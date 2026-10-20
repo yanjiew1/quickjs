@@ -4,6 +4,7 @@
 #include "format.h"
 #include "basic-match.h"
 #include "ordinary-programs.h"
+#include "date-clock-programs.h"
 #include "style-date.h"
 #include "style-hour.h"
 #include "interval-data.h"
@@ -439,25 +440,18 @@ typedef struct Programs {
     QJSIntlDateAvailableSources append;
     QJSIntlDateOrdinaryPrograms ordinary;
     QJSIntlDatePreparedStyle dates[QJS_INTL_DATE_STYLE_WIDTH_COUNT];
+    QJSIntlDateClockPrograms mixed;
     QJSIntlDateNameAdmission names;
     unsigned char *admitted;
     uint32_t style_calendar, connector_calendar;
 } Programs;
-
-static unsigned int mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0, i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
 
 static void programs_clear(const QJSIntlAllocator *allocator, Programs *programs)
 {
     unsigned int i;
     for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++)
         qjs_intl_date_prepared_style_clear(&programs->dates[i]);
+    qjs_intl_date_clock_programs_clear(&programs->mixed);
     if (programs->admitted)
         allocator->free(allocator->opaque, programs->admitted);
     qjs_intl_date_ordinary_programs_clear(&programs->ordinary);
@@ -565,7 +559,7 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
             goto done;
         out->admitted[i] = 1;
         for (j = 0; j < sizeof(required) / sizeof(*required); j++)
-            if (mask(&single->components) == required[j])
+            if (qjs_intl_datetime_component_mask(&single->components) == required[j])
                 seen |= 1U << j;
     }
     status = seen == (1U << (sizeof(required) / sizeof(*required))) - 1 ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
@@ -583,6 +577,17 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
             qjs_intl_date_prepared_style_clear(date);
             status = QJS_INTL_OK;
         }
+    }
+    if (!status) {
+        const QJSIntlDatePattern *dates[QJS_INTL_DATE_STYLE_WIDTH_COUNT] = {0};
+        for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++)
+            if (out->dates[i].style.pattern.count)
+                dates[i] = &out->dates[i].style.pattern;
+        /* Both inputs already passed name admission. A literal-only connector
+           introduces no new name domain, and the builder verifies the union. */
+        status = qjs_intl_date_clock_programs_open(dates, QJS_INTL_DATE_STYLE_WIDTH_COUNT,
+                     &out->ordinary, out->admitted, &data->connectors, locale,
+                     out->connector_calendar, allocator, &out->mixed);
     }
 done:
     qjs_intl_date_format_sources_clear(&groups);
@@ -603,11 +608,26 @@ static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
     return status;
 }
 
+static QJSIntlStatus match_score(const QJSIntlDateTimeFormatter *formatter,
+                                  const QJSIntlDateTimeComponents *request,
+                                  const QJSIntlDateTimeComponents *candidate, int *out)
+{
+    int a = request->values[QJS_INTL_DATETIME_MONTH];
+    int b = candidate->values[QJS_INTL_DATETIME_MONTH];
+    QJSIntlStatus status = qjs_intl_datetime_basic_score(request, candidate, out);
+    /* Native best fit distinguishes numeric/text months more strongly than
+       width alone. Preserve source padding: matching skeleton lengths can
+       deliberately select a different pattern width under TR35. */
+    if (!status && formatter->options.best_fit && a && b &&
+        ((a <= QJS_INTL_DATETIME_NUMERIC) != (b <= QJS_INTL_DATETIME_NUMERIC)))
+        *out -= 20;
+    return status;
+}
+
 static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                   const QJSIntlDateTimeComponents *request, DateRecord *out)
 {
-    /* The native best-fit policy is BasicFormatMatcher. Both options retain
-       source order on equal scores. */
+    /* Both policies retain source order on equal scores. */
     int best = INT_MIN;
     size_t i, selected = SIZE_MAX;
     for (i = 0; i < programs->ordinary.count; i++) {
@@ -616,7 +636,7 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         int score;
         if (!programs->admitted[i])
             continue;
-        status = qjs_intl_datetime_basic_score(request, &single->components, &score);
+        status = match_score(formatter, request, &single->components, &score);
         if (status)
             return status;
         if (score > best) {
@@ -625,20 +645,36 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         }
     }
     {
-        size_t style = SIZE_MAX;
+        size_t style = SIZE_MAX, mixed = SIZE_MAX;
         for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
             const QJSIntlDateStyleSource *date = &programs->dates[i].style;
             QJSIntlStatus status;
             int score;
             if (!date->pattern.count)
                 continue;
-            status = qjs_intl_datetime_basic_score(request, &date->info.components, &score);
+            status = match_score(formatter, request, &date->info.components, &score);
             if (status)
                 return status;
             if (score > best) {
                 best = score;
                 style = i;
             }
+        }
+        for (i = 0; i < programs->mixed.count; i++) {
+            const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
+            QJSIntlStatus status;
+            int score;
+            status = match_score(formatter, request, &record->components, &score);
+            if (status)
+                return status;
+            if (score > best) {
+                best = score;
+                mixed = i;
+            }
+        }
+        if (mixed != SIZE_MAX) {
+            const QJSIntlDateClockProgram *record = &programs->mixed.records[mixed];
+            return copy_record(formatter, &record->components, &record->normal, &record->twelve, out);
         }
         if (style != SIZE_MAX) {
             const QJSIntlDateStyleSource *date = &programs->dates[style].style;
@@ -684,7 +720,8 @@ static QJSIntlStatus get_record(QJSIntlDateTimeFormatter *formatter, const Progr
 {
     const QJSIntlDateTimeComponents *options = &formatter->options.components;
     QJSIntlDateTimeComponents request = relevant ? (QJSIntlDateTimeComponents){{0}} : *options;
-    unsigned int fields = required_mask(required), present = mask(options), i;
+    unsigned int fields = required_mask(required), i;
+    unsigned int present = qjs_intl_datetime_component_mask(options);
     if (relevant && (required == QJS_INTL_DATE_REQUIRE_DATE ||
                      required == QJS_INTL_DATE_REQUIRE_YEAR_MONTH || required == QJS_INTL_DATE_REQUIRE_ANY))
         request.values[QJS_INTL_DATETIME_ERA] = options->values[QJS_INTL_DATETIME_ERA];
@@ -710,7 +747,7 @@ static QJSIntlStatus adjust_style(QJSIntlDateTimeFormatter *formatter, const Pro
 {
     QJSIntlDateTimeComponents request = style->components;
     unsigned int i;
-    if (!(mask(&style->components) & ~allowed))
+    if (!(qjs_intl_datetime_component_mask(&style->components) & ~allowed))
         return copy_record(formatter, &style->components, &style->normal, &style->twelve, out);
     for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
         if (!((allowed >> i) & 1))
@@ -872,7 +909,8 @@ static QJSIntlStatus validate_options(const QJSIntlDateTimeOptions *options)
     status = qjs_intl_datetime_basic_score(&options->components, &options->components, &score);
     if (status)
         return status;
-    if ((options->date_style || options->time_style) && mask(&options->components))
+    if ((options->date_style || options->time_style) &&
+        qjs_intl_datetime_component_mask(&options->components))
         return QJS_INTL_INVALID_ARGUMENT;
     if ((options->required == QJS_INTL_DATE_REQUIRE_DATE && options->time_style) ||
         (options->required == QJS_INTL_DATE_REQUIRE_TIME && options->date_style))
