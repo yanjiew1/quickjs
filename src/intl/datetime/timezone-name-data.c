@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "timezone-name-data.h"
+#include "timezone-syntax.h"
 #include "../common/source-locale.h"
 #include "../native/wire.h"
 #include <string.h>
@@ -54,28 +55,6 @@ static int equal(QJSIntlBytes text, const char *value)
 {
     size_t length = strlen(value);
     return text.length == length && (!length || !memcmp(text.data, value, length));
-}
-
-/* Match the source identity grammars, not ECMA primary-zone canonicalization. */
-static int identity_valid(QJSIntlBytes text, int metazone)
-{
-    size_t i;
-    unsigned int segment = 0;
-    if (!text.length)
-        return 0;
-    for (i = 0; i < text.length; i++) {
-        unsigned int c = (uint8_t)text.data[i];
-        int letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-        if (metazone && !i && !letter)
-            return 0;
-        if (letter || (c >= '0' && c <= '9') || c == '_' || (!metazone && (c == '+' || c == '.' || c == '-')))
-            segment = 1;
-        else if (!metazone && c == '/' && segment)
-            segment = 0;
-        else
-            return 0;
-    }
-    return segment;
 }
 
 static int code_valid(QJSIntlBytes text, uint32_t family)
@@ -227,7 +206,7 @@ QJSIntlStatus qjs_intl_timezone_name_data_open(const QJSIntlData *data, const QJ
         if (!(strings[identity] & bit)) {
             QJSIntlBytes text;
             qjs_intl_data_string(data, identity, &text);
-            if (!identity_valid(text, family == QJS_INTL_TIMEZONE_NAME_METAZONE))
+            if (!qjs_intl_timezone_source_identity_valid(text, family == QJS_INTL_TIMEZONE_NAME_METAZONE))
                 goto done;
             strings[identity] |= bit;
         }
