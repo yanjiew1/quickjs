@@ -229,6 +229,27 @@ static QJSIntlStatus compose_tokens(Scan *state, const QJSIntlDatePattern *conne
     return seen == 3 ? QJS_INTL_OK : QJS_INTL_INVALID_ARGUMENT;
 }
 
+static QJSIntlStatus replace_tokens(Scan *state, const QJSIntlDatePattern *pattern,
+                                    unsigned int symbol, const QJSIntlDatePattern *replacement)
+{
+    size_t i, seen = 0;
+    for (i = 0; i < pattern->count; i++) {
+        const QJSIntlDatePatternToken *token = &pattern->tokens[i];
+        QJSIntlStatus status;
+        if (token->symbol == symbol) {
+            if (++seen > 1)
+                return QJS_INTL_INVALID_ARGUMENT;
+            status = append_tokens(state, replacement, 1);
+        } else {
+            status = token->symbol ? field(state, token->symbol, token->width) :
+                                     literal(state, token->literal.data, token->literal.length);
+        }
+        if (status)
+            return status;
+    }
+    return seen == 1 ? QJS_INTL_OK : QJS_INTL_INVALID_ARGUMENT;
+}
+
 static int compiled(const QJSIntlDatePattern *pattern)
 {
     return pattern && pattern->tokens && pattern->count;
@@ -236,7 +257,7 @@ static int compiled(const QJSIntlDatePattern *pattern)
 
 static QJSIntlStatus transform(const QJSIntlAllocator *allocator, const QJSIntlDatePattern *pattern,
                                const QJSIntlDatePattern *time, const QJSIntlDatePattern *date,
-                               QJSIntlDatePattern *out)
+                               unsigned int replace_symbol, QJSIntlDatePattern *out)
 {
     QJSIntlDatePattern result = {0};
     Scan measure = {0}, write = {0};
@@ -246,7 +267,12 @@ static QJSIntlStatus transform(const QJSIntlAllocator *allocator, const QJSIntlD
         memset(out, 0, sizeof(*out));
     if (!out || !allocator || !allocator->malloc || !allocator->free || !compiled(pattern))
         return QJS_INTL_INVALID_ARGUMENT;
-    if (time || date) {
+    if (replace_symbol) {
+        if (!compiled(time) || date || pattern->order != QJS_INTL_DATE_INTERVAL_DEFAULT ||
+            time->order != QJS_INTL_DATE_INTERVAL_DEFAULT)
+            return QJS_INTL_INVALID_ARGUMENT;
+        status = replace_tokens(&measure, pattern, replace_symbol, time);
+    } else if (time || date) {
         if (!compiled(time) || !compiled(date) || pattern->order != QJS_INTL_DATE_INTERVAL_DEFAULT ||
             time->order != QJS_INTL_DATE_INTERVAL_DEFAULT || date->order != QJS_INTL_DATE_INTERVAL_DEFAULT)
             return QJS_INTL_INVALID_ARGUMENT;
@@ -269,7 +295,8 @@ static QJSIntlStatus transform(const QJSIntlAllocator *allocator, const QJSIntlD
     result.order = pattern->order;
     write.tokens = result.tokens;
     write.text = (char *)result.storage + token_bytes;
-    status = time ? compose_tokens(&write, pattern, time, date) : append_tokens(&write, pattern, 0);
+    status = replace_symbol ? replace_tokens(&write, pattern, replace_symbol, time) :
+             time ? compose_tokens(&write, pattern, time, date) : append_tokens(&write, pattern, 0);
     if (status) {
         allocator->free(allocator->opaque, result.storage);
         return status;
@@ -281,7 +308,7 @@ static QJSIntlStatus transform(const QJSIntlAllocator *allocator, const QJSIntlD
 QJSIntlStatus qjs_intl_date_pattern_copy(const QJSIntlAllocator *allocator,
                                        const QJSIntlDatePattern *pattern, QJSIntlDatePattern *out)
 {
-    return transform(allocator, pattern, NULL, NULL, out);
+    return transform(allocator, pattern, NULL, NULL, 0, out);
 }
 
 QJSIntlStatus qjs_intl_date_pattern_combine(const QJSIntlAllocator *allocator,
@@ -294,7 +321,7 @@ QJSIntlStatus qjs_intl_date_pattern_combine(const QJSIntlAllocator *allocator,
             memset(out, 0, sizeof(*out));
         return QJS_INTL_INVALID_ARGUMENT;
     }
-    return transform(allocator, connector, time, date, out);
+    return transform(allocator, connector, time, date, 0, out);
 }
 
 QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
@@ -324,6 +351,18 @@ QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
                                               '0' + (i ? 1 - layout->first : layout->first)};
     }
     return qjs_intl_date_pattern_combine(allocator, &connector, first, second, out);
+}
+
+QJSIntlStatus qjs_intl_date_pattern_replace(const QJSIntlAllocator *allocator,
+                                          const QJSIntlDatePattern *pattern, unsigned int symbol,
+                                          const QJSIntlDatePattern *replacement, QJSIntlDatePattern *out)
+{
+    if (!symbol || symbol == '0' || symbol == '1') {
+        if (out)
+            memset(out, 0, sizeof(*out));
+        return QJS_INTL_INVALID_ARGUMENT;
+    }
+    return transform(allocator, pattern, replacement, NULL, symbol, out);
 }
 
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern)
