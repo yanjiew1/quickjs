@@ -34,7 +34,7 @@ QJSIntlDateRangeField qjs_intl_date_range_last_field(const QJSIntlDateTimeCompon
 /* Resolve exact ordinary-alternate source chains, score usable skeletons in
    stable source order, compile improving per-field candidates and admit names.
    Require every ordinary visible field in the actual interval union, allowing
-   extra range context. Preserve ordinary period semantics and represent the
+   extra range context. Preserve ordinary year/period semantics and represent the
    changed field at both endpoints. Never resurrect blocked/empty leaves.
    Missing or unrenderable candidates leave the corresponding fallback slot.
 
