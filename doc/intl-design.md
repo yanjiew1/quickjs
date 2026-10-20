@@ -836,6 +836,30 @@ or revive masked sources. No-hour groups copy one source without a 12-hour
 program. Copied programs survive releasing both input owners; diagnostic source
 indexes require the original pool for any later provenance lookup.
 
+`datetime/style-program.[ch]` compiles exact selected styles separately from
+available-pattern matching. Pattern and independent skeleton provenance retain
+raw numbering overrides; numeric rendering still uses the resolved ECMA
+NumberingSystem. Date/time family mixing and unsupported semantic fields such
+as week-year Y remain explicit gaps, not calendar-year substitutions. Single-date
+composition accepts a selected date and a complete, compatible time pair. With
+both, the connector uses the requested date style width: usable atTime first,
+then standard; missing/blocked/empty forms do not revive masked parents or try
+relative/another width. Without both sources no connector is needed. Compose
+owned token programs, retain source facts, and verify the final component union,
+year kinds and auxiliary period semantics. This supplies no ranges, missing
+hour-family synthesis, renderer admission or public formatter capability.
+
+`datetime/style-hour.[ch]` constructs complete time-style single-date pairs
+from the authoritative style, compatible whole available programs, or bare
+clocks plus the exact visible Timezone append template. Retain specific/generic
+zone distinctions and b/B; never delete AM/PM punctuation. Explicitly adapt only
+hour family and permitted numeric hour/minute/second widths, using the shared
+`program-adapt` kernel. Original source metadata stays unchanged, with SIZE_MAX
+for the style's own program and actual pool indexes for available sources.
+Record zone appends as synthesis. Literal append templates use a parsed pair
+and token composition; their ASCII letters/apostrophes are not LDML syntax.
+Missing provable counterparts remain synthesis gaps, not advertised capability.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.

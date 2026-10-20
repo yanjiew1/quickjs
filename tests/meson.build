@@ -1486,6 +1486,92 @@ if intl_enabled
     },
   }]
 
+  intl_date_style_hour_fixture = custom_target(
+    'intl-date-style-hour-authored-fixture',
+    output: 'intl-date-style-hour-authored-fixture.c',
+    command: [python, files('intl_date_style_hour_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_available_formats.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_style_hour_test = {
+    'name': 'test_intl_date_style_hour',
+    'sources': files(
+      'test_intl_date_style_hour.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/pair-pattern.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/datetime/format-source.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/program-adapt.c',
+      '../src/intl/datetime/single-program.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/datetime/style-data.c',
+      '../src/intl/datetime/style-hour.c',
+      '../src/intl/datetime/style-program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_style_hour_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_style_hour_test,
+    'name': 'intl-date-style-hour',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_style_program_fixture = custom_target(
+    'intl-date-style-program-authored-fixture',
+    output: 'intl-date-style-program-authored-fixture.c',
+    command: [python, files('intl_date_style_program_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_combinations.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_style_program_test = {
+    'name': 'test_intl_date_style_program',
+    'sources': files(
+      'test_intl_date_style_program.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/datetime/format-source.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/single-program.c',
+      '../src/intl/datetime/program-adapt.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/datetime/style-data.c',
+      '../src/intl/datetime/style-program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_style_program_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_style_program_test,
+    'name': 'intl-date-style-program',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_single_program_test = {
     'name': 'test_intl_date_single_program',
     'sources': files(
@@ -1498,6 +1584,7 @@ if intl_enabled
       '../src/intl/datetime/pattern.c',
       '../src/intl/datetime/pattern-info.c',
       '../src/intl/datetime/single-program.c',
+      '../src/intl/datetime/program-adapt.c',
       '../src/intl/datetime/source-candidate.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
