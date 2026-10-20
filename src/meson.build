@@ -136,6 +136,7 @@ if intl_enabled
     'intl/datetime/format-source.c',
     'intl/datetime/interval-data.c',
     'intl/datetime/name-data.c',
+    'intl/datetime/name-select.c',
     'intl/datetime/pattern.c',
     'intl/datetime/pattern-info.c',
     'intl/datetime/single-program.c',

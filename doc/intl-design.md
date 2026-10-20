@@ -719,6 +719,18 @@ inventories, unaligned bytes and allocation-failure retries. Both prepared
 profiles include section 29 and compile its production reader, with separate
 prepared-data C tests. Formatter integration follows separately.
 
+The native `datetime/name-select.[ch]` consumer maps admitted source symbols
+and widths to their exact typed name groups. It follows the prepared aliases,
+retaining missing, blocked, empty and translated observations plus their origin.
+Only absent weekday short names try abbreviated. Month selection exhausts the
+explicit leap-year or common-year key before the ordinary key; a blocked/empty
+year-specific key stops that substitution. Default era names never pick a
+variant alternate automatically. Calendar arithmetic remains responsible for
+mapping its months, eras and cycles to raw name codes. Day-period name selection
+can separately substitute the actual local AM/PM code for an unavailable b/B
+label, retaining the primary observation and never reviving its blocked parent.
+These allocation-free queries do not render numbers or leap-month templates.
+
 `date_available_formats.py` owns available date patterns and append templates,
 not interval patterns, range templates or numeric separators. Its sparse groups
 retain calendar, family and container alternate; exact leaf keys separately
