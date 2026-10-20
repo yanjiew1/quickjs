@@ -123,6 +123,10 @@ int main(void)
     assert(english != SIZE_MAX);
     assert(!qjs_intl_relative_system_supported(service, english, bytes("unknown"), &supported) && !supported);
     assert(!qjs_intl_relative_system_supported(service, english, bytes("native"), &supported) && !supported);
+    assert(!qjs_intl_relative_system_available(service, bytes("latn"), &supported) && supported);
+    assert(!qjs_intl_relative_system_available(service, bytes("roman"), &supported) && !supported);
+    assert(qjs_intl_relative_system_available(NULL, bytes("latn"), &supported)
+           == QJS_INTL_INVALID_ARGUMENT && !supported);
     assert(qjs_intl_relative_formatter_open(service, english, bytes("unknown"), &options, &trial) == QJS_INTL_UNSUPPORTED);
     assert(!trial);
     for (i = 0; i < QJS_INTL_RELATIVE_WIDTH_COUNT; i++) {
