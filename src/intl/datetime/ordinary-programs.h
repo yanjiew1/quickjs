@@ -9,7 +9,8 @@ enum {
     QJS_INTL_DATE_ORDINARY_APPEND = 1,
     QJS_INTL_DATE_ORDINARY_PERIOD = 2,
     QJS_INTL_DATE_ORDINARY_FRACTION = 4,
-    QJS_INTL_DATE_ORDINARY_COMBINE = 8
+    QJS_INTL_DATE_ORDINARY_COMBINE = 8,
+    QJS_INTL_DATE_ORDINARY_FIELD = 16
 };
 
 typedef struct QJSIntlDateOrdinaryProgram {
@@ -38,6 +39,8 @@ typedef struct QJSIntlDateOrdinaryPrograms {
    without an added weekday, optional whole era-bearing date/clock pairs, and
    date-only zone styles through the genuine
    Date-Timezone append template. Retain source/construction provenance.
+   Also offer single flexible-day-period fields at all three text widths;
+   these are native field programs, not claimed available-format sources.
 
    Supply the unchanged pool/grouping pair and exact resolved APPEND inventory.
    Connector locale/calendar indexes belong to their own owner. Decimal is

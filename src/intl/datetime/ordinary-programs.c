@@ -335,6 +335,28 @@ static QJSIntlStatus ensure(Build *build, unsigned int wanted)
     return QJS_INTL_UNSUPPORTED;
 }
 
+static QJSIntlStatus day_period(Build *build, size_t width)
+{
+    QJSIntlDateOrdinaryProgram record;
+    QJSIntlDatePatternInfo info;
+    QJSIntlStatus status;
+    initialize(build, &record);
+    /* TR35 permits B-only skeletons. This native one-field program needs no
+       invented layout; format-context names and rules are admitted later. */
+    status = qjs_intl_date_pattern_compile(&build->result.allocator,
+                 (QJSIntlBytes){"BBBBB", width}, &record.single.normal.pattern);
+    if (!status)
+        status = qjs_intl_date_pattern_info(&record.single.normal.pattern, &info);
+    if (status) {
+        qjs_intl_date_single_programs_clear(&record.single);
+        return status;
+    }
+    record.single.components = info.components;
+    record.single.normal.source_info = info;
+    record.construction = QJS_INTL_DATE_ORDINARY_FIELD;
+    return add(build, &record);
+}
+
 void qjs_intl_date_ordinary_programs_clear(QJSIntlDateOrdinaryPrograms *programs)
 {
     size_t i;
@@ -373,6 +395,7 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     static const struct { unsigned int symbol; size_t width; } date_zones[] = {
         {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
     };
+    static const size_t period_widths[] = {1, 4, 5};
     Build build = {0};
     QJSIntlFormatBuilder check = {0};
     QJSIntlStatus status;
@@ -394,14 +417,15 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 52)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 55)
         return QJS_INTL_OVERFLOW;
     /* Fourteen required targets, with up to two additional widths for each
        of the four fractional targets, fit within 32 extra records. Reserve
        three more for optional minute/second-only fractional patterns and
        eleven for whole date/clock combinations (including an optional era-date),
-       and six for date-only programs with an appended timezone name. */
-    build.capacity = groups->count + 52;
+       six for date-only programs with an appended timezone name, and three
+       for single flexible-day-period fields. */
+    build.capacity = groups->count + 55;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -447,6 +471,11 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     i = find(&build, BIT(MINUTE) | BIT(SECOND));
     if (i != SIZE_MAX) {
         status = fraction(&build, i);
+        if (status)
+            goto fail;
+    }
+    for (i = 0; i < sizeof(period_widths) / sizeof(*period_widths); i++) {
+        status = day_period(&build, period_widths[i]);
         if (status)
             goto fail;
     }

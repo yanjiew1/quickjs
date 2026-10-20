@@ -103,6 +103,23 @@ static void verify(const QJSIntlDateOrdinaryPrograms *programs)
     }
     for (j = 0; j < sizeof(required) / sizeof(*required); j++)
         assert(seen[j]);
+    /* Bare B fields retain their widths without importing an hour or literal.
+       Real source records, if present, keep precedence over generated fields. */
+    for (field = QJS_INTL_DATETIME_NARROW; field <= QJS_INTL_DATETIME_LONG; field++) {
+        for (i = 0; i < programs->count; i++) {
+            const QJSIntlDateSinglePrograms *single = &programs->records[i].single;
+            if (mask(&single->components) == (1U << QJS_INTL_DATETIME_DAY_PERIOD) &&
+                single->components.values[QJS_INTL_DATETIME_DAY_PERIOD] == (int)field) {
+                assert(!single->twelve.pattern.count);
+                if (programs->records[i].construction == QJS_INTL_DATE_ORDINARY_FIELD) {
+                    assert(single->normal.pattern.count == 1);
+                    assert(single->normal.pattern.tokens[0].symbol == 'B');
+                }
+                break;
+            }
+        }
+        assert(i < programs->count);
+    }
 }
 
 static const QJSIntlDateOrdinaryProgram *find(const QJSIntlDateOrdinaryPrograms *programs,
@@ -136,6 +153,14 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
 {
     const QJSIntlDateOrdinaryProgram *record;
     size_t i;
+    for (i = 0; i < programs->count; i++) {
+        record = &programs->records[i];
+        if (mask(&record->single.components) == (1U << QJS_INTL_DATETIME_DAY_PERIOD)) {
+            assert(record->construction == QJS_INTL_DATE_ORDINARY_FIELD);
+            assert(record->first == SIZE_MAX && record->second == SIZE_MAX);
+            assert(record->single.normal.source_index == SIZE_MAX);
+        }
+    }
     record = find(programs, 12, 0); /* year + month */
     assert(record->construction == QJS_INTL_DATE_ORDINARY_APPEND);
     assert(record->append.code.length == 4 && !memcmp(record->append.code.data, "Year", 4));
