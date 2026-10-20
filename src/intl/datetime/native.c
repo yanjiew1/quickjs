@@ -383,13 +383,13 @@ QJSIntlStatus qjs_intl_datetime_default_calendar(const QJSIntlDateTimeService *s
 }
 
 QJSIntlStatus qjs_intl_datetime_calendar_supported(const QJSIntlDateTimeService *service,
-                                                   size_t locale, QJSIntlBytes identifier, int *out)
+                                                   QJSIntlBytes identifier, int *out)
 {
     QJSCalendarId calendar;
     QJSIntlStatus status;
     if (out)
         *out = 0;
-    if (!service || !out || locale >= service->count || (!identifier.data && identifier.length))
+    if (!service || !out || (!identifier.data && identifier.length))
         return QJS_INTL_INVALID_ARGUMENT;
     status = calendar_supported(&service->data, identifier, &calendar);
     if (status == QJS_INTL_UNSUPPORTED)

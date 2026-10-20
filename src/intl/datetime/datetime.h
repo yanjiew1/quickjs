@@ -65,8 +65,9 @@ QJSIntlStatus qjs_intl_datetime_available(const QJSIntlDateTimeService *service,
                                           const QJSIntlBytes **out, size_t *count);
 QJSIntlStatus qjs_intl_datetime_default_calendar(const QJSIntlDateTimeService *service,
                                                  size_t locale, QJSIntlBytes *out);
+/* Global calendar capability, independent of a matched locale index. */
 QJSIntlStatus qjs_intl_datetime_calendar_supported(const QJSIntlDateTimeService *service,
-                                                   size_t locale, QJSIntlBytes calendar, int *out);
+                                                   QJSIntlBytes calendar, int *out);
 QJSIntlStatus qjs_intl_datetime_default_system(const QJSIntlDateTimeService *service,
                                                size_t locale, QJSIntlBytes *out);
 QJSIntlStatus qjs_intl_datetime_system_supported(const QJSIntlDateTimeService *service,

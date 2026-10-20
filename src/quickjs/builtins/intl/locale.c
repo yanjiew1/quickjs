@@ -439,6 +439,97 @@ static JSValue locale_numbering_systems(JSContext *ctx, JSValueConst this_val,
     return result;
 }
 
+static JSValue locale_calendars(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlLocaleService *identity;
+    QJSIntlDateTimeService *dates;
+    QJSIntlBytes list;
+    uint32_t count, i, used = 0;
+    size_t start = 0;
+    JSValue result, value;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        return result;
+    /* Explicit slots are returned even when unknown or empty. Formatter
+       support filters only the preference-derived list. */
+    if (locale->slots[SLOT_CA]) {
+        value = JS_NewString(ctx, locale->slots[SLOT_CA]);
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, 0, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+        return result;
+    }
+    identity = js_intl_locale_service(ctx);
+    dates = identity ? js_intl_datetime_service(ctx) : NULL;
+    if (!dates || js_intl_error(ctx, qjs_intl_locale_calendar_preferences(identity,
+            (QJSIntlBytes){locale->tag, strlen(locale->tag)}, &list, &count),
+            "locale calendar preferences"))
+        goto fail;
+    for (i = 0; i < count; i++) {
+        QJSIntlBytes source, canonical;
+        QJSIntlStatus status;
+        size_t end = start;
+        uint32_t j;
+        int supported;
+        while (end < list.length && list.data[end] != ' ')
+            end++;
+        source = (QJSIntlBytes){list.data + start, end - start};
+        /* CLDR preferences use legacy aliases such as gregorian, which are
+           metadata source names rather than public Unicode keyword input. */
+        status = qjs_intl_locale_source_type(identity, (QJSIntlBytes){"ca", 2}, source, &canonical);
+        if (status == QJS_INTL_UNSUPPORTED) {
+            canonical = source;
+            status = QJS_INTL_OK;
+        }
+        if (js_intl_error(ctx, status, "calendar identifier") ||
+            js_intl_error(ctx, qjs_intl_datetime_calendar_supported(dates, canonical,
+                &supported), "calendar support"))
+            goto fail;
+        start = end + 1;
+        if (!supported)
+            continue;
+        value = JS_NewStringLen(ctx, canonical.data, canonical.length);
+        if (JS_IsException(value))
+            goto fail;
+        /* Only our own fresh array's string elements are inspected. No user
+           getter or array method participates in canonical deduplication. */
+        for (j = 0; j < used; j++) {
+            JSValue previous = JS_GetPropertyUint32(ctx, result, j);
+            int same;
+            if (JS_IsException(previous)) {
+                JS_FreeValue(ctx, value);
+                goto fail;
+            }
+            same = JS_SameValue(ctx, value, previous);
+            JS_FreeValue(ctx, previous);
+            if (same)
+                break;
+        }
+        if (j < used) {
+            JS_FreeValue(ctx, value);
+            continue;
+        }
+        if (JS_DefinePropertyValueUint32(ctx, result, used++, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    if (!used) {
+        value = JS_NewString(ctx, "gregory");
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, 0, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    return result;
+fail:
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
 enum { INFO_WEEK, INFO_TEXT, INFO_HOURS };
 
 static JSValue locale_info(JSContext *ctx, JSValueConst this_val, int argc,
@@ -559,6 +650,7 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_MAGIC_DEF("getTextInfo", 0, locale_info, INFO_TEXT),
     JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
     JS_CFUNC_DEF("getNumberingSystems", 0, locale_numbering_systems),
+    JS_CFUNC_DEF("getCalendars", 0, locale_calendars),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
                        JS_PROP_CONFIGURABLE),
 };

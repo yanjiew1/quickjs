@@ -63,8 +63,26 @@ const numbers = new Intl.Locale("en").getNumberingSystems();
 numbers[0] = "foobar";
 assert(new Intl.Locale("en").getNumberingSystems().join(","), "latn");
 
+// Explicit ca slots bypass availability, including unknown and empty values.
+for (const calendar of ["foobar", "gregory", "buddhist"]) {
+    assert(new Intl.Locale("en", {calendar}).getCalendars().join(","), calendar);
+    assert(new Intl.Locale("en-u-ca-" + calendar).getCalendars().join(","), calendar);
+}
+assert(new Intl.Locale("en-u-ca").getCalendars().length, 1);
+assert(new Intl.Locale("en-u-ca").getCalendars()[0], "");
+assert(new Intl.Locale("en-u-ca-islamicc").getCalendars().join(","), "islamic-civil");
+const thaiCalendars = new Intl.DateTimeFormat("en", {calendar: "buddhist"})
+    .resolvedOptions().calendar === "buddhist" ? "buddhist,gregory" : "gregory";
+for (const tag of ["th", "en-TH", "en-u-sd-th10", "en-US-u-rg-thzzzz"])
+    assert(new Intl.Locale(tag).getCalendars().join(","), thaiCalendars);
+for (const tag of ["en", "en-US", "en-ZZ", "en-US-u-rg-zzzzzz"])
+    assert(new Intl.Locale(tag).getCalendars().join(","), "gregory");
+const calendars = new Intl.Locale("en").getCalendars();
+calendars[0] = "foobar";
+assert(new Intl.Locale("en").getCalendars().join(","), "gregory");
+
 const locale = new Intl.Locale("ar");
-for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems"]) {
+for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems", "getCalendars"]) {
     const method = Intl.Locale.prototype[name];
     assert(method.name, name);
     assert(method.length, 0);
@@ -80,7 +98,7 @@ for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumbering
     const foreign = std.createRealm();
     const foreignMethod = foreign.global.Intl.Locale.prototype[name];
     const result = foreignMethod.call(locale);
-    assert(Object.getPrototypeOf(result), name === "getHourCycles" || name === "getNumberingSystems"
+    assert(Object.getPrototypeOf(result), ["getHourCycles", "getNumberingSystems", "getCalendars"].includes(name)
         ? foreign.global.Array.prototype : foreign.global.Object.prototype);
 }
 const first = locale.getWeekInfo();
@@ -96,6 +114,7 @@ try {
     assert(locale.getWeekInfo().firstDay, 6);
     assert(locale.getHourCycles().length > 0);
     assert(locale.getNumberingSystems().length, 1);
+    assert(locale.getCalendars().length > 0);
 } finally {
     for (const key of ["direction", "firstDay", "weekend", "0"])
         delete Object.prototype[key];

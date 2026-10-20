@@ -2191,6 +2191,7 @@ foreach profile : ['minimal', 'native']
     '../src/intl/locale/native-data.c',
     '../src/intl/locale/preference-data.c',
     '../src/intl/locale/preferences.c',
+    '../src/intl/locale/type-identity.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/native/data.c',
     '../src/intl/native/pack.c',
@@ -2941,6 +2942,31 @@ foreach profile : ['minimal', 'native']
     timeout: 30,
   )
 endforeach
+
+intl_calendar_preference_fixture = custom_target(
+  'intl-calendar-preference-authored-fixture',
+  output: 'intl-calendar-preference-authored-fixture.c',
+  command: [
+    python,
+    files('intl_calendar_preference_fixture.py'),
+    '--output', '@OUTPUT@',
+  ],
+  depend_files: intl_tool_dependencies,
+)
+intl_calendar_preference_test = executable(
+  'test_intl_calendar_preferences',
+  intl_locale_sources + files('test_intl_calendar_preferences.c') + [intl_calendar_preference_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-calendar-preferences',
+  intl_calendar_preference_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
 
 standalone = {
   'test_intl_date_local_core': [
