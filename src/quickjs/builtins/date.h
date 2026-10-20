@@ -27,6 +27,8 @@
 
 #include "../internal/base.h"
 
+/* The intrinsic clock, shared by Date and Intl's omitted-date formatting. */
+__exception int js_date_now(JSContext *ctx, int64_t *result);
 JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv, int magic);
 
