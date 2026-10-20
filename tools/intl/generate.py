@@ -7,6 +7,8 @@ from pathlib import Path
 import acquire
 import availability
 import bundle
+import calendar_names
+import calendar_name_tables
 import compact_patterns
 import compact_tables
 import currencies
@@ -83,6 +85,7 @@ def generate(sources, profile):
     date_field_data = date_field_names.collect(inputs_read, graph)
     date_style_data = date_patterns.collect(inputs_read, graph)
     date_combination_data = date_combinations.collect(inputs_read, graph)
+    calendar_name_data = calendar_names.collect(inputs_read, graph)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
@@ -110,6 +113,7 @@ def generate(sources, profile):
     date_field_data = date_field_tables.select(date_field_data, tags)
     date_style_data = date_style_tables.select(date_style_data, tags)
     date_combination_data = date_combination_tables.select(date_combination_data, tags)
+    calendar_name_data = calendar_name_tables.select(calendar_name_data, tags)
     display_data = display_tables.select(display_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
@@ -132,6 +136,7 @@ def generate(sources, profile):
     pool_strings.update(date_field_tables.strings(date_field_data))
     pool_strings.update(date_style_tables.strings(date_style_data))
     pool_strings.update(date_combination_tables.strings(date_combination_data))
+    pool_strings.update(calendar_name_tables.strings(calendar_name_data))
     pool_strings.update(display_tables.strings(display_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -161,6 +166,7 @@ def generate(sources, profile):
     sections[bundle.DATE_FIELD_NAMES] = date_field_tables.encode(date_field_data, tags, string_ids)
     sections[bundle.DATE_STYLES] = date_style_tables.encode(date_style_data, tags, string_ids)
     sections[bundle.DATE_COMBINATIONS] = date_combination_tables.encode(date_combination_data, tags, string_ids)
+    sections[bundle.CALENDAR_NAMES] = calendar_name_tables.encode(calendar_name_data, tags, string_ids)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -178,7 +184,7 @@ def generate(sources, profile):
                 'complete_services': [],
                 'note': ('Prepared locale metadata, preferences, list templates, numeric symbols/patterns, '
                          'compact maps, currency/layout/unit facts, division grammar, relative/duration '
-                         'source facts, date-field labels, date/time styles and connectors, '
+                         'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
