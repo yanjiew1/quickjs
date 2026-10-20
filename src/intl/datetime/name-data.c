@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "name-data.h"
+#include "dayperiod-code.h"
 #include "../common/source-locale.h"
 #include "../native/wire.h"
 #include <string.h>
@@ -108,10 +109,6 @@ static int decimal_code(QJSIntlBytes text, unsigned int limit)
 static int code_valid(QJSIntlBytes text, uint32_t family)
 {
     static const char *const days[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
-    static const char *const periods[] = {
-        "am", "pm", "midnight", "noon", "morning1", "morning2", "afternoon1", "afternoon2",
-        "evening1", "evening2", "night1", "night2"
-    };
     size_t i;
     if (family == QJS_INTL_CAL_NAME_MONTH)
         return decimal_code(text, 13);
@@ -137,15 +134,8 @@ static int code_valid(QJSIntlBytes text, uint32_t family)
         }
         return 0;
     }
-    if (family == QJS_INTL_CAL_NAME_DAY_PERIOD) {
-        if (text.length > 10)
-            return 0;
-        for (i = 0; i < sizeof(periods) / sizeof(*periods); i++) {
-            if (equal(text, periods[i]))
-                return 1;
-        }
-        return 0;
-    }
+    if (family == QJS_INTL_CAL_NAME_DAY_PERIOD)
+        return qjs_intl_dayperiod_code_find(text) >= 0;
     return equal(text, "leap") || equal(text, "standardAfterLeap") || equal(text, "combined");
 }
 
