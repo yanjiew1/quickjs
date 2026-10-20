@@ -2724,6 +2724,14 @@ test(
 )
 
 test(
+  'intl-date-available-tables',
+  python,
+  args: files('test_intl_date_available_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-calendar-name-tables',
   python,
   args: files('test_intl_calendar_name_tables.py'),

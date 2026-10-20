@@ -16,6 +16,7 @@ intl_tool_dependencies = files(
   'currencies.py',
   'currency_tables.py',
   'date_available_formats.py',
+  'date_available_tables.py',
   'date_combination_tables.py',
   'date_combinations.py',
   'date_field_names.py',

@@ -728,8 +728,14 @@ the ordinary date-pattern lexer. Append text has a distinct substitution-templat
 grammar: `{0}` is the existing format, `{1}` the added field and optional `{2}`
 the field display name. Raw append text such as `{1} ob {0}` must not be parsed
 as a date pattern or a date/time-style connector. Matching, plural/alternate
-fallback and formatter capability remain consumer responsibilities. Binary and
-runtime query integration follow separately.
+fallback and formatter capability remain consumer responsibilities.
+Optional section 30 encodes these groups with separate container-alternate
+references, counted leaf selectors, shared sparse maps and typed source nodes.
+Canonical sharing and reachability validation preserve empty, missing and
+blocked states. Head/parent compatibility is family-based, allowing source
+calendar or container-alternate changes without losing provenance. Profile
+projection keeps reachable origins outside the requester inventory. Prepared
+profiles and runtime queries follow separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
