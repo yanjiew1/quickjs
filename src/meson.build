@@ -130,6 +130,7 @@ if intl_enabled
     'intl/datetime/available-source.c',
     'intl/datetime/basic-match.c',
     'intl/datetime/calendar-identity.c',
+    'intl/datetime/chronology.c',
     'intl/datetime/combination-data.c',
     'intl/datetime/dayperiod-code.c',
     'intl/datetime/dayperiod-data.c',
@@ -214,39 +215,11 @@ endif
 if get_option('temporal') or intl_enabled
   engine_sources += files('quickjs/builtins/duration-value.c')
   support_sources += files(
+    'calendar/calendar.c',
+    'calendar/iso.c',
     'temporal/duration.c',
     'temporal/epoch.c',
     'temporal/options.c',
-  )
-endif
-if get_option('temporal')
-  engine_sources += files(
-    'quickjs/builtins/temporal/calendar-fields.c',
-    'quickjs/builtins/temporal/duration.c',
-    'quickjs/builtins/temporal/instant.c',
-    'quickjs/builtins/temporal/now.c',
-    'quickjs/builtins/temporal/options.c',
-    'quickjs/builtins/temporal/plain-time.c',
-    'quickjs/builtins/temporal/plain.c',
-    'quickjs/builtins/temporal/zoned-arithmetic.c',
-    'quickjs/builtins/temporal/zoned-date-time.c',
-  )
-  support_sources += files(
-    'calendar/calendar.c',
-    'calendar/iso.c',
-    'temporal/calendar.c',
-    'temporal/civil.c',
-    'temporal/clock.c',
-    'temporal/format.c',
-    'temporal/iso.c',
-    'temporal/noniso-arithmetic.c',
-    'temporal/noniso-calendar.c',
-    'temporal/parse.c',
-    'temporal/relative.c',
-    'temporal/time.c',
-    'temporal/time-zone.c',
-    'timezone/system-zone.c',
-    'timezone/timezone.c',
   )
   if get_option('calendars') == 'native'
     support_sources += files(
@@ -265,6 +238,34 @@ if get_option('temporal')
   else
     support_sources += files('calendar/calendar-minimal.c')
   endif
+endif
+if get_option('temporal')
+  engine_sources += files(
+    'quickjs/builtins/temporal/calendar-fields.c',
+    'quickjs/builtins/temporal/duration.c',
+    'quickjs/builtins/temporal/instant.c',
+    'quickjs/builtins/temporal/now.c',
+    'quickjs/builtins/temporal/options.c',
+    'quickjs/builtins/temporal/plain-time.c',
+    'quickjs/builtins/temporal/plain.c',
+    'quickjs/builtins/temporal/zoned-arithmetic.c',
+    'quickjs/builtins/temporal/zoned-date-time.c',
+  )
+  support_sources += files(
+    'temporal/calendar.c',
+    'temporal/civil.c',
+    'temporal/clock.c',
+    'temporal/format.c',
+    'temporal/iso.c',
+    'temporal/noniso-arithmetic.c',
+    'temporal/noniso-calendar.c',
+    'temporal/parse.c',
+    'temporal/relative.c',
+    'temporal/time.c',
+    'temporal/time-zone.c',
+    'timezone/system-zone.c',
+    'timezone/timezone.c',
+  )
   if get_option('timezone_backend') == 'native'
     support_sources += files(
       'timezone/timezone-native.c',

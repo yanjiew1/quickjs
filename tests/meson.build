@@ -2578,6 +2578,30 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_date_calendar_core': [
+    'test_intl_date_calendar.c',
+    '../src/intl/datetime/chronology.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-minimal.c',
+    '../src/calendar/iso.c',
+  ],
+  'test_intl_date_calendar_native': [
+    'test_intl_date_calendar.c',
+    '../src/intl/datetime/chronology.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-native.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/hebrew.c',
+    '../src/calendar/islamic.c',
+    '../src/calendar/iso.c',
+    '../src/calendar/lunisolar.c',
+    '../src/calendar/native-months.c',
+    '../src/calendar/persian.c',
+    '../src/calendar/solar.c',
+    calendar_data,
+  ],
   'test_intl_currency_boundary': [
     'test_intl_currency_boundary.c',
     '../src/intl/currency/boundary.c',

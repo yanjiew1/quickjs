@@ -878,6 +878,23 @@ full renderer with chronology/name/zone services. The shared output vocabulary
 now distinguishes date-field parts; number-bearing consumers retain their
 original number-only type bound.
 
+`datetime/chronology.[ch]` converts checked local epoch days through the shared
+calendar facade, then projects native formatting fields without allocating or
+borrowing localized data. Keep arithmetic/era years separate and let the numeric
+renderer apply nonpositive-year adjustment only once. Modern Japanese and
+Ethiopic formatting use era-relative years; historical Japanese uses Gregorian
+era presentation. Mandatory Gregorian formatting uses core ISO arithmetic even
+without native calendar extensions. Hebrew numeric months remain ordinal while
+raw name keys follow monthCode; Chinese/Dangi numeric months are nominal, with
+separate leap decoration and mathematical cyclic-year modulo. Preserve related
+years independently. The calendar algorithms/data link for either Intl or
+Temporal consumers, without requiring Temporal's JavaScript bindings.
+
+Non-Gregorian ToLocalTime calculations remain implementation-defined in the
+pinned draft. Its unconditional nonpositive-year formatting step can differ
+from ICU for negative single-era years; this implementation follows the specified
+formatting step rather than silently introducing another era or skipping it.
+
 `datetime/era-data.[ch]` owns explicit CLDR canonical-era to raw name-key
 metadata from supplemental calendarData, independently of localized-name and
 calendar-arithmetic owners. Optional section 35 keeps raw calendar identities
