@@ -35,6 +35,14 @@ algorithm details, consult the referenced Unicode/CLDR standards, then ICU4X,
 then ICU4C. Audit reusable QuickJS/QuickJS-NG work before writing replacements.
 Copied or adapted code/data retains its authors, licenses and exact provenance.
 
+The living drafts govern existing functionality. Use an unmerged Stage 4 PR as
+the primary specification for the feature being implemented, checking its scope
+and compatibility intent when it refactors shared algorithms. An incidental
+shared-algorithm difference is not sufficient reason to change an established
+observable result. For example, DateTimeFormat keeps an effective hour cycle
+for Temporal-specific records internally, while `resolvedOptions()` exposes
+`hourCycle` and `hour12` only when its ordinary Date format includes an hour.
+
 ### Stage 4 acceptance inventory
 
 Stage 4 is part of version one's required scope even before its specification
