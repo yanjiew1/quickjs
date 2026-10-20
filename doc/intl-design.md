@@ -931,6 +931,16 @@ separate leap decoration and mathematical cyclic-year modulo. Preserve related
 years independently. The calendar algorithms/data link for either Intl or
 Temporal consumers, without requiring Temporal's JavaScript bindings.
 
+The shared timezone facade also exposes an exact closed-window stability
+query for total UTC offset and raw DST designation. Walk real explicit and
+periodic boundaries rather than comparing endpoints: a period may contain
+changes and return to its initial state. Include same-offset DST changes and
+explicit/footer handoff, while ignoring abbreviation-only changes. Existing
+Temporal transition queries continue to report only UTC-offset changes. This
+primitive is one proof input for generic-name fallback, not proof of unchanged
+CLDR presentation or a particular daylight-saving amount; presentation overrides
+and metazone policy remain with the zone renderer.
+
 `datetime/local-time.[ch]` applies either an immutable named-zone rule or a
 fixed minute offset to normalized epoch seconds plus nanoseconds, then derives
 all calendar/clock fields from the same local day. Negative instants use floor
