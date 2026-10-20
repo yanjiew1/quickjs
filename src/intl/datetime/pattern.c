@@ -297,6 +297,35 @@ QJSIntlStatus qjs_intl_date_pattern_combine(const QJSIntlAllocator *allocator,
     return transform(allocator, connector, time, date, out);
 }
 
+QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
+                                       const QJSIntlPairPattern *layout,
+                                       const QJSIntlDatePattern *first,
+                                       const QJSIntlDatePattern *second, QJSIntlDatePattern *out)
+{
+    QJSIntlDatePatternToken tokens[5];
+    QJSIntlDatePattern connector = {0};
+    QJSIntlBytes fragments[3];
+    size_t i;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !layout || layout->first > 1)
+        return QJS_INTL_INVALID_ARGUMENT;
+    fragments[0] = layout->prefix;
+    fragments[1] = layout->separator;
+    fragments[2] = layout->suffix;
+    connector.tokens = tokens;
+    for (i = 0; i < 3; i++) {
+        if ((!fragments[i].data && fragments[i].length) || fragments[i].length > PTRDIFF_MAX)
+            return QJS_INTL_INVALID_ARGUMENT;
+        if (fragments[i].length)
+            tokens[connector.count++] = (QJSIntlDatePatternToken){fragments[i], 0, 0};
+        if (i < 2)
+            tokens[connector.count++] = (QJSIntlDatePatternToken){{0}, 0,
+                                              '0' + (i ? 1 - layout->first : layout->first)};
+    }
+    return qjs_intl_date_pattern_combine(allocator, &connector, first, second, out);
+}
+
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern)
 {
     if (!pattern)
