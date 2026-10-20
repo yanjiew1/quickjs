@@ -26,6 +26,7 @@
 #include <string.h>
 #include "calendar-fields.h"
 #include "../temporal.h"
+#include "../intl.h"
 #include "../../../temporal/format.h"
 
 /* Temporal Stage 4 PR head 3d4a6e7124a6878cb5af3132af7e01e01a88317f,
@@ -922,7 +923,12 @@ static JSValue js_temporal_zoned_to_locale_string(JSContext *ctx, JSValueConst t
     s = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_ZONED_DATE_TIME);
     if (!s)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    return js_intl_format_date_time(ctx, this_val, argc, argv,
+                                      QJS_INTL_DATE_REQUIRE_ANY, QJS_INTL_DATE_DEFAULT_ALL);
+#else
     return zdt_format(ctx, s, -1, 0, 0, 0, 1, QJS_TEMPORAL_ROUND_TRUNC);
+#endif
 }
 
 static JSValue js_temporal_zoned_value_of(JSContext *ctx, JSValueConst this_val,
