@@ -659,8 +659,8 @@ The optional style section 27 pools source records and complete locale rows,
 retaining independent pattern/skeleton values and numbering overrides. Its
 calendar and alternate registries describe raw source identities. Profile
 projection preserves external source provenance; runtime formatters must still
-establish arithmetic and formatting capabilities independently. Validate the C
-owner before adding this section to prepared production profiles. The C style
+establish arithmetic and formatting capabilities independently. Both prepared
+profiles include the section and have corresponding C reader tests. The C style
 owner is an immutable view with exact queries and temporary validation scratch;
 it owns neither calendar computation nor format selection and retains no heap
 state. Pattern/skeleton text and numbering overrides stay uninterpreted at this

@@ -144,9 +144,9 @@ origins accompany resolved values. Duplicate fields, mixed aliases, cycles and
 unsupported consumed structures fail. Calendar names, available-format maps,
 intervals and combination templates have separate owners.
 
-The collector currently produces host-side resolved facts, not a prepared binary
-section or a formatter capability. Raw CLDR calendar IDs include data-only
-`generic`; they must not be advertised as supported arithmetic calendars.
+The collector produces host-side resolved facts for the prepared style section;
+these facts do not establish formatter capability. Raw CLDR calendar IDs include
+data-only `generic`; they must not be advertised as supported arithmetic calendars.
 Authored repository tests cover inheritance, aliases, provenance, overrides,
 markers and invalid data. CI additionally resolves the pinned production source.
 
@@ -162,9 +162,9 @@ blocked records retain provenance with empty text and numbering override.
 `date_style_tables.py` pools identical records and locale rows canonically and
 validates exact coverage, ordering, reachability, dimensions and references.
 Profile projection retains source identities outside the selected locale list.
-This optional codec is not yet emitted in the prepared production profiles;
-the prepared-profile integration follows separately. Pattern text and numbering
-overrides remain source facts for the later date-format compiler to interpret.
+The generator emits this section in both prepared production profiles. Pattern
+text and numbering overrides remain source facts for the later date-format
+compiler to interpret.
 
 `src/intl/datetime/style-data.c` validates the optional section against an opened
 shared data owner. It checks bounded dimensions, calendar/alternate registries,
