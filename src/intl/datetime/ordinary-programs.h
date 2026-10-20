@@ -34,7 +34,8 @@ typedef struct QJSIntlDateOrdinaryPrograms {
    clocks may explicitly replace B by a when no whole AM/PM clock is available;
    explicit dayPeriod records remain unchanged. Fractional seconds use the
    selected numbering system's decimal separator; mixed formats use the exact
-   ordinary SHORT standard connector. Retain source/construction provenance.
+   ordinary SHORT standard connector. Include useful date/clock combinations
+   without an added weekday. Retain source/construction provenance.
 
    Supply the unchanged pool/grouping pair and exact resolved APPEND inventory.
    Connector locale/calendar indexes belong to their own owner. Decimal is
