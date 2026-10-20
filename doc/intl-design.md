@@ -843,7 +843,13 @@ hour family and permitted numeric hour/minute/second widths, using the shared
 for the style's own program and actual pool indexes for available sources.
 Record zone appends as synthesis. Literal append templates use a parsed pair
 and token composition; their ASCII letters/apostrophes are not LDML syntax.
-Missing provable counterparts remain synthesis gaps, not advertised capability.
+A final AM/PM tier can invert the active Timezone template, proving exact
+recomposition of all original tokens and literals. Use a recovered compatible
+clock, or expand only a proven hour-only h+a layout with the authoritative
+zone-free clock. This preserves its actual AM/PM position and all clock units
+without guessing punctuation. Unmatched templates or larger incomplete layouts
+remain unsupported; extraction and layout expansion have explicit provenance
+flags. Successful style pairs do not establish final range/renderer capability.
 
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
