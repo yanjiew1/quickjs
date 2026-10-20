@@ -780,8 +780,17 @@ The host codec validates canonical sharing and complete reachability without
 scanning an implicit locale/calendar/suffix cube. Its decoded inventory stays
 factored; source rows are expanded only for nonzero heads. Projection retains
 reachable source locales outside the requester inventory. This layout is local
-to interval data; existing section 29/30 formats are unchanged. The immutable C
-reader, prepared profiles and range formatter integration follow separately.
+to interval data; existing section 29/30 formats are unchanged.
+
+The immutable C owner in `datetime/interval-data.[ch]` checks stored calendar
+blocks, suffixes, maps and nodes, including checked global group IDs. Source
+locale, skeleton and per-family code checks are cached by string identity.
+All validation scratch is released before return; exact calendar/group/head/
+node/leaf queries borrow pack storage without allocation. Authored fixtures
+cover source aliases, external origins, all difference/range selectors, empty
+and blocked leaves, shared long skeletons, unaligned storage, malformed records
+and allocation-failure retries. Prepared profiles and formatter integration
+follow separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
