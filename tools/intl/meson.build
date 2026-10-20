@@ -54,6 +54,7 @@ intl_tool_dependencies = files(
   'relative_tables.py',
   'resolve.py',
   'tables.py',
+  'timezone_name_tables.py',
   'timezone_names.py',
   'unit_grammar.py',
   'unit_grammar_tables.py',
