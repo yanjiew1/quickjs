@@ -13,18 +13,18 @@ static JSValue invoke(JSContext *ctx, int operation, JSValueConst constructor,
         return JS_Call(ctx, constructor, receiver, 2, constructor_args);
     if (operation == 6)
         return JS_Call(ctx, method, constructor, 1, constructor_args);
-    return JS_Call(ctx, method, instance, operation == 1 || operation == 4 ? 0 : 1, values);
+    return JS_Call(ctx, method, instance, operation == 1 || operation == 4 ? 0 : operation >= 7 ? 2 : 1, values);
 }
 
 static void test_operation(int operation, OOMTestAllocator *allocator, JSRuntime *rt)
 {
     static const char *const names[] = {NULL, NULL, NULL, "formatToParts", "resolvedOptions",
-                                          NULL, "supportedLocalesOf"};
+                                          NULL, "supportedLocalesOf", "formatRange", "formatRangeToParts"};
     size_t step, calls = 0, failures = 0;
     for (step = 0; step <= calls; step++) {
         JSContext *ctx = JS_NewContextRaw(rt);
         JSValue global, intl, constructor, prototype, instance, method, getter, receiver;
-        JSValue locale, options, first, result;
+        JSValue locale, options, first, last, result;
         JSPropertyDescriptor descriptor;
         JSAtom key;
         void *padding;
@@ -60,8 +60,9 @@ static void test_operation(int operation, OOMTestAllocator *allocator, JSRuntime
             method = JS_UNDEFINED;
         assert(!JS_IsException(method));
         first = JS_NewString(ctx, "1719835200123");
-        assert(!JS_IsException(first));
-        JSValueConst values[] = {first};
+        last = JS_NewString(ctx, "1719921600123");
+        assert(!JS_IsException(first) && !JS_IsException(last));
+        JSValueConst values[] = {first, last};
         padding = test_pool_padding(rt);
         oom_test_begin(allocator, step);
         result = invoke(ctx, operation, constructor, method, instance, receiver, arguments, values);
@@ -94,11 +95,12 @@ static void test_operation(int operation, OOMTestAllocator *allocator, JSRuntime
             assert(!JS_IsException(format) && !JS_IsException(text));
             JS_FreeValue(ctx, text);
             JS_FreeValue(ctx, format);
-        } else if (operation == 3 || operation == 6) {
+        } else if (operation == 3 || operation == 6 || operation == 8) {
             assert(JS_IsArray(ctx, result));
         }
         JS_FreeValue(ctx, result);
         JS_FreeValue(ctx, first);
+        JS_FreeValue(ctx, last);
         JS_FreeValue(ctx, receiver);
         JS_FreeValue(ctx, method);
         JS_FreeValue(ctx, getter);
@@ -132,7 +134,7 @@ int main(void)
     formatter = JS_Eval(warm, script, sizeof(script) - 1, "<warm-date-time-service>", JS_EVAL_TYPE_GLOBAL);
     assert(!JS_IsException(formatter));
     JS_FreeValue(warm, formatter);
-    for (int operation = 0; operation < 7; operation++)
+    for (int operation = 0; operation < 9; operation++)
         test_operation(operation, &allocator, rt);
     JS_FreeContext(warm);
     JS_FreeRuntime(rt);
