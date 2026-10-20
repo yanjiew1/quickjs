@@ -184,3 +184,46 @@ class SparseMaps:
                 base = Overlay(current, key, overrides, base)
             cache[state] = base
         return cache[start]
+
+
+def freeze_overlays(records, groups):
+    """Share immutable sparse layers without interpreting collector selectors.
+
+    Keep child-first local maps and terminal locale/group provenance. Missing
+    heads have no row. Resolve one requester at a time, retaining cached overlay
+    objects while their identities are used in the iterative freeze cache.
+    Parents precede children; no fallback among leaf selectors is performed.
+    Collectors own group ordering, field keys, aliases and value validation.
+    """
+    maps, nodes, node_ids, rows = {}, [], {}, []
+    for locale in records.graph.tags:
+        cache, frozen = {}, {}
+
+        def freeze(head):
+            path = []
+            while head is not None and id(head) not in frozen:
+                path.append(head)
+                head = head.parent
+            tail = 0 if head is None else frozen[id(head)]
+            for node in reversed(path):
+                fields = tuple(key + (node.fields[key],) for key in sorted(node.fields))
+                if fields not in maps:
+                    maps[fields] = len(maps)
+                record = node.locale, node.group, maps[fields], tail
+                if record not in node_ids:
+                    nodes.append(record)
+                    node_ids[record] = len(nodes)
+                tail = node_ids[record]
+                frozen[id(node)] = tail
+            return tail
+
+        for group in groups:
+            head = freeze(records.overlays(locale, group, cache))
+            if head:
+                rows.append((locale, group, head))
+    ordered = tuple(sorted(maps))
+    remap = {maps[fields]: index for index, fields in enumerate(ordered)}
+    return {'maps': ordered,
+            'nodes': tuple((locale, group, remap[index], tail)
+                           for locale, group, index, tail in nodes),
+            'rows': tuple(rows)}
