@@ -9,7 +9,7 @@ import acquire
 import calendar_sources
 from cldr_xml import DataError, Schema
 import parents
-from resolve import SparseMaps
+from resolve import SparseMaps, freeze_overlays
 
 CONTEXTS = ('format', 'stand-alone')
 WIDTHS = ('abbreviated', 'narrow', 'wide')
@@ -157,43 +157,8 @@ def collect(sources, graph=None):
             records.alias(locale, (path[0][1],) + key,
                           (target[0][1],) + groups_by_path[mapped][0], source)
 
-    # Keep child-first maps: consumers may select a lateral alternative at one
-    # layer before walking parents. Flattening exact keys would lose that order.
-    # Missing groups have no row. Share node suffixes and field maps globally,
-    # but bound the resolution cache to one requesting locale. Its overlays
-    # retain every object whose identity is used by that locale's freeze cache.
-    maps, nodes, node_ids, rows = {}, [], {}, []
-    for locale in graph.tags:
-        cache, frozen = {}, {}
-
-        def freeze(head):
-            path = []
-            while head is not None and id(head) not in frozen:
-                path.append(head)
-                head = head.parent
-            tail = 0 if head is None else frozen[id(head)]
-            for node in reversed(path):
-                fields = tuple(key + (node.fields[key],) for key in sorted(node.fields))
-                if fields not in maps:
-                    maps[fields] = len(maps)
-                record = node.locale, node.group, maps[fields], tail
-                if record not in node_ids:
-                    nodes.append(record)
-                    node_ids[record] = len(nodes)
-                tail = node_ids[record]
-                frozen[id(node)] = tail
-            return tail
-
-        for group in groups:
-            head = freeze(records.overlays(locale, group, cache))
-            if head:
-                rows.append((locale, group, head))
-    ordered = tuple(sorted(maps))
-    remap = {maps[fields]: index for index, fields in enumerate(ordered)}
-    return {'calendars': calendars, 'groups': groups, 'maps': ordered,
-            'nodes': tuple((locale, group, remap[index], tail)
-                           for locale, group, index, tail in nodes),
-            'rows': tuple(rows), 'source_records': len(raw), 'source_aliases': len(aliases)}
+    return dict(freeze_overlays(records, groups), calendars=calendars, groups=groups,
+                source_records=len(raw), source_aliases=len(aliases))
 
 
 if __name__ == '__main__':
