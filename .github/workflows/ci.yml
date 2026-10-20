@@ -91,6 +91,10 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/timezone_names.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit supplemental timezone presentation
+      run: |
+        timeout 120s python3 tools/intl/timezone_presentation.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
