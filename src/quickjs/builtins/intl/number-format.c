@@ -22,7 +22,7 @@ static const char *const rounding_modes[] = {"ceil", "floor", "expand", "trunc",
                                              "halfFloor", "halfExpand", "halfTrunc", "halfEven"};
 static const char *const priorities[] = {"auto", "morePrecision", "lessPrecision"};
 static const char *const trailing[] = {"auto", "stripIfInteger"};
-static const char *const part_names[QJS_INTL_PART_COUNT] = {
+static const char *const part_names[QJS_INTL_PART_NUMBER_COUNT] = {
     "literal", "element", "integer", "group", "decimal", "fraction", "nan", "infinity",
     "minusSign", "plusSign", "percentSign", "currency", "exponentSeparator", "exponentMinusSign",
     "exponentInteger", "compact", "unit", "approximatelySign"};
@@ -321,7 +321,7 @@ static JSValue number_parts(JSContext *ctx, const QJSIntlFormatted *ordinary,
         unsigned int source = range ? range->parts[i].source : 0;
         JSValue part;
         if (start != end || limit < start || limit > length ||
-            (unsigned int)type >= QJS_INTL_PART_COUNT || type == QJS_INTL_PART_ELEMENT ||
+            (unsigned int)type >= QJS_INTL_PART_NUMBER_COUNT || type == QJS_INTL_PART_ELEMENT ||
             source >= countof(sources))
             goto invalid;
         end = limit;
