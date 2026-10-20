@@ -161,6 +161,84 @@ static void failure(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFo
     qjs_intl_date_pattern_clear(allocator, &pattern);
 }
 
+static void admit(const QJSIntlAllocator *allocator, const QJSIntlDateTextData *data,
+                   QJSCalendarId calendar_id, const char *source, QJSIntlStatus expected_status)
+{
+    QJSIntlDatePattern pattern;
+    QJSIntlDateNameAdmission cache = {0};
+    Allocation *state = allocator->opaque;
+    size_t calls, live;
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes(source), &pattern));
+    calls = state->calls;
+    live = state->live;
+    assert(qjs_intl_date_names_admit(&pattern, calendar_id, data, &cache) == expected_status);
+    assert(qjs_intl_date_names_admit(&pattern, calendar_id, data, &cache) == expected_status);
+    assert(calls == state->calls && live == state->live);
+    qjs_intl_date_pattern_clear(allocator, &pattern);
+}
+
+static void admission(const QJSIntlAllocator *allocator, QJSIntlDateTextData data)
+{
+    data.locale = locale(&data.names->data, "root");
+    data.calendar = calendar(data.names, "gregorian");
+    admit(allocator, NULL, QJS_CAL_GREGORY, "y-MM-dd HH:mm:ss", QJS_INTL_OK);
+    admit(allocator, NULL, QJS_CAL_GREGORY, "r", QJS_INTL_UNSUPPORTED);
+    admit(allocator, NULL, QJS_CAL_CHINESE, "r MM", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_GREGORY, "G", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_GREGORY, "a b B", QJS_INTL_UNSUPPORTED); /* Repeated period. */
+    admit(allocator, &data, QJS_CAL_GREGORY, "a", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_GREGORY, "b", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_GREGORY, "B", QJS_INTL_OK);
+    {
+        QJSIntlDateNameAdmission cache = {0};
+        QJSIntlDateTextData copy = data;
+        QJSIntlDatePattern pattern;
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes("a"), &pattern));
+        assert(!qjs_intl_date_names_admit(&pattern, QJS_CAL_GREGORY, &data, &cache));
+        assert(qjs_intl_date_names_admit(&pattern, QJS_CAL_GREGORY, &copy, &cache) == QJS_INTL_INVALID_ARGUMENT);
+        assert(qjs_intl_date_names_admit(&pattern, QJS_CAL_ISO8601, &data, &cache) == QJS_INTL_INVALID_ARGUMENT);
+        qjs_intl_date_pattern_clear(allocator, &pattern);
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes("B"), &pattern));
+        assert(!qjs_intl_date_names_admit(&pattern, QJS_CAL_GREGORY, &data, &cache));
+        qjs_intl_date_pattern_clear(allocator, &pattern);
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes("MMMM"), &pattern));
+        assert(qjs_intl_date_names_admit(&pattern, QJS_CAL_GREGORY, &data, &cache) == QJS_INTL_UNSUPPORTED);
+        assert(qjs_intl_date_names_admit(&pattern, QJS_CAL_GREGORY, &data, &cache) == QJS_INTL_UNSUPPORTED);
+        qjs_intl_date_pattern_clear(allocator, &pattern);
+    }
+    admit(allocator, &data, QJS_CAL_GREGORY, "EEEE", QJS_INTL_UNSUPPORTED); /* Sunday alone is insufficient. */
+    admit(allocator, &data, QJS_CAL_GREGORY, "MMMM", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "hebrew");
+    admit(allocator, &data, QJS_CAL_HEBREW, "MMMM", QJS_INTL_OK); /* Adar I is needed only in leap years. */
+    data.calendar = calendar(data.names, "chinese");
+    admit(allocator, &data, QJS_CAL_CHINESE, "MMMM", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_CHINESE, "MMM", QJS_INTL_DATA_ERROR); /* Invalid leap template. */
+    admit(allocator, &data, QJS_CAL_CHINESE, "U", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_GREGORY, "U", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "periodonly");
+    admit(allocator, &data, QJS_CAL_GREGORY, "B", QJS_INTL_OK); /* Complete rules need no unused a names. */
+    admit(allocator, &data, QJS_CAL_GREGORY, "a", QJS_INTL_UNSUPPORTED);
+    {
+        /* A point-only rule leaves uncovered times needing AM/PM fallback;
+           this fixture deliberately has no such fallback labels. */
+        QJSIntlDayPeriodRuleList point;
+        uint32_t i;
+        int found = 0;
+        for (i = 0; i < data.period_rules->count; i++) {
+            QJSIntlDayPeriodRule rule;
+            assert(!qjs_intl_dayperiod_rule(data.periods, data.period_rules->start + i, &rule));
+            if (rule.form != QJS_INTL_DAYPERIOD_AT)
+                continue;
+            point = (QJSIntlDayPeriodRuleList){data.period_rules->start + i, 1};
+            data.period_rules = &point;
+            admit(allocator, &data, QJS_CAL_GREGORY, "B", QJS_INTL_UNSUPPORTED);
+            found = 1;
+            break;
+        }
+        assert(found);
+    }
+}
+
 static void names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,
                    QJSIntlDateTextData data)
 {
@@ -349,6 +427,7 @@ int main(void)
             break;
     assert(en < count);
     numbers = open_numbers(service, en, bytes("latn"));
+    admission(&allocator, data);
     names(&allocator, &numbers, data);
     ownership(&allocator, &numbers, data);
     prepared_names(&allocator, &numbers, &prepared, &metadata);
