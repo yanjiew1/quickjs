@@ -24,7 +24,7 @@ static QJSIntlStatus component_valid(const QJSIntlDurationComponent *component)
     for (i = 0; i < component->part_count; i++) {
         const QJSIntlDurationPart *part = &component->parts[i];
         if (part->start != end || part->end < end || part->end > component->text.length ||
-            (unsigned int)part->type >= QJS_INTL_PART_COUNT || part->type == QJS_INTL_PART_ELEMENT ||
+            (unsigned int)part->type >= QJS_INTL_PART_NUMBER_COUNT || part->type == QJS_INTL_PART_ELEMENT ||
             (unsigned int)part->unit > QJS_TEMPORAL_UNIT_COUNT)
             return QJS_INTL_DATA_ERROR;
         end = part->end;
