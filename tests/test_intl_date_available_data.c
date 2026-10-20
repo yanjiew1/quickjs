@@ -169,8 +169,9 @@ static void check_queries(const QJSIntlDateAvailableData *data)
     for (i = 1; i <= data->node_count; i++) {
         uint32_t start, count;
         assert(!qjs_intl_date_available_node(data, i, &node));
-        start = qjs_intl_read_u32(data->maps + (size_t)node.map * 8);
-        count = qjs_intl_read_u32(data->maps + (size_t)node.map * 8 + 4);
+        assert(!qjs_intl_date_available_map(data, node.map, &start, &count));
+        assert(start == qjs_intl_read_u32(data->maps + (size_t)node.map * 8));
+        assert(count == qjs_intl_read_u32(data->maps + (size_t)node.map * 8 + 4));
         for (j = 0; j < count; j++) {
             const uint8_t *field = data->entries + ((size_t)start + j) * 16;
             QJSIntlBytes code, alt, text;
@@ -178,7 +179,16 @@ static void check_queries(const QJSIntlDateAvailableData *data)
             QJSIntlDateAvailablePlural plural = qjs_intl_read_u32(field + 4);
             assert(!qjs_intl_data_string(&data->data, qjs_intl_read_u32(field), &code));
             assert(!qjs_intl_data_string(&data->data, qjs_intl_read_u32(field + 8), &alt));
-            assert(!qjs_intl_date_available_lookup(data, i, code, plural, alt, &entry));
+            {
+                QJSIntlDateAvailableEntry indexed;
+                assert(!qjs_intl_date_available_entry_at(data, start + j, &indexed));
+                assert(indexed.plural == plural && indexed.code.length == code.length && indexed.alt.length == alt.length);
+                assert(!memcmp(indexed.code.data, code.data, code.length));
+                assert(!alt.length || !memcmp(indexed.alt.data, alt.data, alt.length));
+                assert(!qjs_intl_date_available_lookup(data, i, code, plural, alt, &entry));
+                assert(indexed.blocked == entry.blocked && indexed.text.length == entry.text.length);
+                assert(!entry.text.length || !memcmp(indexed.text.data, entry.text.data, entry.text.length));
+            }
             assert(entry.plural == plural && entry.code.length == code.length);
             assert(entry.alt.length == alt.length);
             assert(!memcmp(entry.code.data, code.data, code.length));
@@ -200,6 +210,19 @@ static void check_queries(const QJSIntlDateAvailableData *data)
         assert(!qjs_intl_date_available_find_group(data, &group, &index));
         group.alt.length = 1;
         assert(qjs_intl_date_available_find_group(data, &group, &index) == QJS_INTL_INVALID_ARGUMENT && !index);
+    }
+    {
+        uint32_t start = 99, count = 99;
+        assert(qjs_intl_date_available_map(data, data->map_count, &start, &count) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!start && !count);
+        start = count = 99;
+        assert(qjs_intl_date_available_map(data, 0, &start, NULL) == QJS_INTL_INVALID_ARGUMENT && !start);
+        assert(qjs_intl_date_available_map(NULL, 0, NULL, &count) == QJS_INTL_INVALID_ARGUMENT && !count);
+        memset(&entry, 0xff, sizeof(entry));
+        assert(qjs_intl_date_available_entry_at(data, data->entry_count, &entry) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!entry.code.data && !entry.alt.data && !entry.text.data && !entry.blocked);
+        assert(!entry.code.length && !entry.alt.length && !entry.text.length && entry.plural == QJS_INTL_DATE_NO_PLURAL);
+        assert(qjs_intl_date_available_entry_at(data, 0, NULL) == QJS_INTL_INVALID_ARGUMENT);
     }
     assert(qjs_intl_date_available_node(data, 0, &node) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_date_available_group_at(data, data->group_count, &group) == QJS_INTL_INVALID_ARGUMENT);
