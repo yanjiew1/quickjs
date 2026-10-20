@@ -37,7 +37,10 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
                                                  QJSIntlDateSourceCandidates *out);
 void qjs_intl_date_source_candidates_clear(QJSIntlDateSourceCandidates *candidates);
 /* Borrow a const record, without allocating or transferring pattern ownership.
-   Do not modify/clear individual records. Reset non-NULL output on failure. */
+   Do not modify/clear borrowed records. An owner may filter its own mutable
+   array, clearing rejected patterns and moving retained records before grouping;
+   it must retain the allocator and avoid duplicate pattern ownership.
+   Reset non-NULL output on failure. */
 QJSIntlStatus qjs_intl_date_source_candidate_at(const QJSIntlDateSourceCandidates *candidates,
                                               size_t index, const QJSIntlDateSourceCandidate **out);
 #endif
