@@ -142,6 +142,25 @@ static void incompatible_kind(const QJSIntlAllocator *allocator,
     qjs_intl_datetime_formatter_close(formatter);
 }
 
+static void adjusted_date_style(const QJSIntlAllocator *allocator,
+                                const QJSIntlDateTimeService *service, size_t locale)
+{
+    QJSIntlDateTimeOptions options = {0};
+    QJSIntlDateTimeFormatter *formatter;
+    QJSIntlFormatted result;
+    options.maximum_output_length = 1000;
+    options.date_style = QJS_INTL_DATE_STYLE_FULL + 1;
+    options.time_style = QJS_INTL_DATE_STYLE_SHORT + 1;
+    formatter = open_formatter(service, locale, &options);
+    /* Adjustment chooses a whole date record, retaining the full style's
+       wide names when a PlainDate removes the clock from a mixed style. */
+    assert(!qjs_intl_datetime_format(formatter, QJS_INTL_DATE_VALUE_PLAIN_DATE, 1719835200, 0, &result));
+    part(&result, QJS_INTL_PART_WEEKDAY, "Monday");
+    part(&result, QJS_INTL_PART_MONTH, "July");
+    qjs_intl_formatted_clear(allocator, &result);
+    qjs_intl_datetime_formatter_close(formatter);
+}
+
 static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service, size_t locale)
 {
     Allocation *state = allocator->opaque;
@@ -289,6 +308,7 @@ int main(int argc, char **argv)
            hours.twenty_four == QJS_INTL_DATE_H23);
     defaults(&allocator, service, en);
     incompatible_kind(&allocator, service, en);
+    adjusted_date_style(&allocator, service, en);
     capabilities(&allocator, service, en, tags[en]);
     for (unsigned int c = 0; c < QJS_CAL_COUNT; c++) {
         QJSIntlBytes identifier = bytes(qjs_calendar_identifier(c));
