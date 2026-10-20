@@ -74,6 +74,14 @@ assert(styled.timeStyle, 'short');
 assert(styled.year, undefined);
 assert(styled.hour, undefined);
 
+// Date/time composition retains the whole source programs without adding the
+// weekday present in the specification's mandatory mixed-format subsets.
+const mixed = new DTF('en', {...utc, year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2});
+assert(mixed.resolvedOptions().weekday, undefined);
+assert(mixed.formatToParts(1719835200123).some(part => part.type === 'weekday'), false);
+assert(mixed.formatToParts(1719835200123).find(part => part.type === 'fractionalSecond').value, '12');
+
 const getter = Object.getOwnPropertyDescriptor(DTF.prototype, 'format').get;
 for (const receiver of [undefined, null, 1, {}, DTF.prototype, Object.create(f), new Proxy(f, {})]) {
     assertThrows(TypeError, () => getter.call(receiver));
