@@ -8,14 +8,13 @@ import re
 import acquire
 import calendar_sources
 from cldr_xml import DataError, Schema
+from dayperiod_codes import CODES as DAY_PERIODS
 import parents
 from resolve import SparseMaps, freeze_overlays
 
 CONTEXTS = ('format', 'stand-alone')
 WIDTHS = ('abbreviated', 'narrow', 'wide')
 CYCLIC_SETS = ('years', 'months', 'days', 'dayParts', 'zodiacs', 'solarTerms')
-DAY_PERIODS = ('am', 'pm', 'midnight', 'noon', 'morning1', 'morning2',
-               'afternoon1', 'afternoon2', 'evening1', 'evening2', 'night1', 'night2')
 LEAF_CODES = {
     'months': frozenset(str(i) for i in range(1, 14)),
     'days': frozenset(('sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat')),
