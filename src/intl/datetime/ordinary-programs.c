@@ -95,12 +95,18 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
     QJSIntlDateOrdinaryProgram record;
     QJSIntlDatePatternToken token = {{0}, width, symbol};
     QJSIntlDatePattern field = {0};
+    QJSIntlDatePatternInfo info;
     QJSIntlPairPattern layout;
     QJSIntlStatus status = QJS_INTL_UNSUPPORTED;
     size_t i;
     initialize(build, &record);
     field.tokens = &token;
     field.count = 1;
+    status = qjs_intl_date_pattern_info(&field, &info);
+    if (status)
+        return status;
+    if (mask(&info.components) & mask(&build->result.records[base].single.components))
+        return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < build->append->count; i++) {
         QJSIntlDateAvailableGroup group;
         status = qjs_intl_date_available_source_at(build->append, i, &record.append, &record.origin);
@@ -124,9 +130,11 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
             return status;
         record.first = base;
         record.single.components = build->result.records[base].single.components;
-        record.single.components.values[symbol == 'y' ? QJS_INTL_DATETIME_YEAR :
-                                                        QJS_INTL_DATETIME_WEEKDAY] =
-            symbol == 'y' ? QJS_INTL_DATETIME_NUMERIC : QJS_INTL_DATETIME_SHORT;
+        /* Derive metadata from the actual field token, including zone style,
+           rather than from the append item's key or punctuation. */
+        for (size_t component = 0; component < QJS_INTL_DATETIME_COMPONENT_COUNT; component++)
+            if (info.components.values[component])
+                record.single.components.values[component] = info.components.values[component];
         record.construction = QJS_INTL_DATE_ORDINARY_APPEND;
         return add(build, &record);
     }
@@ -351,6 +359,9 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
         DATE_MASK | BIT(HOUR) | BIT(MINUTE), DATE_MASK | CLOCK_MASK,
         DATE_MASK | CLOCK_MASK | BIT(FRACTION)
     };
+    static const struct { unsigned int symbol; size_t width; } date_zones[] = {
+        {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
+    };
     Build build = {0};
     QJSIntlFormatBuilder check = {0};
     QJSIntlStatus status;
@@ -372,13 +383,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 40)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 46)
         return QJS_INTL_OVERFLOW;
     /* Fourteen required targets, with up to two additional widths for each
        of the four fractional targets, fit within 32 extra records. Reserve
        three more for optional minute/second-only fractional patterns and
-       five for whole date/clock combinations without an added weekday. */
-    build.capacity = groups->count + 40;
+       five for whole date/clock combinations without an added weekday and
+       six for date-only programs with an appended timezone name. */
+    build.capacity = groups->count + 46;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -407,6 +419,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
        acquire that extra field. Reuse the locale's exact connector. */
     for (i = 0; i < sizeof(date_clocks) / sizeof(*date_clocks); i++) {
         status = ensure(&build, date_clocks[i]);
+        if (status && status != QJS_INTL_UNSUPPORTED)
+            goto fail;
+    }
+    /* TR35 uses Date-Timezone when the time side contains only a zone. Keep
+       that real two-slot layout; do not borrow clock separators or strip fields. */
+    for (i = 0; i < sizeof(date_zones) / sizeof(*date_zones); i++) {
+        status = append_field(&build, find(&build, DATE_MASK), "Date-Timezone",
+                                date_zones[i].symbol, date_zones[i].width);
         if (status && status != QJS_INTL_UNSUPPORTED)
             goto fail;
     }

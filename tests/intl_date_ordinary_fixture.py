@@ -26,7 +26,8 @@ def pack(blocked=False):
     source = dict(calendars=('gregorian',), groups=tuple(sorted((ordinary, append))),
                   maps=(tuple((key, '', '', value) for key, value in patterns),
                         (('Year', '', '', BLOCK if blocked else '{1} [year] {0}'),
-                         ('Day-Of-Week', '', '', '{1}, {0}'))),
+                         ('Day-Of-Week', '', '', '{1}, {0}'),
+                         ('Date-Timezone', '', '', '{1} [zone] {0}'))),
                   nodes=(('root', ordinary, 0, 0), ('root', append, 1, 0)),
                   rows=tuple((tag, key, head) for tag in tags for key, head in ((ordinary, 1), (append, 2))))
     connector = dict(calendars=('gregorian',), alternates=('',), widths=date_combinations.WIDTHS,

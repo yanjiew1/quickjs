@@ -165,6 +165,17 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
     pattern_equal(allocator, &record->single.twelve.pattern, "y' [year] 'M/d' at 'a h:mm:ss");
     record = find(programs, 988, 2);
     pattern_equal(allocator, &record->single.normal.pattern, "y' [year] 'M/d' at 'H:mm:ss\xd9\xabSS");
+    record = find(programs, 1052, 0); /* date + timezone, reordered append slots */
+    pattern_equal(allocator, &record->single.normal.pattern, "z' [zone] 'y' [year] 'M/d");
+    {
+        unsigned int styles = 0;
+        for (i = 0; i < programs->count; i++) {
+            const QJSIntlDateTimeComponents *components = &programs->records[i].single.components;
+            if (mask(components) == 1052)
+                styles |= 1U << components->values[QJS_INTL_DATETIME_ZONE];
+        }
+        assert(styles == 126); /* Six genuine zone symbols/widths, no clock. */
+    }
     for (i = 0; i < pool->count; i++)
         if (pool->records[i].source.code.length == 3 && !memcmp(pool->records[i].source.code.data, "Bhm", 3)) {
             assert(pool->records[i].info.period_symbol == 'B');

@@ -82,6 +82,16 @@ assert(mixed.resolvedOptions().weekday, undefined);
 assert(mixed.formatToParts(1719835200123).some(part => part.type === 'weekday'), false);
 assert(mixed.formatToParts(1719835200123).find(part => part.type === 'fractionalSecond').value, '12');
 
+// Date-plus-zone uses the CLDR Date-Timezone layout. Plain Temporal records
+// intentionally omit zones even though the ordinary Date record retains one.
+for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset', 'shortGeneric', 'longGeneric']) {
+    const formatter = new DTF('en', {...utc, timeZoneName});
+    assert(formatter.formatToParts(0).some(part => part.type === 'timeZoneName'), true);
+    if (typeof Temporal !== 'undefined')
+        assert(formatter.formatToParts(Temporal.PlainDate.from('2024-07-01'))
+            .some(part => part.type === 'timeZoneName'), false);
+}
+
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
 for (const calendar of ['chinese', 'dangi']) {
