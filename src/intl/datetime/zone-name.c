@@ -87,6 +87,39 @@ static QJSIntlStatus names(const QJSIntlDateZoneData *data, QJSIntlTimeZoneNameF
     return status;
 }
 
+/* A zero custom offset has GMT's names without changing its public identifier.
+   This is a name-style lookup; explicit O/offset styles still use hourFormat.
+   Use locale data, including masks and empty records, rather than a GMT literal. */
+static QJSIntlStatus fixed_zero_name(const QJSIntlDateZoneData *data,
+                                     QJSIntlTimeZoneNameWidth width, int generic,
+                                     QJSIntlBytes *out)
+{
+    static const struct {
+        QJSIntlTimeZoneNameFamily family;
+        const char *entity;
+    } sources[] = {
+        {QJS_INTL_TIMEZONE_NAME_ZONE, "Etc/GMT"},
+        {QJS_INTL_TIMEZONE_NAME_METAZONE, "GMT"},
+    };
+    QJSIntlStatus status;
+    NameSet set;
+    size_t i;
+
+    *out = (QJSIntlBytes){0};
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        status = names(data, sources[i].family, bytes(sources[i].entity), width, &set);
+        if (status)
+            return status;
+        /* A fixed zero offset is permanently standard. Generic styles may
+           therefore use its standard name without a seasonal rule query. */
+        *out = generic && set.generic.length ? set.generic :
+               set.standard.length ? set.standard : set.generic;
+        if (out->length)
+            break;
+    }
+    return QJS_INTL_OK;
+}
+
 static int effective_type(QJSTimeZoneInfo info, const QJSIntlTimeZonePeriod *period)
 {
     int standard, daylight;
@@ -170,7 +203,9 @@ static QJSIntlStatus choose(const QJSIntlDateZoneData *data, const Zone *zone,
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code, Text *out)
+/* CLDR permits short country names for regionFormat, but not fallbackFormat. */
+static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code,
+                             QJSIntlNameStyle style, Text *out)
 {
     QJSIntlNameLabel label;
     QJSIntlStatus status;
@@ -187,8 +222,9 @@ static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code,
         unsigned int c = (uint8_t)code.data[i];
         normalized[i] = c >= 'A' && c <= 'Z' ? c + ('a' - 'A') : c;
     }
-    status = qjs_intl_name_select(data->regions, data->regions_locale, QJS_INTL_NAME_REGION,
-                                  QJS_INTL_NAME_SHORT, 0, (QJSIntlBytes){normalized, code.length}, &label);
+    status = qjs_intl_name_select(data->regions, data->regions_locale,
+                                  QJS_INTL_NAME_REGION, style, 0,
+                                  (QJSIntlBytes){normalized, code.length}, &label);
     if (status)
         return status;
     if (label.found && label.entry.text.length)
@@ -273,7 +309,8 @@ static QJSIntlStatus location(const QJSIntlDateZoneData *data, const Zone *zone,
                 return status;
         }
     }
-    status = selected ? country(data, region, &body) : city(data, zone, &body);
+    status = selected ? country(data, region, QJS_INTL_NAME_SHORT, &body) :
+                        city(data, zone, &body);
     if (status || !body.bytes.length)
         return status;
     status = format_source(data, "regionFormat", &pattern);
@@ -294,9 +331,13 @@ static QJSIntlStatus qualified(const QJSIntlDateZoneData *data, const Zone *zone
     QJSIntlStatus status;
     int selected = 0;
     Text qualifier, meta = {label, 0};
-    status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, region, &preferred);
+    status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                       zone->period.metazone,
+                                                       region, &preferred);
     if (status == QJS_INTL_UNSUPPORTED && !same(region, bytes("001")))
-        status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, bytes("001"), &preferred);
+        status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                           zone->period.metazone,
+                                                           bytes("001"), &preferred);
     if (!status)
         status = same_identity(data, preferred, zone, &selected);
     if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
@@ -307,13 +348,20 @@ static QJSIntlStatus qualified(const QJSIntlDateZoneData *data, const Zone *zone
     }
     region = bytes(zone->identity.territory);
     if (region.length) {
-        status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, region, &preferred);
+        status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                           zone->period.metazone,
+                                                           region, &preferred);
+        if (status == QJS_INTL_UNSUPPORTED && !same(region, bytes("001")))
+            status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                               zone->period.metazone,
+                                                               bytes("001"), &preferred);
         if (!status)
             status = same_identity(data, preferred, zone, &selected);
         if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
             return status;
     }
-    status = selected ? country(data, region, &qualifier) : city(data, zone, &qualifier);
+    status = selected ? country(data, region, QJS_INTL_NAME_LONG, &qualifier) :
+                        city(data, zone, &qualifier);
     if (status || !qualifier.bytes.length)
         return status;
     status = format_source(data, "fallbackFormat", &pattern);
@@ -396,8 +444,22 @@ QJSIntlStatus qjs_intl_date_zone_format(const QJSIntlAllocator *allocator,
     } else {
         zone.info.offset_seconds = offset_minutes * 60;
     }
-    if (!named || style == QJS_INTL_DATETIME_ZONE_SHORT_OFFSET || style == QJS_INTL_DATETIME_ZONE_LONG_OFFSET)
+    if (style == QJS_INTL_DATETIME_ZONE_SHORT_OFFSET || style == QJS_INTL_DATETIME_ZONE_LONG_OFFSET)
         goto offset_fallback;
+    width = long_format ? QJS_INTL_TIMEZONE_NAME_LONG : QJS_INTL_TIMEZONE_NAME_SHORT;
+    if (!named) {
+        if (offset_minutes || !data || !data->names || !data->names->section.bytes)
+            goto offset_fallback;
+        if (data->names_locale >= data->names->section.count)
+            return QJS_INTL_INVALID_ARGUMENT;
+        status = fixed_zero_name(data, width, style >= QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, &label);
+        if (status)
+            return status;
+        if (!label.length)
+            goto offset_fallback;
+        layout = (Layout){{{label, 0}}, 1};
+        goto render_layout;
+    }
     if (!data || !data->names || !data->names->section.bytes || !data->metadata ||
         !data->presentation || !data->presentation->section.bytes ||
         data->names_locale >= data->names->section.count ||
@@ -430,7 +492,6 @@ QJSIntlStatus qjs_intl_date_zone_format(const QJSIntlAllocator *allocator,
         return status;
     type = style >= QJS_INTL_DATETIME_ZONE_SHORT_GENERIC ? GENERIC :
            effective_type(zone.info, zone.has_period ? &zone.period : NULL);
-    width = long_format ? QJS_INTL_TIMEZONE_NAME_LONG : QJS_INTL_TIMEZONE_NAME_SHORT;
     status = names(data, QJS_INTL_TIMEZONE_NAME_ZONE, zone.identity.identifier, width, &set);
     if (!status)
         status = choose(data, &zone, &set, type, &label);
@@ -462,6 +523,7 @@ QJSIntlStatus qjs_intl_date_zone_format(const QJSIntlAllocator *allocator,
     }
     if (!layout.count)
         goto offset_fallback;
+render_layout:
     builder.limit = maximum_output_length;
     status = emit(&builder, &layout);
     if (status)
