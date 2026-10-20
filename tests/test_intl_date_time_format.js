@@ -82,6 +82,16 @@ assert(mixed.resolvedOptions().weekday, undefined);
 assert(mixed.formatToParts(1719835200123).some(part => part.type === 'weekday'), false);
 assert(mixed.formatToParts(1719835200123).find(part => part.type === 'fractionalSecond').value, '12');
 
+// Root ISO patterns intentionally pad numeric month/day. Native best fit keeps
+// that source override rather than choosing a named month to reduce width cost.
+const numericIso = new DTF('en', {...utc, calendar: 'iso8601'});
+assert(numericIso.resolvedOptions().month, '2-digit');
+assert(numericIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, '09');
+const basicIso = new DTF('en', {...utc, calendar: 'iso8601', formatMatcher: 'basic'});
+assert(basicIso.resolvedOptions().month, 'short');
+const textIso = new DTF('en', {...utc, calendar: 'iso8601', month: 'short'});
+assert(textIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, 'Sep');
+
 // Date-plus-zone uses the CLDR Date-Timezone layout. Plain Temporal records
 // intentionally omit zones even though the ordinary Date record retains one.
 for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset', 'shortGeneric', 'longGeneric']) {

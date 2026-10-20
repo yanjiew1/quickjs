@@ -603,11 +603,26 @@ static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
     return status;
 }
 
+static QJSIntlStatus match_score(const QJSIntlDateTimeFormatter *formatter,
+                                  const QJSIntlDateTimeComponents *request,
+                                  const QJSIntlDateTimeComponents *candidate, int *out)
+{
+    int a = request->values[QJS_INTL_DATETIME_MONTH];
+    int b = candidate->values[QJS_INTL_DATETIME_MONTH];
+    QJSIntlStatus status = qjs_intl_datetime_basic_score(request, candidate, out);
+    /* Native best fit distinguishes numeric/text months more strongly than
+       width alone. Preserve source padding: matching skeleton lengths can
+       deliberately select a different pattern width under TR35. */
+    if (!status && formatter->options.best_fit && a && b &&
+        ((a <= QJS_INTL_DATETIME_NUMERIC) != (b <= QJS_INTL_DATETIME_NUMERIC)))
+        *out -= 20;
+    return status;
+}
+
 static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                   const QJSIntlDateTimeComponents *request, DateRecord *out)
 {
-    /* The native best-fit policy is BasicFormatMatcher. Both options retain
-       source order on equal scores. */
+    /* Both policies retain source order on equal scores. */
     int best = INT_MIN;
     size_t i, selected = SIZE_MAX;
     for (i = 0; i < programs->ordinary.count; i++) {
@@ -616,7 +631,7 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         int score;
         if (!programs->admitted[i])
             continue;
-        status = qjs_intl_datetime_basic_score(request, &single->components, &score);
+        status = match_score(formatter, request, &single->components, &score);
         if (status)
             return status;
         if (score > best) {
@@ -632,7 +647,7 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
             int score;
             if (!date->pattern.count)
                 continue;
-            status = qjs_intl_datetime_basic_score(request, &date->info.components, &score);
+            status = match_score(formatter, request, &date->info.components, &score);
             if (status)
                 return status;
             if (score > best) {

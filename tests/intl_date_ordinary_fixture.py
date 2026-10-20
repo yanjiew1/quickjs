@@ -16,13 +16,17 @@ from resolve import BLOCK
 import tables
 
 
-def pack(blocked=False):
+def pack(blocked=False, padded=False):
     tags = ('en', 'root')
     graph = ParentGraph(tags, {}, {}, {'und': 'en-Latn-US'}, (), False)
     ordinary, append = ('gregorian', 'availableFormats', ''), ('gregorian', 'appendItems', '')
     patterns = (('M', 'L'), ('Md', 'M/d'), ('GyM', 'y M G'), ('GyMd', 'y M d G'),
                 ('Hm', 'H:mm'), ('Hms', 'H:mm:ss'), ('Bh', 'B h'), ('Bhm', 'B h:mm'),
                 ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'), ('ms', 'mm:ss'))
+    if padded:
+        # Canonical source order puts the named date before the padded numeric
+        # date. Composition should choose the latter without narrowing it.
+        patterns += (('yMMMd', 'MMM d y'), ('yMd', 'y-MM-dd'))
     source = dict(calendars=('gregorian',), groups=tuple(sorted((ordinary, append))),
                   maps=(tuple((key, '', '', value) for key, value in patterns),
                         (('Year', '', '', BLOCK if blocked else '{1} [year] {0}'),
@@ -53,4 +57,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     text = embed.render(pack()).replace('qjs_intl_native', 'qjs_intl_date_ordinary_fixture')
     text += '\n' + embed.render(pack(True)).replace('qjs_intl_native', 'qjs_intl_date_ordinary_blocked')
+    text += '\n' + embed.render(pack(padded=True)).replace('qjs_intl_native', 'qjs_intl_date_ordinary_padded')
     atomic_write(args.output, text.encode('ascii'))

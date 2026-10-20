@@ -45,6 +45,24 @@ static size_t find(const Build *build, unsigned int wanted)
     return SIZE_MAX;
 }
 
+static size_t date_base(const Build *build, unsigned int wanted)
+{
+    size_t i;
+    /* Default date/clock and date/zone combinations prefer a whole numeric
+       date. Keep its actual padding in the metadata for final matching. */
+    if (wanted == DATE_MASK) {
+        for (i = 0; i < build->result.count; i++) {
+            const QJSIntlDateTimeComponents *components = &build->result.records[i].single.components;
+            if (mask(components) == wanted &&
+                components->values[QJS_INTL_DATETIME_YEAR] == QJS_INTL_DATETIME_NUMERIC &&
+                components->values[QJS_INTL_DATETIME_MONTH] <= QJS_INTL_DATETIME_NUMERIC &&
+                components->values[QJS_INTL_DATETIME_DAY] <= QJS_INTL_DATETIME_NUMERIC)
+                return i;
+        }
+    }
+    return find(build, wanted);
+}
+
 static void initialize(Build *build, QJSIntlDateOrdinaryProgram *record)
 {
     memset(record, 0, sizeof(*record));
@@ -309,7 +327,7 @@ static QJSIntlStatus ensure(Build *build, unsigned int wanted)
             status = ensure(build, time);
         if (status)
             return status;
-        first = find(build, date);
+        first = date_base(build, date);
         second = find(build, time);
         return combine(build, first, second);
     }
@@ -425,7 +443,7 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     /* TR35 uses Date-Timezone when the time side contains only a zone. Keep
        that real two-slot layout; do not borrow clock separators or strip fields. */
     for (i = 0; i < sizeof(date_zones) / sizeof(*date_zones); i++) {
-        status = append_field(&build, find(&build, DATE_MASK), "Date-Timezone",
+        status = append_field(&build, date_base(&build, DATE_MASK), "Date-Timezone",
                                 date_zones[i].symbol, date_zones[i].width);
         if (status && status != QJS_INTL_UNSUPPORTED)
             goto fail;

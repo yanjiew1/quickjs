@@ -183,8 +183,21 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
         }
 }
 
+static void authored_numeric(const QJSIntlAllocator *allocator,
+                              const QJSIntlDateOrdinaryPrograms *programs)
+{
+    const QJSIntlDateOrdinaryProgram *record = find(programs, 28, 0);
+    assert(record->single.components.values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_SHORT);
+    record = find(programs, 476, 0);
+    pattern_equal(allocator, &record->single.normal.pattern, "y-MM-dd' at 'H:mm:ss");
+    assert(record->single.components.values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_TWO_DIGIT &&
+           record->single.components.values[QJS_INTL_DATETIME_DAY] == QJS_INTL_DATETIME_TWO_DIGIT);
+    record = find(programs, 1052, 0);
+    pattern_equal(allocator, &record->single.normal.pattern, "z' [zone] 'y-MM-dd");
+}
+
 static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t length,
-                int blocked, int failures)
+                int blocked, int failures, int padded)
 {
     QJSIntlData pack;
     QJSIntlDateAvailableData available;
@@ -219,7 +232,10 @@ static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t le
                     bytes("\xd9\xab"), allocator, &programs));
         calls = state->calls;
         verify(&programs);
-        authored(allocator, &pool, &programs);
+        if (padded)
+            authored_numeric(allocator, &programs);
+        else
+            authored(allocator, &pool, &programs);
         qjs_intl_date_ordinary_programs_clear(&programs);
         if (failures) {
             for (i = 1; i <= calls; i++) {
@@ -306,13 +322,16 @@ static void prepared(const QJSIntlAllocator *allocator)
 
 extern const uint8_t qjs_intl_date_ordinary_fixture_bytes[], qjs_intl_date_ordinary_blocked_bytes[];
 extern const size_t qjs_intl_date_ordinary_fixture_length, qjs_intl_date_ordinary_blocked_length;
+extern const uint8_t qjs_intl_date_ordinary_padded_bytes[];
+extern const size_t qjs_intl_date_ordinary_padded_length;
 
 int main(void)
 {
     Allocation state = {0};
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
-    run(&allocator, qjs_intl_date_ordinary_fixture_bytes, qjs_intl_date_ordinary_fixture_length, 0, 1);
-    run(&allocator, qjs_intl_date_ordinary_blocked_bytes, qjs_intl_date_ordinary_blocked_length, 1, 0);
+    run(&allocator, qjs_intl_date_ordinary_fixture_bytes, qjs_intl_date_ordinary_fixture_length, 0, 1, 0);
+    run(&allocator, qjs_intl_date_ordinary_blocked_bytes, qjs_intl_date_ordinary_blocked_length, 1, 0, 0);
+    run(&allocator, qjs_intl_date_ordinary_padded_bytes, qjs_intl_date_ordinary_padded_length, 0, 0, 1);
 #ifdef TEST_INTL_ORDINARY_PROFILE
     prepared(&allocator);
 #endif
