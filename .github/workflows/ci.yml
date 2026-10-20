@@ -103,6 +103,10 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/calendar_names.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit sparse available date patterns and append templates
+      run: |
+        timeout 120s python3 tools/intl/date_available_formats.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit number range and currency layouts
       run: |
         timeout 120s python3 tools/intl/number_layout.py \
