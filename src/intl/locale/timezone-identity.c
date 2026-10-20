@@ -59,31 +59,60 @@ QJSIntlStatus qjs_intl_timezone_identity(const QJSIntlLocaleMetadata *metadata,
     return status ? status : project(metadata, index, out);
 }
 
-QJSIntlStatus qjs_intl_timezone_region_count(const QJSIntlLocaleMetadata *metadata,
-                                            QJSIntlBytes territory, uint32_t *out)
+static int valid_region(const QJSIntlLocaleMetadata *metadata, QJSIntlBytes territory)
 {
-    uint32_t i, count = 0;
     size_t j;
-    if (out)
-        *out = 0;
-    if (!out || !metadata || !metadata->types.bytes || !territory.data ||
+    if (!metadata || !metadata->types.bytes || !territory.data ||
         (territory.length != 2 && territory.length != 3))
-        return QJS_INTL_INVALID_ARGUMENT;
+        return 0;
     for (j = 0; j < territory.length; j++) {
         unsigned int c = (uint8_t)territory.data[j];
         if (territory.length == 2 ? c < 'A' || c > 'Z' : c < '0' || c > '9')
-            return QJS_INTL_INVALID_ARGUMENT;
+            return 0;
     }
-    for (i = 0; i < metadata->types.count; i++) {
+    return 1;
+}
+
+QJSIntlStatus qjs_intl_timezone_region_next(const QJSIntlLocaleMetadata *metadata,
+                                           QJSIntlBytes territory, uint32_t *cursor,
+                                           QJSIntlTimeZoneIdentity *out)
+{
+    uint32_t i;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !cursor || !valid_region(metadata, territory) || *cursor > metadata->types.count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = *cursor; i < metadata->types.count; i++) {
         QJSIntlTimeZoneIdentity identity;
         QJSIntlStatus status = project(metadata, i, &identity);
         if (status == QJS_INTL_UNSUPPORTED)
             continue;
         if (status)
             return status;
-        if (territory.length == 2 && !memcmp(identity.territory, territory.data, 2))
-            count++;
+        if (territory.length == 2 && !memcmp(identity.territory, territory.data, 2)) {
+            *out = identity;
+            *cursor = i + 1;
+            return QJS_INTL_OK;
+        }
     }
+    *cursor = metadata->types.count;
+    return QJS_INTL_UNSUPPORTED;
+}
+
+QJSIntlStatus qjs_intl_timezone_region_count(const QJSIntlLocaleMetadata *metadata,
+                                            QJSIntlBytes territory, uint32_t *out)
+{
+    QJSIntlTimeZoneIdentity identity;
+    QJSIntlStatus status;
+    uint32_t cursor = 0, count = 0;
+    if (out)
+        *out = 0;
+    if (!out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    while (!(status = qjs_intl_timezone_region_next(metadata, territory, &cursor, &identity)))
+        count++;
+    if (status != QJS_INTL_UNSUPPORTED)
+        return status;
     *out = count;
     return QJS_INTL_OK;
 }
