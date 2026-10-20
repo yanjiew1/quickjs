@@ -25,4 +25,10 @@ QJSIntlStatus qjs_intl_timezone_identity(const QJSIntlLocaleMetadata *metadata,
    nothing; reset output on errors. Unknown regions return count zero. */
 QJSIntlStatus qjs_intl_timezone_region_count(const QJSIntlLocaleMetadata *metadata,
                                             QJSIntlBytes territory, uint32_t *out);
+/* Enumerate the same terminal source identities. Start cursor at zero; advance
+   it only on success or exhaustion (UNSUPPORTED). Clear output on errors/end;
+   leave cursor unchanged on other errors. No allocation or backend queries. */
+QJSIntlStatus qjs_intl_timezone_region_next(const QJSIntlLocaleMetadata *metadata,
+                                           QJSIntlBytes territory, uint32_t *cursor,
+                                           QJSIntlTimeZoneIdentity *out);
 #endif
