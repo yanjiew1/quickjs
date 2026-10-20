@@ -1452,6 +1452,79 @@ if intl_enabled
     },
   }]
 
+  intl_date_single_program_test = {
+    'name': 'test_intl_date_single_program',
+    'sources': files(
+      'test_intl_date_single_program.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/format-source.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/single-program.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_single_program_test,
+    'name': 'intl-date-single-program',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_format_source_test = {
+    'name': 'test_intl_date_format_source',
+    'sources': files(
+      'test_intl_date_format_source.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/format-source.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_source_candidate_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_format_source_test,
+    'name': 'intl-date-format-source',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_pattern_compose_test = {
+    'name': 'test_intl_date_pattern_compose',
+    'sources': files(
+      'test_intl_date_pattern_compose.c',
+      '../src/intl/datetime/pattern.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_pattern_compose_test,
+    'name': 'intl-date-pattern-compose',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_pattern_info_test = {
     'name': 'test_intl_date_pattern_info',
     'sources': files(
