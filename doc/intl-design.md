@@ -762,6 +762,11 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
+Physical map-span and entry-at queries expose all exact keys for candidate enumeration without
+leaking wire decoding into the builder. Enumeration does not choose inheritance,
+plural or alternate fallback; a consumer must retain child-key shadowing even
+when that child's pattern is blocked, empty or not renderable.
+
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate
 owner. Groups retain calendar, interval-container alternate, family, skeleton
@@ -959,6 +964,30 @@ retain the complete global supplemental table, including explicit origins outsid
 their locale inventory. Each profile uses its own shared string pool and records
 the consumed source in provenance. This reader supplies no locale inheritance,
 period selection or formatter API.
+
+The C source compiler in `datetime/pattern.[ch]` separately decodes ordinary
+LDML patterns, date/time combination slots and interval ordering directives.
+It preserves recognized field symbols, full run lengths and repetitions, while
+coalescing decoded literal text into one owned allocation. Input storage may be
+released after compilation. Scalar text, quotes and combination slot counts are
+validated before allocation. Lexical validity does not imply ECMA candidate
+admission: quarter/week fields, long fractions, literal-only patterns, raw
+numbering overrides and hour-family adaptation require separate consumer policy.
+In particular, retain `a` versus `b`/`B`, `M` versus `L`, all weekday name widths,
+all four hour symbols and `r` plus `U` until the renderer has used their meaning.
+
+The allocation-free native projection in `datetime/pattern-info.[ch]` maps an
+ordinary compiled pattern to public component widths while separately retaining
+its hour cycle, period kind and calendar/related/cyclic year flags. `a` supplies
+AM/PM metadata without adding flexible `dayPeriod`; `r` plus `U` share the YEAR
+component while retaining distinct output semantics. Numeric `yyyy` does not
+impose four-digit ECMA padding, and `rr` or `UU` do not imply two-digit output.
+Recognized fields outside the current projection subset return UNSUPPORTED,
+not malformed source. Literal-only and AM/PM-only metadata remains valid here;
+semantic admission belongs to candidate construction. Raw tokens retain month
+context and weekday width 6 for rendering. The initial z/v/O zone subset must
+be extended or explicitly synthesized for the pinned Persian generic Z pattern;
+Z must not be silently interpreted as z or O.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
