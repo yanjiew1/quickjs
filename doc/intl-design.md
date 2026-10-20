@@ -849,6 +849,24 @@ stored selector and the independent family-row addressing, English provenance,
 unaligned storage and validation allocation failures. Runtime formatting
 integration follows separately.
 
+`timezone_presentation.py` collects locale-independent metazone periods,
+preferred metazone/territory zones, dominant `primaryZones` and active metazone
+ID metadata. Periods are half-open UTC second ranges with distinct unbounded
+endpoints; actual Monrovia input includes seconds despite the DTD's minute-only
+annotation. Gregorian parsing uses integer arithmetic without host timezone
+conversion. Intentional gaps remain gaps. Standard/daylight offset overrides
+remain independently optional and may classify display names without changing
+the engine's DST designation. One golden zone may represent different
+metazones in different periods; only the metazone/territory key is unique.
+
+References use BCP47 first-alias CLDR stable IDs, with timezone and metazone
+namespaces kept separate. Dominant zones are location-label policy, unrelated
+to ECMA primary-identifier selection. The small shared `timezone_syntax.py`
+keeps identifier grammar independent of either localized or supplemental
+collectors. Unreviewed deprecated/preferred metazone-ID forms fail explicitly;
+metadata release fields remain source facts. Binary and runtime integration of
+these supplemental records follow separately.
+
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.
 Zero-initialized records have no requested components. The shared
