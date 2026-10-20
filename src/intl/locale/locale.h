@@ -41,4 +41,22 @@ QJSIntlStatus
 qjs_intl_locale_canonicalize_uvalue(const QJSIntlLocaleService *service,
                                     QJSIntlBytes key, QJSIntlBytes value,
                                     char **out);
+/* Resolve an exact registered source type/alias through its preferred chain.
+   Legacy source spellings need not satisfy public Unicode keyword syntax.
+   Return a canonical registered name borrowed from the unchanged service;
+   unknown source types are UNSUPPORTED. No service capability is inferred.
+   Allocate nothing and reset output on error; do not use for option validation. */
+QJSIntlStatus qjs_intl_locale_source_type(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes key, QJSIntlBytes value,
+                                          QJSIntlBytes *out);
+/* Exact territory source facts, without maximizing a locale or consulting a
+   timezone backend. Borrow immutable CLDR identifiers. The consumer resolves
+   backend support and primary names after preserving source territory identity.
+   Use uppercase two-letter/three-digit regions; unknown regions are empty.
+   next follows timezone-identity.h's cursor protocol; reset output on errors. */
+QJSIntlStatus qjs_intl_locale_timezone_count(const QJSIntlLocaleService *service,
+                                             QJSIntlBytes territory, uint32_t *out);
+QJSIntlStatus qjs_intl_locale_timezone_next(const QJSIntlLocaleService *service,
+                                            QJSIntlBytes territory, uint32_t *cursor,
+                                            QJSIntlBytes *out);
 #endif

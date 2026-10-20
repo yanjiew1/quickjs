@@ -25,6 +25,9 @@ QJSIntlStatus qjs_intl_locale_week_data(const QJSIntlLocaleService *service,
 QJSIntlStatus qjs_intl_locale_hour_data(const QJSIntlLocaleService *service,
                                         QJSIntlBytes key, QJSIntlBytes *out,
                                         uint32_t *count);
+QJSIntlStatus qjs_intl_locale_calendar_data(const QJSIntlLocaleService *service,
+                                            QJSIntlBytes key, QJSIntlBytes *out,
+                                            uint32_t *count);
 QJSIntlStatus qjs_intl_locale_script_direction(const QJSIntlLocaleService *service,
                                                QJSIntlBytes script, unsigned int *out);
 
@@ -41,6 +44,14 @@ QJSIntlStatus qjs_intl_locale_week_info(const QJSIntlLocaleService *service,
 QJSIntlStatus qjs_intl_locale_hour_cycles(const QJSIntlLocaleService *service,
                                           QJSIntlBytes tag, QJSIntlBytes *out,
                                           uint32_t *count);
+/* Select the first available language-region/region calendar preference list.
+   Return raw source identifiers in preference order, borrowing service storage;
+   no list is OK with empty output. The caller canonicalizes, deduplicates and
+   filters by its formatting service's capabilities, then applies gregory fallback.
+   Explicit Locale calendar slots bypass this query. */
+QJSIntlStatus qjs_intl_locale_calendar_preferences(const QJSIntlLocaleService *service,
+                                                   QJSIntlBytes tag, QJSIntlBytes *out,
+                                                   uint32_t *count);
 QJSIntlStatus qjs_intl_locale_text_direction(const QJSIntlLocaleService *service,
                                              QJSIntlBytes tag, unsigned int *out);
 #endif
