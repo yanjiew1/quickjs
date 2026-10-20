@@ -1694,6 +1694,7 @@ intl_unit_pattern_test = executable(
   [
     'test_intl_unit_pattern.c',
     '../src/intl/common/pair-pattern.c',
+    '../src/intl/common/unary-pattern.c',
     '../src/intl/unit/pattern.c',
     '../src/cutils/cutils.c',
     '../src/intl/unit/data.c',
@@ -1734,6 +1735,7 @@ intl_number_unit_test = executable(
     '../src/intl/unit/grammar-data.c',
     '../src/intl/unit/identifier.c',
     '../src/intl/common/pair-pattern.c',
+    '../src/intl/common/unary-pattern.c',
     '../src/intl/unit/pattern.c',
     intl_unit_fixture,
   ],
@@ -1747,6 +1749,16 @@ test(
   intl_number_unit_test,
   suite: ['repo', 'native'],
   timeout: 30,
+)
+
+intl_date_text_fixture = custom_target(
+  'intl-date-text-authored-fixture',
+  output: 'intl-date-text-authored-fixture.c',
+  command: [python, files('intl_date_text_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_calendar_names.py',
+    'test_intl_list_patterns.py',
+  ),
 )
 
 intl_number_service_sources = [
@@ -1776,6 +1788,7 @@ intl_number_service_sources = [
   '../src/intl/unit/grammar-data.c',
   '../src/intl/unit/identifier.c',
   '../src/intl/common/pair-pattern.c',
+  '../src/intl/common/unary-pattern.c',
   '../src/intl/unit/pattern.c',
   '../src/intl/unit/format.c',
   '../src/intl/number/pattern-data.c',
@@ -2088,6 +2101,43 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-list-service-' + profile,
     intl_list_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_date_text_test = executable(
+    'test_intl_date_text_' + profile,
+    intl_number_service_sources + files(
+      'test_intl_date_text.c',
+      '../src/intl/datetime/text.c',
+      '../src/intl/datetime/numeric.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/calendar-identity.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/datetime/interval-data.c',
+      '../src/intl/datetime/style-data.c',
+      '../src/intl/datetime/name-data.c',
+      '../src/intl/datetime/name-select.c',
+      '../src/intl/datetime/era-data.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/dayperiod-data.c',
+      '../src/intl/datetime/dayperiod.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/locale/type-identity.c',
+      '../src/calendar/calendar.c',
+      '../src/calendar/calendar-minimal.c',
+      '../src/calendar/iso.c',
+    ) + [intl_date_text_fixture],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-date-text-' + profile,
+    intl_date_text_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )

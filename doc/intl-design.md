@@ -878,6 +878,28 @@ full renderer with chronology/name/zone services. The shared output vocabulary
 now distinguishes date-field parts; number-bearing consumers retain their
 original number-only type bound.
 
+`datetime/text.[ch]` composes numeric fields with native localized era, month,
+weekday, cyclic-year and day-period names into owned UTF-16 and typed parts.
+Reuse the numeric kernel one field at a time; do not duplicate its digit,
+year/hour or fractional rules. Resolve names and unary leap affixes once before
+bounded two-pass emission. A complete decorated named month is one month part;
+apostrophes in CLDR unary templates are literal, unlike LDML pattern quotes.
+The grammar-only unary parser lives in `common`, shared with unit formatting.
+
+Era codes use explicit metadata rather than arithmetic on raw CLDR IDs. ISO's
+localized catalog stays distinct from its Gregorian era mapping; historical
+Japanese uses Gregorian labels. Hebrew names use their independent raw keys and
+year selectors. Only Chinese/Dangi's repeated nominal months receive the exact
+inherited named-month leap template. Numeric months still go directly through
+FormatNumeric: the pinned ECMA-402 numeric branch does not specify CLDR's numeric
+leap decoration, so it is not silently inserted. Flexible day periods consume
+resolved format rules and a separate full-precision subsecond fact; noon plus
+one nanosecond must not use an exact-noon point. Missing/blocked/empty names or
+required templates return unsupported here, without invented lateral fallbacks.
+The final service owns admission and the standard's permitted unavailable-name
+fallback policy. Zones, complete service admission and the public constructor
+remain separate work; this renderer alone does not advertise DateTimeFormat.
+
 `datetime/chronology.[ch]` converts checked local epoch days through the shared
 calendar facade, then projects native formatting fields without allocating or
 borrowing localized data. Keep arithmetic/era years separate and let the numeric
