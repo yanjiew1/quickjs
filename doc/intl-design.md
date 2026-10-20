@@ -725,11 +725,26 @@ sharing, typed references and reachability are checked before consumption.
 The immutable C owner in `datetime/name-data.[ch]` validates the section using
 temporary depth, coverage and source-string scratch, released before return.
 Exact group/head/node/entry queries borrow pack storage and allocate nothing.
+An exact-key resolve query follows only prepared parents and retains the actual
+origin group. Blocked and explicitly empty leaves stop inheritance; year,
+alternate, width, context and calendar fallback remain consumer policy.
 Family-level and era-string validation caches bound repeated shared-data work.
 The reader has authored C fixtures, including external source locales, empty
 inventories, unaligned bytes and allocation-failure retries. Both prepared
 profiles include section 29 and compile its production reader, with separate
 prepared-data C tests. Formatter integration follows separately.
+
+The native `datetime/name-select.[ch]` consumer maps admitted source symbols
+and widths to their exact typed name groups. It follows the prepared aliases,
+retaining missing, blocked, empty and translated observations plus their origin.
+Only absent weekday short names try abbreviated. Month selection exhausts the
+explicit leap-year or common-year key before the ordinary key; a blocked/empty
+year-specific key stops that substitution. Default era names never pick a
+variant alternate automatically. Calendar arithmetic remains responsible for
+mapping its months, eras and cycles to raw name codes. Day-period name selection
+can separately substitute the actual local AM/PM code for an unavailable b/B
+label, retaining the primary observation and never reviving its blocked parent.
+These allocation-free queries do not render numbers or leap-month templates.
 
 `date_available_formats.py` owns available date patterns and append templates,
 not interval patterns, range templates or numeric separators. Its sparse groups
@@ -1034,6 +1049,16 @@ retain the complete global supplemental table, including explicit origins outsid
 their locale inventory. Each profile uses its own shared string pool and records
 the consumed source in provenance. This reader supplies no locale inheritance,
 period selection or formatter API.
+
+The native consumer in `datetime/dayperiod.[ch]` resolves one whole rule list
+by structural locale truncation, independently of exceptional main-data
+parents. Explicit empty/point-only lists stop inheritance and formatting and
+selection kinds stay distinct. Clock classification separates fixed a/b from
+flexible B, prioritizes exact points over variable ranges and falls back to
+AM/PM when no variable period applies. The caller supplies the specified local
+record's fractional-presence flag; omitted display fields do not round it.
+Translated-name availability and fallback remain renderer policy. Queries
+allocate nothing and do not normalize clock values such as 24:00.
 
 The C source compiler in `datetime/pattern.[ch]` separately decodes ordinary
 LDML patterns, date/time combination slots and interval ordering directives.
