@@ -32,6 +32,60 @@ class Sources:
 
 
 class DatePatternSyntaxTests(unittest.TestCase):
+    def test_combination_slots_and_quoted_connector(self):
+        self.assertEqual(syntax.compile_combination("{1} 'at' {0}"),
+                         (('1', 0, ''), ('', 0, ' at '), ('0', 0, '')))
+        self.assertEqual(syntax.compile_combination('{0}, {1}'),
+                         (('0', 0, ''), ('', 0, ', '), ('1', 0, '')))
+        self.assertEqual(syntax.compile_combination('{1}{0}'),
+                         (('1', 0, ''), ('0', 0, '')))
+
+    def test_combination_quotes_apply_to_markers_and_fields(self):
+        self.assertEqual(syntax.compile_combination("'{0}' {1} 'o''clock' {0}"),
+                         (('', 0, '{0} '), ('1', 0, ''), ('', 0, " o'clock "), ('0', 0, '')))
+        self.assertEqual(syntax.compile_combination("{1}'{'{0}'}'"),
+                         (('1', 0, ''), ('', 0, '{'), ('0', 0, ''), ('', 0, '}')))
+        self.assertEqual(syntax.compile_combination("''{1}'' {0}"),
+                         (('', 0, "'"), ('1', 0, ''), ('', 0, "' "), ('0', 0, '')))
+        self.assertEqual(syntax.compile_combination('{1}\u202f\u200f年😀 {0}'),
+                         (('1', 0, ''), ('', 0, '\u202f\u200f年😀 '), ('0', 0, '')))
+
+    def test_combination_keeps_fields_without_selecting_format_policy(self):
+        self.assertEqual(syntax.compile_combination('{1} HH:mm {0}'),
+                         (('1', 0, ''), ('', 0, ' '), ('H', 2, ''), ('', 0, ':'),
+                          ('m', 2, ''), ('', 0, ' '), ('0', 0, '')))
+        # Ordinary date patterns still treat braces as literal text.
+        self.assertEqual(syntax.compile_pattern('{0}'), (('', 0, '{0}'),))
+        for suffix in (' }', ' {2}', ' {01}', ' {}', ' {'):
+            self.assertEqual(syntax.compile_combination('{1}{0}' + suffix),
+                             (('1', 0, ''), ('0', 0, ''), ('', 0, suffix)))
+
+    def test_combination_rejects_missing_repeated_or_invalid_slots(self):
+        for value in ('', None, 1, b'{1}{0}', '{1}', '{0}', "'{1}' {0}",
+                      '{0}{1}{0}', '{1}{1}{0}', '{2}{1}', '{}{1}',
+                      '{01}{1}', '{ 0}{1}', '{0 {1}',
+                      "{0}{1}'", '{0}j{1}', '{0}\0{1}', '{0}\ud800{1}'):
+            with self.subTest(value=repr(value)), self.assertRaises(DataError):
+                syntax.compile_combination(value)
+
+    def test_combination_audit_keeps_forms_and_markers_separate(self):
+        source = Sources('''<dateTimeFormats><dateTimeFormatLength type="long">
+            <dateTimeFormat><pattern>{1}, {0}</pattern><pattern alt="variant">{1}, {0}</pattern>
+            <pattern>''' + INHERIT + '''</pattern></dateTimeFormat>
+            <dateTimeFormat type="atTime"><pattern>{1} 'at' {0}</pattern>
+            <pattern>''' + BLOCK + '''</pattern></dateTimeFormat>
+            </dateTimeFormatLength><availableFormats><dateFormatItem id="y">y</dateFormatItem>
+            </availableFormats></dateTimeFormats>''')
+        self.assertEqual(syntax.audit_combinations(source),
+                         {'records': 3, 'markers': 2, 'patterns': 2, 'tokens': 6})
+
+    def test_combination_audit_rejects_bad_leaves(self):
+        for value in ('<pattern>{1}</pattern>', '<pattern><child/></pattern>'):
+            source = Sources('<dateTimeFormats><dateTimeFormatLength><dateTimeFormat>' + value +
+                             '</dateTimeFormat></dateTimeFormatLength></dateTimeFormats>')
+            with self.subTest(value=value), self.assertRaises(DataError):
+                syntax.audit_combinations(source)
+
     def test_fields_keep_source_identity_width_and_order(self):
         self.assertEqual(syntax.compile_pattern('yyyy.MM.dd G'),
                          (('y', 4, ''), ('', 0, '.'), ('M', 2, ''),
