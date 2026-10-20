@@ -33,6 +33,8 @@ from test_intl_unit_patterns import Sources as UnitSources
 from test_intl_unit_grammar import Sources as GrammarSources
 from test_intl_relative_patterns import Sources as RelativeSources
 from test_intl_duration_patterns import Sources as DurationSources
+from test_intl_dayperiod_rules import Sources as DayPeriodSources
+import dayperiod_rules
 from test_intl_timezone_presentation import DTD as TIMEZONE_PRESENTATION_DTD
 import number_patterns
 import number_pattern_syntax
@@ -235,6 +237,9 @@ class VerifiedFixture(Sources):
           </mapTimezones></metaZones><primaryZones>
             <primaryZone iso3166="IN">Asia/Calcutta</primaryZone>
           </primaryZones></supplementalData>'''
+        dayperiod_source = DayPeriodSources()
+        self.files['common/dtd/ldmlSupplemental.dtd'] += dayperiod_source.files['common/dtd/ldmlSupplemental.dtd']
+        self.files['common/supplemental/dayPeriods.xml'] = dayperiod_source.files['common/supplemental/dayPeriods.xml']
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -333,6 +338,13 @@ class TableTests(unittest.TestCase):
                     break
             else:
                 self.fail('prepared English interval source is missing yMd/d')
+            rules = view['dayperiod_rules']
+            self.assertIsNotNone(rules)
+            self.assertEqual(len(rules['rows']), 178)
+            groups = {(kind, tag): values for kind, tag, values in rules['rows']}
+            self.assertIn(('midnight', 'at', 0, 0), groups['selection', 'gsw'])
+            self.assertIn(('format', 'hi-Latn'), groups)
+            self.assertNotIn(('format', 'sr-Latn'), groups)
             zone_names = view['timezone_names']
             self.assertIsNotNone(zone_names)
             presentation = view['timezone_presentation']
@@ -551,6 +563,8 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['preferences'], minimal_view['preferences'])
         self.assertEqual(full_view['numbering'], minimal_view['numbering'])
         self.assertEqual(full_view['timezone_presentation'], minimal_view['timezone_presentation'])
+        self.assertEqual(full_view['dayperiod_rules'], minimal_view['dayperiod_rules'])
+        self.assertEqual(full_view['dayperiod_rules'], dayperiod_rules.collect(DayPeriodSources()))
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
         changed = VerifiedFixture()
@@ -561,7 +575,7 @@ class TableTests(unittest.TestCase):
         source.pin['archive']['sha256'] = '2' * 64
         self.assertEqual(acquire.json_bytes(manifest), original)
         for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags', 'numberingSystems',
-                     'grammaticalFeatures', 'metaZones'):
+                     'grammaticalFeatures', 'metaZones', 'dayPeriods'):
             self.assertIn('common/supplemental/' + name + '.xml', manifest['inputs']['sources'])
 
     def test_preference_wire_roundtrip_and_invalid_fields(self):
