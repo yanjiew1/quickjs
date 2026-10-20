@@ -124,6 +124,7 @@ if intl_enabled
     'intl/currency/data.c',
     'intl/currency/display.c',
     'intl/datetime/available-data.c',
+    'intl/datetime/available-source.c',
     'intl/datetime/basic-match.c',
     'intl/datetime/combination-data.c',
     'intl/datetime/dayperiod-code.c',

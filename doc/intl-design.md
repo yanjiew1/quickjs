@@ -747,10 +747,21 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
-Physical map-span and entry-at queries expose all exact keys for candidate enumeration without
-leaking wire decoding into the builder. Enumeration does not choose inheritance,
+Physical map-span and entry-at queries expose all exact keys for candidate
+enumeration without leaking wire decoding into the builder. Enumeration does not choose inheritance,
 plural or alternate fallback; a consumer must retain child-key shadowing even
 when that child's pattern is blocked, empty or not renderable.
+
+`datetime/available-source.[ch]` resolves visible exact keys along one source
+chain without interpreting patterns or append templates. Nearest blocked, empty
+and unusable source text still shadows the same code/plural/leaf-alt parent key.
+It skips repeated physical maps, gathers at most the owner's physical entries,
+then sorts and selects deterministic nearest records. The retained index owns
+one allocation and borrows the unchanged pack through a copied owner view;
+queries allocate nothing and preserve origin groups. Head zero needs no
+allocation. This source inventory is separate from usable native candidates and
+final ECMA Format Records, including duplicate-component grouping and hour-cycle
+pairing. A counted `other` key is never an uncounted fallback.
 
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate
