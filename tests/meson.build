@@ -2586,6 +2586,86 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_date_format_sources = intl_number_service_sources + files(
+      '../src/intl/datetime/format.c',
+      '../src/intl/datetime/local-time.c',
+      '../src/intl/datetime/chronology.c',
+      '../src/intl/datetime/text.c',
+      '../src/intl/datetime/numeric.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/calendar-identity.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/datetime/interval-data.c',
+      '../src/intl/datetime/style-data.c',
+      '../src/intl/datetime/name-data.c',
+      '../src/intl/datetime/name-select.c',
+      '../src/intl/datetime/era-data.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/dayperiod-data.c',
+      '../src/intl/datetime/dayperiod.c',
+      '../src/intl/datetime/zone-name.c',
+      '../src/intl/datetime/zone-offset.c',
+      '../src/intl/datetime/timezone-name-data.c',
+      '../src/intl/datetime/timezone-presentation-data.c',
+      '../src/intl/display/data.c',
+      '../src/intl/display/select.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/locale/type-identity.c',
+      '../src/intl/locale/timezone-identity.c',
+    ) + calendar_test_sources + timezone_test_sources
+    intl_date_format_test = {
+      'name': ('test_intl_date_format_' + profile),
+      'sources': intl_date_format_sources + files(
+        'test_intl_date_format.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_format_test,
+      'name': ('intl-date-format-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_service_test = {
+      'name': ('test_intl_date_service_' + profile),
+      'sources': intl_date_format_sources + files(
+        'test_intl_date_service.c',
+        '../src/intl/datetime/native.c',
+        '../src/intl/datetime/available-source.c',
+        '../src/intl/datetime/basic-match.c',
+        '../src/intl/datetime/format-source.c',
+        '../src/intl/datetime/ordinary-programs.c',
+        '../src/intl/datetime/source-candidate.c',
+        '../src/intl/datetime/single-program.c',
+        '../src/intl/datetime/program-adapt.c',
+        '../src/intl/datetime/style-date.c',
+        '../src/intl/datetime/style-hour.c',
+        '../src/intl/datetime/style-program.c',
+        '../src/intl/locale/identifier.c',
+        '../src/intl/locale/matching.c',
+        '../src/intl/locale/native.c',
+        '../src/intl/locale/native-id.c',
+        '../src/intl/locale/preference-data.c',
+        '../src/intl/locale/preferences.c',
+      ) + [],
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_service_test,
+      'name': ('intl-date-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_date_numeric_test = {
       'name': ('test_intl_date_numeric_' + profile),
       'sources': intl_number_service_sources + files(
