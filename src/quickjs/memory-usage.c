@@ -134,7 +134,7 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     if (rt->default_time_zone) {
         s->memory_used_count++;
         s->memory_used_size += strlen(rt->default_time_zone) + 1;
