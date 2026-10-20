@@ -1023,6 +1023,16 @@ their locale inventory. Each profile uses its own shared string pool and records
 the consumed source in provenance. This reader supplies no locale inheritance,
 period selection or formatter API.
 
+The native consumer in `datetime/dayperiod.[ch]` resolves one whole rule list
+by structural locale truncation, independently of exceptional main-data
+parents. Explicit empty/point-only lists stop inheritance and formatting and
+selection kinds stay distinct. Clock classification separates fixed a/b from
+flexible B, prioritizes exact points over variable ranges and falls back to
+AM/PM when no variable period applies. The caller supplies the specified local
+record's fractional-presence flag; omitted display fields do not round it.
+Translated-name availability and fallback remain renderer policy. Queries
+allocate nothing and do not normalize clock values such as 24:00.
+
 The C source compiler in `datetime/pattern.[ch]` separately decodes ordinary
 LDML patterns, date/time combination slots and interval ordering directives.
 It preserves recognized field symbols, full run lengths and repetitions, while

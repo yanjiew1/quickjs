@@ -1281,6 +1281,30 @@ test(
   timeout: 30,
 )
 
+intl_dayperiod_select_test = executable(
+  'test_intl_dayperiod_select',
+  files(
+    'test_intl_dayperiod_select.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/dayperiod-code.c',
+    '../src/intl/datetime/dayperiod-data.c',
+    '../src/intl/datetime/dayperiod.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_dayperiod_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-dayperiod-select',
+  intl_dayperiod_select_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_timezone_presentation_fixture = custom_target(
   'intl-timezone-presentation-authored-fixture',
   output: 'intl-timezone-presentation-authored-fixture.c',
