@@ -1751,6 +1751,13 @@ test(
   timeout: 30,
 )
 
+intl_date_zone_fixture = custom_target(
+  'intl-date-zone-authored-fixture',
+  output: 'intl-date-zone-authored-fixture.c',
+  command: [python, files('intl_date_zone_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files('test_intl_timezone_names.py', 'test_intl_list_patterns.py'),
+)
+
 intl_date_text_fixture = custom_target(
   'intl-date-text-authored-fixture',
   output: 'intl-date-text-authored-fixture.c',
@@ -2101,6 +2108,37 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-list-service-' + profile,
     intl_list_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_date_zone_test = executable(
+    'test_intl_date_zone_' + profile,
+    intl_number_service_sources + files(
+      'test_intl_date_zone.c',
+      '../src/intl/datetime/zone-name.c',
+      '../src/intl/datetime/zone-offset.c',
+      '../src/intl/datetime/timezone-name-data.c',
+      '../src/intl/datetime/timezone-presentation-data.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/display/data.c',
+      '../src/intl/display/select.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/locale/type-identity.c',
+      '../src/intl/locale/timezone-identity.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/timezone.c',
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [intl_date_zone_fixture, timezone_data],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-date-zone-' + profile,
+    intl_date_zone_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )

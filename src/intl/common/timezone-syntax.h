@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
-#ifndef QJS_INTL_DATETIME_TIMEZONE_SYNTAX_H
-#define QJS_INTL_DATETIME_TIMEZONE_SYNTAX_H
-#include "../common/types.h"
+#ifndef QJS_INTL_COMMON_TIMEZONE_SYNTAX_H
+#define QJS_INTL_COMMON_TIMEZONE_SYNTAX_H
+#include "types.h"
 
 /* Source identity grammar, not ECMA primary-zone canonicalization. */
 static inline int qjs_intl_timezone_source_identity_valid(QJSIntlBytes text, int metazone)
