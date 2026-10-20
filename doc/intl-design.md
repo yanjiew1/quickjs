@@ -867,6 +867,24 @@ collectors. Unreviewed deprecated/preferred metazone-ID forms fail explicitly;
 metadata release fields remain source facts. Binary and runtime integration of
 these supplemental records follow separately.
 
+Optional section 33 encodes these global runtime facts with separate active-ID,
+zone-span, period, preferred-zone and dominant-zone tables. Four independent
+presence flags distinguish finite endpoints and standard/daylight overrides
+from absence, including numeric zero; absent numeric words must be zero.
+Finite wire timestamps accept all signed 64-bit epoch seconds, independently
+of the collector's narrower textual grammar. Periods retain their source
+boundaries, including adjacent equal assignments and intentional gaps.
+
+The codec explicitly projects release metadata out of runtime columns and
+retains it in source provenance. Empty timezone spans, unused active IDs and
+dominant targets without an explicit metazone row remain valid source facts.
+Canonical validation checks exact physical order, namespace-specific identities,
+contiguous spans, nonoverlap and historical golden-zone membership. It does not
+promise BCP47 cross-section or formatter-capability admission; the collector
+checks stable-ID membership, and service admission must check its complete
+semantic dependencies. This small global section needs no locale projection.
+The C owner and prepared-profile integration follow separately.
+
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.
 Zero-initialized records have no requested components. The shared

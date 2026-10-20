@@ -2948,6 +2948,14 @@ test(
 )
 
 test(
+  'intl-timezone-presentation-tables',
+  python,
+  args: files('test_intl_timezone_presentation_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-timezone-presentation',
   python,
   args: files('test_intl_timezone_presentation.py'),

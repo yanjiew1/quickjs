@@ -57,6 +57,7 @@ intl_tool_dependencies = files(
   'timezone_name_tables.py',
   'timezone_names.py',
   'timezone_presentation.py',
+  'timezone_presentation_tables.py',
   'timezone_syntax.py',
   'unit_grammar.py',
   'unit_grammar_tables.py',
