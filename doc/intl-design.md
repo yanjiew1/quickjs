@@ -762,6 +762,54 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
+`date_intervals.py` owns interval fallback templates, greatest-difference
+patterns and range-example templates; numeric separators retain a separate
+owner. Groups retain calendar, interval-container alternate, family, skeleton
+and item alternate. Exact leaves retain the difference field or range type and
+their own alternate. There is no plural selector. Typed ancestor/item/range
+aliases preserve requesting/explicit-source anchors and source provenance.
+Both interval and other sparse collectors use the resolver's common layer
+freezing mechanism; their source grammars and selectors remain separate.
+
+The interval pattern lexer preserves optional `earliestFirst:`/`latestFirst:`
+ordering directives without splitting repeated logical fields. Fallback and
+range templates use literal `{0}`/`{1}` substitution, sharing the host pair
+validator with ListFormat rather than using date-pattern quoting or field
+rules. Empty, missing, inherited and blocked records remain distinct. CLDR's
+numeric/non-numeric/mixed `intervalFormatRange` templates are for synthesized
+comparison examples, explicitly not production interval data; they must not
+become production `formatRange` synthesis policy. Matching, source-root stopping,
+field equivalence, greatest-difference calculation and rendering remain consumer
+responsibilities.
+
+Optional section 31 stores interval layers using shared dense calendar blocks.
+The seven-word header gives version, calendar/suffix/block/map/node/entry counts.
+Calendars and four-word suffixes (container alternate, family, skeleton, item
+alternate) form a rectangular inventory; the product must fit a uint32 source
+identity. Locale/calendar pairs reference shared suffix-head blocks. Sparse
+maps use three-word leaves (code, leaf alternate, text-or-blocked), and four-word
+source nodes retain origin locale, global source group, map and parent. Aliases
+may change calendar and all alternate/skeleton selectors within a family.
+
+The host codec validates canonical sharing and complete reachability without
+scanning an implicit locale/calendar/suffix cube. Its decoded inventory stays
+factored; source rows are expanded only for nonzero heads. Projection retains
+reachable source locales outside the requester inventory. This layout is local
+to interval data; existing section 29/30 formats are unchanged.
+
+The immutable C owner in `datetime/interval-data.[ch]` checks stored calendar
+blocks, suffixes, maps and nodes, including checked global group IDs. Source
+locale, skeleton and per-family code checks are cached by string identity.
+All validation scratch is released before return; exact calendar/group/head/
+node/leaf queries borrow pack storage without allocation. Authored fixtures
+cover source aliases, external origins, all difference/range selectors, empty
+and blocked leaves, shared long skeletons, unaligned storage, malformed records
+and allocation-failure retries. Both prepared profiles include this section,
+with the C reader compiled in production Intl builds. Prepared-data tests check
+all stored selectors, calendar-block indexing, English provenance, unaligned
+storage and validation allocation failures. Range formatter integration follows
+separately.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
