@@ -1,8 +1,8 @@
 {
-  "bytes": 760060,
+  "bytes": 773576,
   "complete_services": [],
   "format": 1,
-  "generation": "82a4e9967ee6a788f61a554300fea80686c4040ca0fd04652e1d8dca2cc4a42e",
+  "generation": "99a5b9a84ad12054351e45568bf8e2628c0f8646a2f2a4d2aff07a4c9e5010ae",
   "inputs": {
     "cldr": {
       "archive": {
@@ -131,6 +131,10 @@
       "33": {
         "count": 419,
         "sha256": "9fff3c421ce5e212cc53fcc43108e6209e14ee2061e1b447227b1f8b8a1c82cf"
+      },
+      "34": {
+        "count": 178,
+        "sha256": "3bb71bc38c002846f010967d4e7a7df42b9ee7f9e5cb768c2cb3096e63e4da73"
       },
       "4": {
         "count": 7868,
@@ -1326,6 +1330,7 @@
       "common/main/zu.xml": "d422c64d979e5c784fef6f81e8fb42584dbc6b2a7ca7e8c8137fa28a2ebdf25b",
       "common/main/zu_ZA.xml": "521e535cb23efe4c64f59fecf3b4e3e16b69e5741e2935cef8b3a3cd106ef413",
       "common/properties/scriptMetadata.txt": "bb9e789af929c5db67ffcd3e47e3a58f6187686fe4c72fb8203cbe7098715a56",
+      "common/supplemental/dayPeriods.xml": "bee0c8328f33d5c5610018e97d537ce8599a55501a52a104b775de8e5c7aad0e",
       "common/supplemental/grammaticalFeatures.xml": "5dbab16f4b42a46c622af122bc91568cd0748e51175f8d90d157db891528107c",
       "common/supplemental/likelySubtags.xml": "114019e183cffd98262c8c137d40d215124f80d9ba474a594d6ffa1b551b0a96",
       "common/supplemental/metaZones.xml": "fa705a0568667008789e1b865c10982f33b56cddbb3d428da2546decca75e5d4",
@@ -1338,7 +1343,7 @@
     }
   },
   "locales": 3,
-  "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation facts, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "5b9030fcd181ee69918434adad0862e0304e217e5c7b3d86c68ade22d1118187",
+  "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation and day-period clock facts, layered display names and plural rules; not formatter capability or full Intl coverage.",
+  "sha256": "85c6700a4c6e301c6b24413419d8d008f4ffa7e01a59efebfde3899fbc1aa387",
   "strings": 25972
 }
