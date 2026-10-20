@@ -4,10 +4,9 @@
 #define QJS_INTL_UNIT_PATTERN_H
 #include "data.h"
 #include "../common/pair-pattern.h"
+#include "../common/unary-pattern.h"
 
-typedef struct QJSIntlUnitPattern {
-    QJSIntlBytes prefix, suffix;
-} QJSIntlUnitPattern;
+typedef QJSIntlUnaryPattern QJSIntlUnitPattern;
 
 /* Borrow scalar UTF-8 text from validated unit data. Support one {0}; both
    affixes may be empty. Apostrophes are literal, not decimal-pattern quoting.
