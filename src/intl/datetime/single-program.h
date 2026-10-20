@@ -4,10 +4,7 @@
 #define QJS_INTL_DATETIME_SINGLE_PROGRAM_H
 #include "format-source.h"
 
-enum {
-    QJS_INTL_DATE_ADAPT_HOUR_WIDTH = 1,
-    QJS_INTL_DATE_ADAPT_HOUR_FAMILY = 2
-};
+#include "program-adapt.h"
 
 typedef struct QJSIntlDateSingleProgram {
     QJSIntlDatePattern pattern;
