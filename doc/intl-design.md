@@ -763,6 +763,18 @@ allocation. This source inventory is separate from usable native candidates and
 final ECMA Format Records, including duplicate-component grouping and hour-cycle
 pairing. A counted `other` key is never an uncounted fallback.
 
+`datetime/source-candidate.[ch]` compiles the visible ordinary pattern family
+for an explicitly selected leaf alternate and uncounted keys. It selects no
+alternate or plural fallback. Blocked/empty leaves, unsupported projections and
+literal-only/AM-PM-only patterns contribute no direct candidate; child masking
+has already taken effect. Flexible day-period-only patterns remain candidates.
+Eligible malformed syntax and allocation failures propagate and unwind all owned
+patterns. Filtered keys are not syntax-validated by this operation. Compiled
+tokens are owned, while skeletons, raw text and source provenance borrow the
+unchanged pack. The input source index can be released independently. Distinct
+skeletons and hour cycles remain distinct even when component vectors match;
+these are source candidates, not the final ECMA format list or capability proof.
+
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate
 owner. Groups retain calendar, interval-container alternate, family, skeleton

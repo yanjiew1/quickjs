@@ -135,6 +135,7 @@ if intl_enabled
     'intl/datetime/name-data.c',
     'intl/datetime/pattern.c',
     'intl/datetime/pattern-info.c',
+    'intl/datetime/source-candidate.c',
     'intl/datetime/style-data.c',
     'intl/datetime/timezone-name-data.c',
     'intl/datetime/timezone-presentation-data.c',
