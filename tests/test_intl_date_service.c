@@ -478,7 +478,7 @@ static size_t capabilities(const QJSIntlAllocator *allocator, const QJSIntlDateT
         QJSIntlFormatted result;
         QJSIntlStatus status;
         int supported;
-        assert(!qjs_intl_datetime_calendar_supported(service, locale, bytes(name), &supported));
+        assert(!qjs_intl_datetime_calendar_supported(service, bytes(name), &supported));
         if (!supported)
             continue;
         status = qjs_intl_datetime_formatter_open(service, locale, bytes(name), system, &zone, &options, &formatter);
@@ -536,8 +536,11 @@ int main(int argc, char **argv)
     assert(argc == 1);
     assert(!qjs_intl_datetime_default_calendar(service, en, &calendar));
     assert(calendar.length == 7 && !memcmp(calendar.data, "gregory", 7));
-    assert(!qjs_intl_datetime_calendar_supported(service, en, bytes("gregory"), &supported) && supported);
-    assert(!qjs_intl_datetime_calendar_supported(service, en, bytes("not-calendar"), &supported) && !supported);
+    assert(!qjs_intl_datetime_calendar_supported(service, bytes("gregory"), &supported) && supported);
+    assert(!qjs_intl_datetime_calendar_supported(service, bytes("not-calendar"), &supported) && !supported);
+    assert(!qjs_intl_datetime_calendar_available(service, bytes("gregory"), &supported) && supported);
+    assert(!qjs_intl_datetime_calendar_available(service, bytes("islamic"), &supported) && !supported);
+    assert(!qjs_intl_datetime_calendar_available(service, bytes("islamicc"), &supported) && !supported);
     assert(!qjs_intl_datetime_default_system(service, en, &system));
     assert(!qjs_intl_datetime_system_supported(service, en, system, &supported) && supported);
     assert(!qjs_intl_datetime_hour_preferences(service, en, &hours));
@@ -552,7 +555,7 @@ int main(int argc, char **argv)
     capabilities(&allocator, service, en, tags[en]);
     for (unsigned int c = 0; c < QJS_CAL_COUNT; c++) {
         QJSIntlBytes identifier = bytes(qjs_calendar_identifier(c));
-        assert(!qjs_intl_datetime_calendar_supported(service, en, identifier, &supported));
+        assert(!qjs_intl_datetime_calendar_supported(service, identifier, &supported));
         if (supported)
             styles(&allocator, service, en, tags[en], identifier, 0);
     }
