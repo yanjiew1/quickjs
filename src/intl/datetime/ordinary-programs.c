@@ -50,7 +50,7 @@ static size_t date_base(const Build *build, unsigned int wanted)
     size_t i;
     /* Default date/clock and date/zone combinations prefer a whole numeric
        date. Keep its actual padding in the metadata for final matching. */
-    if (wanted == DATE_MASK) {
+    if ((wanted & ~BIT(ERA)) == DATE_MASK) {
         for (i = 0; i < build->result.count; i++) {
             const QJSIntlDateTimeComponents *components = &build->result.records[i].single.components;
             if (mask(components) == wanted &&
@@ -321,7 +321,7 @@ static QJSIntlStatus ensure(Build *build, unsigned int wanted)
         return status ? status : fraction(build, find(build, wanted & ~BIT(FRACTION)));
     }
     if ((wanted & DATE_MASK) && (wanted & BIT(HOUR))) {
-        unsigned int date = wanted & (DATE_MASK | BIT(WEEKDAY)), time = wanted & ~date;
+        unsigned int date = wanted & (DATE_MASK | BIT(WEEKDAY) | BIT(ERA)), time = wanted & ~date;
         status = ensure(build, date);
         if (!status)
             status = ensure(build, time);
@@ -375,7 +375,9 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     };
     static const unsigned int date_clocks[] = {
         DATE_MASK | BIT(HOUR) | BIT(MINUTE), DATE_MASK | CLOCK_MASK,
-        DATE_MASK | CLOCK_MASK | BIT(FRACTION)
+        DATE_MASK | CLOCK_MASK | BIT(FRACTION),
+        BIT(ERA) | DATE_MASK | BIT(HOUR) | BIT(MINUTE), BIT(ERA) | DATE_MASK | CLOCK_MASK,
+        BIT(ERA) | DATE_MASK | CLOCK_MASK | BIT(FRACTION)
     };
     static const struct { unsigned int symbol; size_t width; } date_zones[] = {
         {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
@@ -401,14 +403,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 46)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 52)
         return QJS_INTL_OVERFLOW;
     /* Fourteen required targets, with up to two additional widths for each
        of the four fractional targets, fit within 32 extra records. Reserve
        three more for optional minute/second-only fractional patterns and
-       five for whole date/clock combinations without an added weekday and
-       six for date-only programs with an appended timezone name. */
-    build.capacity = groups->count + 46;
+       eleven for whole date/clock combinations (including an optional era-date),
+       and six for date-only programs with an appended timezone name. */
+    build.capacity = groups->count + 52;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -434,7 +436,8 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     }
     /* Required mixed subsets contain a weekday. Also join the genuine date
        and clock programs directly, so ordinary date/time requests need not
-       acquire that extra field. Reuse the locale's exact connector. */
+       acquire that extra field. Include whole era-bearing dates when available;
+       calendars without them remain supported. Reuse the exact connector. */
     for (i = 0; i < sizeof(date_clocks) / sizeof(*date_clocks); i++) {
         status = ensure(&build, date_clocks[i]);
         if (status && status != QJS_INTL_UNSUPPORTED)

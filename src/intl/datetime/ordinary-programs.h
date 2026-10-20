@@ -35,7 +35,8 @@ typedef struct QJSIntlDateOrdinaryPrograms {
    explicit dayPeriod records remain unchanged. Fractional seconds use the
    selected numbering system's decimal separator; mixed formats use the exact
    ordinary SHORT standard connector. Include useful date/clock combinations
-   without an added weekday and date-only zone styles through the genuine
+   without an added weekday, optional whole era-bearing date/clock pairs, and
+   date-only zone styles through the genuine
    Date-Timezone append template. Retain source/construction provenance.
 
    Supply the unchanged pool/grouping pair and exact resolved APPEND inventory.

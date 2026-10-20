@@ -165,6 +165,8 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
     pattern_equal(allocator, &record->single.twelve.pattern, "y' [year] 'M/d' at 'a h:mm:ss");
     record = find(programs, 988, 2);
     pattern_equal(allocator, &record->single.normal.pattern, "y' [year] 'M/d' at 'H:mm:ss\xd9\xabSS");
+    record = find(programs, 478, 0); /* Preserve the complete era-bearing date. */
+    pattern_equal(allocator, &record->single.twelve.pattern, "y M d G' at 'a h:mm:ss");
     record = find(programs, 1052, 0); /* date + timezone, reordered append slots */
     pattern_equal(allocator, &record->single.normal.pattern, "z' [zone] 'y' [year] 'M/d");
     {

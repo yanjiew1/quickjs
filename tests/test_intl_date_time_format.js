@@ -91,6 +91,10 @@ const basicIso = new DTF('en', {...utc, calendar: 'iso8601', formatMatcher: 'bas
 assert(basicIso.resolvedOptions().month, 'short');
 const textIso = new DTF('en', {...utc, calendar: 'iso8601', month: 'short'});
 assert(textIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, 'Sep');
+const eraClock = new DTF('en', {...utc, era: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit'});
+assert(eraClock.resolvedOptions().era, 'short');
+assert(eraClock.formatToParts(0).find(part => part.type === 'era').value, 'AD');
 
 // Date-plus-zone uses the CLDR Date-Timezone layout. Plain Temporal records
 // intentionally omit zones even though the ordinary Date record retains one.
@@ -184,6 +188,8 @@ Intl.DateTimeFormat = DTF;
 
 if (typeof Temporal !== 'undefined') {
     const plain = Temporal.PlainDateTime.from('2024-07-01T12:34:56.123456789');
+    const onlyEra = new DTF('en', {...utc, era: 'narrow'});
+    assert(onlyEra.format(Temporal.PlainDateTime.from('2025-11-04T14:46')).startsWith('11'), true);
     assert(f.format(plain), f.format(Date.UTC(2024, 6, 1, 12, 34, 56, 123)));
     const full = new DTF('en', {...utc, dateStyle: 'full', timeStyle: 'long'});
     assert(full.format(Temporal.PlainDate.from('2024-07-01')), 'Monday, July 1, 2024');
