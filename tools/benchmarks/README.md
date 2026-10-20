@@ -158,6 +158,15 @@ The guarded `intl_duration` cases cover DurationFormat construction, text units,
 exact fractional digital output and typed parts. They also use live feature
 detection and leave the frozen historical comparison catalog unchanged.
 
+The guarded live `intl_date` cases cover DateTimeFormat construction, bound
+formatting, parts, cross-day ranges and source parts, localized offset zone
+names, Date.toLocaleString and optional Temporal.PlainDateTime formatting.
+Inputs use fixed UTC dates; constructor and Date locale cases reuse their
+option objects. Run each exact case in a fresh process using the same enabled
+Intl/calendar/zone profile for both revisions. These cases do not extend the
+frozen 72-case catalog, and the default hosted core benchmark does not measure
+enabled Intl services.
+
 ## Running locally
 
 Use two clean, distinct source checkouts and a new output directory:
