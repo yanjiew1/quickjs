@@ -50,6 +50,8 @@ typedef struct DateRecord {
     QJSIntlDateTimeComponents components;
 } DateRecord;
 
+/* Views borrow the permanent compiled pack, not the service. Interior format
+   and rule pointers are installed after allocation; do not relocate this owner. */
 struct QJSIntlDateTimeFormatter {
     QJSIntlAllocator allocator;
     DateData data;
@@ -863,6 +865,7 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
             goto done;
         formatter->numbers.fraction[i] = digits;
     }
+    /* fraction[] owns all three handles; these two convenience slots alias it. */
     formatter->numbers.numeric = formatter->numbers.fraction[0];
     formatter->numbers.two_digit = formatter->numbers.fraction[1];
     /* These typed owners share one validated pack locale catalog. Calendar
