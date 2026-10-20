@@ -347,6 +347,10 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
         BIT(DAY_PERIOD) | CLOCK_MASK | BIT(FRACTION), BIT(WEEKDAY) | DATE_MASK | CLOCK_MASK,
         BIT(WEEKDAY) | DATE_MASK | CLOCK_MASK | BIT(FRACTION)
     };
+    static const unsigned int date_clocks[] = {
+        DATE_MASK | BIT(HOUR) | BIT(MINUTE), DATE_MASK | CLOCK_MASK,
+        DATE_MASK | CLOCK_MASK | BIT(FRACTION)
+    };
     Build build = {0};
     QJSIntlFormatBuilder check = {0};
     QJSIntlStatus status;
@@ -368,12 +372,13 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 35)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 40)
         return QJS_INTL_OVERFLOW;
     /* Fourteen required targets, with up to two additional widths for each
        of the four fractional targets, fit within 32 extra records. Reserve
-       three more for optional minute/second-only fractional patterns. */
-    build.capacity = groups->count + 35;
+       three more for optional minute/second-only fractional patterns and
+       five for whole date/clock combinations without an added weekday. */
+    build.capacity = groups->count + 40;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -396,6 +401,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
             status = QJS_INTL_DATA_ERROR;
             goto fail;
         }
+    }
+    /* Required mixed subsets contain a weekday. Also join the genuine date
+       and clock programs directly, so ordinary date/time requests need not
+       acquire that extra field. Reuse the locale's exact connector. */
+    for (i = 0; i < sizeof(date_clocks) / sizeof(*date_clocks); i++) {
+        status = ensure(&build, date_clocks[i]);
+        if (status && status != QJS_INTL_UNSUPPORTED)
+            goto fail;
     }
     /* Extend a visible whole minute/second program; do not introduce an hour
        merely because the requested precision includes a fractional second. */
