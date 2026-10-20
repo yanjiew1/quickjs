@@ -1186,6 +1186,7 @@ if intl_enabled
       'test_intl_calendar_name_data.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/dayperiod-code.c',
       '../src/intl/datetime/name-data.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
@@ -1344,6 +1345,35 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_datetime_basic_match,
     'name': 'intl-datetime-basic-match',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_dayperiod_fixture = custom_target(
+    'intl-dayperiod-authored-fixture',
+    output: 'intl-dayperiod-authored-fixture.c',
+    command: [python, files('intl_dayperiod_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files('test_intl_dayperiod_rules.py'),
+  )
+  intl_dayperiod_authored = {
+    'name': 'test_intl_dayperiod_authored',
+    'sources': files(
+      'test_intl_dayperiod_data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/dayperiod-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_dayperiod_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_dayperiod_authored,
+    'name': 'intl-dayperiod-authored',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
@@ -2078,6 +2108,29 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_dayperiod_data_test = {
+      'name': ('test_intl_dayperiod_data_' + profile),
+      'sources': files(
+        'test_intl_dayperiod_profiles.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/common/source-locale.c',
+        '../src/intl/datetime/dayperiod-code.c',
+        '../src/intl/datetime/dayperiod-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_dayperiod_data_test,
+      'name': ('intl-dayperiod-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_timezone_presentation_data_test = {
       'name': ('test_intl_timezone_presentation_data_' + profile),
       'sources': files(
@@ -2171,6 +2224,7 @@ if intl_enabled
         'test_intl_calendar_name_profiles.c',
         '../src/intl/common/locale-grammar.c',
         '../src/intl/common/source-locale.c',
+        '../src/intl/datetime/dayperiod-code.c',
         '../src/intl/datetime/name-data.c',
         '../src/intl/native/data.c',
         '../src/intl/native/pack.c',
@@ -3046,6 +3100,22 @@ if intl_enabled
     'intl-date-field-tables',
     python,
     args: files('test_intl_date_field_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-dayperiod-rules',
+    python,
+    args: files('test_intl_dayperiod_rules.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-dayperiod-tables',
+    python,
+    args: files('test_intl_dayperiod_tables.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )

@@ -95,6 +95,10 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/timezone_presentation.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit supplemental day-period rules
+      run: |
+        timeout 120s python3 tools/intl/dayperiod_rules.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
