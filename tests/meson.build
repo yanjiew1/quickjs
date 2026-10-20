@@ -1351,6 +1351,43 @@ if intl_enabled
     },
   }]
 
+  intl_date_pattern_info_test = {
+    'name': 'test_intl_date_pattern_info',
+    'sources': files(
+      'test_intl_date_pattern_info.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_pattern_info_test,
+    'name': 'intl-date-pattern-info',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_pattern_test = {
+    'name': 'test_intl_date_pattern',
+    'sources': files(
+      'test_intl_date_pattern.c',
+      '../src/intl/datetime/pattern.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_pattern_test,
+    'name': 'intl-date-pattern',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_dayperiod_fixture = custom_target(
     'intl-dayperiod-authored-fixture',
     output: 'intl-dayperiod-authored-fixture.c',
