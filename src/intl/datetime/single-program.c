@@ -29,6 +29,13 @@ static int same_components(const QJSIntlDateTimeComponents *a, const QJSIntlDate
     return 1;
 }
 
+/* Public year metadata groups numeric and cyclic representations together.
+   Prefer an actual numeric-year source when possible; never relabel U as r. */
+static int cyclic_only(unsigned int kinds)
+{
+    return kinds == QJS_INTL_DATE_YEAR_CYCLIC;
+}
+
 static unsigned int period_class(const QJSIntlDatePatternInfo *info)
 {
     return info->period_symbol == 'b' ? 1 : info->period_symbol == 'B' ? 2 : 0;
@@ -104,9 +111,19 @@ QJSIntlStatus qjs_intl_date_single_programs_open(const QJSIntlDateSourceCandidat
     result.allocator = *allocator;
     if (!result.components.values[QJS_INTL_DATETIME_HOUR]) {
         Choice choice = {0};
-        status = qjs_intl_date_format_source_member(groups, group, 0, &choice.index);
-        if (status || choice.index >= pool->count)
-            return QJS_INTL_INVALID_ARGUMENT;
+        int rank = 2;
+        for (i = 0; i < count; i++) {
+            size_t index;
+            int candidate;
+            status = qjs_intl_date_format_source_member(groups, group, i, &index);
+            if (status || index >= pool->count)
+                return QJS_INTL_INVALID_ARGUMENT;
+            candidate = cyclic_only(pool->records[index].info.year_kinds);
+            if (candidate < rank) {
+                rank = candidate;
+                choice.index = index;
+            }
+        }
         status = copy_program(pool, &choice, &result.components, 0, allocator, &result.normal);
         if (status)
             goto fail;
@@ -145,8 +162,12 @@ QJSIntlStatus qjs_intl_date_single_programs_open(const QJSIntlDateSourceCandidat
     for (year = 0; year < 8; year++) {
         for (period = 0; period < 3; period++) {
             Pair *pair = &classes[year][period];
-            if (pair->normal.found && pair->twelve.found && (!chosen || better_pair(pair, chosen)))
-                chosen = pair;
+            if (pair->normal.found && pair->twelve.found) {
+                int rank = cyclic_only(year);
+                int previous = chosen ? cyclic_only(pool->records[chosen->normal.index].info.year_kinds) : 2;
+                if (rank < previous || (rank == previous && better_pair(pair, chosen)))
+                    chosen = pair;
+            }
         }
     }
     if (!chosen)
