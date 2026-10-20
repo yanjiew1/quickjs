@@ -131,6 +131,7 @@ if intl_enabled
     'intl/currency/data.c',
     'intl/currency/display.c',
     'intl/datetime/available-data.c',
+    'intl/datetime/basic-match.c',
     'intl/datetime/combination-data.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
