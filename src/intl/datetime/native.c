@@ -446,15 +446,6 @@ typedef struct Programs {
     uint32_t style_calendar, connector_calendar;
 } Programs;
 
-static unsigned int mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0, i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
-
 static void programs_clear(const QJSIntlAllocator *allocator, Programs *programs)
 {
     unsigned int i;
@@ -568,7 +559,7 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
             goto done;
         out->admitted[i] = 1;
         for (j = 0; j < sizeof(required) / sizeof(*required); j++)
-            if (mask(&single->components) == required[j])
+            if (qjs_intl_datetime_component_mask(&single->components) == required[j])
                 seen |= 1U << j;
     }
     status = seen == (1U << (sizeof(required) / sizeof(*required))) - 1 ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
@@ -729,7 +720,8 @@ static QJSIntlStatus get_record(QJSIntlDateTimeFormatter *formatter, const Progr
 {
     const QJSIntlDateTimeComponents *options = &formatter->options.components;
     QJSIntlDateTimeComponents request = relevant ? (QJSIntlDateTimeComponents){{0}} : *options;
-    unsigned int fields = required_mask(required), present = mask(options), i;
+    unsigned int fields = required_mask(required), i;
+    unsigned int present = qjs_intl_datetime_component_mask(options);
     if (relevant && (required == QJS_INTL_DATE_REQUIRE_DATE ||
                      required == QJS_INTL_DATE_REQUIRE_YEAR_MONTH || required == QJS_INTL_DATE_REQUIRE_ANY))
         request.values[QJS_INTL_DATETIME_ERA] = options->values[QJS_INTL_DATETIME_ERA];
@@ -755,7 +747,7 @@ static QJSIntlStatus adjust_style(QJSIntlDateTimeFormatter *formatter, const Pro
 {
     QJSIntlDateTimeComponents request = style->components;
     unsigned int i;
-    if (!(mask(&style->components) & ~allowed))
+    if (!(qjs_intl_datetime_component_mask(&style->components) & ~allowed))
         return copy_record(formatter, &style->components, &style->normal, &style->twelve, out);
     for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
         if (!((allowed >> i) & 1))
@@ -917,7 +909,8 @@ static QJSIntlStatus validate_options(const QJSIntlDateTimeOptions *options)
     status = qjs_intl_datetime_basic_score(&options->components, &options->components, &score);
     if (status)
         return status;
-    if ((options->date_style || options->time_style) && mask(&options->components))
+    if ((options->date_style || options->time_style) &&
+        qjs_intl_datetime_component_mask(&options->components))
         return QJS_INTL_INVALID_ARGUMENT;
     if ((options->required == QJS_INTL_DATE_REQUIRE_DATE && options->time_style) ||
         (options->required == QJS_INTL_DATE_REQUIRE_TIME && options->date_style))

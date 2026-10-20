@@ -17,16 +17,6 @@ typedef struct Build {
     size_t capacity;
 } Build;
 
-static unsigned int mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0;
-    size_t i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
-
 static int equal(const QJSIntlDateTimeComponents *a, const QJSIntlDateTimeComponents *b)
 {
     size_t i;
@@ -40,7 +30,7 @@ static size_t find(const Build *build, unsigned int wanted)
 {
     size_t i;
     for (i = 0; i < build->result.count; i++)
-        if (mask(&build->result.records[i].single.components) == wanted)
+        if (qjs_intl_datetime_component_mask(&build->result.records[i].single.components) == wanted)
             return i;
     return SIZE_MAX;
 }
@@ -53,7 +43,7 @@ static size_t date_base(const Build *build, unsigned int wanted)
     if ((wanted & ~BIT(ERA)) == DATE_MASK) {
         for (i = 0; i < build->result.count; i++) {
             const QJSIntlDateTimeComponents *components = &build->result.records[i].single.components;
-            if (mask(components) == wanted &&
+            if (qjs_intl_datetime_component_mask(components) == wanted &&
                 components->values[QJS_INTL_DATETIME_YEAR] == QJS_INTL_DATETIME_NUMERIC &&
                 components->values[QJS_INTL_DATETIME_MONTH] <= QJS_INTL_DATETIME_NUMERIC &&
                 components->values[QJS_INTL_DATETIME_DAY] <= QJS_INTL_DATETIME_NUMERIC)
@@ -123,7 +113,8 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
     status = qjs_intl_date_pattern_info(&field, &info);
     if (status)
         return status;
-    if (mask(&info.components) & mask(&build->result.records[base].single.components))
+    if (qjs_intl_datetime_component_mask(&info.components) &
+        qjs_intl_datetime_component_mask(&build->result.records[base].single.components))
         return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < build->append->count; i++) {
         QJSIntlDateAvailableGroup group;
@@ -170,7 +161,7 @@ static QJSIntlStatus plain_clock(Build *build, unsigned int wanted)
     initialize(build, &record);
     for (i = 0; i < build->pool->count; i++) {
         const QJSIntlDatePatternInfo *info = &build->pool->records[i].info;
-        unsigned int fields = mask(&info->components);
+        unsigned int fields = qjs_intl_datetime_component_mask(&info->components);
         if (fields == wanted && !info->period_symbol && normal == SIZE_MAX) {
             normal = i;
             target = info->components;

@@ -5,16 +5,6 @@
 
 #define BIT(field) (1U << QJS_INTL_DATETIME_ ## field)
 
-static unsigned int mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0;
-    size_t i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
-
 static QJSIntlDateStyleWidth connector_width(const QJSIntlDateTimeComponents *components)
 {
     int month = components->values[QJS_INTL_DATETIME_MONTH];
@@ -63,7 +53,7 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
         indexes[i] = SIZE_MAX;
     for (i = 0; i < ordinary->count; i++) {
         const QJSIntlDateTimeComponents *components = &ordinary->records[i].single.components;
-        unsigned int fields = mask(components);
+        unsigned int fields = qjs_intl_datetime_component_mask(components);
         int fraction = components->values[QJS_INTL_DATETIME_FRACTION];
         size_t at;
         if (admitted && !admitted[i])
@@ -105,8 +95,8 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
         status = qjs_intl_date_pattern_info(dates[i], &date);
         if (status)
             goto fail;
-        if (!(mask(&date.components) & (BIT(YEAR) | BIT(MONTH) | BIT(DAY))) ||
-            (mask(&date.components) & ~date_fields)) {
+        if (!(qjs_intl_datetime_component_mask(&date.components) & (BIT(YEAR) | BIT(MONTH) | BIT(DAY))) ||
+            (qjs_intl_datetime_component_mask(&date.components) & ~date_fields)) {
             status = QJS_INTL_INVALID_ARGUMENT;
             goto fail;
         }
