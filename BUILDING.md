@@ -91,13 +91,13 @@ parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
 
 Current JavaScript APIs are `Intl.getCanonicalLocales()` and `Intl.Locale`
 construction, getters, `toString()`, `maximize()`, `minimize()`, `getWeekInfo()`,
-`getTextInfo()` and `getHourCycles()`. Other locale preference methods and
-locale information methods are still being implemented. The delivered
-formatting APIs are `Intl.ListFormat`, `Intl.PluralRules`, `Intl.NumberFormat`,
-`Intl.RelativeTimeFormat` and `Intl.DurationFormat`, including their standard
-methods. Number and BigInt locale formatting uses the intrinsic NumberFormat;
-Temporal.Duration locale formatting uses the intrinsic DurationFormat when
-Temporal is enabled. DateTimeFormat, DisplayNames, Collator and Segmenter are
+`getTextInfo()`, `getHourCycles()` and `getNumberingSystems()`. Other locale
+preference methods and locale information methods are still being implemented.
+The delivered formatting APIs are `Intl.ListFormat`, `Intl.PluralRules`, `Intl.NumberFormat`,
+`Intl.RelativeTimeFormat`, `Intl.DurationFormat` and `Intl.DisplayNames`, including
+their standard methods. Number and BigInt locale formatting uses the intrinsic
+NumberFormat; Temporal.Duration locale formatting uses the intrinsic DurationFormat when
+Temporal is enabled. DateTimeFormat, Collator and Segmenter are
 still in development. Setup warns about this status; these options do not imply
 complete Intl conformance.
 Intl can be enabled independently of `-Dtemporal=false`. The embedding entry

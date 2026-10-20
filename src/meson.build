@@ -154,6 +154,7 @@ if intl_enabled
     'intl/datetime/combination-data.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
+    'intl/datetime/name-data.c',
     'intl/datetime/style-data.c',
     'intl/display/calendar-names.c',
     'intl/display/data.c',
