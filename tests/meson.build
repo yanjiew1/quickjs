@@ -2670,6 +2670,14 @@ test(
 )
 
 test(
+  'intl-calendar-name-tables',
+  python,
+  args: files('test_intl_calendar_name_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-calendar-names',
   python,
   args: files('test_intl_calendar_names.py'),

@@ -700,6 +700,13 @@ not parsed as date patterns. Raw CLDR era IDs remain source identities until
 the calendar integration maps them through supplemental era codes. Neither
 localized names nor inventory entries establish calendar arithmetic support.
 This host collector precedes its separate wire and runtime-query stages.
+Optional calendar-name section 29 stores a typed group registry, shared locale
+rows, sparse leaf maps and source nodes. Each node retains its own terminal
+locale and group. Aliases may change calendar, context, width or cyclic set
+along a parent chain, while retaining the semantic name family. The wire never
+flattens those chains or selects lateral fallback. Profile projection retains
+reachable source nodes outside the selected requesting locales. Canonical
+sharing, typed references and reachability are checked before consumption.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
