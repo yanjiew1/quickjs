@@ -1461,6 +1461,117 @@ function string_normalize_long(n)
     return n * 100;
 }
 
+/* Fixed UTC input keeps date workloads independent of host zone and clock.
+   Formatting cases prepare a reusable formatter outside the inner loop. */
+function intl_date_construct(n)
+{
+    var options = { timeZone: "UTC", dateStyle: "medium", timeStyle: "medium" };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.DateTimeFormat("en", options);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_format(n)
+{
+    var format = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+    }).format;
+    var base = Date.UTC(2024, 0, 1), i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(base + i * 1000);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_parts(n)
+{
+    var formatter = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+    });
+    var base = Date.UTC(2024, 0, 1), i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatToParts(base + i * 1000);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_range_format(n)
+{
+    var formatter = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
+    });
+    var base = Date.UTC(2024, 0, 1), day = 86400000, i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatRange(base + i * day, base + (i + 3) * day);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_range_parts(n)
+{
+    var formatter = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
+    });
+    var base = Date.UTC(2024, 0, 1), day = 86400000, i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatRangeToParts(base + i * day, base + (i + 3) * day);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_zone(n)
+{
+    var format = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", hour: "numeric", minute: "2-digit", timeZoneName: "longOffset"
+    }).format;
+    var base = Date.UTC(2024, 0, 1), i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(base + i * 1000);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_locale(n)
+{
+    var date = new Date(Date.UTC(2024, 0, 1));
+    var options = { timeZone: "UTC", dateStyle: "medium", timeStyle: "medium" };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = date.toLocaleString("en", options);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_date_temporal(n)
+{
+    var format = new Intl.DateTimeFormat("en", {
+        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+    }).format;
+    var value = new Temporal.PlainDateTime(2024, 1, 1, 12, 34, 56), i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(value);
+        global_res = result;
+    }
+    return n * 100;
+}
+
 function string_length(n)
 {
     var str, sum, j;
@@ -2148,6 +2259,17 @@ function main(argc, argv, g)
         test_list.push(intl_display_language);
         test_list.push(intl_display_calendar);
         test_list.push(intl_display_currency);
+    }
+    if (typeof Intl === "object" && typeof Intl.DateTimeFormat === "function") {
+        test_list.push(intl_date_construct);
+        test_list.push(intl_date_format);
+        test_list.push(intl_date_parts);
+        test_list.push(intl_date_range_format);
+        test_list.push(intl_date_range_parts);
+        test_list.push(intl_date_zone);
+        test_list.push(intl_date_locale);
+        if (typeof Temporal === "object" && typeof Temporal.PlainDateTime === "function")
+            test_list.push(intl_date_temporal);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
