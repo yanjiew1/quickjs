@@ -939,8 +939,11 @@ variable-day partitions. Format restrictions apply if any formatting origin
 references a shared list. Validation releases all scratch on success and failure;
 exact-origin, map and rule queries allocate nothing and borrow pack storage.
 `datetime/dayperiod-code.[ch]` owns the common C vocabulary used independently
-by calendar-name admission and clock-rule decoding. Profile integration follows;
-this reader supplies no locale inheritance, period selection or formatter API.
+by calendar-name admission and clock-rule decoding. Both prepared profiles
+retain the complete global supplemental table, including explicit origins outside
+their locale inventory. Each profile uses its own shared string pool and records
+the consumed source in provenance. This reader supplies no locale inheritance,
+period selection or formatter API.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
