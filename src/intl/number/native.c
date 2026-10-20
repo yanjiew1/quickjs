@@ -240,6 +240,51 @@ QJSIntlStatus qjs_intl_number_system_supported(const QJSIntlNumberService *servi
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_number_system_available(const QJSIntlNumberService *service,
+                                               QJSIntlBytes name, int *out)
+{
+    size_t i;
+    if (out)
+        *out = 0;
+    if (!service || !out || (!name.data && name.length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < service->numbering.data.locales.count - 1; i++) {
+        QJSIntlStatus status = qjs_intl_number_system_supported(service, i, name, out);
+        if (status || *out)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_number_system_next(const QJSIntlNumberService *service,
+                                          uint32_t *cursor, QJSIntlBytes *out)
+{
+    uint32_t i;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!service || !cursor || !out || *cursor > service->numbering.systems.count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = *cursor; i < service->numbering.systems.count; i++) {
+        QJSIntlNumberingSystem system;
+        int supported;
+        QJSIntlStatus status = qjs_intl_numbering_system_at(&service->numbering, i, &system);
+        if (status)
+            return status;
+        if (system.kind != QJS_INTL_NUMBERING_NUMERIC)
+            continue;
+        status = qjs_intl_number_system_available(service, system.name, &supported);
+        if (status)
+            return status;
+        if (supported) {
+            *out = system.name;
+            *cursor = i + 1;
+            return QJS_INTL_OK;
+        }
+    }
+    *cursor = service->numbering.systems.count;
+    return QJS_INTL_UNSUPPORTED;
+}
+
 void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
 {
     if (formatter) {
