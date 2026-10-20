@@ -8,6 +8,12 @@ See [the binary format guide](../../doc/intl-data-format.md) and
 [section reference](../../doc/intl-data-sections.md) for the envelope, exact wire
 layouts, size reductions and format maintenance rules.
 
+Canonical-era presentation metadata is collected by `calendar_eras.py` and
+encoded by `calendar_era_tables.py` in optional section 35. It retains explicit
+CLDR `calendarData` code/type pairs independently of locale inventories and
+calendar arithmetic. Japanese raw IDs are source values, not array positions;
+cyclic calendars without canonical era codes do not acquire a fictitious era.
+
 ## Acquire the pinned inputs
 
 ```sh
