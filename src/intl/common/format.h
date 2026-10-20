@@ -98,4 +98,18 @@ static inline void qjs_intl_formatted_clear(const QJSIntlAllocator *allocator, Q
     }
     memset(out, 0, sizeof(*out));
 }
+
+static inline void qjs_intl_formatted_range_clear(const QJSIntlAllocator *allocator,
+                                                 QJSIntlFormattedRange *out)
+{
+    if (!out)
+        return;
+    if (allocator && allocator->free) {
+        if (out->text)
+            allocator->free(allocator->opaque, out->text);
+        if (out->parts)
+            allocator->free(allocator->opaque, out->parts);
+    }
+    memset(out, 0, sizeof(*out));
+}
 #endif
