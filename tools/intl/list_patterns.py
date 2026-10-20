@@ -8,6 +8,7 @@ import re
 import acquire
 from cldr_xml import DataError, Schema, read_xml
 import parents
+import pair_template
 from resolve import BLOCK, INHERIT, Records
 
 PARTS = ('2', 'start', 'middle', 'end')
@@ -35,12 +36,7 @@ def context(locale, variant, values):
 def pattern(value):
     if value in (INHERIT, BLOCK):
         return value
-    if value.count('{0}') != 1 or value.count('{1}') != 1:
-        raise DataError('list pattern requires both placeholders exactly once')
-    literal = value.replace('{0}', '').replace('{1}', '')
-    if '{' in literal or '}' in literal:
-        raise DataError('unsupported list placeholder or brace')
-    return value
+    return pair_template.validate(value)
 
 
 def collect(sources, graph=None):
