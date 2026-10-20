@@ -840,7 +840,7 @@ indexes require the original pool for any later provenance lookup.
 available-pattern matching. Pattern and independent skeleton provenance retain
 raw numbering overrides; numeric rendering still uses the resolved ECMA
 NumberingSystem. Date/time family mixing and unsupported semantic fields such
-as week-year Y remain explicit gaps, not calendar-year substitutions. Single-date
+as week-year Y remain unsupported exact sources. Single-date
 composition accepts a selected date and a complete, compatible time pair. With
 both, the connector uses the requested date style width: usable atTime first,
 then standard; missing/blocked/empty forms do not revive masked parents or try
@@ -848,6 +848,19 @@ relative/another width. Without both sources no connector is needed. Compose
 owned token programs, retain source facts, and verify the final component union,
 year kinds and auxiliary period semantics. This supplies no ranges, missing
 hour-family synthesis, renderer admission or public formatter capability.
+
+`datetime/style-date.[ch]` is native DATE preparation above that exact source
+compiler. Preserve the original selected style and independent skeleton. Only a
+single width-one Y with otherwise supported date-only fields may explicitly
+request a calendar-year alternative. Choose a real visible whole y-only available
+pattern in the supplied source catalog, retaining its punctuation and field order.
+Prefer exact component widths; otherwise permit only SHORT-to-LONG month/weekday
+name expansion with unchanged context and a matching source skeleton. Do not
+override an intentionally different locale skeleton/pattern width. Retain the
+replacement entry, origin, pool index and reconstruction flag separately from
+the original style. Missing/blocked/empty and other unsupported forms do not
+fallback. Generic provenance never chooses arithmetic calendar. Prepared styles
+can enter the existing composer; ranges and renderer admission remain separate.
 
 `datetime/style-hour.[ch]` constructs complete time-style single-date pairs
 from the authoritative style, compatible whole available programs, or bare
@@ -858,7 +871,13 @@ hour family and permitted numeric hour/minute/second widths, using the shared
 for the style's own program and actual pool indexes for available sources.
 Record zone appends as synthesis. Literal append templates use a parsed pair
 and token composition; their ASCII letters/apostrophes are not LDML syntax.
-Missing provable counterparts remain synthesis gaps, not advertised capability.
+A final AM/PM tier can invert the active Timezone template, proving exact
+recomposition of all original tokens and literals. Use a recovered compatible
+clock, or expand only a proven hour-only h+a layout with the authoritative
+zone-free clock. This preserves its actual AM/PM position and all clock units
+without guessing punctuation. Unmatched templates or larger incomplete layouts
+remain unsupported; extraction and layout expansion have explicit provenance
+flags. Successful style pairs do not establish final range/renderer capability.
 
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
