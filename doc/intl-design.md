@@ -735,14 +735,17 @@ Canonical sharing and reachability validation preserve empty, missing and
 blocked states. Head/parent compatibility is family-based, allowing source
 calendar or container-alternate changes without losing provenance. Profile
 projection keeps reachable origins outside the requester inventory. Prepared
-profiles follow separately. The immutable C owner in `datetime/available-data.[ch]`
+profiles both include this section. The immutable C owner in `datetime/available-data.[ch]`
 validates canonical source records and frees all scratch before returning. Its
 exact group/head/node/leaf queries borrow pack storage and allocate nothing;
 container alternates compare by bytes, independently of leaf alternates. Source
 locale and code validation is cached by string/family, bounding repeated scans
 of shared long skeleton IDs. Authored fixtures cover unaligned storage, empty
 inventories, external origins, malformed records and allocation-failure retries.
-These checks do not implement pattern matching or template rendering.
+Prepared-data C tests cover every stored selector and source layer, English
+pattern provenance and validation allocation failures. The reader is compiled
+in production Intl builds. These checks do not implement pattern matching or
+template rendering.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
