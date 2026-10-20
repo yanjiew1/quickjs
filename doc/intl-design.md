@@ -681,8 +681,12 @@ and establishes host-side facts before a separate wire/C-owner stage.
 Optional connector section 28 pools records and locale rows over calendar,
 width, form and alternate selectors. Eight-word records preserve raw overrides
 and typed terminal provenance independently of consumer fallback. Validate its
-C owner before adding it to production profiles. Missing, blocked and explicit
-empty records remain distinct across source, wire and future runtime queries.
+C owner before adding it to production profiles. The immutable connector owner
+checks canonical sharing and references, frees all validation scratch, and
+provides exact queries that allocate nothing. Pattern and connector data share
+the width selector in `datetime/style-types.h`; their records, states and query
+interfaces retain distinct owners. Missing, blocked and explicit empty records
+remain distinct across source, wire and runtime queries.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled

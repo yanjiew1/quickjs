@@ -215,7 +215,12 @@ override, source locale and source calendar/width/form/alternate indices. Missin
 is all zero; blocked retains provenance with empty text and numbering override.
 `date_combination_tables.py` validates exact coverage, canonical pooling, all
 references and reachability; projection retains origins outside selected locales.
-Add a C owner and validate it before emitting the section in prepared profiles.
+`src/intl/datetime/combination-data.c` validates these records through a borrowed
+immutable owner, using temporary scratch with no retained allocation. Queries
+return exact borrowed text, overrides and source metadata without allocation or
+form fallback. Authored C tests cover every selector, corrupt tables, unaligned
+input and validation allocation failure with retry. Integrate prepared profiles
+only after this owner is validated; the optional section is not emitted yet.
 
 ## Relative-time source records
 
