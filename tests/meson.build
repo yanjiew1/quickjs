@@ -1067,6 +1067,39 @@ test(
   timeout: 30,
 )
 
+intl_timezone_name_sources = files(
+  'test_intl_timezone_name_data.c',
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/common/source-locale.c',
+  '../src/intl/datetime/timezone-name-data.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+)
+intl_timezone_name_fixture = custom_target(
+  'intl-timezone-name-authored-fixture',
+  output: 'intl-timezone-name-authored-fixture.c',
+  command: [python, files('intl_timezone_name_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_timezone_name_tables.py',
+    'test_intl_timezone_names.py',
+    'test_intl_list_patterns.py',
+  ),
+)
+intl_timezone_name_authored = executable(
+  'test_intl_timezone_name_authored',
+  intl_timezone_name_sources + [intl_timezone_name_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-timezone-name-authored',
+  intl_timezone_name_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_date_interval_sources = files(
   'test_intl_date_interval_data.c',
   '../src/intl/common/locale-grammar.c',
@@ -1718,6 +1751,28 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-relative-data-' + profile,
     intl_relative_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_timezone_name_data_test = executable(
+    'test_intl_timezone_name_data_' + profile,
+    files(
+      'test_intl_timezone_name_profiles.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/timezone-name-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-timezone-name-data-' + profile,
+    intl_timezone_name_data_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
@@ -2910,6 +2965,14 @@ test(
   'intl-date-interval-tables',
   python,
   args: files('test_intl_date_interval_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-timezone-name-tables',
+  python,
+  args: files('test_intl_timezone_name_tables.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
