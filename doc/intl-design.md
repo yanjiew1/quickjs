@@ -831,8 +831,38 @@ does not manufacture one. Runtime zero-offset and localized digit policy belong
 to the renderer. Supplemental metazone periods, golden zones and primary-zone
 presentation maps have a separate owner; their standard/daylight offset hints
 must not redefine the timezone engine's DST designation. CLDR stable name keys
-also do not redefine ECMA primary identifiers. Wire/runtime integration follows
-separately from this host source boundary.
+also do not redefine ECMA primary identifiers.
+
+Optional section 32 stores these source layers with four fixed family codes and
+independently shared dense head rows per family. The canonical five-selector
+group registry determines each family's width; no unrelated identity products
+are implied. An absent family has no rows or requester references. A present
+family with no values has one all-zero row. Nonempty maps, source nodes and
+four-selector leaves remain shared across families, with explicit origin locale
+and source-group provenance. Zone and metazone names share a semantic class;
+format and city aliases cannot cross that boundary. Requester projection keeps
+reachable external source locales and groups before string pooling.
+
+The host codec checks exact extents, selector shapes, canonical order, unique
+and used physical rows/maps/nodes, marker states, compatible alias chains and
+reverse reachability. It validates stored head rows once and expands only present
+heads for the host source view. Raw format text remains source data: collection
+validates its grammar, while token compilation and formatting policy remain
+separate from structural wire admission.
+
+The immutable C owner in `datetime/timezone-name-data.[ch]` validates physical
+family blocks, selector identities, compatible source chains, canonical maps
+and full reachability. Per-string source/identity/code checks are cached during
+opening. All scratch is released before return; exact group/head/node/leaf
+queries allocate nothing and borrow the unchanged pack. Authored C fixtures
+cover both alias directions, external source locales, independent alternates,
+empty/blocked values, absent families, hostile records, unaligned storage and
+allocation-failure retries. The owner does not choose primary identifiers,
+metazone periods, standard/daylight names, offsets or renderer fallback.
+Both prepared profiles include these source layers. Their C tests query every
+stored selector and the independent family-row addressing, English provenance,
+unaligned storage and validation allocation failures. Runtime formatting
+integration follows separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
