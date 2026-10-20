@@ -2740,6 +2740,14 @@ test(
 )
 
 test(
+  'intl-date-available-formats',
+  python,
+  args: files('test_intl_date_available_formats.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-combinations',
   python,
   args: files('test_intl_date_combinations.py'),
