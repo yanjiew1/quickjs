@@ -143,7 +143,7 @@ QJSIntlStatus qjs_intl_number_compact_format(const QJSIntlAllocator *allocator,
             const QJSIntlPart *part = &body->parts[i];
             if (part->start != at || part->end < at || part->end > body->length ||
                 part->type == QJS_INTL_PART_ELEMENT ||
-                (unsigned int)part->type >= QJS_INTL_PART_COUNT)
+                (unsigned int)part->type >= QJS_INTL_PART_NUMBER_COUNT)
                 return QJS_INTL_INVALID_ARGUMENT;
             at = part->end;
         }
