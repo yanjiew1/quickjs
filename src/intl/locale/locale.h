@@ -41,4 +41,12 @@ QJSIntlStatus
 qjs_intl_locale_canonicalize_uvalue(const QJSIntlLocaleService *service,
                                     QJSIntlBytes key, QJSIntlBytes value,
                                     char **out);
+/* Resolve an exact registered source type/alias through its preferred chain.
+   Legacy source spellings need not satisfy public Unicode keyword syntax.
+   Return a canonical registered name borrowed from the unchanged service;
+   unknown source types are UNSUPPORTED. No service capability is inferred.
+   Allocate nothing and reset output on error; do not use for option validation. */
+QJSIntlStatus qjs_intl_locale_source_type(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes key, QJSIntlBytes value,
+                                          QJSIntlBytes *out);
 #endif
