@@ -2975,6 +2975,22 @@ if intl_enabled
   )
 
   test(
+    'intl-timezone-names',
+    python,
+    args: files('test_intl_timezone_names.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-zone-pattern-syntax',
+    python,
+    args: files('test_intl_zone_pattern_syntax.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-date-intervals',
     python,
     args: files('test_intl_date_intervals.py'),
