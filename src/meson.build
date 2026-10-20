@@ -270,11 +270,14 @@ if get_option('temporal')
     'temporal/relative.c',
     'temporal/time.c',
     'temporal/time-zone.c',
-    'timezone/system-zone.c',
   )
 endif
 if get_option('temporal') or intl_enabled
-  support_sources += files('timezone/timezone.c')
+  support_sources += files(
+    'timezone/identifier.c',
+    'timezone/system-zone.c',
+    'timezone/timezone.c',
+  )
   if get_option('timezone_backend') == 'native'
     support_sources += files(
       'timezone/timezone-native.c',
