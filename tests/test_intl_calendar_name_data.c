@@ -94,12 +94,74 @@ static uint32_t month_head(const QJSIntlCalendarNameData *data, const char *loca
     return head;
 }
 
+static void check_resolved_queries(const QJSIntlCalendarNameData *data)
+{
+    static const struct {
+        const char *code;
+        QJSIntlCalendarNameYear year;
+        const char *alt, *text;
+        unsigned int blocked;
+        const char *locale, *calendar;
+    } cases[] = {
+        {"1", QJS_INTL_CAL_NAME_NO_YEAR, "", "root", 0, "root", "gregorian"},
+        {"1", QJS_INTL_CAL_NAME_NO_YEAR, "variant", "child", 0, "en", "gregorian"},
+        {"2", QJS_INTL_CAL_NAME_NO_YEAR, "", "", 1, "root", "gregorian"},
+        {"3", QJS_INTL_CAL_NAME_NO_YEAR, "", "", 0, "root", "gregorian"},
+        {"4", QJS_INTL_CAL_NAME_NO_YEAR, "", "own", 0, "en-GB", "generic"},
+        {"6", QJS_INTL_CAL_NAME_NO_YEAR, "", "", 1, "en", "gregorian"},
+        {"8", QJS_INTL_CAL_NAME_NO_YEAR, "", "", 0, "en", "gregorian"},
+        {"7", QJS_INTL_CAL_NAME_STANDARD_YEAR, "", "ordinary", 0, "root", "gregorian"},
+        {"7", QJS_INTL_CAL_NAME_LEAP_YEAR, "variant", "leap\xf0\x9f\x98\x80", 0, "root", "gregorian"}
+    };
+    QJSIntlCalendarNameEntry entry;
+    QJSIntlCalendarNameNode origin;
+    QJSIntlCalendarNameGroup group;
+    uint32_t head = month_head(data, "en-GB", "generic");
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(*cases); i++) {
+        assert(!qjs_intl_calendar_name_resolve(data, head, bytes(cases[i].code), cases[i].year,
+                                              bytes(cases[i].alt), &entry, &origin));
+        assert(equal(entry.text, cases[i].text) && entry.blocked == cases[i].blocked);
+        assert(equal(origin.origin_locale, cases[i].locale));
+        assert(!qjs_intl_calendar_name_group_at(data, origin.group, &group));
+        assert(group.calendar == calendar_id(data, cases[i].calendar));
+    }
+    for (i = 0; i < 3; i++) {
+        QJSIntlCalendarNameYear year = i == 1 ? QJS_INTL_CAL_NAME_LEAP_YEAR : QJS_INTL_CAL_NAME_NO_YEAR;
+        memset(&entry, 0xff, sizeof(entry));
+        memset(&origin, 0xff, sizeof(origin));
+        assert(qjs_intl_calendar_name_resolve(data, head, bytes(i == 2 ? "5" : "7"), year,
+                                             bytes(""), &entry, &origin) == QJS_INTL_UNSUPPORTED);
+        assert(!entry.code.data && !entry.text.length && !entry.alt.data && !entry.blocked && !entry.year);
+        assert(!origin.origin_locale.data && !origin.parent && !origin.group && !origin.map);
+    }
+    head = month_head(data, "de", "generic");
+    assert(!qjs_intl_calendar_name_resolve(data, head, bytes("5"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                          bytes(""), &entry, &origin));
+    assert(equal(entry.text, "external") && equal(origin.origin_locale, "en-1901-1996"));
+    assert(qjs_intl_calendar_name_resolve(data, 0, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                         bytes(""), &entry, &origin) == QJS_INTL_UNSUPPORTED);
+    assert(qjs_intl_calendar_name_resolve(data, data->node_count + 1, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                         bytes(""), &entry, &origin) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_calendar_name_resolve(data, 0, (QJSIntlBytes){NULL, 1}, QJS_INTL_CAL_NAME_NO_YEAR,
+                                         bytes(""), &entry, &origin) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_calendar_name_resolve(data, head, bytes("1"), (QJSIntlCalendarNameYear)-1,
+                                         bytes(""), &entry, &origin) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_calendar_name_resolve(data, head, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                         (QJSIntlBytes){NULL, 1}, &entry, &origin) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_calendar_name_resolve(data, head, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                         bytes(""), NULL, &origin) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_calendar_name_resolve(data, head, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
+                                         bytes(""), &entry, NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
 static void check_queries(const QJSIntlCalendarNameData *data)
 {
     QJSIntlCalendarNameEntry entry;
     QJSIntlCalendarNameNode node;
     QJSIntlCalendarNameGroup group;
     uint32_t i, j, found, head = month_head(data, "en-GB", "generic");
+    check_resolved_queries(data);
     assert(head);
     assert(qjs_intl_calendar_name_lookup(data, head, bytes("1"), QJS_INTL_CAL_NAME_NO_YEAR,
                                          bytes(""), &entry) == QJS_INTL_UNSUPPORTED);
