@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_DATETIME_TEXT_H
 #define QJS_INTL_DATETIME_TEXT_H
 #include "chronology.h"
+#include "numeric.h"
 #include "calendar-identity.h"
 #include "dayperiod.h"
 #include "era-data.h"
