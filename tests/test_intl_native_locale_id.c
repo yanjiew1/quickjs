@@ -111,13 +111,24 @@ static QJSIntlStatus preference_operation(QJSIntlLocaleService *service, int ope
         } else {
             assert(!list.data && !count);
         }
-    } else {
+    } else if (operation == 2) {
         unsigned int direction;
         status = qjs_intl_locale_text_direction(service, bytes("ar"), &direction);
         if (!status)
             assert(direction == QJS_INTL_DIRECTION_RTL);
         else
             assert(direction == QJS_INTL_DIRECTION_UNKNOWN);
+    } else {
+        QJSIntlBytes list;
+        uint32_t count;
+        status = qjs_intl_locale_calendar_preferences(service,
+                    bytes("en-u-rg-thzzzz-sd-usca"), &list, &count);
+        if (!status) {
+            assert(count == 2 && list.length == 18);
+            assert(!memcmp(list.data, "buddhist gregorian", 18));
+        } else {
+            assert(!list.data && !count);
+        }
     }
     return status;
 }
@@ -125,7 +136,7 @@ static QJSIntlStatus preference_operation(QJSIntlLocaleService *service, int ope
 static void test_preferences(QJSIntlLocaleService *service, AllocationState *state)
 {
     int operation;
-    for (operation = 0; operation < 3; operation++) {
+    for (operation = 0; operation < 4; operation++) {
         size_t i, calls;
         state->calls = 0;
         assert(!preference_operation(service, operation));
