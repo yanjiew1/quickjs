@@ -775,6 +775,22 @@ unchanged pack. The input source index can be released independently. Distinct
 skeletons and hour cycles remain distinct even when component vectors match;
 these are source candidates, not the final ECMA format list or capability proof.
 
+`locale/type-identity.[ch]` resolves exact metadata names and complete legacy
+alias tokens to a terminal preferred identity, without applying Unicode-type
+syntax to raw source spellings. The scan is restricted to one extension/key.
+Aliases converging on one terminal are valid; conflicting terminals are data
+errors. Variable rows establish no identity. This shared operation allocates
+nothing and does not infer any service capability.
+
+`datetime/calendar-identity.[ch]` applies that equivalence independently to
+available-pattern, style, connector, calendar-name and interval catalogs. Each
+query returns the selected owner's raw index; catalogs need not have matching
+contents or ordering. Ambiguous multiple raw keys for one identity are rejected.
+Gregorian `gregory` maps through metadata to `gregorian`, while `iso8601` keeps
+its own source inventory and `generic` stays source-only. Existing source alias
+chains and origin calendars are unchanged. Arithmetic support, locale calendar
+preferences and renderer admission remain separate from this projection.
+
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate
 owner. Groups retain calendar, interval-container alternate, family, skeleton

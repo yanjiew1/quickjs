@@ -1074,6 +1074,42 @@ test(
   timeout: 30,
 )
 
+intl_date_calendar_identity_fixture = custom_target(
+  'intl-date-calendar-identity-fixture',
+  output: 'intl-date-calendar-identity-fixture.c',
+  command: [python, files('intl_date_calendar_identity_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies,
+)
+intl_date_calendar_identity_test = executable(
+  'test_intl_date_calendar_identity',
+  files(
+    'test_intl_date_calendar_identity.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/available-data.c',
+    '../src/intl/datetime/calendar-identity.c',
+    '../src/intl/datetime/combination-data.c',
+    '../src/intl/datetime/dayperiod-code.c',
+    '../src/intl/datetime/interval-data.c',
+    '../src/intl/datetime/name-data.c',
+    '../src/intl/datetime/style-data.c',
+    '../src/intl/locale/native-data.c',
+    '../src/intl/locale/type-identity.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_date_calendar_identity_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-date-calendar-identity',
+  intl_date_calendar_identity_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_date_source_candidate_fixture = custom_target(
   'intl-date-source-candidate-fixture',
   output: 'intl-date-source-candidate-fixture.c',
