@@ -23,10 +23,9 @@ static const char *const rounding_modes[] = {"ceil", "floor", "expand", "trunc",
 static const char *const priorities[] = {"auto", "morePrecision", "lessPrecision"};
 static const char *const trailing[] = {"auto", "stripIfInteger"};
 static const char *const part_names[QJS_INTL_PART_NUMBER_COUNT] = {
-    "literal", "element", "integer", "group", "decimal", "fraction", "nan", "infinity",
+    "literal", NULL, "integer", "group", "decimal", "fraction", "nan", "infinity",
     "minusSign", "plusSign", "percentSign", "currency", "exponentSeparator", "exponentMinusSign",
     "exponentInteger", "compact", "unit", "approximatelySign"};
-static const char *const sources[] = {"shared", "startRange", "endRange"};
 
 typedef struct JSIntlNumberFormat {
     QJSIntlNumberFormatter *formatter;
@@ -304,48 +303,7 @@ done:
 static JSValue number_parts(JSContext *ctx, const QJSIntlFormatted *ordinary,
                              const QJSIntlFormattedRange *range)
 {
-    const uint16_t *text = range ? range->text : ordinary->text;
-    size_t length = range ? range->length : ordinary->length;
-    size_t count = range ? range->part_count : ordinary->part_count;
-    size_t end = 0;
-    JSValue array;
-    if (count > UINT32_MAX)
-        return JS_ThrowRangeError(ctx, "too many NumberFormat parts");
-    array = JS_NewArray(ctx);
-    if (JS_IsException(array))
-        return array;
-    for (size_t i = 0; i < count; i++) {
-        size_t start = range ? range->parts[i].start : ordinary->parts[i].start;
-        size_t limit = range ? range->parts[i].end : ordinary->parts[i].end;
-        QJSIntlPartType type = range ? range->parts[i].type : ordinary->parts[i].type;
-        unsigned int source = range ? range->parts[i].source : 0;
-        JSValue part;
-        if (start != end || limit < start || limit > length ||
-            (unsigned int)type >= QJS_INTL_PART_NUMBER_COUNT || type == QJS_INTL_PART_ELEMENT ||
-            source >= countof(sources))
-            goto invalid;
-        end = limit;
-        part = JS_NewObject(ctx);
-        if (JS_IsException(part))
-            goto fail;
-        if (property(ctx, part, "type", JS_NewString(ctx, part_names[type])) < 0 ||
-            property(ctx, part, "value", JS_NewStringUTF16(ctx, text ? text + start : NULL,
-                                                           limit - start)) < 0 ||
-            (range && property(ctx, part, "source", JS_NewString(ctx, sources[source])) < 0)) {
-            JS_FreeValue(ctx, part);
-            goto fail;
-        }
-        if (JS_DefinePropertyValueUint32(ctx, array, (uint32_t)i, part, JS_PROP_C_W_E | JS_PROP_THROW) < 0)
-            goto fail;
-    }
-    if (end != length)
-        goto invalid;
-    return array;
-invalid:
-    JS_ThrowInternalError(ctx, "invalid Intl number parts");
-fail:
-    JS_FreeValue(ctx, array);
-    return JS_EXCEPTION;
+    return js_intl_format_parts(ctx, ordinary, range, part_names, countof(part_names));
 }
 
 /* -1 ordinary text (bound format), 0 ordinary parts, 1 range text, 2 range parts. */
