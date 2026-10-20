@@ -1754,6 +1754,27 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_timezone_presentation_data_test = executable(
+    'test_intl_timezone_presentation_data_' + profile,
+    files(
+      'test_intl_timezone_presentation_profiles.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/intl/datetime/timezone-presentation-data.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-timezone-presentation-data-' + profile,
+    intl_timezone_presentation_data_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_timezone_name_data_test = executable(
     'test_intl_timezone_name_data_' + profile,
     files(

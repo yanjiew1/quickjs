@@ -889,7 +889,12 @@ are decoded without out-of-range casts; historical membership uses sorted
 physical zone/metazone pairs, and syntax checks are cached per string. Exact
 allocation-free queries preserve gaps and do not introduce territory fallback.
 The source identity grammar is shared with localized timezone-name validation.
-Prepared-profile integration follows separately.
+Both prepared profiles carry these global supplemental facts without locale
+projection. Generation reuses the shared locale identity result and records the
+authenticated supplemental source in provenance. Profile tests exercise every
+physical period's inclusive start and exclusive end, source gaps, second-precise
+Monrovia data, Irish offset overrides and exact preferred/dominant queries.
+These records do not install or advertise a DateTimeFormat service.
 
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.
