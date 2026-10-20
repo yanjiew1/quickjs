@@ -704,6 +704,33 @@ the width selector in `datetime/style-types.h`; their records, states and query
 interfaces retain distinct owners. Missing, blocked and explicit empty records
 remain distinct across source, wire and runtime queries.
 
+`calendar_names.py` collects months, weekdays, quarters, day periods, eras,
+cyclic names and month templates in sparse child-first layers. Its typed group
+is calendar/family/cyclic-set/context/width; leaf identities separately retain
+the source identifier, month year type and alternate. Ancestor aliases map
+typed prefixes, retaining requesting or explicit-source locale anchors and
+terminal provenance. Missing groups, blocked leaves and explicit empty text
+remain distinct. Month templates have their own numeric/all selectors and are
+not parsed as date patterns. Raw CLDR era IDs remain source identities until
+the calendar integration maps them through supplemental era codes. Neither
+localized names nor inventory entries establish calendar arithmetic support.
+This host collector precedes its separate wire and runtime-query stages.
+Optional calendar-name section 29 stores a typed group registry, shared locale
+rows, sparse leaf maps and source nodes. Each node retains its own terminal
+locale and group. Aliases may change calendar, context, width or cyclic set
+along a parent chain, while retaining the semantic name family. The wire never
+flattens those chains or selects lateral fallback. Profile projection retains
+reachable source nodes outside the selected requesting locales. Canonical
+sharing, typed references and reachability are checked before consumption.
+The immutable C owner in `datetime/name-data.[ch]` validates the section using
+temporary depth, coverage and source-string scratch, released before return.
+Exact group/head/node/entry queries borrow pack storage and allocate nothing.
+Family-level and era-string validation caches bound repeated shared-data work.
+The reader has authored C fixtures, including external source locales, empty
+inventories, unaligned bytes and allocation-failure retries. Both prepared
+profiles include section 29 and compile its production reader, with separate
+prepared-data C tests. Formatter integration follows separately.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
