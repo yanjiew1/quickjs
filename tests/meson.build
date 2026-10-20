@@ -1332,6 +1332,24 @@ if intl_enabled
     },
   }]
 
+  intl_datetime_basic_match = {
+    'name': 'test_intl_datetime_basic_match',
+    'sources': files(
+      'test_intl_datetime_basic_match.c',
+      '../src/intl/datetime/basic-match.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_datetime_basic_match,
+    'name': 'intl-datetime-basic-match',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_timezone_name_sources = files(
     'test_intl_timezone_name_data.c',
     '../src/intl/common/locale-grammar.c',
