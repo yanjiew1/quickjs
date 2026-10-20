@@ -71,6 +71,20 @@ for (const [hourCycle, text] of [['h11', '0'], ['h12', '12'], ['h23', '0'], ['h2
     assert(formatter.formatToParts(0).find(p => p.type === 'hour').value, text);
     assert(formatter.resolvedOptions().hourCycle, hourCycle);
 }
+// A bare flexible period uses format-context names/rules, including exact
+// midnight/noon, without importing an hour or stand-alone-context labels.
+for (const dayPeriod of ['short', 'long', 'narrow']) {
+    const formatter = new DTF('en', {...utc, dayPeriod});
+    assert(formatter.resolvedOptions().dayPeriod, dayPeriod);
+    assert(formatter.resolvedOptions().hour, undefined);
+    for (const [hour, text] of [[0, dayPeriod === 'narrow' ? 'mi' : 'midnight'],
+                              [12, dayPeriod === 'narrow' ? 'n' : 'noon'], [9, 'in the morning']]) {
+        const parts = formatter.formatToParts(Date.UTC(2024, 0, 1, hour));
+        assertArrayEquals(parts.map(part => part.type), ['dayPeriod']);
+        assert(parts[0].value, text);
+        assert(formatter.format(Date.UTC(2024, 0, 1, hour)), text);
+    }
+}
 const overridden = new DTF('en-u-hc-h11', {...utc, hour: 'numeric', hour12: false, hourCycle: 'h12'});
 assert(overridden.resolvedOptions().hourCycle, 'h23');
 assert(overridden.resolvedOptions().locale, 'en');
@@ -91,6 +105,30 @@ const mixed = new DTF('en', {...utc, year: 'numeric', month: 'numeric', day: 'nu
 assert(mixed.resolvedOptions().weekday, undefined);
 assert(mixed.formatToParts(1719835200123).some(part => part.type === 'weekday'), false);
 assert(mixed.formatToParts(1719835200123).find(part => part.type === 'fractionalSecond').value, '12');
+
+// Root ISO patterns intentionally pad numeric month/day. Native best fit keeps
+// that source override rather than choosing a named month to reduce width cost.
+const numericIso = new DTF('en', {...utc, calendar: 'iso8601'});
+assert(numericIso.resolvedOptions().month, '2-digit');
+assert(numericIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, '09');
+const basicIso = new DTF('en', {...utc, calendar: 'iso8601', formatMatcher: 'basic'});
+assert(basicIso.resolvedOptions().month, 'short');
+const textIso = new DTF('en', {...utc, calendar: 'iso8601', month: 'short'});
+assert(textIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, 'Sep');
+const eraClock = new DTF('en', {...utc, era: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit'});
+assert(eraClock.resolvedOptions().era, 'short');
+assert(eraClock.formatToParts(0).find(part => part.type === 'era').value, 'AD');
+
+// Date-plus-zone uses the CLDR Date-Timezone layout. Plain Temporal records
+// intentionally omit zones even though the ordinary Date record retains one.
+for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset', 'shortGeneric', 'longGeneric']) {
+    const formatter = new DTF('en', {...utc, timeZoneName});
+    assert(formatter.formatToParts(0).some(part => part.type === 'timeZoneName'), true);
+    if (typeof Temporal !== 'undefined')
+        assert(formatter.formatToParts(Temporal.PlainDate.from('2024-07-01'))
+            .some(part => part.type === 'timeZoneName'), false);
+}
 
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
@@ -198,9 +236,15 @@ if (typeof Temporal !== 'undefined') {
     assert(dateOnly.formatToParts(new Temporal.PlainTime(13, 24, 35))
         .find(part => part.type === 'hour').value, '13');
     const plain = Temporal.PlainDateTime.from('2024-07-01T12:34:56.123456789');
+    const onlyEra = new DTF('en', {...utc, era: 'narrow'});
+    assert(onlyEra.format(Temporal.PlainDateTime.from('2025-11-04T14:46')).startsWith('11'), true);
     assert(f.format(plain), f.format(Date.UTC(2024, 6, 1, 12, 34, 56, 123)));
     const full = new DTF('en', {...utc, dateStyle: 'full', timeStyle: 'long'});
     assert(full.format(Temporal.PlainDate.from('2024-07-01')), 'Monday, July 1, 2024');
+    const wide = full.formatToParts(plain);
+    assert(wide.find(part => part.type === 'month').value, 'July');
+    assert(wide.find(part => part.type === 'weekday').value, 'Monday');
+    assert(wide.some(part => part.type === 'timeZoneName'), false);
     assertThrows(TypeError, () => new DTF('en', {...utc, year: 'numeric'}).format(plain.toPlainTime()));
     const ym = Temporal.PlainYearMonth.from('2024-07');
     const md = Temporal.PlainMonthDay.from('07-01');
