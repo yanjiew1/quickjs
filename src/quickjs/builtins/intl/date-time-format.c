@@ -50,7 +50,7 @@ static QJSIntlBytes bytes(const char *text)
 static QJSIntlStatus calendar_supported(void *opaque, QJSIntlBytes value, int *out)
 {
     DateCapabilities *capabilities = opaque;
-    return qjs_intl_datetime_calendar_supported(capabilities->service, capabilities->locale, value, out);
+    return qjs_intl_datetime_calendar_supported(capabilities->service, value, out);
 }
 
 static QJSIntlStatus system_supported(void *opaque, QJSIntlBytes value, int *out)
@@ -70,7 +70,7 @@ static QJSIntlStatus hour_supported(void *opaque, QJSIntlBytes value, int *out)
     return QJS_INTL_OK;
 }
 
-static QJSIntlDateTimeService *datetime_service(JSContext *ctx)
+QJSIntlDateTimeService *js_intl_datetime_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_datetime) {
@@ -245,7 +245,7 @@ static JSIntlDateTimeFormat *make_state(JSContext *ctx, JSValueConst locales, JS
     cycle = js_intl_string_option(ctx, options, "hourCycle", hour_cycles, countof(hour_cycles), countof(hour_cycles));
     if (cycle < 0)
         goto done;
-    service = datetime_service(ctx);
+    service = js_intl_datetime_service(ctx);
     if (!service || js_intl_error(ctx, qjs_intl_datetime_available(service, &available, &count), "date/time locales") ||
         js_intl_resolve_locale_match(ctx, available, count, &requested, &match))
         goto done;
@@ -761,7 +761,7 @@ done:
 
 static JSValue datetime_supported(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    QJSIntlDateTimeService *service = datetime_service(ctx);
+    QJSIntlDateTimeService *service = js_intl_datetime_service(ctx);
     const QJSIntlBytes *available;
     size_t count;
     (void)this_val;
