@@ -35,6 +35,14 @@ algorithm details, consult the referenced Unicode/CLDR standards, then ICU4X,
 then ICU4C. Audit reusable QuickJS/QuickJS-NG work before writing replacements.
 Copied or adapted code/data retains its authors, licenses and exact provenance.
 
+The living drafts govern existing functionality. Use an unmerged Stage 4 PR as
+the primary specification for the feature being implemented, checking its scope
+and compatibility intent when it refactors shared algorithms. An incidental
+shared-algorithm difference is not sufficient reason to change an established
+observable result. For example, DateTimeFormat keeps an effective hour cycle
+for Temporal-specific records internally, while `resolvedOptions()` exposes
+`hourCycle` and `hour12` only when its ordinary Date format includes an hour.
+
 ### Stage 4 acceptance inventory
 
 Stage 4 is part of version one's required scope even before its specification
@@ -930,7 +938,7 @@ original number-only type bound.
 weekday, cyclic-year and day-period names into owned UTF-16 and typed parts.
 Reuse the numeric kernel one field at a time; do not duplicate its digit,
 year/hour or fractional rules. Resolve names and unary leap affixes once before
-bounded two-pass emission. A complete decorated named month is one month part;
+bounded two-pass emission. A complete decorated month, numeric or named, is one month part;
 apostrophes in CLDR unary templates are literal, unlike LDML pattern quotes.
 The grammar-only unary parser lives in `common`, shared with unit formatting.
 
@@ -938,9 +946,18 @@ Era codes use explicit metadata rather than arithmetic on raw CLDR IDs. ISO's
 localized catalog stays distinct from its Gregorian era mapping; historical
 Japanese uses Gregorian labels. Hebrew names use their independent raw keys and
 year selectors. Only Chinese/Dangi's repeated nominal months receive the exact
-inherited named-month leap template. Numeric months still go directly through
-FormatNumeric: the pinned ECMA-402 numeric branch does not specify CLDR's numeric
-leap decoration, so it is not silently inserted. Flexible day periods consume
+inherited leap template. Numeric M/L fields select the numeric/all template;
+apply it after ordinary localized digit formatting and two-digit clipping.
+This preserves the nominal month and distinguishes it from its leap repetition,
+for example English `5` versus `5bis`, without using the year's ordinal month.
+
+This native CLDR policy follows TR35's regular M/L month-pattern handling and
+ICU behavior. The living ECMA-402 numeric branch (730ca2b, reviewed 2026-10-23,
+[FormatDateTimePattern](https://tc39.es/ecma402/#sec-formatdatetimepattern)) calls
+FormatNumeric directly and does not explicitly include leap decoration. Record
+this specification-text gap rather than claiming that its numeric pseudocode
+mandates the suffix. CLDR supplies the actual text; never hardcode `bis`, invent
+a textual resolved width, or trim a decorated result to its last two code points. Flexible day periods consume
 resolved format rules and a separate full-precision subsecond fact; noon plus
 one nanosecond must not use an exact-noon point. Missing/blocked/empty names or
 required templates return unsupported here, without invented lateral fallbacks.
@@ -966,6 +983,15 @@ legacy zero leaves remain preserved by the binary data owner. Exact chain
 resolution preserves missing/BLOCK/empty and original alias provenance; it does
 not perform name-type, width, metazone or territory fallback. Those are still
 required for complete native specific/generic zone presentation.
+
+Fixed zero identifiers retain their public `+00:00` identity while name styles
+try the CLDR Etc/GMT zone and GMT metazone names. Generic styles can use a
+standard GMT name because a fixed zero offset is permanently standard. Missing,
+blocked or empty names retain numeric fallback. Explicit shortOffset/longOffset
+styles bypass name selection and preserve numeric GMT formatting, including at
+zero. This separates locale names from the wrapper: French can use the GMT name
+while its numeric offset wrapper remains UTC{0}. It is an implementation-defined
+presentation policy consistent with CLDR name lookup, not a synthetic zero label.
 
 `datetime/ordinary-programs.[ch]` prepares a finite owned set of ordinary
 single-date programs. Retain complete useful source pairs in stable group
