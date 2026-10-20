@@ -156,6 +156,17 @@ static void identity(const QJSIntlLocaleMetadata *metadata)
     assert(!qjs_intl_timezone_region_count(metadata, bytes("ZZ"), &count) && !count);
     assert(!qjs_intl_timezone_region_count(metadata, bytes("001"), &count) && !count);
     assert(qjs_intl_timezone_region_count(metadata, bytes("us"), &count) == QJS_INTL_INVALID_ARGUMENT && !count);
+    {
+        uint32_t cursor = 0, seen = 0;
+        QJSIntlStatus status;
+        assert(!qjs_intl_timezone_region_count(metadata, bytes("US"), &count));
+        while (!(status = qjs_intl_timezone_region_next(metadata, bytes("US"), &cursor, &result))) {
+            assert(!strcmp(result.territory, "US") && result.identifier.length);
+            seen++;
+        }
+        assert(status == QJS_INTL_UNSUPPORTED && seen == count);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+    }
 }
 
 static QJSIntlFormatted render(const QJSIntlAllocator *allocator, const QJSIntlDateZoneData *data,
