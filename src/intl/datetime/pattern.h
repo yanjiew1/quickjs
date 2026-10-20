@@ -67,5 +67,13 @@ QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
                                        const QJSIntlPairPattern *layout,
                                        const QJSIntlDatePattern *first,
                                        const QJSIntlDatePattern *second, QJSIntlDatePattern *out);
+/* Replace exactly one field token by an ordinary compiled program. Preserve
+   surrounding decoded literals and never reparse replacement text. Both inputs
+   are unchanged ordinary programs; symbol is a nonzero field, not a slot.
+   Missing/repeated target is INVALID_ARGUMENT. Own one copied allocation;
+   require malloc/free and fresh disjoint output, reset errors. */
+QJSIntlStatus qjs_intl_date_pattern_replace(const QJSIntlAllocator *allocator,
+                                          const QJSIntlDatePattern *pattern, unsigned int symbol,
+                                          const QJSIntlDatePattern *replacement, QJSIntlDatePattern *out);
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern);
 #endif
