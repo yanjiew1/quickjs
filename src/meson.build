@@ -146,6 +146,7 @@ if intl_enabled
   support_sources += files(
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
+    'intl/common/range-compose.c',
     'intl/common/locale-grammar.c',
     'intl/common/source-locale.c',
     'intl/common/number-decimal.c',
@@ -169,6 +170,8 @@ if intl_enabled
     'intl/datetime/format-source.c',
     'intl/datetime/format.c',
     'intl/datetime/interval-data.c',
+    'intl/datetime/interval-program.c',
+    'intl/datetime/interval-select.c',
     'intl/datetime/name-data.c',
     'intl/datetime/name-select.c',
     'intl/datetime/local-time.c',
