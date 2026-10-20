@@ -397,6 +397,42 @@ QJSIntlStatus qjs_intl_date_available_node(const QJSIntlDateAvailableData *data,
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_date_available_map(const QJSIntlDateAvailableData *data,
+                                          uint32_t index, uint32_t *start, uint32_t *count)
+{
+    if (start)
+        *start = 0;
+    if (count)
+        *count = 0;
+    if (!data || !data->section.bytes || !start || !count || index >= data->map_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    *start = word(data->maps, (size_t)index * 2);
+    *count = word(data->maps, (size_t)index * 2 + 1);
+    return QJS_INTL_OK;
+}
+
+static void read_entry(const QJSIntlDateAvailableData *data, const uint8_t *entry,
+                       QJSIntlDateAvailableEntry *out)
+{
+    qjs_intl_data_string(&data->data, word(entry, 0), &out->code);
+    out->plural = word(entry, 1);
+    qjs_intl_data_string(&data->data, word(entry, 2), &out->alt);
+    out->blocked = word(entry, 3) == BLOCKED;
+    if (!out->blocked)
+        qjs_intl_data_string(&data->data, word(entry, 3), &out->text);
+}
+
+QJSIntlStatus qjs_intl_date_available_entry_at(const QJSIntlDateAvailableData *data,
+                                               uint32_t index, QJSIntlDateAvailableEntry *out)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->section.bytes || index >= data->entry_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    read_entry(data, data->entries + (size_t)index * ENTRY_WIDTH * 4, out);
+    return QJS_INTL_OK;
+}
+
 static int compare_key(const QJSIntlDateAvailableData *data, const uint8_t *entry,
                        QJSIntlBytes code, QJSIntlDateAvailablePlural plural, QJSIntlBytes alt)
 {
@@ -440,11 +476,6 @@ QJSIntlStatus qjs_intl_date_available_lookup(const QJSIntlDateAvailableData *dat
     entry = data->entries + ((size_t)start + low) * ENTRY_WIDTH * 4;
     if (compare_key(data, entry, code, plural, alt))
         return QJS_INTL_UNSUPPORTED;
-    qjs_intl_data_string(&data->data, word(entry, 0), &out->code);
-    out->plural = word(entry, 1);
-    qjs_intl_data_string(&data->data, word(entry, 2), &out->alt);
-    out->blocked = word(entry, 3) == BLOCKED;
-    if (!out->blocked)
-        qjs_intl_data_string(&data->data, word(entry, 3), &out->text);
+    read_entry(data, entry, out);
     return QJS_INTL_OK;
 }
