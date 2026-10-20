@@ -731,6 +731,37 @@ inventories, unaligned bytes and allocation-failure retries. Both prepared
 profiles include section 29 and compile its production reader, with separate
 prepared-data C tests. Formatter integration follows separately.
 
+`date_available_formats.py` owns available date patterns and append templates,
+not interval patterns, range templates or numeric separators. Its sparse groups
+retain calendar, family and container alternate; exact leaf keys separately
+retain skeleton ID or append request, optional plural count and leaf alternate.
+An absent count is distinct from `other`. Calendar and container aliases retain
+requester/source anchors and terminal provenance without flattening overrides.
+Skeleton spelling is preserved; the collector does not normalize fields or
+validate semantic skeleton ordering and widths. Available pattern values use
+the ordinary date-pattern lexer. Append text has a distinct substitution-template
+grammar: `{0}` is the existing format, `{1}` the added field and optional `{2}`
+the field display name. Raw append text such as `{1} ob {0}` must not be parsed
+as a date pattern or a date/time-style connector. Matching, plural/alternate
+fallback and formatter capability remain consumer responsibilities.
+Optional section 30 encodes these groups with separate container-alternate
+references, counted leaf selectors, shared sparse maps and typed source nodes.
+Canonical sharing and reachability validation preserve empty, missing and
+blocked states. Head/parent compatibility is family-based, allowing source
+calendar or container-alternate changes without losing provenance. Profile
+projection keeps reachable origins outside the requester inventory. Prepared
+profiles both include this section. The immutable C owner in `datetime/available-data.[ch]`
+validates canonical source records and frees all scratch before returning. Its
+exact group/head/node/leaf queries borrow pack storage and allocate nothing;
+container alternates compare by bytes, independently of leaf alternates. Source
+locale and code validation is cached by string/family, bounding repeated scans
+of shared long skeleton IDs. Authored fixtures cover unaligned storage, empty
+inventories, external origins, malformed records and allocation-failure retries.
+Prepared-data C tests cover every stored selector and source layer, English
+pattern provenance and validation allocation failures. The reader is compiled
+in production Intl builds. These checks do not implement pattern matching or
+template rendering.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
