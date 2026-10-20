@@ -883,7 +883,13 @@ contiguous spans, nonoverlap and historical golden-zone membership. It does not
 promise BCP47 cross-section or formatter-capability admission; the collector
 checks stable-ID membership, and service admission must check its complete
 semantic dependencies. This small global section needs no locale projection.
-The C owner and prepared-profile integration follow separately.
+The immutable `datetime/timezone-presentation-data.[ch]` owner validates physical
+records and releases all scratch storage before return. Full signed timestamps
+are decoded without out-of-range casts; historical membership uses sorted
+physical zone/metazone pairs, and syntax checks are cached per string. Exact
+allocation-free queries preserve gaps and do not introduce territory fallback.
+The source identity grammar is shared with localized timezone-name validation.
+Prepared-profile integration follows separately.
 
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.

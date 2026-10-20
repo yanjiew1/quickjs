@@ -1040,6 +1040,33 @@ test(
   timeout: 30,
 )
 
+intl_timezone_presentation_fixture = custom_target(
+  'intl-timezone-presentation-authored-fixture',
+  output: 'intl-timezone-presentation-authored-fixture.c',
+  command: [python, files('intl_timezone_presentation_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies,
+)
+intl_timezone_presentation_authored = executable(
+  'test_intl_timezone_presentation_authored',
+  files(
+    'test_intl_timezone_presentation_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/datetime/timezone-presentation-data.c',
+  ) + [intl_timezone_presentation_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-timezone-presentation-authored',
+  intl_timezone_presentation_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_timezone_name_sources = files(
   'test_intl_timezone_name_data.c',
   '../src/intl/common/locale-grammar.c',
