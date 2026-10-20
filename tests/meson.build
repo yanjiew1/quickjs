@@ -1138,6 +1138,38 @@ if intl_enabled
     }]
   endforeach
 
+  intl_date_available_fixture = custom_target(
+    'intl-date-available-authored-fixture',
+    output: 'intl-date-available-authored-fixture.c',
+    command: [python, files('intl_date_available_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_available_formats.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_available_authored = {
+    'name': 'test_intl_date_available_authored',
+    'sources': files(
+      'test_intl_date_available_data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_available_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_available_authored,
+    'name': 'intl-date-available-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_calendar_name_data_fixture = custom_target(
     'intl-calendar-name-authored-fixture',
     output: 'intl-calendar-name-authored-fixture.c',
@@ -1928,6 +1960,28 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_available_data_test = {
+      'name': ('test_intl_date_available_data_' + profile),
+      'sources': files(
+        'test_intl_date_available_profiles.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/common/source-locale.c',
+        '../src/intl/datetime/available-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_available_data_test,
+      'name': ('intl-date-available-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2835,6 +2889,14 @@ if intl_enabled
   )
 
   test(
+    'intl-date-available-tables',
+    python,
+    args: files('test_intl_date_available_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-calendar-name-tables',
     python,
     args: files('test_intl_calendar_name_tables.py'),
@@ -2846,6 +2908,14 @@ if intl_enabled
     'intl-calendar-names',
     python,
     args: files('test_intl_calendar_names.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-available-formats',
+    python,
+    args: files('test_intl_date_available_formats.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
