@@ -120,6 +120,33 @@ class DatePatternSyntaxTests(unittest.TestCase):
         self.assertEqual(syntax.compile_pattern("y'/'y"),
                          (('y', 1, ''), ('', 0, '/'), ('y', 1, '')))
 
+    def test_interval_directives_preserve_order_without_splitting_fields(self):
+        pattern = "LLL d – MMM d, y"
+        tokens = syntax.compile_pattern(pattern)
+        for prefix in ('', 'earliestFirst:', 'latestFirst:'):
+            self.assertEqual(syntax.compile_interval(prefix + pattern), (prefix[:-1], tokens))
+        self.assertEqual(syntax.compile_interval("'latestFirst:'d–d"),
+                         ('', (('', 0, 'latestFirst:'), ('d', 1, ''), ('', 0, '–'), ('d', 1, ''))))
+        for value in ('', None, 1, b'd-d', 'latestFirst:', 'earliestFirst:',
+                      'latestFirst:earliestFirst:d–d', 'latestFirst:j', 'latestFirst:\0'):
+            with self.subTest(value=repr(value)), self.assertRaises(DataError):
+                syntax.compile_interval(value)
+
+    def test_audit_uses_interval_directives_only_for_interval_leaves(self):
+        body = '''<dateTimeFormats><intervalFormats><intervalFormatItem>
+            <greatestDifference id="d">latestFirst:d–d</greatestDifference>
+            </intervalFormatItem></intervalFormats></dateTimeFormats>'''
+        source = Sources(body)
+        self.assertEqual(syntax.audit(source)['records'], 1)
+        # A later calendar cannot reuse the interval grammar's cached result.
+        path = 'common/main/en.xml'
+        source.files[path] = source.files[path].replace(b'</calendars>',
+            b'''<calendar type="japanese"><dateFormats><dateFormatLength><dateFormat>
+            <pattern>latestFirst:d-d</pattern></dateFormat></dateFormatLength></dateFormats>
+            </calendar></calendars>'''.replace(b'd-d', 'd–d'.encode('utf-8')))
+        with self.assertRaises(DataError):
+            syntax.audit(source)
+
     def test_invalid_inputs_and_reserved_letters(self):
         for value in ('', None, 1, b'yyyy', '\0', '\ud800', '\udfff',
                       "yyyy '", "'quoted''", 'j', 'J', 'C', 'p', 'yyyy at HH:mm'):
