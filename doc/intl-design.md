@@ -834,6 +834,17 @@ owned token programs, retain source facts, and verify the final component union,
 year kinds and auxiliary period semantics. This supplies no ranges, missing
 hour-family synthesis, renderer admission or public formatter capability.
 
+`datetime/style-hour.[ch]` constructs complete time-style single-date pairs
+from the authoritative style, compatible whole available programs, or bare
+clocks plus the exact visible Timezone append template. Retain specific/generic
+zone distinctions and b/B; never delete AM/PM punctuation. Explicitly adapt only
+hour family and permitted numeric hour/minute/second widths, using the shared
+`program-adapt` kernel. Original source metadata stays unchanged, with SIZE_MAX
+for the style's own program and actual pool indexes for available sources.
+Record zone appends as synthesis. Literal append templates use a parsed pair
+and token composition; their ASCII letters/apostrophes are not LDML syntax.
+Missing provable counterparts remain synthesis gaps, not advertised capability.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.
