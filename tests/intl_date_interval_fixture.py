@@ -2,6 +2,7 @@
 """Emit interval layers with external origins, selector aliases and empty data."""
 import argparse
 from pathlib import Path
+import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
@@ -24,19 +25,25 @@ def pack(empty=False):
     if empty:
         source.set('root', data_calendar(formats('')))
     else:
+        # The better-scored Chinese source shares r incorrectly on a year
+        # difference; a lower-scored source represents both complete endpoints.
+        year_cases = item(leaf('greatestDifference', 'r U – U', id='y'), skeleton='y')
+        year_cases += item(leaf('greatestDifference', 'r U – r U', id='y'), skeleton='yy')
         source.set('root', data_calendar(formats(leaf('intervalFormatFallback', '{0}–{1}') +
             item(''.join(leaf('greatestDifference', 'd–d', id=code) for code in sorted('BGHahm')) +
                  leaf('greatestDifference', "latestFirst:M d – M d", id='M') +
                  leaf('greatestDifference', '', id='y') + leaf('greatestDifference', BLOCK, id='d')) +
+            item(leaf('greatestDifference', 'M/d – M/d', id='d'), skeleton='Md') +
             '<intervalFormatRanges>' + ''.join(leaf('intervalFormatRange', '{1} to {0}', type=code)
                                               for code in sorted(date_intervals.RANGES)) + '</intervalFormatRanges>') +
             formats(item(leaf('greatestDifference', 'dd–dd', id='d', alt='variant'), alt='ascii'), alt='variant')) +
             data_calendar(formats(alias("../../../calendar[@type='gregorian']/dateTimeFormats/intervalFormats")),
                           code='generic') +
-            data_calendar(formats(item(leaf('greatestDifference', 'd–d', id='d'), skeleton='y' * 4096)) +
+            data_calendar(formats(item(leaf('greatestDifference', 'd–d', id='d'), skeleton='y' * 4096) + year_cases) +
                           formats(item(leaf('greatestDifference', 'dd–dd', id='d'), skeleton='y' * 4096), alt='variant'),
                           code='chinese'))
-        source.set('en', data_calendar(formats(item(leaf('greatestDifference', "'child'", id='d', alt='variant')))))
+        source.set('en', data_calendar(formats(item(leaf('greatestDifference', "'child'", id='d', alt='variant')) +
+                                              item(leaf('greatestDifference', BLOCK, id='d'), skeleton='Md'))))
         source.set('en_GB', data_calendar(formats(item(leaf('greatestDifference', "'own'", id='M', alt='variant'))),
                                           code='generic'))
         source.set('en_1901_1996', data_calendar(formats(item(leaf('greatestDifference', "'external'", id='d')))))
@@ -57,6 +64,13 @@ def pack(empty=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--prefix', default='qjs_intl_native')
     args = parser.parse_args()
-    text = embed.render(pack()) + '\n' + embed.render(pack(True)).replace('qjs_intl_native', 'date_interval_empty')
+    if not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', args.prefix):
+        parser.error('prefix must be a C identifier')
+    # Reader and selector tests share the authored model without colliding
+    # with the prepared profile's symbols in the selector's linked executable.
+    empty = 'date_interval_empty' if args.prefix == 'qjs_intl_native' else args.prefix + '_empty'
+    text = embed.render(pack()).replace('qjs_intl_native', args.prefix)
+    text += '\n' + embed.render(pack(True)).replace('qjs_intl_native', empty)
     atomic_write(args.output, text.encode('ascii'))
