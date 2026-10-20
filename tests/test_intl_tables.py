@@ -172,6 +172,14 @@ class VerifiedFixture(Sources):
           <!ELEMENT dateFormatItem (#PCDATA)><!ATTLIST dateFormatItem id CDATA #REQUIRED>'''
         available = ET.SubElement(formats, 'availableFormats')
         ET.SubElement(available, 'dateFormatItem', id='yMd').text = 'M/d/y'
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT intervalFormats ANY>
+          <!ELEMENT intervalFormatFallback (#PCDATA)>
+          <!ELEMENT intervalFormatItem ANY><!ATTLIST intervalFormatItem id CDATA #REQUIRED>
+          <!ELEMENT greatestDifference (#PCDATA)><!ATTLIST greatestDifference id CDATA #REQUIRED>'''
+        intervals = ET.SubElement(formats, 'intervalFormats')
+        ET.SubElement(intervals, 'intervalFormatFallback').text = '{0}–{1}'
+        interval = ET.SubElement(intervals, 'intervalFormatItem', id='yMd')
+        ET.SubElement(interval, 'greatestDifference', id='d').text = 'M/d/y – M/d/y'
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT months ANY>
           <!ELEMENT monthContext ANY><!ATTLIST monthContext type NMTOKEN #REQUIRED>
           <!ELEMENT monthWidth ANY><!ATTLIST monthWidth type NMTOKEN #REQUIRED>
@@ -290,6 +298,18 @@ class TableTests(unittest.TestCase):
                     break
             else:
                 self.fail('prepared English available-pattern source is missing yMd')
+            intervals = view['date_intervals']
+            self.assertIsNotNone(intervals)
+            key = ('gregorian', '', 'item', 'yMd', '')
+            head = next(head for tag, group, head in intervals['rows'] if (tag, group) == ('en', key))
+            while head:
+                locale, group, index, head = intervals['nodes'][head - 1]
+                pattern = [field[2] for field in intervals['maps'][index] if field[:2] == ('d', '')]
+                if pattern:
+                    self.assertEqual((locale, group, pattern), ('en', key, ['M/d/y – M/d/y']))
+                    break
+            else:
+                self.fail('prepared English interval source is missing yMd/d')
             names = view['display_names']
             self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
             head = next(head for tag, group, head in names['rows']
