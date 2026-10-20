@@ -103,6 +103,16 @@ static void check_queries(const QJSIntlTimeZoneNameData *data)
     assert(!qjs_intl_timezone_name_node(data, head, &node) && node.parent);
     assert(!qjs_intl_timezone_name_lookup(data, node.parent, bytes("regionFormat"), QJS_INTL_TIMEZONE_NAME_STANDARD, bytes(""), &entry));
     assert(equal(entry.text, "{0} Standard"));
+    assert(!qjs_intl_timezone_name_resolve(data, head, bytes("regionFormat"),
+                                          QJS_INTL_TIMEZONE_NAME_STANDARD, bytes(""), &entry, &node));
+    assert(equal(entry.text, "{0} Standard") && equal(node.origin_locale, "root"));
+    assert(!qjs_intl_timezone_name_resolve(data, head, bytes("gmtFormat"),
+                                          QJS_INTL_TIMEZONE_NAME_NO_TYPE, bytes(""), &entry, &node));
+    assert(!entry.blocked && !entry.text.length && equal(node.origin_locale, "en-1901-1996"));
+    assert(qjs_intl_timezone_name_resolve(data, 0, bytes("gmtFormat"),
+                                         QJS_INTL_TIMEZONE_NAME_NO_TYPE, bytes(""), &entry, &node) == QJS_INTL_UNSUPPORTED);
+    assert(!entry.text.data && !node.origin_locale.data);
+
     head = head_for(data, "en-GB", QJS_INTL_TIMEZONE_NAME_CITY, "Europe/London");
     assert(!qjs_intl_timezone_name_lookup(data, head, bytes("exemplarCity"), QJS_INTL_TIMEZONE_NAME_NO_TYPE, bytes("secondary"), &entry));
     assert(entry.blocked && !entry.text.length);
