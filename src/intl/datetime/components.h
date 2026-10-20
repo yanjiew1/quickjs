@@ -22,6 +22,13 @@ typedef enum QJSIntlDateTimeZoneStyle {
     QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, QJS_INTL_DATETIME_ZONE_LONG_GENERIC
 } QJSIntlDateTimeZoneStyle;
 
+typedef enum QJSIntlDateHourCycle {
+    QJS_INTL_DATE_H11,
+    QJS_INTL_DATE_H12,
+    QJS_INTL_DATE_H23,
+    QJS_INTL_DATE_H24
+} QJSIntlDateHourCycle;
+
 typedef struct QJSIntlDateTimeComponents {
     /* Zero means absent; fraction uses 1..3, zone uses ZoneStyle, other fields
        use Width. Field-specific legal values follow ECMA-402 Table 16. */
