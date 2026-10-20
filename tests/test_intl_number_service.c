@@ -128,7 +128,7 @@ static void test_system_capabilities(const QJSIntlAllocator *allocator,
     QJSIntlNumberOptions settings = options();
     QJSIntlMathematicalValue input = value("1234.5");
     Allocation *state = allocator->opaque;
-    size_t i, before;
+    size_t i, before, numeric_count = 0;
     int supported;
     assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &data));
     assert(!qjs_intl_numbering_data_open(&data, allocator, &numbering));
@@ -145,6 +145,7 @@ static void test_system_capabilities(const QJSIntlAllocator *allocator,
         assert(supported == (system.kind == QJS_INTL_NUMBERING_NUMERIC));
         if (!supported)
             continue;
+        numeric_count++;
         assert(!qjs_intl_number_formatter_open(service, en, system.name, &settings, &formatter));
         assert(!qjs_intl_number_format(formatter, &input, &result));
         assert(result.length && result.part_count);
@@ -179,6 +180,37 @@ static void test_system_capabilities(const QJSIntlAllocator *allocator,
     assert(qjs_intl_number_system_supported(service, en, bytes("latn"), NULL) ==
            QJS_INTL_INVALID_ARGUMENT);
     assert(state->calls == before);
+    {
+        QJSIntlBytes current, previous = {0};
+        QJSIntlStatus status;
+        uint32_t cursor = 0;
+        size_t listed = 0;
+        /* Metadata contains algorithmic systems too. Enumeration must agree
+           with the executable repertoire already formatted above. */
+        state->fail_at = before + 1;
+        while (!(status = qjs_intl_number_system_next(service, &cursor, &current))) {
+            if (listed) {
+                size_t common = previous.length < current.length ? previous.length : current.length;
+                int order = memcmp(previous.data, current.data, common);
+                assert(order < 0 || (!order && previous.length < current.length));
+            }
+            assert(!qjs_intl_number_system_available(service, current, &supported) && supported);
+            previous = current;
+            listed++;
+        }
+        assert(status == QJS_INTL_UNSUPPORTED && !current.data && listed == numeric_count);
+        assert(cursor == numbering.systems.count && state->calls == before);
+        assert(qjs_intl_number_system_next(service, &cursor, &current) == QJS_INTL_UNSUPPORTED);
+        assert(!current.data && cursor == numbering.systems.count);
+        cursor = UINT32_MAX;
+        assert(qjs_intl_number_system_next(service, &cursor, &current) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!current.data && cursor == UINT32_MAX);
+        assert(!qjs_intl_number_system_available(service, bytes("roman"), &supported) && !supported);
+        assert(qjs_intl_number_system_available(NULL, bytes("latn"), &supported)
+               == QJS_INTL_INVALID_ARGUMENT && !supported);
+        assert(state->calls == before);
+        state->fail_at = 0;
+    }
 }
 
 static void range_expected(const QJSIntlFormattedRange *result, const char *text, int approximate)
