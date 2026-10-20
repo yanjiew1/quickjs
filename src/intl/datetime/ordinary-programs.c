@@ -224,7 +224,7 @@ static QJSIntlStatus fraction(Build *build, size_t base)
         record.construction = QJS_INTL_DATE_ORDINARY_FRACTION;
         status = fractional_pattern(build, &build->result.records[base].single.normal.pattern,
                                      digits, &record.single.normal.pattern);
-        if (!status)
+        if (!status && build->result.records[base].single.twelve.pattern.count)
             status = fractional_pattern(build, &build->result.records[base].single.twelve.pattern,
                                          digits, &record.single.twelve.pattern);
         if (status) {
@@ -368,11 +368,12 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 32)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 35)
         return QJS_INTL_OVERFLOW;
     /* Fourteen required targets, with up to two additional widths for each
-       of the four fractional targets, fit within these 32 extra records. */
-    build.capacity = groups->count + 32;
+       of the four fractional targets, fit within 32 extra records. Reserve
+       three more for optional minute/second-only fractional patterns. */
+    build.capacity = groups->count + 35;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -395,6 +396,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
             status = QJS_INTL_DATA_ERROR;
             goto fail;
         }
+    }
+    /* Extend a visible whole minute/second program; do not introduce an hour
+       merely because the requested precision includes a fractional second. */
+    i = find(&build, BIT(MINUTE) | BIT(SECOND));
+    if (i != SIZE_MAX) {
+        status = fraction(&build, i);
+        if (status)
+            goto fail;
     }
     *out = build.result;
     return QJS_INTL_OK;
