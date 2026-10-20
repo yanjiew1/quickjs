@@ -4,6 +4,7 @@
 #include "format.h"
 #include "basic-match.h"
 #include "ordinary-programs.h"
+#include "date-clock-programs.h"
 #include "style-date.h"
 #include "style-hour.h"
 #include "interval-data.h"
@@ -439,6 +440,7 @@ typedef struct Programs {
     QJSIntlDateAvailableSources append;
     QJSIntlDateOrdinaryPrograms ordinary;
     QJSIntlDatePreparedStyle dates[QJS_INTL_DATE_STYLE_WIDTH_COUNT];
+    QJSIntlDateClockPrograms mixed;
     QJSIntlDateNameAdmission names;
     unsigned char *admitted;
     uint32_t style_calendar, connector_calendar;
@@ -458,6 +460,7 @@ static void programs_clear(const QJSIntlAllocator *allocator, Programs *programs
     unsigned int i;
     for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++)
         qjs_intl_date_prepared_style_clear(&programs->dates[i]);
+    qjs_intl_date_clock_programs_clear(&programs->mixed);
     if (programs->admitted)
         allocator->free(allocator->opaque, programs->admitted);
     qjs_intl_date_ordinary_programs_clear(&programs->ordinary);
@@ -584,6 +587,17 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
             status = QJS_INTL_OK;
         }
     }
+    if (!status) {
+        const QJSIntlDatePattern *dates[QJS_INTL_DATE_STYLE_WIDTH_COUNT] = {0};
+        for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++)
+            if (out->dates[i].style.pattern.count)
+                dates[i] = &out->dates[i].style.pattern;
+        /* Both inputs already passed name admission. A literal-only connector
+           introduces no new name domain, and the builder verifies the union. */
+        status = qjs_intl_date_clock_programs_open(dates, QJS_INTL_DATE_STYLE_WIDTH_COUNT,
+                     &out->ordinary, out->admitted, &data->connectors, locale,
+                     out->connector_calendar, allocator, &out->mixed);
+    }
 done:
     qjs_intl_date_format_sources_clear(&groups);
     qjs_intl_date_available_sources_clear(&patterns);
@@ -640,7 +654,7 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         }
     }
     {
-        size_t style = SIZE_MAX;
+        size_t style = SIZE_MAX, mixed = SIZE_MAX;
         for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
             const QJSIntlDateStyleSource *date = &programs->dates[i].style;
             QJSIntlStatus status;
@@ -654,6 +668,22 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
                 best = score;
                 style = i;
             }
+        }
+        for (i = 0; i < programs->mixed.count; i++) {
+            const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
+            QJSIntlStatus status;
+            int score;
+            status = match_score(formatter, request, &record->components, &score);
+            if (status)
+                return status;
+            if (score > best) {
+                best = score;
+                mixed = i;
+            }
+        }
+        if (mixed != SIZE_MAX) {
+            const QJSIntlDateClockProgram *record = &programs->mixed.records[mixed];
+            return copy_record(formatter, &record->components, &record->normal, &record->twelve, out);
         }
         if (style != SIZE_MAX) {
             const QJSIntlDateStyleSource *date = &programs->dates[style].style;

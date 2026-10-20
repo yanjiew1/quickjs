@@ -193,6 +193,10 @@ if (typeof Temporal !== 'undefined') {
     assert(f.format(plain), f.format(Date.UTC(2024, 6, 1, 12, 34, 56, 123)));
     const full = new DTF('en', {...utc, dateStyle: 'full', timeStyle: 'long'});
     assert(full.format(Temporal.PlainDate.from('2024-07-01')), 'Monday, July 1, 2024');
+    const wide = full.formatToParts(plain);
+    assert(wide.find(part => part.type === 'month').value, 'July');
+    assert(wide.find(part => part.type === 'weekday').value, 'Monday');
+    assert(wide.some(part => part.type === 'timeZoneName'), false);
     assertThrows(TypeError, () => new DTF('en', {...utc, year: 'numeric'}).format(plain.toPlainTime()));
     const ym = Temporal.PlainYearMonth.from('2024-07');
     const md = Temporal.PlainMonthDay.from('07-01');
