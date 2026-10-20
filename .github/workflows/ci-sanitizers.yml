@@ -83,6 +83,11 @@ jobs:
       run: |
         meson test -C build --no-rebuild --suite integration --logbase repo-integration \
           --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+    - name: Audit every prepared DateTimeFormat locale and calendar
+      run: |
+        python3 tools/ci/audit_intl_datetime.py \
+          build/tests/test_intl_date_service_${{ matrix.profile }} \
+          --threads "$(getconf _NPROCESSORS_ONLN)"
     - name: Install pinned Test262
       run: |
         python3 tools/build/test262.py bootstrap
