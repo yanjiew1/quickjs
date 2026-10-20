@@ -106,7 +106,9 @@ context-sensitive list behavior or install a JavaScript formatter.
 
 ```sh
 python3 tools/intl/date_pattern_syntax.py --pattern "yyyy-MM-dd 'at' HH:mm"
+python3 tools/intl/date_pattern_syntax.py --combination "{1} 'at' {0}"
 python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4 --combinations
 ```
 
 The DateTimeFormat data compiler's lexical prerequisite decodes TR35 apostrophe
@@ -123,6 +125,15 @@ does not validate field widths, interpret `numbers` overrides, select formats,
 establish locale coverage or install DateTimeFormat. Those operations belong to
 the subsequent typed collector/compiler and native service. Authored tests run
 in the repository suite; CI also audits the pinned CLDR source patterns.
+
+`compile_combination` handles date/time style connectors separately. It requires
+one `{0}` time slot and one `{1}` date slot, preserves their order, and applies
+date-pattern apostrophe quoting to the surrounding text and braces. Slots are
+tokens with symbol `0` or `1`, zero width and empty text; fields and decoded
+literals retain the ordinary token representation. Quoted markers remain literal
+text. The `--combinations` audit checks raw style connectors across calendars,
+forms and alternates, distinguishing inheritance/block markers from patterns.
+Alias resolution, style selection and placeholder substitution have later owners.
 
 ## Date/time style source records
 
@@ -173,6 +184,43 @@ borrow immutable text, raw numbering overrides and provenance without allocating
 opening retains no allocation and requires no teardown. Missing, blocked and
 empty values remain distinct. Authored C tests exercise every query selector,
 unaligned input, corrupt records/dimensions and allocation failure with retry.
+
+## Date/time combination source records
+
+```sh
+python3 tools/intl/date_combinations.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The typed connector collector retains standard, atTime and relative forms at
+each calendar/style width, including alternate identities, raw numbering
+overrides and terminal provenance. It maps whole-calendar, dateTimeFormats and
+per-form aliases to typed keys, preserving requesting-locale and explicit-source
+resolution. Missing, blocked, inherited and explicitly empty values stay distinct.
+Unsupported structures, mixed aliases, duplicate records and cycles fail.
+
+`calendar_sources.py` owns structural calendar traversal and alias/container
+validation shared with the style collector; individual collectors own their
+subtrees, typed keys and XPath mappings. Combination patterns use date-pattern
+apostrophe rules, not the shared unit/list pair-template grammar. Selection of
+atTime/relative versus standard is consumer policy after inheritance, not a
+collector fallback. Both prepared profiles include these source records; they
+do not install DateTimeFormat or establish calendar capability.
+
+Section 28 is the optional canonical connector schema. Its little-endian header
+contains version, calendar count, alternate count, shared-row count and shared-
+record count. Calendar/alternate string references precede per-locale row indices.
+Rows use calendar, full/long/medium/short width, standard/atTime/relative form and
+alternate as nested selectors. Eight-word records retain state, text, numbering
+override, source locale and source calendar/width/form/alternate indices. Missing
+is all zero; blocked retains provenance with empty text and numbering override.
+`date_combination_tables.py` validates exact coverage, canonical pooling, all
+references and reachability; projection retains origins outside selected locales.
+`src/intl/datetime/combination-data.c` validates these records through a borrowed
+immutable owner, using temporary scratch with no retained allocation. Queries
+return exact borrowed text, overrides and source metadata without allocation or
+form fallback. Authored C tests cover every selector, corrupt tables, unaligned
+input and validation allocation failure with retry. Prepared-profile C tests
+exercise every selector and representative English connector forms.
 
 ## Relative-time source records
 
