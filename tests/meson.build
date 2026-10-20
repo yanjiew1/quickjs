@@ -2980,6 +2980,11 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_date_local': files(
+      'test_intl_date_local.c',
+      '../src/intl/datetime/local-time.c',
+      '../src/intl/datetime/chronology.c',
+    ) + calendar_test_sources + timezone_test_sources,
     'test_intl_date_calendar': files(
       'test_intl_date_calendar.c',
       '../src/intl/datetime/chronology.c',
