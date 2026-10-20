@@ -19,6 +19,7 @@ from resolve import BLOCK, INHERIT
 # j/J/C are deliberately absent; they must never appear in stored patterns.
 FIELD_SYMBOLS = frozenset('GyYuUrQqMLlwWdDFgEecabBhHKkmsSAzZOvVXx')
 Token = namedtuple('Token', 'symbol width text')
+IntervalPattern = namedtuple('IntervalPattern', 'order tokens')
 PATTERN_PATHS = (
     'dateFormats/dateFormatLength/dateFormat/pattern',
     'timeFormats/timeFormatLength/timeFormat/pattern',
@@ -47,6 +48,23 @@ def compile_combination(value):
     '{0}' is literal text, not a slot. No style selection policy is applied.
     """
     return _compile(value, True)
+
+
+def compile_interval(value):
+    """Keep an optional interval ordering directive and unsplit pattern tokens.
+
+    Empty order means use intervalFormatFallback's ordering. Repeated fields
+    retain their original symbols: logical equivalence and the split between
+    start/end pattern parts belong to the consumer.
+    """
+    if not isinstance(value, str):
+        raise DataError('interval pattern must be scalar text')
+    order = ''
+    for name in ('earliestFirst', 'latestFirst'):
+        if value.startswith(name + ':'):
+            order, value = name, value[len(name) + 1:]
+            break
+    return IntervalPattern(order, compile_pattern(value))
 
 
 def _compile(value, combination):
@@ -155,9 +173,14 @@ def audit(sources):
                     if value in (BLOCK, INHERIT):
                         markers += 1
                         continue
-                    if value not in patterns:
+                    # Prefix directives are legal only for interval patterns.
+                    # Cache by grammar too so a valid interval cannot admit
+                    # the same prefixed text as an ordinary date pattern.
+                    interval = node.tag == 'greatestDifference'
+                    key = interval, value
+                    if key not in patterns:
                         try:
-                            patterns[value] = compile_pattern(value)
+                            patterns[key] = compile_interval(value).tokens if interval else compile_pattern(value)
                         except DataError as exc:
                             raise DataError('{}: {}: {}'.format(name, path, exc))
                     records += 1
