@@ -9,7 +9,7 @@ or a declaration of service completeness.
 - Unless explicitly stated otherwise, every field is an unsigned little-endian
   32-bit word, arrays are tightly packed and dimensions count records.
 - `L` is section 2's selected locale count. In sections 25 through 32, `N` has
-  that same meaning. Sections 33 and 34 define their own `N`.
+  that same meaning. Sections 33 through 35 define their own `N`.
 - `sid` indexes section 1; string 0 is empty. A numbering-system definition
   index indexes section 13, not a numeric-only projection of that table.
 - `(start, count)` describes records in a named payload table, not byte extents.
@@ -568,3 +568,26 @@ Length `3+N*3+M*2+Q*4`; at most 12 rules per map. Missing row and explicit empty
 is no blocked sentinel here. Consumer inheritance truncates locale structurally, selects one whole
 explicit list, does not follow main-data exceptional parents or merge leaves across origins.
 Format/selection independent.
+
+## 35 — Calendar era name keys
+
+Encoder/decoder `tools/intl/calendar_era_tables.py`; source
+`tools/intl/calendar_eras.py`. C owner `src/intl/datetime/era-data.c`.
+
+**N is the number of explicit canonical-era mappings**, independent of selected
+locale count. Header `(1)` followed by `rows[N][3]` =
+`(raw_calendar_sid, canonical_era_code_sid, raw_era_name_key_sid)`.
+Length is exactly `1+3*N` words; an empty table is valid.
+
+Rows are strictly ordered by `(raw_calendar_sid, canonical_era_code_sid)`;
+each `(raw_calendar_sid, raw_era_name_key_sid)` must also be unique. Raw calendar
+identities match `[a-z0-9]+(-[a-z0-9]+)*`; canonical era codes match
+`[a-z0-9]{2,8}(-[a-z0-9]{3,8})*`. Raw keys are nonempty decimal ASCII strings,
+without leading zeroes except `0`; they are not row positions or C enums.
+
+Only explicit code-bearing `calendarData/calendar/eras/era` records are retained.
+No localized labels, era boundaries, alias expansion or inherited-era flattening
+occurs here. In particular, Chinese/Dangi sequential epoch records without a
+canonical code do not create era 0, and Japanese inherited Gregorian eras are
+resolved explicitly by the chronology/presentation consumer. Future canonical
+codes and noncontiguous raw IDs remain data, without changing a compiled table.
