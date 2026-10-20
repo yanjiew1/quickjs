@@ -564,7 +564,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     assert(list_empty(&rt->gc_obj_list));
     assert(list_empty(&rt->weakref_list));
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     js_free_rt(rt, rt->default_time_zone);
 #endif
 #ifdef CONFIG_INTL
