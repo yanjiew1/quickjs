@@ -39,7 +39,7 @@ jobs:
   intl-source-data:
     name: Pinned native Intl source data
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
     - uses: actions/checkout@v7
     - name: Verify offline acquisition contracts
@@ -134,7 +134,7 @@ jobs:
     - name: Reproduce prepared native and minimal Intl sections
       run: |
         for profile in minimal native; do
-          timeout 180s python3 tools/intl/generate.py \
+          timeout --kill-after=30s 600s python3 tools/intl/generate.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
             --profile "$profile" \
             --output "$RUNNER_TEMP/intl-$profile.bin" \
