@@ -160,6 +160,14 @@ class VerifiedFixture(Sources):
             form = ET.SubElement(length, family + 'Format')
             ET.SubElement(form, 'pattern', numbers='latn').text = 'y-MM-dd' if family == 'date' else 'HH:mm'
             ET.SubElement(form, 'datetimeSkeleton').text = 'yMMdd' if family == 'date' else 'Hmm'
+        self.files['common/dtd/ldml.dtd'] += b"""<!ELEMENT dateTimeFormats ANY>
+          <!ELEMENT dateTimeFormatLength ANY>
+          <!ATTLIST dateTimeFormatLength type NMTOKEN #REQUIRED>
+          <!ELEMENT dateTimeFormat ANY><!ATTLIST dateTimeFormat type NMTOKEN "standard">"""
+        formats = ET.SubElement(calendar, 'dateTimeFormats')
+        length = ET.SubElement(formats, 'dateTimeFormatLength', type='long')
+        form = ET.SubElement(length, 'dateTimeFormat')
+        ET.SubElement(form, 'pattern').text = "{1} 'at' {0}"
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT localeDisplayNames ANY>
           <!ELEMENT languages ANY><!ELEMENT language (#PCDATA)>
           <!ATTLIST language type NMTOKEN #REQUIRED>'''
@@ -239,6 +247,12 @@ class TableTests(unittest.TestCase):
             self.assertEqual(date_styles['en', 'gregorian', 'date', 'long', 'pattern', ''][:3],
                              ('value', 'MMMM d, y', ''))
             self.assertEqual(date_styles['en', 'gregorian', 'date', 'long', 'skeleton', ''][1], 'yMMMMd')
+            combinations = view['date_combinations']
+            self.assertIsNotNone(combinations)
+            english = {row[3]: row[5:] for row in combinations['rows']
+                       if row[:3] == ('en', 'gregorian', 'long') and not row[4]}
+            self.assertEqual(english['standard'][:3], ('value', '{1}, {0}', ''))
+            self.assertEqual(english['atTime'][1], "{1} 'at' {0}")
             names = view['display_names']
             self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
             head = next(head for tag, group, head in names['rows']

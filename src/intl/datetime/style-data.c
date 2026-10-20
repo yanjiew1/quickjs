@@ -88,7 +88,7 @@ static int unresolved(QJSIntlBytes text)
 }
 
 QJSIntlStatus qjs_intl_date_style_data_open(const QJSIntlData *data, const QJSIntlAllocator *allocator,
-                                         QJSIntlDateStyleData *out)
+                                            QJSIntlDateStyleData *out)
 {
     QJSIntlDateStyleData result = {0};
     QJSIntlStatus status = QJS_INTL_DATA_ERROR;
@@ -209,7 +209,7 @@ done:
 }
 
 QJSIntlStatus qjs_intl_date_style_calendar_at(const QJSIntlDateStyleData *data, uint32_t index,
-                                           QJSIntlBytes *out)
+                                              QJSIntlBytes *out)
 {
     if (out)
         memset(out, 0, sizeof(*out));
@@ -219,7 +219,7 @@ QJSIntlStatus qjs_intl_date_style_calendar_at(const QJSIntlDateStyleData *data, 
 }
 
 QJSIntlStatus qjs_intl_date_style_alternate_at(const QJSIntlDateStyleData *data, uint32_t index,
-                                            QJSIntlBytes *out)
+                                               QJSIntlBytes *out)
 {
     if (out)
         memset(out, 0, sizeof(*out));
@@ -229,9 +229,9 @@ QJSIntlStatus qjs_intl_date_style_alternate_at(const QJSIntlDateStyleData *data,
 }
 
 QJSIntlStatus qjs_intl_date_style_record_at(const QJSIntlDateStyleData *data, uint32_t locale,
-                                         uint32_t calendar, QJSIntlDateStyleFamily family,
-                                         QJSIntlDateStyleWidth width, QJSIntlDateStyleField field,
-                                         uint32_t alternate, QJSIntlDateStyleRecord *out)
+                                            uint32_t calendar, QJSIntlDateStyleFamily family,
+                                            QJSIntlDateStyleWidth width, QJSIntlDateStyleField field,
+                                            uint32_t alternate, QJSIntlDateStyleRecord *out)
 {
     uint32_t row, index, selector;
     const uint8_t *record;
