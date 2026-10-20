@@ -21,11 +21,13 @@ typedef struct QJSIntlDateSinglePrograms {
 
 /* Require the unchanged source pool/grouping pair and a valid group index.
    Choose whole compatible patterns, changing only hour width/family. Both
-   variants retain identical year kinds and explicit b/B semantics. Minimize
+   variants retain identical year kinds and explicit b/B semantics. Prefer a
+   real numeric-year representation over cyclic-only U when available. Minimize
    total family changes, then width changes, then earliest/normal/twelve source
    indexes; within each class prefer direct families and exact widths. A missing
    complete pair is UNSUPPORTED, not an invitation to strip a or revive parents.
-   No-hour groups copy their first source and leave twelve empty. Own copied
+   No-hour groups retain source order within that year preference and leave
+   twelve empty. Own copied
    programs independently of the input owners; retained source indexes are
    diagnostic unless the caller keeps the pool for later provenance queries.
    Cross-family copies use representative H/h; the eventual renderer must
