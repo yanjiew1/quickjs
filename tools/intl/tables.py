@@ -5,6 +5,7 @@ import bundle
 import calendar_name_tables
 import compact_tables
 import currency_tables
+import date_available_tables
 import number_layout_tables
 import unit_tables
 import unit_grammar_tables
@@ -238,4 +239,6 @@ def validate(binary):
             'display_names': display_tables.decode(sections.get(bundle.DISPLAY_NAMES), strings, tags),
             'date_styles': date_style_tables.decode(sections.get(bundle.DATE_STYLES), strings, tags),
             'date_combinations': date_combination_tables.decode(sections.get(bundle.DATE_COMBINATIONS), strings, tags),
-            'calendar_names': calendar_name_tables.decode(sections.get(bundle.CALENDAR_NAMES), strings, tags)}
+            'calendar_names': calendar_name_tables.decode(sections.get(bundle.CALENDAR_NAMES), strings, tags),
+            'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
+                                                                  strings, tags)}
