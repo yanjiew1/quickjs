@@ -2048,6 +2048,26 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_date_numeric_test = executable(
+    'test_intl_date_numeric_' + profile,
+    intl_number_service_sources + files(
+      'test_intl_date_numeric.c',
+      '../src/intl/datetime/numeric.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-date-numeric-' + profile,
+    intl_date_numeric_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_number_service_test = executable(
     'test_intl_number_service_' + profile,
     ['test_intl_number_service.c'] + intl_number_service_sources,

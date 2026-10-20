@@ -864,6 +864,20 @@ without guessing punctuation. Unmatched templates or larger incomplete layouts
 remain unsupported; extraction and layout expansion have explicit provenance
 flags. Successful style pairs do not establish final range/renderer capability.
 
+`datetime/numeric.[ch]` executes numeric/literal single-date programs against
+fully specified local numeric fields. It uses selected NumberFormat instances
+with grouping off and prescribed minimum integer widths, collapses each result
+to one date-field part, and keeps its complete localized text. Two-digit output
+retains the last two Unicode code points; supplementary digits occupy two UTF-16
+units each. Calendar years at or below zero use 1-year, related years retain their
+sign, resolved hour cycles override raw h/H/K/k, and fractional milliseconds are
+truncated before formatting. Own output independently of programs and number
+services; unwind all temporary numeric results on failure. Named/zone fields
+remain explicitly unsupported by this numeric kernel, to be composed by the
+full renderer with chronology/name/zone services. The shared output vocabulary
+now distinguishes date-field parts; number-bearing consumers retain their
+original number-only type bound.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.

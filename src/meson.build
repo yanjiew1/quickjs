@@ -140,6 +140,7 @@ if intl_enabled
     'intl/datetime/interval-data.c',
     'intl/datetime/name-data.c',
     'intl/datetime/name-select.c',
+    'intl/datetime/numeric.c',
     'intl/datetime/pattern.c',
     'intl/datetime/pattern-info.c',
     'intl/datetime/program-adapt.c',
