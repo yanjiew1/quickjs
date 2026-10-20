@@ -8,7 +8,7 @@ import re
 import acquire
 from cldr_xml import DataError, Schema, read_xml
 import parents
-import pair_template
+import literal_template
 from resolve import BLOCK, INHERIT, Records
 
 PARTS = ('2', 'start', 'middle', 'end')
@@ -36,7 +36,7 @@ def context(locale, variant, values):
 def pattern(value):
     if value in (INHERIT, BLOCK):
         return value
-    return pair_template.validate(value)
+    return literal_template.validate(value, 2)
 
 
 def collect(sources, graph=None):
