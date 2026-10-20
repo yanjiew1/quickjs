@@ -23,6 +23,7 @@
  */
 #include "temporal-internal.h"
 #include "../temporal.h"
+#include "../intl.h"
 #include "../../../temporal/format.h"
 
 static void js_temporal_instant_finalizer(JSRuntime *rt, JSValue val)
@@ -471,7 +472,12 @@ static JSValue js_temporal_instant_to_locale_string(JSContext *ctx,
     instant = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_INSTANT);
     if (!instant)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    return js_intl_format_date_time(ctx, this_val, argc, argv,
+                                      QJS_INTL_DATE_REQUIRE_ANY, QJS_INTL_DATE_DEFAULT_ALL);
+#else
     return js_temporal_instant_format(ctx, *instant, NULL, -1);
+#endif
 }
 
 static JSValue js_temporal_instant_to_zoned(JSContext *ctx,
