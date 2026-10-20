@@ -42,5 +42,21 @@ QJSIntlStatus qjs_intl_date_combination_compile(const QJSIntlAllocator *allocato
    field tokens. The consumer owns interval splitting and logical equivalence. */
 QJSIntlStatus qjs_intl_date_interval_compile(const QJSIntlAllocator *allocator,
                                            QJSIntlBytes source, QJSIntlDatePattern *out);
+/* Copy an unchanged compiled pattern, retaining its grammar/order metadata.
+   Own one allocation, independent of all input token/literal storage. Require
+   malloc/free and fresh disjoint output; reset output on failure and release
+   with the same allocator through pattern_clear. */
+QJSIntlStatus qjs_intl_date_pattern_copy(const QJSIntlAllocator *allocator,
+                                       const QJSIntlDatePattern *pattern, QJSIntlDatePattern *out);
+/* Expand a compiled connector's time/date slots with compiled ordinary
+   patterns. Quoted slot text remains literal, inserted tokens are not parsed
+   again, and adjacent literals coalesce across input boundaries. Copy raw
+   symbols/widths without choosing styles or adapting hour cycles. Require
+   unchanged inputs from their matching compile operations, disjoint output
+   and malloc/free. Reset output on failure; release via pattern_clear. */
+QJSIntlStatus qjs_intl_date_pattern_combine(const QJSIntlAllocator *allocator,
+                                          const QJSIntlDatePattern *connector,
+                                          const QJSIntlDatePattern *time,
+                                          const QJSIntlDatePattern *date, QJSIntlDatePattern *out);
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern);
 #endif
