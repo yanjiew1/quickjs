@@ -1,0 +1,245 @@
+/* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#include "text.h"
+#include "name-select.h"
+#include "../common/format-builder.h"
+#include "../common/unary-pattern.h"
+#include "../../calendar/calendar.h"
+#include <string.h>
+
+#define MAX_TOKENS (2 * (QJS_INTL_DATETIME_COMPONENT_COUNT + 2) + 1)
+
+typedef struct Piece {
+    QJSIntlFormatted number;
+    QJSIntlBytes text;
+    QJSIntlUnaryPattern affix;
+    QJSIntlPartType type;
+} Piece;
+
+static QJSIntlBytes bytes(const char *text)
+{
+    return (QJSIntlBytes){text, strlen(text)};
+}
+
+static int equal(QJSIntlBytes text, const char *value)
+{
+    return text.length == strlen(value) && !memcmp(text.data, value, text.length);
+}
+
+static QJSIntlStatus era(const QJSIntlDateTextData *data, const QJSIntlDateCalendarFields *local,
+                         uint32_t *calendar, QJSIntlBytes *key)
+{
+    const char *identifier;
+    QJSIntlBytes raw, selected;
+    QJSIntlStatus status;
+    uint32_t source;
+    if (!local->has_era)
+        return QJS_INTL_UNSUPPORTED;
+    if (!data->metadata || !data->eras ||
+        !(identifier = qjs_calendar_identifier(local->era_calendar)))
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_date_name_calendar_index(data->metadata, data->names, bytes(identifier), &source);
+    if (!status)
+        status = qjs_intl_calendar_name_calendar_at(data->names, source, &raw);
+    if (!status)
+        status = qjs_intl_calendar_era_find(data->eras, raw, bytes(local->era_code), key);
+    if (!status)
+        status = qjs_intl_calendar_name_calendar_at(data->names, data->calendar, &selected);
+    if (!status) {
+        /* ISO has explicit name aliases/overrides but no era arithmetic of its
+           own. Pre-adoption Japanese, in contrast, needs Gregorian labels. */
+        *calendar = equal(selected, "iso8601") ? data->calendar : source;
+    }
+    return status;
+}
+
+static QJSIntlStatus leap_affix(const QJSIntlDateTextData *data,
+                                const QJSIntlDatePatternToken *token, QJSIntlUnaryPattern *out)
+{
+    QJSIntlCalendarNameGroup group = {0};
+    QJSIntlCalendarNameEntry entry;
+    QJSIntlCalendarNameNode origin;
+    QJSIntlStatus status;
+    uint32_t index, head;
+    group.calendar = data->calendar;
+    group.family = QJS_INTL_CAL_NAME_MONTH_PATTERN;
+    group.context = token->symbol == 'L' ? QJS_INTL_CAL_NAME_STAND_ALONE : QJS_INTL_CAL_NAME_FORMAT;
+    group.width = token->width == 4 ? QJS_INTL_CAL_NAME_WIDE :
+                  token->width == 5 ? QJS_INTL_CAL_NAME_NARROW : QJS_INTL_CAL_NAME_ABBREVIATED;
+    status = qjs_intl_calendar_name_find_group(data->names, &group, &index);
+    if (!status)
+        status = qjs_intl_calendar_name_head(data->names, data->locale, index, &head);
+    if (!status)
+        status = qjs_intl_calendar_name_resolve(data->names, head, bytes("leap"),
+                                               QJS_INTL_CAL_NAME_NO_YEAR, (QJSIntlBytes){0},
+                                               &entry, &origin);
+    if (status)
+        return status;
+    if (entry.blocked || !entry.text.length)
+        return QJS_INTL_UNSUPPORTED;
+    return qjs_intl_unary_pattern_parse(entry.text, out);
+}
+
+static QJSIntlStatus named(const QJSIntlDateTextData *data, const QJSIntlDateCalendarFields *local,
+                           unsigned int subsecond, const QJSIntlDatePatternToken *token, Piece *out)
+{
+    static const char *const weekdays[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
+    QJSIntlDateNameSelection selected;
+    QJSIntlBytes code;
+    QJSIntlStatus status;
+    uint32_t calendar = data->calendar;
+    switch (token->symbol) {
+    case 'G':
+        status = era(data, local, &calendar, &code);
+        if (status)
+            return status;
+        out->type = QJS_INTL_PART_ERA;
+        break;
+    case 'M': case 'L':
+        code = bytes(local->month_key);
+        out->type = QJS_INTL_PART_MONTH;
+        break;
+    case 'E': case 'e': case 'c':
+        code = bytes(weekdays[local->weekday]);
+        out->type = QJS_INTL_PART_WEEKDAY;
+        break;
+    case 'U':
+        if (!local->has_cyclic_year)
+            return QJS_INTL_UNSUPPORTED;
+        code = bytes(local->cyclic_key);
+        out->type = QJS_INTL_PART_YEAR_NAME;
+        break;
+    case 'a': case 'b': case 'B': {
+        QJSIntlDayPeriodCode primary, fallback = local->numeric.hour < 12 ?
+                                                QJS_INTL_DAYPERIOD_AM : QJS_INTL_DAYPERIOD_PM;
+        QJSIntlDatePeriodNameSelection period;
+        uint32_t second = (local->numeric.hour * 60 + local->numeric.minute) * 60 + local->numeric.second;
+        status = qjs_intl_dayperiod_select(data->periods, data->period_rules, token->symbol,
+                                           second, subsecond, &primary);
+        if (!status)
+            status = qjs_intl_date_period_name_select(data->names, data->locale, calendar,
+                                                     token->symbol, token->width, primary, fallback, &period);
+        if (status)
+            return status;
+        selected = period.selected;
+        out->type = QJS_INTL_PART_DAY_PERIOD;
+        goto selected_name;
+    }
+    default:
+        return QJS_INTL_UNSUPPORTED;
+    }
+    status = qjs_intl_date_name_select(data->names, data->locale, calendar, token->symbol,
+                                      token->width, code, local->in_leap_year, &selected);
+    if (status)
+        return status;
+selected_name:
+    if (selected.state != QJS_INTL_DATE_NAME_TEXT)
+        return QJS_INTL_UNSUPPORTED;
+    out->text = selected.entry.text;
+    /* Chinese/Dangi have a repeated nominal month. Hebrew's inserted Adar has
+       an independent month key/name, and must not receive a lunar prefix. */
+    if ((token->symbol == 'M' || token->symbol == 'L') && local->has_cyclic_year && local->leap_month)
+        return leap_affix(data, token, &out->affix);
+    return QJS_INTL_OK;
+}
+
+static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlDatePattern *pattern,
+                          const Piece *pieces)
+{
+    size_t i;
+    for (i = 0; i < pattern->count; i++) {
+        const QJSIntlDatePatternToken *token = &pattern->tokens[i];
+        const Piece *piece = &pieces[i];
+        size_t start = builder->length;
+        QJSIntlStatus status;
+        if (piece->number.text) {
+            status = qjs_intl_format_builder_body(builder, &piece->number);
+        } else {
+            status = qjs_intl_format_builder_text(builder, piece->affix.prefix, NULL, NULL);
+            if (!status)
+                status = qjs_intl_format_builder_text(builder, token->symbol ? piece->text : token->literal,
+                                                       NULL, NULL);
+            if (!status)
+                status = qjs_intl_format_builder_text(builder, piece->affix.suffix, NULL, NULL);
+            if (!status)
+                status = qjs_intl_format_builder_part(builder, start, builder->length,
+                                                       token->symbol ? piece->type : QJS_INTL_PART_LITERAL, 0);
+        }
+        if (status)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_date_text_format(const QJSIntlAllocator *allocator,
+                                       const QJSIntlDatePattern *pattern,
+                                       const QJSIntlDateCalendarFields *local,
+                                       unsigned int subsecond, QJSIntlDateHourCycle cycle,
+                                       const QJSIntlDateNumberFormats *numbers,
+                                       const QJSIntlDateTextData *data,
+                                       size_t maximum_output_length, QJSIntlFormatted *out)
+{
+    Piece pieces[MAX_TOKENS] = {0};
+    QJSIntlFormatBuilder builder = {0};
+    QJSIntlDatePatternInfo info;
+    QJSIntlStatus status;
+    size_t i;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !allocator || !allocator->malloc || !allocator->free || !local || !numbers || !data ||
+        !data->names || !data->names->section.bytes || data->locale >= data->names->section.count ||
+        data->calendar >= data->names->calendar_count || !maximum_output_length ||
+        (unsigned int)cycle > QJS_INTL_DATE_H24 || subsecond > 1 ||
+        (local->numeric.millisecond && !subsecond) || local->weekday > 6 ||
+        local->in_leap_year > 1 || local->leap_month > 1 || local->has_era > 1 ||
+        local->has_cyclic_year > 1 || !local->numeric.month || local->numeric.month > 13 ||
+        !local->numeric.day || local->numeric.day > 31 || local->numeric.hour > 23 ||
+        local->numeric.minute > 59 || local->numeric.second > 59 || local->numeric.millisecond > 999)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_date_pattern_info(pattern, &info);
+    if (status)
+        return status;
+    if (pattern->count > MAX_TOKENS)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < pattern->count; i++) {
+        QJSIntlDatePattern single;
+        unsigned int symbol = pattern->tokens[i].symbol;
+        if (!symbol)
+            continue;
+        single = (QJSIntlDatePattern){&pattern->tokens[i], 1, NULL, QJS_INTL_DATE_INTERVAL_DEFAULT};
+        status = qjs_intl_date_numeric_format(allocator, &single, &local->numeric, cycle,
+                                              numbers, maximum_output_length, &pieces[i].number);
+        if (status == QJS_INTL_UNSUPPORTED)
+            status = named(data, local, subsecond, &pattern->tokens[i], &pieces[i]);
+        if (status)
+            goto done;
+    }
+    builder.limit = maximum_output_length;
+    status = emit(&builder, pattern, pieces);
+    if (status)
+        goto done;
+    if (builder.length > SIZE_MAX / sizeof(uint16_t)) {
+        status = QJS_INTL_OVERFLOW;
+        goto done;
+    }
+    if (builder.length)
+        builder.result.text = allocator->malloc(allocator->opaque, builder.length * sizeof(uint16_t));
+    if (builder.count)
+        builder.result.parts = allocator->malloc(allocator->opaque, builder.count * sizeof(QJSIntlPart));
+    if ((builder.length && !builder.result.text) || (builder.count && !builder.result.parts)) {
+        status = QJS_INTL_NO_MEMORY;
+        goto done;
+    }
+    builder.result.length = builder.length;
+    builder.result.part_count = builder.count;
+    builder.length = builder.count = 0;
+    status = emit(&builder, pattern, pieces);
+    if (!status) {
+        *out = builder.result;
+        memset(&builder.result, 0, sizeof(builder.result));
+    }
+done:
+    for (i = 0; i < MAX_TOKENS; i++)
+        qjs_intl_formatted_clear(allocator, &pieces[i].number);
+    qjs_intl_formatted_clear(allocator, &builder.result);
+    return status;
+}
