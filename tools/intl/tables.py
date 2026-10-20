@@ -11,6 +11,7 @@ import relative_tables
 import duration_tables
 import date_field_tables
 import date_style_tables
+import date_combination_tables
 import display_tables
 import locale_tables
 import numbering_tables
@@ -234,4 +235,5 @@ def validate(binary):
             'duration_patterns': duration_tables.decode(sections.get(bundle.DURATION_PATTERNS), strings, tags),
             'date_field_names': date_field_tables.decode(sections.get(bundle.DATE_FIELD_NAMES), strings, tags),
             'display_names': display_tables.decode(sections.get(bundle.DISPLAY_NAMES), strings, tags),
-            'date_styles': date_style_tables.decode(sections.get(bundle.DATE_STYLES), strings, tags)}
+            'date_styles': date_style_tables.decode(sections.get(bundle.DATE_STYLES), strings, tags),
+            'date_combinations': date_combination_tables.decode(sections.get(bundle.DATE_COMBINATIONS), strings, tags)}
