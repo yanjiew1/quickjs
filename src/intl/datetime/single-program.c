@@ -66,34 +66,11 @@ static QJSIntlStatus copy_program(const QJSIntlDateSourceCandidates *pool, const
                                   const QJSIntlAllocator *allocator, QJSIntlDateSingleProgram *out)
 {
     const QJSIntlDateSourceCandidate *source = &pool->records[choice->index];
-    QJSIntlDatePatternInfo info;
-    QJSIntlStatus status;
-    size_t i;
-    status = qjs_intl_date_pattern_copy(allocator, &source->pattern, &out->pattern);
-    if (status)
-        return status;
     out->source_info = source->info;
     out->source_index = choice->index;
-    if (components->values[QJS_INTL_DATETIME_HOUR]) {
-        size_t width = components->values[QJS_INTL_DATETIME_HOUR] == QJS_INTL_DATETIME_TWO_DIGIT ? 2 : 1;
-        for (i = 0; i < out->pattern.count; i++) {
-            QJSIntlDatePatternToken *token = &out->pattern.tokens[i];
-            if (token->symbol != 'h' && token->symbol != 'H' && token->symbol != 'K' && token->symbol != 'k')
-                continue;
-            if (token->width != width) {
-                token->width = width;
-                out->adaptations |= QJS_INTL_DATE_ADAPT_HOUR_WIDTH;
-            }
-            if (hour12(token->symbol) != twelve) {
-                token->symbol = twelve ? 'h' : 'H';
-                out->adaptations |= QJS_INTL_DATE_ADAPT_HOUR_FAMILY;
-            }
-        }
-    }
-    status = qjs_intl_date_pattern_info(&out->pattern, &info);
-    if (status || !same_components(&info.components, components, 0) || info.year_kinds != source->info.year_kinds)
-        return QJS_INTL_DATA_ERROR;
-    return QJS_INTL_OK;
+    return qjs_intl_date_program_adapt(allocator, &source->pattern, components,
+                                      QJS_INTL_DATE_ADAPT_HOUR_WIDTH, twelve,
+                                      &out->pattern, &out->adaptations);
 }
 
 void qjs_intl_date_single_programs_clear(QJSIntlDateSinglePrograms *programs)
