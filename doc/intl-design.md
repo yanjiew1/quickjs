@@ -747,6 +747,11 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
+Physical map-span and entry-at queries expose all exact keys for candidate enumeration without
+leaking wire decoding into the builder. Enumeration does not choose inheritance,
+plural or alternate fallback; a consumer must retain child-key shadowing even
+when that child's pattern is blocked, empty or not renderable.
+
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate
 owner. Groups retain calendar, interval-container alternate, family, skeleton
