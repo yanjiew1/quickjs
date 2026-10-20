@@ -27,6 +27,7 @@ def pack(empty=False):
     else:
         source.set('root', calendar('gregorian', group('months',
             '<month type="1">root</month><month type="2">' + BLOCK + '</month><month type="3"/>'
+            '<month type="6">parent-six</month><month type="8">parent-eight</month>'
             '<month type="7" yeartype="standard">ordinary</month>'
             '<month type="7" yeartype="leap" alt="variant">leap😀</month>') +
             group('days', '<day type="mon">Monday</day>', width='short') +
@@ -45,7 +46,8 @@ def pack(empty=False):
                 group('monthPatterns', '<monthPattern type="leap">leap {0}</monthPattern>',
                       context='numeric', width='all')) +
             calendar('generic', '<months>' + alias("../../calendar[@type='gregorian']/months") + '</months>'))
-        source.set('en', calendar('gregorian', group('months', '<month type="1" alt="variant">child</month>')))
+        source.set('en', calendar('gregorian', group('months', '<month type="1" alt="variant">child</month>'
+                   '<month type="6">' + BLOCK + '</month><month type="8"/>')))
         source.set('en_GB', calendar('generic', group('months', '<month type="4">own</month>')))
         source.set('en_1901_1996', calendar('gregorian', group('months', '<month type="5">external</month>')))
         source.set('de', calendar('generic', '<months>' +
