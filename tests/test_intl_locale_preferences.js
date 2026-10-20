@@ -63,8 +63,49 @@ const numbers = new Intl.Locale("en").getNumberingSystems();
 numbers[0] = "foobar";
 assert(new Intl.Locale("en").getNumberingSystems().join(","), "latn");
 
-const locale = new Intl.Locale("ar");
-for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems"]) {
+// Explicit ca slots bypass availability, including unknown and empty values.
+for (const calendar of ["foobar", "gregory", "buddhist", "islamic"]) {
+    assert(new Intl.Locale("en", {calendar}).getCalendars().join(","), calendar);
+    assert(new Intl.Locale("en-u-ca-" + calendar).getCalendars().join(","), calendar);
+}
+assert(new Intl.Locale("en-u-ca").getCalendars().length, 1);
+assert(new Intl.Locale("en-u-ca").getCalendars()[0], "");
+assert(new Intl.Locale("en-u-ca-islamicc").getCalendars().join(","), "islamic-civil");
+const thaiCalendars = new Intl.DateTimeFormat("en", {calendar: "buddhist"})
+    .resolvedOptions().calendar === "buddhist" ? "buddhist,gregory" : "gregory";
+for (const tag of ["th", "en-TH", "en-u-sd-th10", "en-US-u-rg-thzzzz"])
+    assert(new Intl.Locale(tag).getCalendars().join(","), thaiCalendars);
+for (const tag of ["en", "en-US", "en-ZZ", "en-US-u-rg-zzzzzz"])
+    assert(new Intl.Locale(tag).getCalendars().join(","), "gregory");
+const calendars = new Intl.Locale("en").getCalendars();
+calendars[0] = "foobar";
+assert(new Intl.Locale("en").getCalendars().join(","), "gregory");
+// Generic islamic remains a valid explicit negotiation request, but Stage 4's
+// canonical AvailableCalendars table excludes it from implicit preference lists.
+for (const tag of ["en-EG", "en-IR", "en-SA"])
+    assert(new Intl.Locale(tag).getCalendars().includes("islamic"), false);
+
+// Zone preferences use explicit region only, rather than calendar/hour rules.
+for (const tag of ["en", "en-u-rg-uszzzz", "en-u-sd-usca", "en-u-tz-usnyc"])
+    assert(new Intl.Locale(tag).getTimeZones(), undefined);
+assert(new Intl.Locale("en-001").getTimeZones().join(","), "");
+assert(new Intl.Locale("en-ZZ").getTimeZones().join(","), "");
+const usZones = new Intl.Locale("en-US").getTimeZones();
+assert(new Intl.Locale("en-US-u-rg-jpzzzz-sd-th10-tz-jptyo").getTimeZones().join(","), usZones.join(","));
+assert(new Set(usZones).size, usZones.length);
+assert([...usZones].sort().join(","), usZones.join(","));
+// Minimal UTC-only timezone builds have no US regional zone capability.
+if (usZones.length) {
+    assert(usZones.includes("America/New_York"));
+    assert(new Intl.Locale("en-IN").getTimeZones().includes("Asia/Kolkata"));
+    assert(new Intl.Locale("en-UA").getTimeZones().includes("Europe/Kyiv"));
+}
+const originalZones = usZones.join(",");
+usZones.length = 0;
+assert(new Intl.Locale("en-US").getTimeZones().join(","), originalZones);
+
+const locale = new Intl.Locale("ar-US");
+for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems", "getCalendars", "getTimeZones"]) {
     const method = Intl.Locale.prototype[name];
     assert(method.name, name);
     assert(method.length, 0);
@@ -80,7 +121,7 @@ for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumbering
     const foreign = std.createRealm();
     const foreignMethod = foreign.global.Intl.Locale.prototype[name];
     const result = foreignMethod.call(locale);
-    assert(Object.getPrototypeOf(result), name === "getHourCycles" || name === "getNumberingSystems"
+    assert(Object.getPrototypeOf(result), ["getHourCycles", "getNumberingSystems", "getCalendars", "getTimeZones"].includes(name)
         ? foreign.global.Array.prototype : foreign.global.Object.prototype);
 }
 const first = locale.getWeekInfo();
@@ -93,9 +134,11 @@ for (const key of ["direction", "firstDay", "weekend", "0"]) {
 }
 try {
     assert(locale.getTextInfo().direction, "rtl");
-    assert(locale.getWeekInfo().firstDay, 6);
+    assert(locale.getWeekInfo().firstDay, 7);
     assert(locale.getHourCycles().length > 0);
     assert(locale.getNumberingSystems().length, 1);
+    assert(locale.getCalendars().length > 0);
+    assert(Array.isArray(locale.getTimeZones()));
 } finally {
     for (const key of ["direction", "firstDay", "weekend", "0"])
         delete Object.prototype[key];
