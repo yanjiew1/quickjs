@@ -130,6 +130,7 @@ engine_sources += files(
 if intl_enabled
   engine_sources += files(
     'quickjs/builtins/intl/display-names.c',
+    'quickjs/builtins/intl/date-time-format.c',
     'quickjs/builtins/intl/duration-format.c',
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
