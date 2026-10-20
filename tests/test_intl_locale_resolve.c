@@ -161,6 +161,7 @@ int main(void)
         assert(!strcmp(result.values[0], "false") && !strcmp(result.locale, "en"));
         qjs_intl_resolved_locale_clear(&result);
     }
+    /* Fail each allocator independently; neither may free the other's state. */
     for (i = 0; i < 2; i++) {
         Allocation *state = i ? &input : &output;
         size_t fail;
@@ -181,6 +182,7 @@ int main(void)
     assert(!memcmp(&result, &zero, sizeof(result)) && !output.live);
     keys[1].key[0] = 'h'; keys[1].key[1] = 'c';
     assert(!qjs_intl_resolve_locale_keys(identity, &b, bytes("en"), extension, keys, 3, &result));
+    /* Results own their strings independently of the identity service. */
     qjs_intl_locale_close(identity);
     assert(!input.live);
     expected(&result, "en-u-ca-buddhist", "buddhist", NULL, "latn");

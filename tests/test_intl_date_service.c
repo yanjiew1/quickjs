@@ -300,6 +300,8 @@ int main(int argc, char **argv)
     options.maximum_output_length = 1000;
     options.date_style = QJS_INTL_DATE_STYLE_FULL + 1;
     formatter = open_formatter(service, en, &options);
+    /* Both lifetime boundaries matter: formatter survives service close,
+       then returned parts survive formatter close. */
     qjs_intl_datetime_close(service);
     assert(!qjs_intl_datetime_format(formatter, QJS_INTL_DATE_VALUE_DATE, 1719835200, 0, &result));
     part(&result, QJS_INTL_PART_WEEKDAY, "Monday");
