@@ -4,6 +4,11 @@
 #ifndef QUICKJS_CALENDAR_ERAS_H
 #define QUICKJS_CALENDAR_ERAS_H
 #include "types.h"
+#include <stddef.h>
+
+/* Enumerate only canonical codes that set_era can emit, including data-driven
+   modern Japanese codes and their Gregorian historical fallback. */
+int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out);
 
 /* date already contains a checked arithmetic year; epoch_day is its date.
    Calendars without eras leave has_era zero and both era outputs empty. */
