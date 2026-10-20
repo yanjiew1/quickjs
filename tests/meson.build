@@ -2059,6 +2059,13 @@ if intl_enabled
     },
   }]
 
+  intl_date_zone_fixture = custom_target(
+    'intl-date-zone-authored-fixture',
+    output: 'intl-date-zone-authored-fixture.c',
+    command: [python, files('intl_date_zone_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files('test_intl_timezone_names.py', 'test_intl_list_patterns.py'),
+  )
+
   intl_date_text_fixture = custom_target(
     'intl-date-text-authored-fixture',
     output: 'intl-date-text-authored-fixture.c',
@@ -2413,6 +2420,35 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_list_test,
       'name': ('intl-list-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_zone_test = {
+      'name': ('test_intl_date_zone_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_date_zone.c',
+        '../src/intl/datetime/zone-name.c',
+        '../src/intl/datetime/zone-offset.c',
+        '../src/intl/datetime/timezone-name-data.c',
+        '../src/intl/datetime/timezone-presentation-data.c',
+        '../src/intl/datetime/pattern.c',
+        '../src/intl/display/data.c',
+        '../src/intl/display/select.c',
+        '../src/intl/locale/native-data.c',
+        '../src/intl/locale/type-identity.c',
+        '../src/intl/locale/timezone-identity.c',
+      ) + [intl_date_zone_fixture] + files(
+        '../src/calendar/iso.c',
+      ) + timezone_test_sources,
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_zone_test,
+      'name': ('intl-date-zone-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
