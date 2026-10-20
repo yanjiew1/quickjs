@@ -424,10 +424,11 @@ JS_EXTERN JSRuntime *JS_GetRuntime(JSContext *ctx);
 JS_EXTERN void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
 JS_EXTERN JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
 
-/* Set this runtime's shared Date/Temporal default zone. The identifier is
+/* Set this runtime's shared Date/Temporal/Intl default zone. The identifier is
    copied; failure preserves the old setting and reports an exception.
    A NULL or unsupported identifier throws RangeError. Disabled builds throw
-   TypeError. Raw contexts require base objects for exception construction. */
+   TypeError when neither Temporal nor Intl is enabled. Raw contexts require
+   base objects for exception construction. */
 JS_EXTERN int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone);
 /* Return an owned identifier string. Before an explicit setting, snapshot
    the discovered system default on first use, subject to the build's
