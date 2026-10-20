@@ -11,14 +11,13 @@ import literal_template
 import parents
 from resolve import BLOCK, INHERIT, SparseMaps, freeze_overlays
 import zone_pattern_syntax
+from timezone_syntax import ZONE, METAZONE
 
 FORMATS = frozenset(('hourFormat', 'gmtFormat', 'gmtZeroFormat', 'gmtUnknownFormat',
                      'dualOffsetFormat', 'regionFormat', 'fallbackFormat'))
 NAMES = frozenset(('generic', 'standard', 'daylight'))
 WIDTHS = ('long', 'short')
 FORMAT_GROUP = ('format', '', '', '', '')
-ZONE = re.compile(r'[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*')
-METAZONE = re.compile(r'[A-Za-z][A-Za-z0-9_]*')
 SEGMENT = re.compile(r"\.\.|[A-Za-z]+(?:\[@(?:type|alt)=(?:'[^']*'|\"[^\"]*\")\])*")
 ELEMENT = re.compile(r'([A-Za-z]+)(.*)')
 PREDICATE = re.compile(r"\[@(type|alt)=(['\"])([^'\"]*)\2\]")
