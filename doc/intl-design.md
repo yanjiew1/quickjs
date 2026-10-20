@@ -662,6 +662,11 @@ stage, which must resolve calendar aliases, retain source identities and handle
 numbering overrides, names, skeletons and intervals. Compilation must distinguish
 these date patterns from date-time combination templates; shared pair templates
 do not use the date-pattern apostrophe rules.
+The lexical compiler provides separate `compile_combination` tokens for exactly
+one time and one date slot, applying apostrophe quoting to fields and braces.
+Its raw-source audit covers style connectors without resolving aliases or
+choosing standard/atTime/relative fallback policy. Slot tokens keep substituted
+date/time patterns separate from decoded connector literals and field runs.
 
 `tools/intl/date_patterns.py` owns the first typed date/time style facts. It
 resolves length styles and their independent skeleton records across calendar
@@ -680,6 +685,24 @@ owner is an immutable view with exact queries and temporary validation scratch;
 it owns neither calendar computation nor format selection and retains no heap
 state. Pattern/skeleton text and numbering overrides stay uninterpreted at this
 boundary, ready for the later native date-format compiler.
+
+`calendar_sources.py` shares structural XML traversal and alias validation
+between style and connector collection. Typed key inventories, subtree ownership
+and alias-path mappings remain with their collectors. `date_combinations.py`
+resolves standard/atTime/relative source connectors independently at each style
+width, preserving raw overrides and terminal provenance through calendar,
+group and form aliases. It leaves form fallback to the consuming formatter,
+and establishes host-side facts before a separate wire/C-owner stage.
+Optional connector section 28 pools records and locale rows over calendar,
+width, form and alternate selectors. Eight-word records preserve raw overrides
+and typed terminal provenance independently of consumer fallback. Both production
+profiles include this section and have corresponding C reader tests. The immutable
+connector owner
+checks canonical sharing and references, frees all validation scratch, and
+provides exact queries that allocate nothing. Pattern and connector data share
+the width selector in `datetime/style-types.h`; their records, states and query
+interfaces retain distinct owners. Missing, blocked and explicit empty records
+remain distinct across source, wire and runtime queries.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
