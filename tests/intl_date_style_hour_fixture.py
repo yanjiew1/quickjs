@@ -24,7 +24,7 @@ def pack():
     templates = {'plain': '{0} {1}', 'paren': '{0} ({1})', 'reverse': '{1} {0}',
                  'comma': '{0}, {1}', 'cyrillic': '{0} ч. {1}', 'letters': "'at' {0} + {1}",
                  'blocked': '{0} {1}', 'empty': '{0} {1}', 'missing': None,
-                 'malformed': '{0} {0} {1}'}
+                 'malformed': '{0} {0} {1}', 'recovery': '{0} {1}', 'unmatched': '{0} {1}'}
     time = styles('time', (
         ('full', '<pattern>h:mm:ss a zzzz</pattern>'),
         ('long', '<pattern>HH:mm:ss z</pattern>'),
@@ -33,7 +33,16 @@ def pack():
     roots = []
     for code, text in sorted(templates.items()):
         leaf = '' if text is None else '<appendItem request="Timezone">' + text + '</appendItem>'
-        roots.append(calendar(code, time + '<dateTimeFormats>' + group(leaf, 'appendItems') + '</dateTimeFormats>'))
+        own_time = time
+        if code == 'recovery':
+            own_time = styles('time', (
+                ('full', '<pattern>HH:mm:ss zzzz</pattern>'),
+                ('long', '<pattern>HH:mm:ss z</pattern>'),
+                ('medium', '<pattern>HH:mm:ss</pattern>'),
+                ('short', '<pattern>HH:mm</pattern>')))
+        elif code == 'unmatched':
+            own_time = time.replace('HH:mm:ss z', 'HH:mm:ss [z]')
+        roots.append(calendar(code, own_time + '<dateTimeFormats>'  + group(leaf, 'appendItems') + '</dateTimeFormats>'))
     source.set('root', ''.join(roots))
     source.set('en', ''.join(calendar(code, '<dateTimeFormats>' + group(
         '<appendItem request="Timezone">' + text + '</appendItem>', 'appendItems') + '</dateTimeFormats>')
