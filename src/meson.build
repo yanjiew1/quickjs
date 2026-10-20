@@ -161,6 +161,8 @@ if intl_enabled
     'intl/datetime/field.c',
     'intl/datetime/interval-data.c',
     'intl/datetime/name-data.c',
+    'intl/datetime/pattern.c',
+    'intl/datetime/pattern-info.c',
     'intl/datetime/style-data.c',
     'intl/datetime/timezone-name-data.c',
     'intl/datetime/timezone-presentation-data.c',
