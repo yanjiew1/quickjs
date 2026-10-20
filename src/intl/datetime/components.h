@@ -35,4 +35,14 @@ typedef struct QJSIntlDateTimeComponents {
     int values[QJS_INTL_DATETIME_COMPONENT_COUNT];
 } QJSIntlDateTimeComponents;
 
+/* Presence only; field-specific value validation belongs to consumers. */
+static inline unsigned int qjs_intl_datetime_component_mask(const QJSIntlDateTimeComponents *components)
+{
+    unsigned int result = 0, i;
+    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
+        if (components->values[i])
+            result |= 1U << i;
+    return result;
+}
+
 #endif
