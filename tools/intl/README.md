@@ -50,6 +50,23 @@ Collator support. Both prepared profiles carry the same root mapping section;
 the allocation-free C reader is `src/intl/collation/root-data.c`. Full locale
 tailorings and the comparator remain separate runtime work.
 
+`collation_groups.py` collects source group identities for the host semantic
+compiler. It joins FractionalUCA's synthetic boundaries with pinned CLDR script
+samples and explicit reordering-token metadata, without interpreting comments or
+equating scripts just because they share a lead byte. It retains the first real
+mapping key after each boundary, skipping numeric/reserved markers. Hiragana/
+Katakana and the two Meroitic scripts share groups; Han aliases are retained.
+Composite sample metadata alone does not create a reordering alias.
+
+These are build-time facts, not a new executable pack section. Implicit anchor
+keys are deliberately unresolved: the semantic compiler must use the same
+root/implicit-weight implementation as execution, rather than zip fractional
+CEs with allkeys CEs. The generic-unassigned boundary has no real key or
+separately selectable script identity. Fixed U+FFFE/trailing behavior remains
+outside the reorderable group list. Authored tests cover aliases, missing real
+anchors, version/ordering errors and coarse lead-byte collisions; CI audits the
+complete pinned catalog.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
