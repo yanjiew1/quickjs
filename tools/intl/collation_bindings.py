@@ -65,13 +65,23 @@ def resolve(catalog, locales, aliases=()):
     return tuple(rows)
 
 
-def collect(sources, profile):
-    catalog = collation_programs.load(sources)
+def from_catalog(catalog, profile):
+    """Reuse one parsed catalog for target selection and binding resolution."""
     graph, aliases = availability.complete(catalog.graph)
     # root owns source fallback, not a public BCP47 service locale. Keep it in
     # prepared formatter tables, but never in executable service bindings.
     locales = tuple(tag for tag in availability.profile_locales(graph, profile) if tag != 'root')
     return resolve(catalog, locales, aliases)
+
+
+def collect(sources, profile):
+    return from_catalog(collation_programs.load(sources), profile)
+
+
+def program_targets(rows):
+    """Sorted standalone targets; ordered imports are compiled into each one."""
+    return tuple(sorted({target for row in rows for target in (row.sort, row.search)
+                         if target is not None}))
 
 
 def main():
