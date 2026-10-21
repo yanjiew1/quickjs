@@ -7,6 +7,7 @@
 #include "../../intl/locale/locale.h"
 #include "../../intl/locale/matching.h"
 #include "../../intl/locale/resolve.h"
+#include "../../intl/collation/collation.h"
 #include "../../intl/list/list.h"
 #include "../../intl/plural/plural.h"
 #include "../../intl/number/number.h"
@@ -27,6 +28,7 @@ typedef struct JSIntlLocaleList {
 QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx);
 /* Borrow runtime-owned services for binding-level capability queries. */
 QJSIntlNumberService *js_intl_number_service(JSContext *ctx);
+QJSIntlCollationService *js_intl_collation_service(JSContext *ctx);
 QJSIntlDateTimeService *js_intl_datetime_service(JSContext *ctx);
 QJSIntlDisplayService *js_intl_display_service(JSContext *ctx);
 QJSIntlRelativeService *js_intl_relative_service(JSContext *ctx);
@@ -39,6 +41,7 @@ int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_list_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_plural_rules(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_number_format(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_collator(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_relative_time_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_duration_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_display_names(JSContext *ctx, JSValueConst namespace_object);
@@ -58,6 +61,10 @@ JSValue js_intl_format_duration(JSContext *ctx, JSValueConst value, int argc, JS
 /* Intrinsic Number/BigInt locale formatting. value is a validated primitive;
    argc/argv supply locales/options. Never consult mutable global properties. */
 JSValue js_intl_format_number(JSContext *ctx, JSValueConst value, int argc, JSValueConst *argv);
+/* Already-coerced string inputs; argc/argv contain locales/options. Use the
+   intrinsic Collator, never mutable global properties or its compare getter. */
+JSValue js_intl_compare_strings(JSContext *ctx, JSValueConst a, JSValueConst b,
+                                int argc, JSValueConst *argv);
 JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
                                         JSClassID class_id);
 JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
