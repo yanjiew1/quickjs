@@ -918,8 +918,10 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
 
 /* return the length of the decomposition (length <=
    UNICODE_DECOMP_LEN_MAX) or 0 if no decomposition */
+/* Keep the per-scalar normalization call inline when rare boundary queries
+   also share this decoder. */
 #ifndef USE_TEST
-static
+static inline
 #endif
 int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 {
@@ -2164,3 +2166,40 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
 }
 
 #include "libunicode-es-property-grammar.inc"
+
+#ifdef CONFIG_ALL_UNICODE
+/* Used by data compilers. Keep this rare query after runtime routines to
+   avoid shifting their hot code when adding another normalization caller. */
+int unicode_nfc_boundary_before(uint32_t c)
+{
+    uint32_t decomposition[UNICODE_DECOMP_LEN_MAX];
+    size_t low = 0, high = countof(unicode_nfc_backward_zero_cc);
+    int length;
+
+    if (c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
+        return FALSE;
+    /* A composite can itself have CCC0 yet lead with a backward-composing
+       scalar. Follow canonical singleton/multistage decompositions too. */
+    for (;;) {
+        if (c >= 0xac00 && c < 0xd7a4) {
+            c = 0x1100 + (c - 0xac00) / 588;
+            break;
+        }
+        length = unicode_decomp_char(decomposition, c, FALSE);
+        if (!length)
+            break;
+        c = decomposition[0];
+    }
+    if (unicode_get_cc(c) || (c >= 0x1161 && c <= 0x1175) ||
+        (c >= 0x11a8 && c <= 0x11c2))
+        return FALSE;
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        if (unicode_nfc_backward_zero_cc[middle] < c)
+            low = middle + 1;
+        else
+            high = middle;
+    }
+    return low == countof(unicode_nfc_backward_zero_cc) || unicode_nfc_backward_zero_cc[low] != c;
+}
+#endif
