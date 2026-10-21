@@ -2442,6 +2442,14 @@ const uint16_t unicode_comp_table[965] = {
     0x9306, 0x9303, 0x9341, 0x9340, 0x9342,
 };
 
+const uint32_t unicode_nfc_backward_zero_cc[33] = {
+    0x000009be, 0x000009d7, 0x00000b3e, 0x00000b56, 0x00000b57, 0x00000bbe, 0x00000bd7, 0x00000cc2,
+    0x00000cd5, 0x00000cd6, 0x00000d3e, 0x00000d57, 0x00000dcf, 0x00000ddf, 0x0000102e, 0x00001b35,
+    0x00011127, 0x0001133e, 0x00011357, 0x000113b8, 0x000113bb, 0x000113c2, 0x000113c9, 0x000114b0,
+    0x000114ba, 0x000114bd, 0x000115af, 0x00011930, 0x0001611e, 0x0001611f, 0x00016120, 0x00016129,
+    0x00016d67,
+};
+
 const char unicode_gc_name_table[] =
     "Cn,Unassigned"            "\0"
     "Lu,Uppercase_Letter"      "\0"
@@ -6718,4 +6726,4 @@ const uint32_t unicode_block_ranges[353][2] = {
 };
 
 #endif /* CONFIG_ALL_UNICODE */
-/* 75 tables / 69167 bytes, 7 index / 2947 bytes */
+/* 76 tables / 69299 bytes, 7 index / 2947 bytes */
