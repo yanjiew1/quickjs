@@ -2285,6 +2285,7 @@ if intl_enabled
       'name': ('test_intl_collation_' + profile),
       'sources': files(
         'test_intl_collation_profiles.c',
+        'intl_collation_ordered.c',
         '../src/intl/collation/compare.c',
         '../src/intl/collation/contexts.c',
         '../src/intl/collation/elements.c',
@@ -3540,6 +3541,7 @@ if intl_enabled
     ) + [intl_collation_ir_fixture],
     'test_intl_collation_compiled': files(
       'test_intl_collation_compiled.c',
+      'intl_collation_ordered.c',
       '../src/intl/collation/compiled-data.c',
       '../src/intl/collation/ranked-elements.c',
       '../src/intl/collation/ranked-compare.c',
@@ -4579,6 +4581,15 @@ if intl_enabled
     'intl-collation-compiler-input',
     python,
     args: [files('test_intl_collation_ir.py'), '--compiler', collation_compile],
+    depends: collation_compile,
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-profile-preparation',
+    python,
+    args: [files('test_intl_collation_prepare.py'), '--compiler', collation_compile],
     depends: collation_compile,
     suite: ['repo', 'generator', 'unit'],
     timeout: 30,
