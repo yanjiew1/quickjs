@@ -1,8 +1,8 @@
 {
-  "bytes": 1960344,
+  "bytes": 1960416,
   "complete_services": [],
   "format": 1,
-  "generation": "bb0bbcd58f51dfb500dd2362392c33f10846d2a0cec30718cb341c1a10dee8e8",
+  "generation": "ce3b65ea67c7497209d3ae4a6c4c2e5a3d6eb07fe01776083919e2585483bf63",
   "inputs": {
     "cldr": {
       "archive": {
@@ -143,6 +143,10 @@
       "36": {
         "count": 40467,
         "sha256": "4171a25d2db5e91e492efb172580607626b1e37c179aba8d68269b70a99c5952"
+      },
+      "37": {
+        "count": 4,
+        "sha256": "663985e77c28ae514b83f206ef8eed84c50c4e2d95ad67bb7f3a754ef5f93471"
       },
       "4": {
         "count": 7868,
@@ -1348,11 +1352,12 @@
       "common/supplemental/plurals.xml": "69a30c57a621de9c52ec6ca95fe7bf9f06df6f8c13ca71a72e447b532c92cff7",
       "common/supplemental/supplementalData.xml": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a",
       "common/supplemental/supplementalMetadata.xml": "b06614fc2c9aab3b9a9f7e8bf9328f4f7a95d89b2d2dbb300d0caff0f885c164",
+      "common/uca/FractionalUCA.txt": "90549e48dc1dfdfcbb3b79dbf79c257c23eef87c9896b6c2119ba713cd849f4f",
       "common/uca/allkeys_CLDR.txt": "cd5bc1048dfb692f0be1944f368905ea9651356dabb9e082cee713ee820cd39d"
     }
   },
   "locales": 3,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, root UCA mappings, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "6be98ab21416b1e3af0866b360b6a898ea234cf02bc03a5fc108bb6c119fbbc0",
+  "sha256": "544af46a37f9d2115269e05cdd74d60da8049c90c4a9e71c51926c760fd2956a",
   "strings": 25981
 }
