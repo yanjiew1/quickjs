@@ -3492,6 +3492,11 @@ standalone += {
     'test_unicode_break_properties.c',
     '../src/unicode/break-properties.c',
   ) + unicode_tables,
+  'test_unicode_normalization_boundary': files(
+    'test_unicode_normalization_boundary.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+  ) + unicode_tables,
 }
 
 if get_option('temporal') and native_calendars
