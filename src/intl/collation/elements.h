@@ -3,9 +3,11 @@
 #ifndef QJS_INTL_COLLATION_ELEMENTS_H
 #define QJS_INTL_COLLATION_ELEMENTS_H
 #include "match.h"
+#include "contexts.h"
 
 typedef struct QJSIntlCollationElements {
     QJSIntlCollationMatch match;
+    QJSIntlCollationContexts data;
     uint32_t pending_at;
     QJSIntlCollationEntry pending;
     QJSIntlCollationElement implicit[2];

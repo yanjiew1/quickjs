@@ -3,18 +3,26 @@
 #ifndef QJS_INTL_COMPILER_RELATIONS_H
 #define QJS_INTL_COMPILER_RELATIONS_H
 #include "collation-weights.h"
-#include "../../src/intl/collation/logical.h"
 
-/* Separate ordinary weak weights from weights of ignorable CEs (UCA WF2).
-   The boundary itself is an insertion anchor, never an emitted CE weight. */
-#define QJS_INTL_RELATION_WEAK_BOUNDARY UINT32_C(0x10000)
-#define QJS_INTL_RELATION_WEAK_MAX UINT32_C(0x1ffff)
+/* The root catalog owns coordinate allocation, common aliases and protected
+   WF2 boundaries. Relation execution must not infer them from one wire format. */
+typedef struct QJSIntlRelationRoots {
+    uint32_t primary_max, secondary_max, tertiary_max;
+    uint32_t secondary_common, tertiary_common;
+    uint32_t secondary_boundary, tertiary_boundary;
+} QJSIntlRelationRoots;
 
 enum {
     QJS_INTL_RELATION_LOWER,
     QJS_INTL_RELATION_MIXED,
     QJS_INTL_RELATION_UPPER
 };
+
+typedef struct QJSIntlRelationCase {
+    /* Explicit immutable-root metadata: primary is Boolean, case_value is one
+       of the three values above, independent of the ordinary tertiary ID. */
+    unsigned int primary, case_value;
+} QJSIntlRelationCase;
 
 typedef struct QJSIntlRelationElement {
     uint32_t weights[4]; /* Stable P/S/T/Q IDs until graph freeze/resolution. */
@@ -29,6 +37,7 @@ typedef struct QJSIntlRelationMapping {
 
 typedef struct QJSIntlRelations {
     QJSIntlAllocator allocator;
+    QJSIntlRelationRoots roots;
     QJSIntlWeightGraph axes[4];
     QJSIntlRelationMapping cursor;
     int ready;
@@ -38,12 +47,10 @@ typedef struct QJSIntlRelations {
    be root conversions or results from this same owner, before freezing.
    Initialize fresh/cleared storage; clear before reuse. Do not copy a live owner. Allocator state
    outlives all mappings and cannot reenter these operations. */
-QJSIntlStatus qjs_intl_relations_init(QJSIntlRelations *, const QJSIntlAllocator *);
+QJSIntlStatus qjs_intl_relations_init(QJSIntlRelations *, const QJSIntlAllocator *,
+                                      const QJSIntlRelationRoots *);
 void qjs_intl_relations_clear(QJSIntlRelations *);
 void qjs_intl_relation_mapping_clear(const QJSIntlAllocator *, QJSIntlRelationMapping *);
-/* logical must be a valid logical_root result, not a raw implicit continuation.
-   Root conversion does not allocate. No pointers are retained. */
-QJSIntlStatus qjs_intl_relation_root(const QJSIntlCollationLogical *, QJSIntlRelationElement *);
 /* Copy a CURRENT lookup result as a reset. Empty lookup means one zero CE.
    Allocation failure leaves the cursor unchanged. */
 QJSIntlStatus qjs_intl_relations_reset(QJSIntlRelations *, const QJSIntlRelationElement *, size_t);
@@ -55,7 +62,7 @@ QJSIntlStatus qjs_intl_relations_reset(QJSIntlRelations *, const QJSIntlRelation
    out must be empty and disjoint. Success creates an independently owned
    mapping; failure leaves its output empty and the cursor/order unchanged. */
 QJSIntlStatus qjs_intl_relations_apply(QJSIntlRelations *, unsigned int strength, int before,
-                                      const QJSIntlCollationLogical *root_case, size_t root_count,
-                                      const QJSIntlRelationElement *extension, size_t extension_count,
-                                      QJSIntlRelationMapping *out);
+                                       const QJSIntlRelationCase *root_case, size_t root_count,
+                                       const QJSIntlRelationElement *extension, size_t extension_count,
+                                       QJSIntlRelationMapping *out);
 #endif
