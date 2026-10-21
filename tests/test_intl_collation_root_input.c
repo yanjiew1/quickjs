@@ -15,7 +15,7 @@ extern const uint8_t intl_root_multirange[];
 extern const size_t intl_root_multirange_size;
 
 typedef struct Allocation {
-    size_t calls, live;
+    size_t calls, live, fail_at;
     int fail;
 } Allocation;
 
@@ -25,7 +25,7 @@ static void *allocate(void *opaque, size_t size)
     void *p;
     assert(size);
     state->calls++;
-    if (state->fail)
+    if (state->fail || state->calls == state->fail_at)
         return NULL;
     p = malloc(size);
     assert(p);
@@ -38,7 +38,7 @@ static void *resize(void *opaque, void *p, size_t size)
     Allocation *state = opaque;
     assert(p && size);
     state->calls++;
-    if (state->fail)
+    if (state->fail || state->calls == state->fail_at)
         return NULL;
     p = realloc(p, size);
     assert(p);
@@ -97,13 +97,15 @@ static void test_borrowed_and_fallback(void)
     QJSIntlCollationCoordinate ce;
     uint8_t *bytes = malloc(intl_root_fixture_size + 1);
     uint32_t i, start, count;
+    size_t opening_calls;
     unsigned int role;
     const uint32_t generic[] = {0, 1, 0xd800, 0xe000, 0x10ffff};
     assert(bytes);
     memcpy(bytes + 1, intl_root_fixture, intl_root_fixture_size);
     /* All tables and returned slices must work without native alignment. */
     assert(!qjs_intl_root_input_open(bytes + 1, intl_root_fixture_size, &a, &view));
-    assert(state.calls == 1 && !state.live && view.fingerprint == bytes + 33);
+    assert(state.calls && !state.live && view.fingerprint == bytes + 33);
+    opening_calls = state.calls;
     for (i = 0; i < 32; i++)
         assert(view.fingerprint[i] == i);
     assert(view.metadata.implicit_last_marker == view.metadata.generic_base);
@@ -130,7 +132,7 @@ static void test_borrowed_and_fallback(void)
         assert(!qjs_intl_root_input_implicit(&view, i, &ce));
         assert(ce.weights[0] == view.metadata.han_base + (i == 0x4e02 ? 1 : i - 0x4e00 + 2));
     }
-    assert(state.calls == 1); /* Lookup/fallback retains no allocating owner. */
+    assert(state.calls == opening_calls); /* Lookup/fallback allocates nothing. */
     assert(qjs_intl_root_input_implicit(&view, 0x110000, &ce) == QJS_INTL_INVALID_ARGUMENT);
     assert(!ce.weights[0] && !ce.implicit);
     assert(qjs_intl_root_input_mapping(&view, view.keys.row_count, &start, &count) == QJS_INTL_INVALID_ARGUMENT);
@@ -224,7 +226,14 @@ static void test_failure_and_corruption(void)
     empty(&view);
     state.fail = 0;
     assert(!qjs_intl_root_input_open(intl_root_fixture, intl_root_fixture_size, &a, &view));
-    assert(state.calls == 2 && !state.live);
+    assert(state.calls > 1 && !state.live);
+    for (i = 1; i < state.calls; i++) {
+        Allocation failing = {.fail_at = i};
+        QJSIntlAllocator a_fail = allocator(&failing);
+        assert(qjs_intl_root_input_open(intl_root_fixture, intl_root_fixture_size, &a_fail, &view) == QJS_INTL_NO_MEMORY);
+        assert(failing.calls == i && !failing.live);
+        empty(&view);
+    }
     assert(qjs_intl_root_input_open(NULL, 0, &a, &view) == QJS_INTL_INVALID_ARGUMENT);
     empty(&view);
     memcpy(bytes, intl_root_fixture, intl_root_fixture_size);
