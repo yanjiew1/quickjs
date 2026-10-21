@@ -141,8 +141,8 @@ composites, and uses a generated sorted CCC0 composition-second list. Unicode
 checks every code point in CI; no-prefix relations and extensions retain their
 independent lookup semantics.
 
-This is the compiler input/normalization stage, not completed semantic weight
-allocation. It does not execute settings or emit executable locale tailorings.
+These audit modes validate input/normalization separately from program execution.
+They do not emit executable locale tailorings.
 Python retains ownership of XML, syntax,
 parents, type aliases and import expansion; it never substitutes its host Unicode
 version for the C algorithms. Normal builds still consume prepared runtime packs.
@@ -285,6 +285,27 @@ retain their prescribed leading order. A replacement list publishes atomically;
 allocation or validation failure leaves the previous ranks intact. Fixed and
 trailing primaries remain outside this permutation. Reordering does not alter
 construction weights, logical resets or maximum-variable classification.
+
+`collation-program.c` executes the paired IR through those owners. Each program
+gets a fresh builder, scalar policy and reorder permutation. It checks command
+sequence grammar in addition to the reader's record shapes, decodes counted
+unaligned operands, and leaves original-prefix checks and text normalization to
+the builder. `collation-text.c` shares pinned NFD and starred-scalar inert checks;
+every interior starred scalar is checked before normalization. Suppression uses
+exact set members; optimize is a validated nonsemantic hint.
+
+Successful programs reach a borrowed finalizer, which can freeze axes and copy
+live data into its own staging owner. The executor clears program state on every
+success/error path. Earlier callbacks are not rolled back; consumers must discard
+staged aggregate output on any later error. No live builder, descriptor or graph
+may escape the callback. Root-context suppression must be preserved separately
+from live map terminals when packing.
+
+`intl-collation-compile --execute-pair root.qjcr input.qjci` checks the complete
+source identity before allocating program state, executes the rules and freezes
+all ordering axes. It reports successful programs, instructions and current
+mapping counts. This is a semantic compiler diagnostic, not runtime Collator
+publication. Normal builds still use the existing prepared runtime pack.
 
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
