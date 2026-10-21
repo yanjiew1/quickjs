@@ -147,6 +147,24 @@ profiles' actual NFD/lookup streams validate this bridge. Current production
 comparison still uses raw root weights; compiler/ranked comparison integration
 is subsequent work.
 
+`collation-relations.c` executes one ordered relation over those stable IDs.
+It copies the reset cursor, modifies the last CE strong enough for a non-equality
+relation, drops following weaker CEs, and resets lower levels to shared common
+aliases. Separate ordinary/ignorable weak-weight bands preserve UCA WF2, even
+when a relation creates a secondary-only or tertiary-only CE from zero. Before
+relations insert on the other side of the same anchor. Root primary provenance
+remains separate from the inserted ID for later grouping and variable policy.
+
+Every relation, including equality, distributes immutable root case values over
+its primary CEs according to TR35. Extra root primaries collapse into the final
+primary's mixed/upper/lower case; secondary cases clear, and tertiary-only cases
+remain upper. Explicit extensions retain their original CEs and case, and do
+not enter the next relation's cursor. Outputs own their arrays, so replacing a
+later mapping cannot mutate an earlier expansion. Allocation failures preserve
+both the cursor and symbolic ordering. This host-only transition layer does not
+yet execute current-map lookup, settings, logical reset positions or runtime
+ranked comparison; it does not advertise locale Collator support by itself.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
