@@ -11,6 +11,8 @@
 #define IR_MAX_SIZE (64u * 1024 * 1024)
 #define IR_MAX_EXPANDED 1000000u
 #define IR_MAX_TOTAL_EXPANDED (4u * IR_MAX_EXPANDED)
+#define IR_UNICODE_VERSION (((uint32_t)LIBUNICODE_UNICODE_VERSION_MAJOR << 16) | \
+                            (LIBUNICODE_UNICODE_VERSION_MINOR << 8) | LIBUNICODE_UNICODE_VERSION_PATCH)
 
 typedef struct Reader {
     const uint8_t *at, *end;
@@ -186,6 +188,13 @@ static int node(Reader *program, Audit *audit)
     case 2: /* prefix, relation string, extension */
         if (auxiliary > 4 || !fields[1].count)
             return -1;
+        /* Prefix and mapped text will normalize separately. Check their
+           ORIGINAL starts before normalization so context cannot cross the
+           split. Extension strings are independent lookups, not prefixes. */
+        if (fields[0].count &&
+            (!unicode_nfc_boundary_before(load32(fields[0].data)) ||
+             !unicode_nfc_boundary_before(load32(fields[1].data))))
+            return -1;
         for (i = 0; i < 3; i++) {
             if (normalize_text(&fields[i], audit))
                 return -1;
@@ -218,7 +227,7 @@ static int audit_ir(const uint8_t *bytes, size_t length, Audit *audit)
         return -1;
     reader.at += 4;
     if (word(&reader, &version) || version != 1 ||
-        word(&reader, &unicode_version) || unicode_version != (18u << 16) ||
+        word(&reader, &unicode_version) || unicode_version != IR_UNICODE_VERSION ||
         word(&reader, &size) || size != length || word(&reader, &count) ||
         count > (size_t)(reader.end - reader.at) / 20)
         return -1;
