@@ -102,6 +102,9 @@ support_library_sources = files(
   'unicode/case-conversion.c',
   'unicode/category.c',
   'unicode/break-properties.c',
+  'unicode/grapheme.c',
+  'unicode/word.c',
+  'unicode/sentence.c',
   'cutils/cutils.c',
 )
 host_service_sources = files(
