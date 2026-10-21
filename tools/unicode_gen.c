@@ -411,6 +411,7 @@ typedef struct {
     uint8_t is_compat:1;
     uint8_t is_excluded:1;
     uint8_t general_category;
+    uint8_t decimal_value; /* Source value plus one; zero means absent. */
     uint8_t script;
     uint8_t script_ext_len;
     uint8_t *script_ext;
@@ -535,6 +536,17 @@ void parse_unicode_data(const char *filename)
                 exit(1);
             }
             ci->general_category = i;
+        }
+
+        p = get_field(line, 6);
+        if (p && *p != ';' && *p != '\0') {
+            char *end;
+            unsigned long value = strtoul(p, &end, 10);
+            if (value > 9 || end == p || *end != ';' || ci->general_category != GCAT_Nd) {
+                fprintf(stderr, "Invalid decimal digit at U+%04X\n", code);
+                exit(1);
+            }
+            ci->decimal_value = value + 1;
         }
 
         p = get_field(line, 3);
@@ -2442,6 +2454,20 @@ void build_general_category_table(UnicodeTableOutput *out)
         while (j <= CHARCODE_MAX && unicode_db[j].general_category == v)
             j++;
         n = j - i;
+        if (v == GCAT_Nd) {
+            /* Point lookup derives values from the original run origin. Do
+               not let a later compression change invalidate that contract. */
+            if (n % 10) {
+                fprintf(stderr, "Incomplete decimal run at U+%04X\n", i);
+                exit(1);
+            }
+            for (n1 = 0; n1 < n; n1++) {
+                if (unicode_db[i + n1].decimal_value != n1 % 10 + 1) {
+                    fprintf(stderr, "Unexpected decimal sequence at U+%04X\n", i + n1);
+                    exit(1);
+                }
+            }
+        }
         /* compress Lu/Ll runs */
         if (v == GCAT_Lu) {
             n1 = 1;
