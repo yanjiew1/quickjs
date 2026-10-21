@@ -80,3 +80,17 @@ bounded UTF-16 decoding helper without sharing its algorithm-specific state.
 the official `GraphemeBreakTest.txt` path additionally checks every source case,
 including the absence of boundaries inside supplementary pairs. Unicode CI
 runs that conformance mode against the same pinned release as the tables.
+
+## Default word boundaries
+
+`src/unicode/word.c` supplies the default word rules with the same forward,
+original-UTF-16 boundary contract. It distinguishes raw adjacency for WB3c and
+WB3d from the significant-character context after WB4 ignores. Punctuation
+rules use bounded additional lookahead across an ignored run; RI parity is
+updated without scanning backward. Full iteration is linear and allocation-free.
+
+These positions alone do not identify meaningful words, apply locale rules or
+split dictionary-script text. Those decisions belong to the segmentation service.
+`test_unicode_word` exercises punctuation, ignored characters, Hebrew quotes,
+surrogates and long runs; Unicode CI additionally checks the pinned
+`WordBreakTest.txt` through the same boundary-vector oracle used for graphemes.
