@@ -352,6 +352,16 @@ storage is released before publication, and malformed input differs from OOM.
 These are nested array layouts; the enclosing runtime archive remains a separate
 format. Matcher queries require the unchanged opened view and allocate nothing.
 
+`collation-archive.c` stages those outputs and emits the explicit LE
+[QJCL runtime archive](../../doc/intl-collation-compiled-format.md). One shared
+root omits compiler reset/weak/token tables; per-program blocks copy ranked CEs,
+keys, suppression, policy, sparse shifts and the compact trie. The compiler
+retains no snapshot pointers after append, and failed staging cannot finish.
+`--compile-pair root.qjcr input.qjci` emits a complete binary image on stdout.
+Public locale/type bindings and runtime service publication remain subsequent
+integration layers. A caller publishing the binary output must first capture the
+complete successful image and replace its destination atomically.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension
