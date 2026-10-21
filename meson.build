@@ -197,6 +197,7 @@ if get_option('unicode_data') != ''
   generated_unicode_tables = custom_target(
     'unicode-tables',
     input: files(
+      ucd / 'Blocks.txt',
       ucd / 'UnicodeData.txt',
       ucd / 'SpecialCasing.txt',
       ucd / 'CaseFolding.txt',
