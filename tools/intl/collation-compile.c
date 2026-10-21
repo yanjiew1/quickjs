@@ -4,6 +4,7 @@
 #include "collation-ir.h"
 #include "collation-program.h"
 #include "collation-snapshot.h"
+#include "collation-trie.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -31,12 +32,23 @@ static QJSIntlStatus execute_end(void *opaque, const QJSIntlIRProgram *identity,
 {
     Executed *result = opaque;
     QJSIntlCollationSnapshot snapshot;
+    QJSIntlCompiledTrie trie;
+    QJSIntlCollationTrie view;
     QJSIntlStatus status;
     /* Exercise the immutable output model while borrowing the active program.
        Wire encoding and runtime publication remain separate output layers. */
     status = qjs_intl_collation_snapshot_create(program, identity, &snapshot);
     if (status)
         return status;
+    status = qjs_intl_compiled_trie_create(&snapshot, &trie);
+    if (!status)
+        status = qjs_intl_collation_trie_open(&trie.nodes, &trie.edges, &trie.suppressed,
+                                              &snapshot.keys, &snapshot.allocator, &view);
+    qjs_intl_compiled_trie_clear(&trie);
+    if (status) {
+        qjs_intl_collation_snapshot_clear(&snapshot);
+        return status;
+    }
     result->programs++;
     result->instructions += identity->instruction_count;
     result->mappings += snapshot.keys.row_count;

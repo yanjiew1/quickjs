@@ -326,6 +326,32 @@ the copied variable flag is only the root default, not effective maxVariable.
 Snapshot creation is staged and leaves empty output on failure; partial axis
 freezing requires aborting that compilation rather than resuming rules.
 
+`collation-trie.c` builds an immutable overlay from snapshot keys, independently
+of compiler hash nodes and history. It sorts virtual paths made from the first
+mapped scalar, reversed prefix, a private separator and the complete suffix.
+An adjacent longest-common-prefix walk then creates nodes without repeated
+sibling searches, including for large Han tailorings. The separator becomes a
+suffix-root link rather than a Unicode edge. Sorted child spans permit binary
+search in the runtime overlay callbacks.
+
+The runtime `src/intl/collation/trie.c` reader owns the following LE layout:
+
+| Array | Record |
+| --- | --- |
+| Nodes | 16 bytes: edge start/count, suffix-root ID, terminal mapping ID |
+| Edges | 8 bytes: Unicode scalar, child node ID |
+| Suppression | Sorted unique Unicode scalar words, independent of terminals |
+
+Node 0 groups by first mapped scalar. Prefix edges run backward; each suffix
+link starts a forward suffix trie including the mapped first scalar. Missing
+IDs use `UINT32_MAX`; links always target later nodes. Opening checks complete
+edge partitions, scalar order, single ownership/reachability and prefix/suffix
+phases, then verifies a unique terminal for each independently validated mapping
+key/split. Every node must belong to one of those paths. Temporary validation
+storage is released before publication, and malformed input differs from OOM.
+These are nested array layouts; the enclosing runtime archive remains a separate
+format. Matcher queries require the unchanged opened view and allocate nothing.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension
