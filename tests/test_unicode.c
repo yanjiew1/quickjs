@@ -194,6 +194,62 @@ static void test_category_points(int all)
     assert(lre_is_mark(0x0903) && lre_is_mark(0x20dd));
 }
 
+/* Every maximal Nd run may contain several adjacent decimal alphabets. */
+static void test_decimal_values(void)
+{
+    CharRange range;
+    int i;
+    cr_init(&range, NULL, test_realloc);
+    assert(!unicode_general_category(&range, "Nd"));
+    for (i = 0; i < range.len; i += 2) {
+        uint32_t code, start = range.points[i], end = range.points[i + 1];
+        assert((end - start) % 10 == 0);
+        for (code = start; code < end; code++)
+            assert(lre_decimal_value(code) == (int)((code - start) % 10));
+        if (start)
+            assert(lre_decimal_value(start - 1) == -1);
+        assert(lre_decimal_value(end) == -1);
+    }
+    assert(lre_decimal_value('A') == -1 && lre_decimal_value(0xb2) == -1);
+    assert(lre_decimal_value(0x2460) == -1 && lre_decimal_value(0xd800) == -1);
+    assert(lre_decimal_value(0x110000) == -1 && lre_decimal_value(UINT32_MAX) == -1);
+    cr_free(&range);
+}
+
+/* Independently parse source decimal fields, not generated category boundaries.
+   Non-Nd ranges need no expansion: the expected array starts at -1. */
+static void test_decimal_source(const char *path)
+{
+    char line[1024];
+    signed char *expected = malloc(0x110000);
+    FILE *file = fopen(path, "rb");
+    uint32_t code;
+    size_t count = 0;
+    assert(expected && file);
+    memset(expected, -1, 0x110000);
+    while (fgets(line, sizeof(line), file)) {
+        unsigned int point;
+        char *field = line;
+        int i;
+        assert(strchr(line, '\n') || feof(file));
+        assert(sscanf(line, "%x;", &point) == 1 && point <= 0x10ffff);
+        for (i = 0; i < 6; i++) {
+            field = strchr(field, ';');
+            assert(field);
+            field++;
+        }
+        if (*field != ';') {
+            assert(*field >= '0' && *field <= '9' && field[1] == ';');
+            expected[point] = *field - '0';
+            count++;
+        }
+    }
+    assert(count && !ferror(file) && !fclose(file));
+    for (code = 0; code <= 0x10ffff; code++)
+        assert(lre_decimal_value(code) == expected[code]);
+    free(expected);
+}
+
 static void test_case_context_properties(void)
 {
     CharRange range;
@@ -303,8 +359,9 @@ static void test_block_source(const char *path)
 int main(int argc, char **argv)
 {
     int all = argc == 2 && !strcmp(argv[1], "--all-categories");
-    if (argc > 1 && !all && !(argc == 3 && !strcmp(argv[1], "--blocks"))) {
-        fprintf(stderr, "usage: %s [--all-categories | --blocks Blocks.txt]\n", argv[0]);
+    if (argc > 1 && !all && !(argc == 3 &&
+        (!strcmp(argv[1], "--blocks") || !strcmp(argv[1], "--decimal")))) {
+        fprintf(stderr, "usage: %s [--all-categories | --blocks Blocks.txt | --decimal UnicodeData.txt]\n", argv[0]);
         return 1;
     }
     test_range_capacity_limits();
@@ -313,8 +370,13 @@ int main(int argc, char **argv)
     test_case_folding();
     test_category_points(all);
     test_case_context_properties();
+    test_decimal_values();
     test_implicit_properties(all);
-    if (argc == 3)
-        test_block_source(argv[2]);
+    if (argc == 3) {
+        if (!strcmp(argv[1], "--blocks"))
+            test_block_source(argv[2]);
+        else
+            test_decimal_source(argv[2]);
+    }
     return 0;
 }
