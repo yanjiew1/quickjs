@@ -27,6 +27,16 @@ jobs:
         run: |
           timeout 180s python3 tools/intl/acquire.py \
             --cache "$RUNNER_TEMP/intl-cache"
+      - name: Compare the complete pinned root collation ordering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
+          meson setup build-collation -Dwerror=true -Ddocumentation=disabled
+          meson compile -C build-collation -j2 test_intl_collation_minimal
+          timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
+            --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
+          timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
+            --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
       - name: Audit pinned XML documents and DTD attribute schema
         run: |
           timeout 120s python3 tools/intl/cldr_xml.py \
@@ -238,6 +248,7 @@ jobs:
           meson compile -C build-unicode test_unicode -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode --all-categories
           build-unicode/tests/test_unicode --blocks "$RUNNER_TEMP/unicode/Blocks.txt"
+          build-unicode/tests/test_unicode --decimal "$RUNNER_TEMP/unicode/UnicodeData.txt"
       - name: Preserve generated tables on failure
         if: failure()
         uses: actions/upload-artifact@v7

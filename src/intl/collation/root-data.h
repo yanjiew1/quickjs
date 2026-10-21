@@ -30,7 +30,7 @@ QJSIntlStatus qjs_intl_collation_element_at(const QJSIntlCollationEntry *, uint3
    UNSUPPORTED. Values outside the stored scalar domain simply do not match;
    do not scan an entire remaining string on every prefix lookup. The result's
    key_count is the consumed prefix length. Normalization, implicit weights and
-   discontiguous contractions belong to the comparator, not this reader. */
+   discontiguous contractions belong to element generation, not this reader. */
 QJSIntlStatus qjs_intl_collation_root_find(const QJSIntlCollationRoot *, const uint32_t *, size_t,
                                           QJSIntlCollationEntry *);
 QJSIntlStatus qjs_intl_collation_root_prefix(const QJSIntlCollationRoot *, const uint32_t *, size_t,
