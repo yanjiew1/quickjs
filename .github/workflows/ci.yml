@@ -214,10 +214,22 @@ jobs:
         meson compile -C build-unicode -j "$(getconf _NPROCESSORS_ONLN)" \
           unicode-tables \
           test_unicode_break_properties \
+          test_unicode_grapheme \
+          test_unicode_word \
+          test_unicode_sentence \
           unicode_gen_test
     - name: Check compiled boundary properties against every Unicode code point
       run: |
         build-unicode/tests/test_unicode_break_properties "$RUNNER_TEMP/unicode"
+    - name: Check Unicode grapheme boundary conformance
+      run: |
+        build-unicode/tests/test_unicode_grapheme "$RUNNER_TEMP/unicode/auxiliary/GraphemeBreakTest.txt"
+    - name: Check Unicode word boundary conformance
+      run: |
+        build-unicode/tests/test_unicode_word "$RUNNER_TEMP/unicode/auxiliary/WordBreakTest.txt"
+    - name: Check Unicode sentence boundary conformance
+      run: |
+        build-unicode/tests/test_unicode_sentence "$RUNNER_TEMP/unicode/auxiliary/SentenceBreakTest.txt"
     - name: Compare generated tables with the repository
       run: |
         status=0
