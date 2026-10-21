@@ -14,6 +14,10 @@
 #include "../../intl/duration/duration.h"
 #include "../../intl/display/display.h"
 #include "../../intl/datetime/datetime.h"
+#ifdef CONFIG_INTL_SEGMENTER
+#include "../../intl/segment/segment.h"
+int js_intl_init_segmenter(JSContext *ctx, JSValueConst namespace_object);
+#endif
 
 typedef struct JSIntlLocaleList {
     char **items;
