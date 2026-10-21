@@ -3384,6 +3384,10 @@ if intl_enabled
   }
 endif
 standalone += {
+  'test_unicode_break_properties': files(
+    'test_unicode_break_properties.c',
+    '../src/unicode/break-properties.c',
+  ) + unicode_tables,
 }
 
 if get_option('temporal') and native_calendars
