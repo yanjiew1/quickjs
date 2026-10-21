@@ -1988,6 +1988,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/collation/compare.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/elements.c',
+      '../src/intl/collation/match.c',
       '../src/intl/collation/logical.c',
       '../src/intl/collation/weights.c',
       '../src/unicode/blocks.c',
@@ -3175,6 +3176,7 @@ standalone = {
     'test_intl_collation_compare.c',
     '../src/intl/collation/compare.c',
     '../src/intl/collation/elements.c',
+    '../src/intl/collation/match.c',
     '../src/intl/collation/contexts.c',
     '../src/intl/collation/root-data.c',
     '../src/intl/collation/weights.c',
@@ -3189,6 +3191,7 @@ standalone = {
   'test_intl_collation_elements': [
     'test_intl_collation_elements.c',
     '../src/intl/collation/elements.c',
+    '../src/intl/collation/match.c',
     '../src/intl/collation/contexts.c',
     '../src/intl/collation/root-data.c',
     '../src/intl/collation/weights.c',

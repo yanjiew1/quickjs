@@ -165,6 +165,15 @@ both the cursor and symbolic ordering. This host-only transition layer does not
 yet execute current-map lookup, settings, logical reset positions or runtime
 ranked comparison; it does not advertise locale Collator support by itself.
 
+The shared `src/intl/collation/match.c` owner keeps normalized input immutable
+and tracks consumption separately. It selects prefix context before suffix
+length, saves full contiguous checkpoints, and permits discontiguous extension
+only from a real full mapping. This lets compilation use the same canonical
+blocking and preceding-context behavior as execution. It returns a mapping,
+unmatched scalar or optional numeric run; CE decoding, implicit weights and
+comparison policy remain in consumers. The current adapter reads immutable root
+storage. Mutable tailoring and frozen executable adapters are subsequent work.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
