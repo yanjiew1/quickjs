@@ -106,6 +106,24 @@ static int numbering_systems(JSContext *ctx, JSValueConst result)
     }
 }
 
+static int collations(JSContext *ctx, JSValueConst result)
+{
+    QJSIntlCollationService *service = js_intl_collation_service(ctx);
+    uint32_t cursor = 0, index = 0;
+
+    if (!service)
+        return -1;
+    for (;;) {
+        QJSIntlBytes name;
+        QJSIntlStatus status = qjs_intl_collation_available_type_next(service, &cursor, &name);
+
+        if (status == QJS_INTL_UNSUPPORTED)
+            return 0;
+        if (js_intl_error(ctx, status, "available collations") || append(ctx, result, &index, name))
+            return -1;
+    }
+}
+
 static int timezones(JSContext *ctx, JSValueConst result)
 {
     uint32_t index = 0;
@@ -140,7 +158,7 @@ JSValue js_intl_supported_values(JSContext *ctx, JSValueConst this_val,
         int (*collect)(JSContext *, JSValueConst);
     } keys[] = {
         {"calendar", calendars},
-        {"collation", NULL}, /* No executable collation provider yet. */
+        {"collation", collations},
         {"currency", currencies},
         {"numberingSystem", numbering_systems},
         {"timeZone", timezones},
