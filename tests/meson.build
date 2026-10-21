@@ -4419,6 +4419,14 @@ test(
 )
 
 test(
+  'intl-collation-root-input',
+  python,
+  args: files('test_intl_collation_root_input.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-collation-programs',
   python,
   args: files('test_intl_collation_programs.py'),
