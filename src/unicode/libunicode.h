@@ -122,6 +122,9 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
                           CharRange *cr);
 
 int lre_case_conv(uint32_t *res, uint32_t c, int conv_type);
+/* Allocation-free queries used by context-sensitive case conversion. */
+int unicode_get_cc(uint32_t c);
+int lre_is_soft_dotted(uint32_t c);
 int lre_canonicalize_slow(uint32_t c, int is_unicode);
 
 /* JS regexp specific rules for case folding */
