@@ -220,17 +220,21 @@ static int node(Reader *program, Audit *audit)
     return 0;
 }
 
-static int audit_ir(const uint8_t *bytes, size_t length, Audit *audit)
+static int audit_ir(const uint8_t *bytes, size_t length, Audit *audit, const uint8_t *fingerprint)
 {
     Reader reader = {bytes, bytes + length};
     uint32_t version, unicode_version, size, count, i;
-    if (length < 20 || length > IR_MAX_SIZE || memcmp(bytes, "QJCI", 4))
+    if (length < 52 || length > IR_MAX_SIZE || memcmp(bytes, "QJCI", 4))
         return -1;
     reader.at += 4;
-    if (word(&reader, &version) || version != 1 ||
+    if (word(&reader, &version) || version != 2 ||
         word(&reader, &unicode_version) || unicode_version != IR_UNICODE_VERSION ||
-        word(&reader, &size) || size != length || word(&reader, &count) ||
-        count > (size_t)(reader.end - reader.at) / 20)
+        word(&reader, &size) || size != length || word(&reader, &count))
+        return -1;
+    if (fingerprint && memcmp(reader.at, fingerprint, 32))
+        return -1;
+    reader.at += 32;
+    if (count > (size_t)(reader.end - reader.at) / 20)
         return -1;
     for (i = 0; i < count; i++) {
         Reader program;
@@ -286,19 +290,13 @@ static int audit_root(const uint8_t *bytes, size_t size)
     return 0;
 }
 
-int main(int argc, char **argv)
+static int read_input(const char *path, uint8_t **bytes, size_t *length)
 {
-    FILE *file;
-    uint8_t *bytes;
+    FILE *file = fopen(path, "rb");
     long size;
-    Audit audit = {.preflight = 1};
-    int failed, root_mode;
-    if (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root"))) {
-        fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr\n", argv[0]);
-        return 2;
-    }
-    root_mode = !strcmp(argv[1], "--audit-root");
-    file = fopen(argv[2], "rb");
+    int failed;
+    *bytes = NULL;
+    *length = 0;
     if (!file)
         return 1;
     if (fseek(file, 0, SEEK_END) || (size = ftell(file)) < 20 || size > IR_MAX_SIZE ||
@@ -306,38 +304,74 @@ int main(int argc, char **argv)
         fclose(file);
         return 1;
     }
-    bytes = malloc((size_t)size);
-    if (!bytes) {
+    *bytes = malloc((size_t)size);
+    if (!*bytes) {
         fclose(file);
         return 1;
     }
-    failed = fread(bytes, 1, (size_t)size, file) != (size_t)size;
+    failed = fread(*bytes, 1, (size_t)size, file) != (size_t)size;
     if (fclose(file))
         failed = 1;
+    if (failed) {
+        free(*bytes);
+        *bytes = NULL;
+    } else {
+        *length = (size_t)size;
+    }
+    return failed;
+}
+
+int main(int argc, char **argv)
+{
+    uint8_t *bytes, *root_bytes = NULL;
+    size_t size, root_size;
+    QJSIntlRootInput root = {0};
+    QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
+    Audit audit = {.preflight = 1};
+    int failed, root_mode, pair_mode;
+    pair_mode = argc == 4 && !strcmp(argv[1], "--audit-pair");
+    if (!pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
+        fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr | "
+                "--audit-pair root.qjcr input.qjci\n", argv[0]);
+        return 2;
+    }
+    root_mode = !strcmp(argv[1], "--audit-root");
+    if (pair_mode) {
+        if (read_input(argv[2], &root_bytes, &root_size))
+            return 1;
+        if (qjs_intl_root_input_open(root_bytes, root_size, &allocator, &root)) {
+            free(root_bytes);
+            fputs("invalid logical root input or allocation failure\n", stderr);
+            return 1;
+        }
+    }
+    if (read_input(argv[pair_mode ? 3 : 2], &bytes, &size)) {
+        free(root_bytes);
+        return 1;
+    }
     if (root_mode) {
-        if (!failed)
-            failed = audit_root(bytes, (size_t)size);
+        failed = audit_root(bytes, size);
         free(bytes);
         return failed ? 1 : 0;
     }
-    /* Preflight the whole artifact before any allocating normalization. A
-       compact repeated range must not evade the budget by changing programs. */
-    if (!failed)
-        failed = audit_ir(bytes, (size_t)size, &audit);
+    /* Pair identities and preflight the whole artifact before allocating any
+       normalization or future per-program execution state. */
+    failed = audit_ir(bytes, size, &audit, root.fingerprint);
     if (!failed) {
         audit = (Audit){0};
-        failed = audit_ir(bytes, (size_t)size, &audit);
+        failed = audit_ir(bytes, size, &audit, root.fingerprint);
     }
     if (failed) {
         if (audit.source)
             fprintf(stderr, "%.*s:%u:%u: ", (int)audit.source_length, (const char *)audit.source,
                     audit.line, audit.column);
-        fputs("invalid tailoring IR or normalization constraint\n", stderr);
+        fputs("invalid tailoring IR, source identity or normalization constraint\n", stderr);
     } else {
         printf("{\"programs\":%" PRIu64 ",\"instructions\":%" PRIu64
                ",\"normalized_texts\":%" PRIu64 ",\"starred_scalars\":%" PRIu64 "}\n",
                audit.programs, audit.instructions, audit.texts, audit.starred);
     }
     free(bytes);
+    free(root_bytes);
     return failed ? 1 : 0;
 }
