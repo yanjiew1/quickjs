@@ -30,6 +30,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <time.h>
+#include <errno.h>
+
+#include "../src/unicode/break-properties.h"
 
 #include "cutils.h"
 
@@ -402,6 +405,8 @@ typedef struct {
     int f_data[CC_LEN_MAX]; /* to case folding */
     int full_f_data[CC_LEN_MAX]; /* full fold when a simple fold also exists */
 
+    uint16_t break_properties;
+    uint8_t break_seen;
     uint8_t combining_class;
     uint8_t is_compat:1;
     uint8_t is_excluded:1;
@@ -825,6 +830,185 @@ next: ;
         }
     }
     fclose(f);
+}
+
+/* Enumerated break properties are independent of RegExp's binary properties.
+   In particular InCB's third field must retain Consonant/Extend/Linker, while
+   the existing property parser continues to build its binary union. */
+#define UNICODE_GRAPHEME_BREAK
+static const char *const break_gcb_names[] = {
+#define DEF(name) #name,
+#include "../src/unicode/break-properties-def.h"
+#undef DEF
+};
+#undef UNICODE_GRAPHEME_BREAK
+#define UNICODE_WORD_BREAK
+static const char *const break_wb_names[] = {
+#define DEF(name) #name,
+#include "../src/unicode/break-properties-def.h"
+#undef DEF
+};
+#undef UNICODE_WORD_BREAK
+#define UNICODE_SENTENCE_BREAK
+static const char *const break_sb_names[] = {
+#define DEF(name) #name,
+#include "../src/unicode/break-properties-def.h"
+#undef DEF
+};
+#undef UNICODE_SENTENCE_BREAK
+#define UNICODE_INDIC_CONJUNCT_BREAK
+static const char *const break_incb_names[] = {
+#define DEF(name) #name,
+#include "../src/unicode/break-properties-def.h"
+#undef DEF
+};
+#undef UNICODE_INDIC_CONJUNCT_BREAK
+
+enum { BREAK_GCB, BREAK_WB, BREAK_SB, BREAK_INCB, BREAK_EP, BREAK_COUNT };
+
+static char *break_trim(char *s)
+{
+    char *end;
+    while (isspace((unsigned char)*s))
+        s++;
+    end = s + strlen(s);
+    while (end > s && isspace((unsigned char)end[-1]))
+        *--end = '\0';
+    return s;
+}
+
+static int break_range(const char *s, uint32_t *start, uint32_t *end)
+{
+    char *next;
+    unsigned long a, b;
+    if (!isxdigit((unsigned char)*s))
+        return -1;
+    errno = 0;
+    a = strtoul(s, &next, 16);
+    b = a;
+    if (next[0] == '.' && next[1] == '.') {
+        s = next + 2;
+        if (!isxdigit((unsigned char)*s))
+            return -1;
+        b = strtoul(s, &next, 16);
+    }
+    if (errno || *next || a > b || b > CHARCODE_MAX)
+        return -1;
+    *start = a;
+    *end = b;
+    return 0;
+}
+
+/* Consume and close f on every path, including malformed authored fixtures. */
+static int parse_break_properties_stream(FILE *f, const char *filename, unsigned int kind)
+{
+    static const char *const *const names[] = {
+        break_gcb_names, break_wb_names, break_sb_names, break_incb_names
+    };
+    static const unsigned int counts[] = {
+        countof(break_gcb_names), countof(break_wb_names),
+        countof(break_sb_names), countof(break_incb_names)
+    };
+    static const unsigned int shifts[] = {
+        UNICODE_BREAK_GCB_SHIFT, UNICODE_BREAK_WB_SHIFT,
+        UNICODE_BREAK_SB_SHIFT, UNICODE_BREAK_INCB_SHIFT, 6
+    };
+    static const unsigned int masks[] = {
+        UNICODE_BREAK_GCB_MASK, UNICODE_BREAK_WB_MASK,
+        UNICODE_BREAK_SB_MASK, UNICODE_BREAK_INCB_MASK, UNICODE_BREAK_EP
+    };
+    char line[4096];
+    unsigned int line_number = 0;
+    int have_default = 0, error = 0;
+    assert(kind < BREAK_COUNT);
+    while (fgets(line, sizeof(line), f)) {
+        char *p, *property, *value, *comment, *extra;
+        uint32_t start, end, c;
+        unsigned int number = 0;
+        int missing = 0;
+        line_number++;
+        if (!strchr(line, '\n') && !feof(f) && strlen(line) == sizeof(line) - 1)
+            goto bad;
+        p = break_trim(line);
+        if (*p == '#') {
+            p = break_trim(p + 1);
+            if (strncmp(p, "@missing:", 9))
+                continue;
+            p = break_trim(p + 9);
+            missing = 1;
+        }
+        comment = strchr(p, '#');
+        if (comment)
+            *comment = '\0';
+        p = break_trim(p);
+        if (!*p)
+            continue;
+        property = strchr(p, ';');
+        if (!property)
+            goto bad;
+        *property++ = '\0';
+        property = break_trim(property);
+        value = strchr(property, ';');
+        if (value) {
+            *value++ = '\0';
+            value = break_trim(value);
+        }
+        property = break_trim(property);
+        if (kind == BREAK_INCB && strcmp(property, "InCB"))
+            continue;
+        if (kind == BREAK_EP && strcmp(property, "Extended_Pictographic"))
+            continue;
+        if ((kind == BREAK_INCB) != (value != NULL))
+            goto bad;
+        if (!value)
+            value = property;
+        extra = strchr(value, ';');
+        if (extra || break_range(break_trim(p), &start, &end))
+            goto bad;
+        if (kind != BREAK_EP) {
+            for (number = 0; number < counts[kind]; number++)
+                if (!strcmp(value, names[kind][number]))
+                    break;
+            if (number == counts[kind] || (number << shifts[kind]) > masks[kind])
+                goto bad;
+        } else {
+            number = 1;
+        }
+        if (missing) {
+            if (kind == BREAK_EP || have_default || start != 0 ||
+                end != CHARCODE_MAX || number != 0)
+                goto bad;
+            have_default = 1;
+            continue;
+        }
+        for (c = start; c <= end; c++) {
+            CCInfo *info = &unicode_db[c];
+            if (info->break_seen & (1U << kind))
+                goto bad;
+            info->break_seen |= 1U << kind;
+            info->break_properties |= number << shifts[kind];
+        }
+    }
+    error = ferror(f) || (kind != BREAK_EP && !have_default);
+    if (fclose(f))
+        error = 1;
+    if (error)
+        fprintf(stderr, "%s: missing break default or input error\n", filename);
+    return error ? -1 : 0;
+bad:
+    fprintf(stderr, "%s:%u: invalid or overlapping break property\n", filename, line_number);
+    fclose(f);
+    return -1;
+}
+
+static int parse_break_properties(const char *filename, unsigned int kind)
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror(filename);
+        return -1;
+    }
+    return parse_break_properties_stream(f, filename, kind);
 }
 
 void parse_derived_norm_properties(const char *filename)
@@ -2007,6 +2191,72 @@ void dump_name_table(UnicodeTableOutput *out, const char *cname, const char **ta
         fprintf(f, "\"%*s\"\\0\"\n", 1 + maxw - w, "");
     }
     fprintf(f, ";\n\n");
+}
+
+/* Parallel arrays avoid struct padding. A small bucket index bounds each
+   binary search while sharing all five properties in a single 16-bit word. */
+static void dump_break_array(UnicodeTableOutput *out, const char *name,
+                             const void *data, uint32_t count, unsigned int width,
+                             int index)
+{
+    uint32_t i;
+    fprintf(out->header, "extern const uint%u_t %s[%u];\n", width, name, count);
+    fprintf(out->source, "const uint%u_t %s[%u] = {", width, name, count);
+    for (i = 0; i < count; i++) {
+        if (i % 8 == 0)
+            fprintf(out->source, "\n   ");
+        fprintf(out->source, width == 16 ? " 0x%04x," : " 0x%08x,",
+                width == 16 ? ((const uint16_t *)data)[i] : ((const uint32_t *)data)[i]);
+    }
+    fprintf(out->source, "\n};\n\n");
+    if (index) {
+        total_index++;
+        total_index_bytes += count * (width / 8);
+    } else {
+        total_tables++;
+        total_table_bytes += count * (width / 8);
+    }
+}
+
+static void build_break_tables(UnicodeTableOutput *out)
+{
+    uint32_t c, count = 1, i = 0, bucket;
+    uint32_t *starts;
+    uint16_t *values;
+    uint16_t index[((CHARCODE_MAX + 1) >> UNICODE_BREAK_BUCKET_SHIFT) + 1];
+    for (c = 1; c <= CHARCODE_MAX; c++)
+        count += unicode_db[c].break_properties != unicode_db[c - 1].break_properties;
+    /* The index representation is checked rather than assuming the current
+       Unicode release's transition count as a permanent upper bound. */
+    if (count > UINT16_MAX) {
+        fprintf(stderr, "Unicode break index needs a wider entry\n");
+        exit(1);
+    }
+    starts = malloc(count * sizeof(*starts));
+    values = malloc(count * sizeof(*values));
+    if (!starts || !values) {
+        fprintf(stderr, "Out of memory building Unicode break tables\n");
+        exit(1);
+    }
+    for (c = 0; c <= CHARCODE_MAX; c++) {
+        if (!c || unicode_db[c].break_properties != unicode_db[c - 1].break_properties) {
+            starts[i] = c;
+            values[i++] = unicode_db[c].break_properties;
+        }
+    }
+    assert(i == count);
+    i = 0;
+    for (bucket = 0; bucket < countof(index); bucket++) {
+        c = bucket << UNICODE_BREAK_BUCKET_SHIFT;
+        while (i + 1 < count && starts[i + 1] <= c)
+            i++;
+        index[bucket] = i;
+    }
+    dump_break_array(out, "unicode_break_starts", starts, count, 32, FALSE);
+    dump_break_array(out, "unicode_break_values", values, count, 16, FALSE);
+    dump_break_array(out, "unicode_break_index", index, countof(index), 16, TRUE);
+    free(starts);
+    free(values);
 }
 
 void build_general_category_table(UnicodeTableOutput *out)
@@ -3758,6 +4008,22 @@ int main(int argc, char *argv[])
              unicode_db_path);
     parse_sequence_prop_list(filename);
 
+    {
+        static const char *const break_files[BREAK_COUNT] = {
+            "auxiliary/GraphemeBreakProperty.txt",
+            "auxiliary/WordBreakProperty.txt",
+            "auxiliary/SentenceBreakProperty.txt",
+            "DerivedCoreProperties.txt",
+            "emoji-data.txt"
+        };
+        unsigned int i;
+        for (i = 0; i < BREAK_COUNT; i++) {
+            snprintf(filename, sizeof(filename), "%s/%s", unicode_db_path, break_files[i]);
+            if (parse_break_properties(filename, i))
+                return 1;
+        }
+    }
+
     //    dump_unicode_data(unicode_db);
     build_conv_table(unicode_db);
 
@@ -3834,6 +4100,7 @@ int main(int argc, char *argv[])
         build_script_ext_table(out);
         build_prop_list_table(out);
         build_sequence_prop_list_table(out);
+        build_break_tables(out);
         fprintf(out->source, "#endif /* CONFIG_ALL_UNICODE */\n");
         fprintf(out->header, "#endif /* CONFIG_ALL_UNICODE */\n\n");
         fprintf(out->header, "#endif /* LIBUNICODE_TABLE_H */\n");
