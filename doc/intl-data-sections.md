@@ -638,3 +638,39 @@ scalar-prefix lookup; a missing section or mapping is `UNSUPPORTED`. Prefix
 lookup preserves an earlier complete key while narrowing its extensions, so a
 later mismatch can fall back to that key. It does not implement UCA's
 discontiguous contractions or establish executable service availability.
+
+
+## 37 — Root collation prefix contexts
+
+Collector/codec `tools/intl/collation_contexts.py`; C metadata reader
+`src/intl/collation/contexts.c`. Both profiles include this section. Its presence
+does not establish executable Collator support.
+
+CLDR root `FractionalUCA.txt` distinguishes preceding-context rules such as
+`L|·` from ordinary contractions. `allkeys_CLDR.txt` represents their combined
+CE sequences as if they were contractions; section 36 alone loses this
+distinction. Prefix matching observes already-consumed normalized input and
+must not consume or emit the preceding context again. Overlapping contractions
+make this observably different from a contraction for `L·`.
+
+**N counts context records**, including zero when a source has none. The two
+header words are `(1, 18 << 16)`. They are followed by `records[N][3]` with
+`(source_mapping_index, prefix_scalar_count, prefix_element_count)`, for an
+exact size of `2 + 3*N` words. Source indices refer to section 36 and must be
+strictly increasing. Each scalar/element split must be nonzero and smaller
+than its source mapping's corresponding count. The leading scalar sequence
+must be an exact root mapping whose entire CE vector equals the leading
+`prefix_element_count` CEs. The remaining scalar/CE slices are the contextual
+suffix mapping. No key, weight or string pool is duplicated.
+
+The collector reads prefix identity from the authenticated FractionalUCA file,
+validates its version and prefix-record syntax, and verifies the equivalent
+allkeys decomposition. It does not convert fractional weights or pair up CE
+vectors from the two encodings, which can have different expansion lengths.
+The current four mappings require 56 bytes, excluding the pack directory row.
+
+The reader validates both the root section and all metadata without allocation,
+then returns borrowed `before` and `mapping` slices plus the source index. It
+provides storage metadata only. The future comparator must replace the marked
+pseudo-contractions with prefix rules and perform longest-prefix matching on
+unchanged normalized text; storage lookup itself does not do this.
