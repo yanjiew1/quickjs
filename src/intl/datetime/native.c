@@ -5,6 +5,7 @@
 #include "basic-match.h"
 #include "ordinary-programs.h"
 #include "date-clock-programs.h"
+#include "append-layout.h"
 #include "style-date.h"
 #include "style-hour.h"
 #include "interval-data.h"
@@ -623,13 +624,21 @@ done:
     return status;
 }
 
+static const QJSIntlDatePattern *record_pattern(const QJSIntlDateTimeFormatter *formatter,
+                                                const QJSIntlDateTimeComponents *components,
+                                                const QJSIntlDatePattern *normal,
+                                                const QJSIntlDatePattern *twelve)
+{
+    return components->values[QJS_INTL_DATETIME_HOUR] &&
+           formatter->options.hour_cycle <= QJS_INTL_DATE_H12 ? twelve : normal;
+}
+
 static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
                                  const QJSIntlDateTimeComponents *components,
                                  const QJSIntlDatePattern *normal, const QJSIntlDatePattern *twelve,
                                  DateRecord *out)
 {
-    const QJSIntlDatePattern *pattern = components->values[QJS_INTL_DATETIME_HOUR] &&
-                                      formatter->options.hour_cycle <= QJS_INTL_DATE_H12 ? twelve : normal;
+    const QJSIntlDatePattern *pattern = record_pattern(formatter, components, normal, twelve);
     QJSIntlStatus status = qjs_intl_date_pattern_copy(&formatter->allocator, pattern, &out->pattern);
     if (!status)
         out->components = *components;
@@ -652,69 +661,131 @@ static QJSIntlStatus match_score(const QJSIntlDateTimeFormatter *formatter,
     return status;
 }
 
+typedef struct DateMatch {
+    const QJSIntlDateTimeComponents *components;
+    const QJSIntlDatePattern *normal, *twelve;
+    int score, appended_zone;
+} DateMatch;
+
+static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
+                                     const QJSIntlDateTimeComponents *request,
+                                     const QJSIntlDateTimeComponents *components,
+                                     const QJSIntlDatePattern *normal, const QJSIntlDatePattern *twelve,
+                                     int append_zone, DateMatch *match)
+{
+    QJSIntlDateTimeComponents extended;
+    const QJSIntlDateTimeComponents *candidate = components;
+    int score;
+    QJSIntlStatus status;
+    if (append_zone) {
+        if (components->values[QJS_INTL_DATETIME_ZONE] ||
+            !(qjs_intl_datetime_component_mask(components) & TIME_FIELDS))
+            return QJS_INTL_OK;
+        extended = *components;
+        extended.values[QJS_INTL_DATETIME_ZONE] = append_zone;
+        candidate = &extended;
+    }
+    status = match_score(formatter, request, candidate, &score);
+    if (!status && score > match->score) {
+        match->score = score;
+        match->components = components;
+        match->normal = normal;
+        match->twelve = twelve;
+        match->appended_zone = append_zone;
+    }
+    return status;
+}
+
 static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                   const QJSIntlDateTimeComponents *request, DateRecord *out)
 {
     /* Both policies retain source order on equal scores. */
-    int best = INT_MIN;
-    size_t i, selected = SIZE_MAX;
+    static const struct { unsigned int symbol; size_t width; } zone_tokens[] = {
+        {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
+    };
+    DateMatch match = {.score = INT_MIN};
+    QJSIntlDateAppendLayout layout = {0};
+    QJSIntlDatePatternToken token = {0};
+    QJSIntlDatePattern field = {0};
+    QJSIntlStatus status;
+    int zone = request->values[QJS_INTL_DATETIME_ZONE];
+    size_t i;
+    if (zone < 0 || (size_t)zone > sizeof(zone_tokens) / sizeof(*zone_tokens))
+        return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < programs->ordinary.count; i++) {
         const QJSIntlDateSinglePrograms *single = &programs->ordinary.records[i].single;
-        QJSIntlStatus status;
-        int score;
         if (!programs->admitted[i])
             continue;
-        status = match_score(formatter, request, &single->components, &score);
+        status = consider_record(formatter, request, &single->components,
+                                  &single->normal.pattern, &single->twelve.pattern, 0, &match);
         if (status)
             return status;
-        if (score > best) {
-            best = score;
-            selected = i;
-        }
     }
-    {
-        size_t style = SIZE_MAX, mixed = SIZE_MAX;
-        for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
-            const QJSIntlDateStyleSource *date = &programs->dates[i].style;
-            QJSIntlStatus status;
-            int score;
-            if (!date->pattern.count)
-                continue;
-            status = match_score(formatter, request, &date->info.components, &score);
-            if (status)
-                return status;
-            if (score > best) {
-                best = score;
-                style = i;
-            }
-        }
-        for (i = 0; i < programs->mixed.count; i++) {
-            const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
-            QJSIntlStatus status;
-            int score;
-            status = match_score(formatter, request, &record->components, &score);
-            if (status)
-                return status;
-            if (score > best) {
-                best = score;
-                mixed = i;
-            }
-        }
-        if (mixed != SIZE_MAX) {
-            const QJSIntlDateClockProgram *record = &programs->mixed.records[mixed];
-            return copy_record(formatter, &record->components, &record->normal, &record->twelve, out);
-        }
-        if (style != SIZE_MAX) {
-            const QJSIntlDateStyleSource *date = &programs->dates[style].style;
-            return copy_record(formatter, &date->info.components, &date->pattern, NULL, out);
-        }
+    for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
+        const QJSIntlDateStyleSource *date = &programs->dates[i].style;
+        if (!date->pattern.count)
+            continue;
+        status = consider_record(formatter, request, &date->info.components,
+                                  &date->pattern, NULL, 0, &match);
+        if (status)
+            return status;
     }
-    if (selected == SIZE_MAX)
+    for (i = 0; i < programs->mixed.count; i++) {
+        const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
+        status = consider_record(formatter, request, &record->components,
+                                  &record->normal, &record->twelve, 0, &match);
+        if (status)
+            return status;
+    }
+    if (!match.components)
         return QJS_INTL_UNSUPPORTED;
-    {
-        const QJSIntlDateSinglePrograms *single = &programs->ordinary.records[selected].single;
-        return copy_record(formatter, &single->components, &single->normal.pattern, &single->twelve.pattern, out);
+    if (zone && (qjs_intl_datetime_component_mask(request) & TIME_FIELDS)) {
+        status = qjs_intl_date_append_layout(&programs->append, bytes("Timezone"), &layout);
+        if (status && status != QJS_INTL_UNSUPPORTED)
+            return status;
+        if (!status) {
+            token.symbol = zone_tokens[zone - 1].symbol;
+            token.width = zone_tokens[zone - 1].width;
+            field.tokens = &token;
+            field.count = 1;
+            status = qjs_intl_date_names_admit(&field, formatter->calendar,
+                                               &formatter->format.text, NULL);
+            if (status && status != QJS_INTL_UNSUPPORTED)
+                return status;
+        }
+        if (!status) {
+            /* A virtual record differs only in zone style. Other appended
+               styles cannot outscore the exact requested style; with no zone
+               request their unzoned base is always better. Score metadata now
+               and allocate only the winning program. Complete sources above
+               retain priority over extensions on equal scores. */
+            for (i = 0; i < programs->ordinary.count; i++) {
+                const QJSIntlDateSinglePrograms *single = &programs->ordinary.records[i].single;
+                if (!programs->admitted[i])
+                    continue;
+                status = consider_record(formatter, request, &single->components,
+                                          &single->normal.pattern, &single->twelve.pattern, zone, &match);
+                if (status)
+                    return status;
+            }
+            for (i = 0; i < programs->mixed.count; i++) {
+                const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
+                status = consider_record(formatter, request, &record->components,
+                                          &record->normal, &record->twelve, zone, &match);
+                if (status)
+                    return status;
+            }
+        }
     }
+    if (!match.appended_zone)
+        return copy_record(formatter, match.components, match.normal, match.twelve, out);
+    status = qjs_intl_date_pattern_join(&formatter->allocator, &layout.pattern,
+                 record_pattern(formatter, match.components, match.normal, match.twelve), &field, &out->pattern);
+    if (!status) {
+        out->components = *match.components;
+        out->components.values[QJS_INTL_DATETIME_ZONE] = match.appended_zone;
+    }
+    return status;
 }
 
 static unsigned int required_mask(QJSIntlDateRequired required)
