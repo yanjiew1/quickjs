@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import acquire
 import bundle
+import collation_root
 import generate
 import locale_metadata
 import locale_tables
@@ -46,6 +47,11 @@ class VerifiedFixture(Sources):
         super().__init__()
         self.files.update({
             'LICENSE': b'Authored test fixture; no external data.',
+            collation_root.SOURCE: b'''@version 18.0.0
+0000 ; [.0000.0000.0000]
+0061 ; [.1000.0020.0002]
+0061 0301 ; [.1000.0020.0002][.0000.0024.0002]
+''',
             'common/dtd/ldmlSupplemental.dtd': PARENT_DTD,
             'common/supplemental/supplementalData.xml': b'<supplementalData/>',
             'common/supplemental/supplementalMetadata.xml': b'<supplementalData/>',
@@ -277,6 +283,8 @@ class TableTests(unittest.TestCase):
             binary = (root / (profile + '.bin')).read_bytes()
             manifest = json.loads((root / (profile + '-manifest.json')).read_text())
             view = tables.validate(binary)
+            self.assertEqual(view['collation_root']['version'], collation_root.VERSION)
+            self.assertGreater(len(view['collation_root']['rows']), 0)
             self.assertEqual(manifest['sha256'], acquire.digest(binary))
             self.assertEqual(manifest['bytes'], len(binary))
             self.assertEqual(manifest['generation'], acquire.digest(acquire.json_bytes(manifest['inputs'])))
@@ -572,6 +580,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['dayperiod_rules'], minimal_view['dayperiod_rules'])
         self.assertEqual(full_view['calendar_eras'], {'rows': ()})
         self.assertEqual(full_view['calendar_eras'], minimal_view['calendar_eras'])
+        self.assertEqual(full_view['collation_root'], minimal_view['collation_root'])
+        self.assertEqual(full_view['collation_root'], collation_root.collect(VerifiedFixture()))
+        self.assertIn(collation_root.SOURCE, manifest['inputs']['sources'])
         self.assertEqual(full_view['dayperiod_rules'], dayperiod_rules.collect(DayPeriodSources()))
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
