@@ -100,7 +100,7 @@ jobs:
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
           --output "$RUNNER_TEMP/collation-input.qjci"
         timeout 60s build-collation/intl-collation-compile \
-          --audit-ir "$RUNNER_TEMP/collation-input.qjci"
+          --audit-pair "$RUNNER_TEMP/collation-root.qjcr" "$RUNNER_TEMP/collation-input.qjci"
     - name: Audit locale inheritance graphs
       run: |
         timeout 60s python3 tools/intl/parents.py \
