@@ -92,8 +92,9 @@ primary ignorable, variable, regular, implicit and trailing, in that order.
 Roles are source CE (1), artificial boundary (2) and derived initial (3).
 Tertiary-ignorable, secondary-ignorable and implicit facts are artificial; initial
 last regular is derived from first Hani rather than the footer's last-regular CE.
-These facts are **not cached current-tailoring extrema**. An executor must derive
-logical reset positions from its current mappings where required. Fixed E5 is
+These facts are **initial baselines, not completed logical reset execution**.
+The executor adjusts them for preceding rules, retaining established ordering
+positions even after their original mappings are replaced or suppressed. Fixed E5 is
 also distinct from the actual first-trailing source CE, `EF FD`. The auditor
 checks each fact's role, CE class and ordered first/last pair. Implicit markers
 and initial last regular must match their metadata anchors, common weak weights
