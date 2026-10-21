@@ -381,19 +381,25 @@ def write(path, raw):
             os.unlink(name)
 
 
+def prepare(sources):
+    catalog = ordinals.Catalog(fractional.collect(sources))
+    groups = collation_groups.collect(sources)
+    return encode(catalog, groups, bytes.fromhex(sources.pin['manifest_sha256']))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     sources = acquire.Sources(args.sources)
-    catalog = ordinals.Catalog(fractional.collect(sources))
-    groups = collation_groups.collect(sources)
-    raw = encode(catalog, groups, bytes.fromhex(sources.pin['manifest_sha256']))
+    raw = prepare(sources)
     if args.output:
         write(args.output, raw)
+    counts = [DIRECTORY.unpack_from(raw, HEADER.size + (kind - 1) * DIRECTORY.size)[3]
+              for kind in (MAPPINGS, HAN_RANKS)]
     print('QJCR: {} bytes, {} mappings, {} Han ranks'.format(
-        len(raw), len(catalog.data['rows']), len(catalog.han)))
+        len(raw), counts[0], counts[1]))
 
 
 if __name__ == '__main__':
