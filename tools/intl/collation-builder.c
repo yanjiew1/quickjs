@@ -1,21 +1,11 @@
 /* Share canonical matching between host rule execution and runtime lookup.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-builder.h"
+#include "collation-text.h"
 #include "../../src/intl/collation/match.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
-#include <limits.h>
 #include <string.h>
-
-typedef struct Text {
-    uint32_t *codes;
-    uint32_t count;
-} Text;
-
-typedef struct NormalizationAllocator {
-    QJSIntlAllocator *allocator;
-    QJSIntlStatus failure;
-} NormalizationAllocator;
 
 static int active(const QJSIntlCollationBuilder *builder)
 {
@@ -58,66 +48,6 @@ QJSIntlStatus qjs_intl_collation_builder_init(QJSIntlCollationBuilder *builder,
         return status;
     builder->ready = 1;
     return QJS_INTL_OK;
-}
-
-static void *normalize_realloc(void *opaque, void *ptr, size_t size)
-{
-    NormalizationAllocator *state = opaque;
-    QJSIntlAllocator *allocator = state->allocator;
-    void *result;
-    if (!size) {
-        if (ptr)
-            allocator->free(allocator->opaque, ptr);
-        return NULL;
-    }
-#if SIZE_MAX > UINT32_MAX
-    /* NFD can expand even an int-sized input beyond the library's int output
-       count. Reject capacity before unicode_normalize performs that conversion. */
-    if (size > (size_t)INT_MAX * sizeof(uint32_t)) {
-        state->failure = QJS_INTL_OVERFLOW;
-        return NULL;
-    }
-#endif
-    result = ptr ? allocator->realloc(allocator->opaque, ptr, size) :
-        allocator->malloc(allocator->opaque, size);
-    if (!result)
-        state->failure = QJS_INTL_NO_MEMORY;
-    return result;
-}
-
-static QJSIntlStatus normalize(QJSIntlCollationBuilder *builder,
-                                const uint32_t *codes, uint32_t count, Text *out)
-{
-    uint32_t i;
-    int length;
-    NormalizationAllocator adapter = {&builder->allocator, QJS_INTL_OK};
-    *out = (Text){0};
-    if (!codes && count)
-        return QJS_INTL_INVALID_ARGUMENT;
-    if (count > INT_MAX)
-        return QJS_INTL_OVERFLOW;
-    for (i = 0; i < count; i++)
-        if (codes[i] > 0x10ffff || (codes[i] >= 0xd800 && codes[i] <= 0xdfff))
-            return QJS_INTL_INVALID_ARGUMENT;
-    if (!count)
-        return QJS_INTL_OK;
-    length = unicode_normalize(&out->codes, codes, count, UNICODE_NFD,
-                               &adapter, normalize_realloc);
-    if (length < 0) {
-        if (out->codes)
-            builder->allocator.free(builder->allocator.opaque, out->codes);
-        *out = (Text){0};
-        return adapter.failure ? adapter.failure : QJS_INTL_OVERFLOW;
-    }
-    out->count = length;
-    return QJS_INTL_OK;
-}
-
-static void clear_text(QJSIntlCollationBuilder *builder, Text *text)
-{
-    if (text->codes)
-        builder->allocator.free(builder->allocator.opaque, text->codes);
-    *text = (Text){0};
 }
 
 static QJSIntlStatus append(QJSIntlCollationBuilder *builder, QJSIntlRelationMapping *out,
@@ -163,7 +93,7 @@ static QJSIntlStatus append_root(QJSIntlCollationBuilder *builder, QJSIntlRelati
     return status;
 }
 
-static QJSIntlStatus lookup(QJSIntlCollationBuilder *builder, const Text *text, int current,
+static QJSIntlStatus lookup(QJSIntlCollationBuilder *builder, const QJSIntlCompilerText *text, int current,
                              QJSIntlRelationMapping *out)
 {
     QJSIntlCollationOverlay overlay;
@@ -235,7 +165,7 @@ QJSIntlStatus qjs_intl_collation_builder_lookup(QJSIntlCollationBuilder *builder
                                                const uint32_t *codes, uint32_t count,
                                                QJSIntlRelationMapping *out)
 {
-    Text text = {0};
+    QJSIntlCompilerText text = {0};
     QJSIntlStatus status;
     if (out)
         *out = (QJSIntlRelationMapping){0};
@@ -243,10 +173,10 @@ QJSIntlStatus qjs_intl_collation_builder_lookup(QJSIntlCollationBuilder *builder
         return QJS_INTL_INVALID_ARGUMENT;
     if (!out)
         return finish(builder, QJS_INTL_INVALID_ARGUMENT);
-    status = normalize(builder, codes, count, &text);
+    status = qjs_intl_compiler_text_nfd(&builder->allocator, codes, count, &text);
     if (!status)
         status = lookup(builder, &text, 1, out);
-    clear_text(builder, &text);
+    qjs_intl_compiler_text_clear(&builder->allocator, &text);
     return finish(builder, status);
 }
 
@@ -380,7 +310,7 @@ QJSIntlStatus qjs_intl_collation_builder_relate(QJSIntlCollationBuilder *builder
                                                const uint32_t *codes, uint32_t count,
                                                const uint32_t *extension, uint32_t extension_count)
 {
-    Text before = {0}, text = {0}, after = {0};
+    QJSIntlCompilerText before = {0}, text = {0}, after = {0};
     QJSIntlRelationMapping root = {0}, extra = {0}, mapping = {0};
     QJSIntlRelationCase *cases = NULL;
     QJSIntlStatus status;
@@ -394,13 +324,13 @@ QJSIntlStatus qjs_intl_collation_builder_relate(QJSIntlCollationBuilder *builder
     if (prefix_count && (!unicode_nfc_boundary_before(prefix[0]) ||
                          !unicode_nfc_boundary_before(codes[0])))
         return finish(builder, QJS_INTL_DATA_ERROR);
-    status = normalize(builder, prefix, prefix_count, &before);
+    status = qjs_intl_compiler_text_nfd(&builder->allocator, prefix, prefix_count, &before);
     if (status)
         goto done;
-    status = normalize(builder, codes, count, &text);
+    status = qjs_intl_compiler_text_nfd(&builder->allocator, codes, count, &text);
     if (status)
         goto done;
-    status = normalize(builder, extension, extension_count, &after);
+    status = qjs_intl_compiler_text_nfd(&builder->allocator, extension, extension_count, &after);
     if (status)
         goto done;
     status = lookup(builder, &text, 0, &root);
@@ -440,8 +370,8 @@ done:
     qjs_intl_relation_mapping_clear(&builder->allocator, &root);
     qjs_intl_relation_mapping_clear(&builder->allocator, &extra);
     qjs_intl_relation_mapping_clear(&builder->allocator, &mapping);
-    clear_text(builder, &before);
-    clear_text(builder, &text);
-    clear_text(builder, &after);
+    qjs_intl_compiler_text_clear(&builder->allocator, &before);
+    qjs_intl_compiler_text_clear(&builder->allocator, &text);
+    qjs_intl_compiler_text_clear(&builder->allocator, &after);
     return finish(builder, status);
 }
