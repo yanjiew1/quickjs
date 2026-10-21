@@ -199,23 +199,57 @@ static QJSIntlStatus simple_name(const QJSIntlDisplayFormatter *formatter, QJSIn
     return status;
 }
 
-static QJSIntlStatus currency_name(const QJSIntlDisplayFormatter *formatter, QJSIntlBytes code,
-                                   QJSIntlBytes *text, int *found)
+static QJSIntlStatus currency_label(const QJSIntlCurrencyData *data, uint32_t locale,
+                                     uint32_t index, QJSIntlBytes *text, int *found)
 {
     QJSIntlCurrencyText label;
-    uint32_t index;
-    QJSIntlStatus status = qjs_intl_currency_code_find(&formatter->currency, code, &index);
-    if (status == QJS_INTL_UNSUPPORTED)
-        return QJS_INTL_OK;
-    if (status)
-        return status;
-    status = qjs_intl_currency_field_at(&formatter->currency, formatter->locale, index,
-                                       QJS_INTL_CURRENCY_NAME, &label);
+    QJSIntlStatus status = qjs_intl_currency_field_at(data, locale, index,
+                                                      QJS_INTL_CURRENCY_NAME, &label);
     if (!status && (label.state == QJS_INTL_CURRENCY_VALUE || label.state == QJS_INTL_CURRENCY_EMPTY)) {
         *found = 1;
         *text = label.text;
     }
     return status;
+}
+
+static QJSIntlStatus currency_name(const QJSIntlDisplayFormatter *formatter, QJSIntlBytes code,
+                                   QJSIntlBytes *text, int *found)
+{
+    uint32_t index;
+    QJSIntlStatus status = qjs_intl_currency_code_find(&formatter->currency, code, &index);
+    if (status == QJS_INTL_UNSUPPORTED)
+        return QJS_INTL_OK;
+    return status ? status : currency_label(&formatter->currency, formatter->locale, index, text, found);
+}
+
+QJSIntlStatus qjs_intl_display_currency_next(const QJSIntlDisplayService *service,
+                                             uint32_t *cursor, QJSIntlBytes *out)
+{
+    uint32_t code, locale;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!service || !cursor || !out || *cursor > service->currency.code_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (code = *cursor; code < service->currency.code_count; code++) {
+        for (locale = 0; locale < service->currency.data.locales.count; locale++) {
+            QJSIntlBytes text = {0};
+            int found = 0;
+            QJSIntlStatus status;
+            if (locale == service->root)
+                continue;
+            status = currency_label(&service->currency, locale, code, &text, &found);
+            if (status)
+                return status;
+            if (found) {
+                status = qjs_intl_currency_code_at(&service->currency, code, out);
+                if (!status)
+                    *cursor = code + 1;
+                return status;
+            }
+        }
+    }
+    *cursor = service->currency.code_count;
+    return QJS_INTL_UNSUPPORTED;
 }
 
 static QJSIntlStatus date_name(const QJSIntlDisplayFormatter *formatter, QJSIntlBytes code,
