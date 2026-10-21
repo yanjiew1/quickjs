@@ -3,12 +3,7 @@
 #ifndef QJS_INTL_COMPILER_SNAPSHOT_H
 #define QJS_INTL_COMPILER_SNAPSHOT_H
 #include "collation-program.h"
-
-typedef struct QJSIntlCollationRankedElement {
-    uint32_t ranks[4]; /* Final uint32 ranks; bit31 is NOT a tailored-ID flag. */
-    uint32_t root_primary;
-    unsigned char case_value, variable, implicit; /* variable is the ROOT default. */
-} QJSIntlCollationRankedElement;
+#include "../../src/intl/collation/ranked.h"
 
 typedef struct QJSIntlCollationRootOffset {
     uint32_t root_gap, added;
