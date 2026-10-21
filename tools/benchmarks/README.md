@@ -170,7 +170,14 @@ formatting, parts, cross-day ranges and source parts, localized offset zone
 names, Date.toLocaleString and optional Temporal.PlainDateTime formatting.
 Inputs use fixed UTC dates; constructor and Date locale cases reuse their
 option objects. Run each exact case in a fresh process using the same enabled
-Intl/calendar/zone profile for both revisions. These cases do not extend the
+Intl/calendar/zone profile for both revisions. Formatting/parts/range cases
+cache their formatter on the benchmark function, and the Temporal case also
+caches its fixed input. The first timed callback prepares that state; later
+minimum-of-100 trials measure repeated reuse. Construction and Date locale
+workloads intentionally keep their constructor cost. Apply the same workload
+to both binaries: older live date scores included recurring formatter setup
+and are not directly comparable to these steady-state cases.
+These cases do not extend the
 frozen 72-case catalog, and the default hosted core benchmark does not measure
 enabled Intl services.
 
