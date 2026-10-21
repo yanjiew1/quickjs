@@ -744,7 +744,24 @@ Programs retain locale, type, alternate, draft and reference metadata. An empty
 root standard program is present data, distinct from missing or alternate
 programs. Repeated operations/imports stay ordered. Source positions identify
 the XML collation and original rule-text line/column, not an invented absolute
-XML line. Import alias resolution, collation-specific inheritance, recursive
-import expansion, NFD-inert star validation, canonical closure and CE allocation
-belong to later semantic compilation. This collector creates no binary section
+XML line. The source catalog described below resolves aliases, collation-specific parents
+and ordered imports. NFD-inert star validation, canonical closure and CE
+allocation remain semantic weight-compilation work. This collector creates no binary section
 and advertises no executable locale collation capability.
+
+`tools/intl/collation_programs.py` owns that source catalog. It reuses
+`parents.ParentGraph` with the `collations` component and aliases/preferred names
+from `locale_metadata`; it does not duplicate a language-wide inheritance or
+hardcoded collation alias table. Exact lookup searches a requested type through
+its parents without concatenating ancestor programs. Normal profile selection
+applies TR35's requested/search/default/standard/root type fallback. Explicit
+alternate lookup does not substitute short/proposed and normal programs.
+
+Import lookup is separate from profile fallback: a missing imported type is an
+error, and absent `co` means standard, not the imported locale's default. Import
+expansion preserves execution order, including repeated imports of cached
+immutable syntax. An explicit stack detects active cycles, limits depth and
+counts all visited nodes, including imports into empty programs; a branching
+empty import graph must not bypass the work budget. Original node provenance
+survives expansion. Private programs may be imported but are excluded from complete-profile
+selection and establish no public service inventory; private defaults reject. The root standard program must exist and be empty.
