@@ -4944,3 +4944,25 @@ test(
   suite: ['repo', 'build'],
   timeout: 30,
 )
+
+# Exercise the actual C compiler's initialization of opaque prepared bytes.
+intl_embedding_fixture = custom_target(
+  'intl-embedding-fixture',
+  output: 'intl-embedding-fixture.c',
+  command: [python, files('intl_embed_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies,
+)
+intl_embedding_test = executable(
+  'test_intl_embedding',
+  files('test_intl_embedding.c', '../src/intl/native/pack.c') + [intl_embedding_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-embedding',
+  intl_embedding_test,
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
