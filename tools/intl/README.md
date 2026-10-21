@@ -182,6 +182,13 @@ in its own gap, preserving the zero sentinel and common root aliases. Node
 provenance records the stronger parents; copied mappings can retain IDs even
 when another mapping is replaced.
 
+Read-only stable-ID comparison is available before freezing. Different virtual
+root gaps compare directly; two tailored IDs in one unfrozen gap follow its
+linked ordering rather than allocation order. This query allocates nothing and
+allows subsequent insertion. Same-gap walks are bounded by inserted node count;
+callers performing repeated scans must account for that linear cost. Once frozen,
+comparison uses resolved ranks.
+
 This generic arena does not decide relation strength, ignorable bands, logical
 reset extrema, case policy or implicit-primary coalescing. The semantic compiler
 must supply those rules. IDs and final ranks are different domains: bit 31
