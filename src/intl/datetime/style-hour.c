@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "style-hour.h"
+#include "append-layout.h"
 #include <string.h>
 
 typedef struct Choice {
@@ -71,28 +72,11 @@ static Choice choose(const QJSIntlDateSourceCandidates *pool, const QJSIntlDateT
 
 static QJSIntlStatus append_layout(const QJSIntlDateAvailableSources *sources, QJSIntlPairPattern *out)
 {
-    size_t i;
-    if (!sources)
-        return QJS_INTL_UNSUPPORTED;
-    for (i = 0; i < sources->count; i++) {
-        QJSIntlDateAvailableEntry entry;
-        QJSIntlDateAvailableNode origin;
-        QJSIntlDateAvailableGroup group;
-        QJSIntlStatus status = qjs_intl_date_available_source_at(sources, i, &entry, &origin);
-        if (!status)
-            status = qjs_intl_date_available_group_at(&sources->data, origin.group, &group);
-        if (status)
-            return status;
-        if (group.family != QJS_INTL_DATE_AVAILABLE_APPEND)
-            return QJS_INTL_INVALID_ARGUMENT;
-        if (entry.code.length == 8 && !memcmp(entry.code.data, "Timezone", 8) &&
-            entry.plural == QJS_INTL_DATE_NO_PLURAL && !entry.alt.length) {
-            if (entry.blocked || !entry.text.length)
-                return QJS_INTL_UNSUPPORTED;
-            return qjs_intl_pair_pattern_parse(entry.text, out);
-        }
-    }
-    return QJS_INTL_UNSUPPORTED;
+    QJSIntlDateAppendLayout selected;
+    QJSIntlStatus status = qjs_intl_date_append_layout(sources, (QJSIntlBytes){"Timezone", 8}, &selected);
+    if (!status)
+        *out = selected.pattern;
+    return status;
 }
 
 static QJSIntlStatus check(const QJSIntlDatePattern *pattern, const QJSIntlDateTimeComponents *target,
