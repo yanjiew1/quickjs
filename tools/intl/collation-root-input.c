@@ -400,6 +400,31 @@ QJSIntlStatus qjs_intl_root_input_element_at(const QJSIntlRootInput *view, uint3
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_root_input_group(const QJSIntlRootInput *view, QJSIntlBytes token,
+                                        uint32_t *group_id)
+{
+    uint32_t i;
+    if (group_id)
+        *group_id = 0;
+    if (!view || !view->fingerprint || !group_id || (!token.data && token.length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (!token.length || token.length > 8)
+        return QJS_INTL_UNSUPPORTED;
+    for (i = 0; i < view->sections[QJS_INTL_ROOT_GROUPS].count; i++) {
+        const uint8_t *group = view->sections[QJS_INTL_ROOT_GROUPS].bytes + (size_t)i * 16;
+        uint32_t first = word(group, 2), count = word(group, 3), j;
+        for (j = 0; j < count; j++) {
+            const uint8_t *row = view->sections[QJS_INTL_ROOT_TOKENS].bytes + (size_t)(first + j) * 8;
+            if (word(row, 1) == token.length &&
+                !memcmp(view->sections[QJS_INTL_ROOT_TOKEN_BYTES].bytes + word(row, 0), token.data, token.length)) {
+                *group_id = i;
+                return QJS_INTL_OK;
+            }
+        }
+    }
+    return QJS_INTL_UNSUPPORTED;
+}
+
 QJSIntlStatus qjs_intl_root_input_reset(const QJSIntlRootInput *view, QJSIntlRootReset kind,
                                         unsigned int *role, QJSIntlCollationCoordinate *out)
 {
