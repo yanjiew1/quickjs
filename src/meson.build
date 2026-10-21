@@ -337,3 +337,11 @@ if get_option('temporal') or intl_enabled
   endif
 endif
 
+if get_option('intl') == 'minimal'
+  engine_sources += files(
+    'quickjs/builtins/intl/segmenter.c',
+  )
+  support_sources += files(
+    'intl/segment/minimal.c',
+  )
+endif
