@@ -169,6 +169,36 @@ static void test_category_points(void)
     assert(lre_is_mark(0x0903) && lre_is_mark(0x20dd));
 }
 
+static void test_case_context_properties(void)
+{
+    CharRange range;
+    int i, delta;
+    cr_init(&range, NULL, test_realloc);
+    assert(unicode_prop(&range, "Soft_Dotted") == 0);
+    /* Exercise every transition and gap in the compressed property, including
+       supplementary letters, against the existing full-range decoder. */
+    for (i = 0; i < range.len; i++) {
+        for (delta = -1; delta <= 1; delta++) {
+            int64_t c = (int64_t)range.points[i] + delta;
+            if (c >= 0 && c <= 0x10ffff)
+                assert(lre_is_soft_dotted(c) == category_contains(&range, c));
+        }
+        if (i + 1 < range.len) {
+            uint32_t c = range.points[i] + (range.points[i + 1] - range.points[i]) / 2;
+            assert(lre_is_soft_dotted(c) == category_contains(&range, c));
+        }
+    }
+    for (i = 0; i < 128; i++)
+        assert(lre_is_soft_dotted(i) == category_contains(&range, i));
+    assert(!lre_is_soft_dotted(0xd800) && !lre_is_soft_dotted(0x10ffff));
+    assert(!lre_is_soft_dotted(UINT32_MAX));
+    assert(unicode_get_cc('I') == 0);
+    assert(unicode_get_cc(0x307) == 230);
+    assert(unicode_get_cc(0x323) == 220);
+    assert(unicode_get_cc(0x101fd) == 220);
+    cr_free(&range);
+}
+
 int main(void)
 {
     test_range_capacity_limits();
@@ -176,5 +206,6 @@ int main(void)
     test_empty_range();
     test_case_folding();
     test_category_points();
+    test_case_context_properties();
     return 0;
 }
