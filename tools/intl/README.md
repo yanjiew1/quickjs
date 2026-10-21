@@ -419,8 +419,12 @@ Following primary-ignorables vanish through Q until a regular or numeric primary
 ends the run. Quaternary tuples keep variable and regular/common bands separate,
 preserve explicit Q-only ranks and retain Q=0 alignment markers when a real Q
 difference is possible. Common-only passes cannot invent differences from CE
-counts. Backward-secondary and identical policies remain explicitly unsupported
-until their consumers are implemented; no native Collator capability is published.
+counts. Backward secondary reverses interiors of separator-delimited segments
+while visiting segments in forward order. Separator aliases retain their own
+weak payload instead of relying on equality assertions. The identical level
+uses the original NFD text, with the field separator below even NUL and a
+separate end condition. Comparison now accepts strengths 1 through 5; service
+availability and JS options remain separate integration layers.
 
 ```sh
 python3 tools/intl/collation_archive.py \
