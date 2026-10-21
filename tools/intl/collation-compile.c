@@ -1,8 +1,8 @@
-/* Host tailoring compiler input and pinned-Unicode normalization audit.
- * This stage does not allocate weights or emit executable tailorings.
+/* Host tailoring compiler audits and execution, without runtime publication.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-root-input.h"
 #include "collation-ir.h"
+#include "collation-program.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -20,6 +20,28 @@ typedef struct Audit {
     uint64_t programs, instructions, texts, starred;
     int preflight;
 } Audit;
+
+typedef struct Executed {
+    uint64_t programs, instructions, mappings;
+} Executed;
+
+static QJSIntlStatus execute_end(void *opaque, const QJSIntlIRProgram *identity,
+                                  QJSIntlCollationProgram *program)
+{
+    Executed *result = opaque;
+    unsigned int i;
+    /* Validate final rankability while the callback still owns a borrowed
+       program. Packing/copying the live map remains a separate output layer. */
+    for (i = 0; i < 4; i++) {
+        QJSIntlStatus status = qjs_intl_weight_freeze(program->builder.relations.axes + i);
+        if (status)
+            return status;
+    }
+    result->programs++;
+    result->instructions += identity->instruction_count;
+    result->mappings += program->builder.map.live_count;
+    return QJS_INTL_OK;
+}
 
 static void *normalize_realloc(void *opaque, void *ptr, size_t size)
 {
@@ -199,11 +221,13 @@ int main(int argc, char **argv)
     const QJSIntlIRVisitor visitor = {NULL, audit_instruction, audit_end};
     QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
     Audit audit = {.preflight = 1};
-    int failed, root_mode, pair_mode;
-    pair_mode = argc == 4 && !strcmp(argv[1], "--audit-pair");
+    Executed executed = {0};
+    int failed, root_mode, pair_mode, execute_mode;
+    execute_mode = argc == 4 && !strcmp(argv[1], "--execute-pair");
+    pair_mode = execute_mode || (argc == 4 && !strcmp(argv[1], "--audit-pair"));
     if (!pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
         fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr | "
-                "--audit-pair root.qjcr input.qjci\n", argv[0]);
+                "--audit-pair root.qjcr input.qjci | --execute-pair root.qjcr input.qjci\n", argv[0]);
         return 2;
     }
     root_mode = !strcmp(argv[1], "--audit-root");
@@ -232,9 +256,11 @@ int main(int argc, char **argv)
     /* Pair identities and preflight the whole artifact before allocating any
        normalization or future per-program execution state. */
     failed = qjs_intl_ir_open(bytes, size, root.fingerprint, &view, &error);
-    if (!failed)
+    if (!failed && execute_mode)
+        failed = qjs_intl_collation_program_execute(&root, &view, &allocator, execute_end, &executed, &error);
+    if (!failed && !execute_mode)
         failed = qjs_intl_ir_visit(&view, &visitor, &audit, &error);
-    if (!failed) {
+    if (!failed && !execute_mode) {
         audit = (Audit){0};
         failed = qjs_intl_ir_visit(&view, &visitor, &audit, &error);
     }
@@ -242,7 +268,10 @@ int main(int argc, char **argv)
         if (error.source.bytes)
             fprintf(stderr, "%.*s:%u:%u: ", (int)error.source.length, (const char *)error.source.bytes,
                     error.line, error.column);
-        fputs("invalid tailoring IR, source identity or normalization constraint\n", stderr);
+        fprintf(stderr, "invalid tailoring input or unsupported execution constraint (%d)\n", failed);
+    } else if (execute_mode) {
+        printf("{\"programs\":%" PRIu64 ",\"instructions\":%" PRIu64 ",\"mappings\":%" PRIu64 "}\n",
+               executed.programs, executed.instructions, executed.mappings);
     } else {
         printf("{\"programs\":%" PRIu64 ",\"instructions\":%" PRIu64
                ",\"normalized_texts\":%" PRIu64 ",\"starred_scalars\":%" PRIu64 "}\n",
