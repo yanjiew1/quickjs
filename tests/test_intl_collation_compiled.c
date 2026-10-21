@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../tools/intl/collation-archive.h"
 #include "../src/intl/collation/compiled-data.h"
+#include "../src/intl/collation/ranked-elements.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,7 +102,7 @@ static void make(Fixture *f, QJSIntlRootInput *root)
     QJSIntlIRView ir;
     QJSIntlCollationProgram program;
     const QJSIntlIRProgram identity = {{(const uint8_t *)"zz", 2}, {(const uint8_t *)"standard", 8}, {0}, 4};
-    const uint32_t q = 'q', marks[] = {'w', 0x327, 0x301};
+    const uint32_t q = 'q', empty = 0xe6, digit = 0xff17, marks[] = {'w', 0x327, 0x301};
     uint32_t unused;
 
     assert(!qjs_intl_root_input_open(intl_root_fixture, intl_root_fixture_size, &a, root));
@@ -114,6 +115,8 @@ static void make(Fixture *f, QJSIntlRootInput *root)
     assert(!qjs_intl_collation_builder_logical(&program.builder, QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE, 0));
     assert(!qjs_intl_collation_builder_relate(&program.builder, 4, NULL, 0, &q, 1, NULL, 0));
     assert(!qjs_intl_collation_builder_relate(&program.builder, 0, NULL, 0, marks, 3, NULL, 0));
+    assert(!qjs_intl_collation_builder_relate(&program.builder, 0, NULL, 0, &digit, 1, NULL, 0));
+    assert(!qjs_intl_collation_map_put(&program.builder.map, NULL, 0, &empty, 1, NULL, 0, &unused));
 
     /* Established positions can remain unused by live CEs. Preserve both gap0
        and the final root's own gap, without expanding the virtual root domain. */
@@ -512,6 +515,195 @@ static void test_root_only(const QJSIntlRootInput *root)
     assert(!f.live);
 }
 
+/* Construct the expected payload independently of matcher selection. The
+   reader's byte/rank equivalence with host snapshots is checked above. */
+static size_t expected_mapping(const QJSIntlCompiledCollationProgram *p, int overlay,
+                               const uint32_t *key, size_t length, uint32_t prefix,
+                               QJSIntlCollationRankedElement *out)
+{
+    const QJSIntlCollationKeyIndex *keys = overlay ? &p->keys : &p->root.keys;
+    uint32_t i;
+
+    for (i = 0; i < keys->row_count; i++) {
+        QJSIntlCollationKeySpan span;
+        uint32_t j, start, count;
+
+        assert(!qjs_intl_collation_keys_at(keys, i, &span));
+        if (span.count != length || qjs_intl_collation_keys_prefix(keys, i) != prefix)
+            continue;
+
+        for (j = 0; j < length && qjs_intl_read_u32(span.keys + (size_t)j * 4) == key[j]; j++)
+            continue;
+        if (j != length)
+            continue;
+
+        if (overlay)
+            assert(!qjs_intl_compiled_collation_mapping(p, i, &start, &count));
+        else
+            assert(!qjs_intl_collation_base_mapping(&p->root, i, &start, &count));
+        assert(count < 8);
+
+        for (j = 0; j < count; j++) {
+            if (overlay)
+                assert(!qjs_intl_compiled_collation_element(p, start + j, out + j));
+            else
+                assert(!qjs_intl_compiled_collation_root_element(p, start + j, out + j));
+        }
+        return count;
+    }
+
+    assert(!"missing authored expected mapping");
+    return 0;
+}
+
+static void check_stream(Fixture *f, const QJSIntlCompiledCollationProgram *p,
+                         const uint16_t *input, size_t length,
+                         const QJSIntlCollationRankedElement *expected, size_t count)
+{
+    QJSIntlAllocator a = allocator(f);
+    QJSIntlCompiledCollationProgram local = *p;
+    QJSIntlCollationRankedElements it;
+    QJSIntlCollationRankedToken token;
+    uint16_t copy[16];
+    size_t baseline = f->live, calls, i;
+    int present;
+
+    assert(length <= 16);
+    if (length)
+        memcpy(copy, input, length * sizeof(*copy));
+    assert(!qjs_intl_collation_ranked_elements_init(&it, &local, copy, length, 0, &a));
+    memset(&local, 0, sizeof(local));
+    memset(copy, 0xff, sizeof(copy));
+    memset(&a, 0, sizeof(a));
+    calls = f->calls;
+
+    for (i = 0; i < count; i++) {
+        assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present);
+        assert(!token.number.length);
+        equal_ce(&token.element, expected + i);
+    }
+
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && !present);
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && !present);
+    assert(!token.number.length && !token.element.ranks[0] && f->calls == calls);
+    qjs_intl_collation_ranked_elements_clear(&it);
+    qjs_intl_collation_ranked_elements_clear(&it);
+    assert(f->live == baseline);
+}
+
+static void test_ranked_streams(Fixture *f, const QJSIntlRootInput *root)
+{
+    QJSIntlAllocator a = allocator(f);
+    QJSIntlCompiledCollationData data;
+    QJSIntlCompiledCollationProgram p;
+    QJSIntlCollationRankedElement expected[16];
+    const uint32_t a_key[] = {'a'}, az[] = {'a', 'z'}, ae[] = {0xe6}, j_key[] = {'j'};
+    const uint32_t abc[] = {'a', 'b', 'c'}, q[] = {'q'}, zero[] = {0};
+    const uint16_t mixed[] = {'a', 'z', 0xe6, 'j'}, contraction[] = {'a', 'b', 'c'};
+    const uint16_t empty_mixed[] = {0xe6, 'q', 0xe6, 'w', 0x327, 0x301, 0xe6, 0, 0x4e00, 0xd800};
+    const uint16_t empty_only[] = {0xe6, 0xe6, 0xe6};
+    size_t count;
+
+    assert(!qjs_intl_compiled_collation_open(f->image.bytes, f->image.length, root->fingerprint, &a, &data));
+
+    assert(!qjs_intl_compiled_collation_program(&data, 0, &p));
+    count = expected_mapping(&p, 0, a_key, 1, 0, expected);
+    count += expected_mapping(&p, 1, az, 2, 1, expected + count);
+    count += expected_mapping(&p, 0, ae, 1, 0, expected + count);
+    count += expected_mapping(&p, 1, j_key, 1, 0, expected + count);
+    check_stream(f, &p, mixed, 4, expected, count);
+
+    assert(!qjs_intl_compiled_collation_program(&data, 1, &p));
+    count = expected_mapping(&p, 0, abc, 3, 0, expected);
+    check_stream(f, &p, contraction, 3, expected, count);
+
+    assert(!qjs_intl_compiled_collation_program(&data, 2, &p));
+    count = expected_mapping(&p, 1, q, 1, 0, expected);
+    assert(count == 1 && expected[0].ranks[3] == 1);
+    expected[count++] = expected[0]; /* Equal tailored marks carry the same CE. */
+    count += expected_mapping(&p, 0, zero, 1, 0, expected + count);
+    assert(!qjs_intl_compiled_collation_implicit(&p, 0x4e00, expected + count++));
+    assert(!qjs_intl_compiled_collation_implicit(&p, 0xd800, expected + count++));
+    check_stream(f, &p, empty_mixed, 10, expected, count);
+    check_stream(f, &p, empty_only, 3, NULL, 0);
+    check_stream(f, &p, NULL, 0, NULL, 0);
+
+    /* Init owns the normalized input and can fail at every allocation stage;
+       failure must not leak or leave an uninitializable matcher behind. */
+    {
+        QJSIntlCollationRankedElements it;
+        size_t baseline = f->live, calls = f->calls, allocations, i;
+
+        assert(!qjs_intl_collation_ranked_elements_init(&it, &p, mixed, 4, 0, &a));
+        allocations = f->calls - calls;
+        qjs_intl_collation_ranked_elements_clear(&it);
+
+        for (i = 1; i <= allocations; i++) {
+            f->fail_at = f->calls + i;
+            assert(qjs_intl_collation_ranked_elements_init(&it, &p, mixed, 4, 0, &a) == QJS_INTL_NO_MEMORY);
+            qjs_intl_collation_ranked_elements_clear(&it);
+            assert(f->live == baseline);
+        }
+        f->fail_at = 0;
+    }
+}
+
+static void test_ranked_numbers(Fixture *f, const QJSIntlRootInput *root)
+{
+    QJSIntlAllocator a = allocator(f);
+    QJSIntlCompiledCollationData data;
+    QJSIntlCompiledCollationProgram p;
+    QJSIntlCollationRankedElements it;
+    QJSIntlCollationRankedToken token;
+    QJSIntlCollationNumber first_number;
+    const uint16_t input[] = {0xe6, '0', 0x660, '2', 0, '3', 0xe6};
+    size_t calls;
+    int present, i;
+
+    assert(!qjs_intl_compiled_collation_open(f->image.bytes, f->image.length, root->fingerprint, &a, &data));
+    assert(!qjs_intl_compiled_collation_program(&data, 1, &p));
+    assert(!qjs_intl_collation_ranked_elements_init(&it, &p, input, 7, 1, &a));
+    calls = f->calls;
+
+    /* A rejected output argument must not consume text. Drain the entire
+       initial expansion before returning the following numeric token. */
+    assert(qjs_intl_collation_ranked_elements_next(&it, NULL, &present) == QJS_INTL_INVALID_ARGUMENT && !present);
+    for (i = 0; i < 2; i++)
+        assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present && !token.number.length);
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present);
+    assert(token.number.length == 1 && (token.number.digits[0] & QJS_INTL_COLLATION_SCALAR_MASK) == '2');
+    assert(!token.element.ranks[0] && !token.element.ranks[1] && !token.element.ranks[2]);
+    first_number = token.number;
+
+    /* Even a completely ignorable non-digit is a numeric-run boundary. */
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present && !token.number.length);
+    assert(!token.element.ranks[0] && !token.element.ranks[1] && !token.element.ranks[2]);
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present);
+    assert(token.number.length == 1 && (token.number.digits[0] & QJS_INTL_COLLATION_SCALAR_MASK) == '3');
+
+    for (i = 0; i < 2; i++)
+        assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present && !token.number.length);
+    assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && !present);
+    assert((first_number.digits[0] & QJS_INTL_COLLATION_SCALAR_MASK) == '2' && f->calls == calls);
+    qjs_intl_collation_ranked_elements_clear(&it);
+
+    /* Only numeric mode bypasses a digit's explicit tailoring. The same
+       fullwidth digit is otherwise the authored Q-only relation. */
+    assert(!qjs_intl_compiled_collation_program(&data, 2, &p));
+    for (i = 0; i < 2; i++) {
+        const uint16_t digit = 0xff17;
+
+        assert(!qjs_intl_collation_ranked_elements_init(&it, &p, &digit, 1, i, &a));
+        assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && present);
+        if (i)
+            assert(token.number.length == 1 && !token.element.ranks[3]);
+        else
+            assert(!token.number.length && token.element.ranks[3] == 1);
+        assert(!qjs_intl_collation_ranked_elements_next(&it, &token, &present) && !present);
+        qjs_intl_collation_ranked_elements_clear(&it);
+    }
+}
+
 int main(void)
 {
     Fixture f = {0};
@@ -522,6 +714,8 @@ int main(void)
     test_unsafe_context(&root, 0);
     test_unsafe_context(&root, 1);
     test_root_only(&root);
+    test_ranked_streams(&f, &root);
+    test_ranked_numbers(&f, &root);
     test_roundtrip_oom_and_lifetime(&f, &root);
     qjs_intl_compiled_collation_clear(&f.image);
     assert(!f.live);
