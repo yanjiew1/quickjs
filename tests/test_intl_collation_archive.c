@@ -105,7 +105,7 @@ static void check_image(const QJSIntlRootInput *root, const QJSIntlCompiledColla
     QJSIntlSection programs = section(image, 9), labels = section(image, 10), blocks = section(image, 11);
     uint32_t i, at = 256;
     assert(image->length >= 336 && !memcmp(image->bytes, "QJCL", 4));
-    assert(qjs_intl_read_u32(image->bytes + 4) == 1);
+    assert(qjs_intl_read_u32(image->bytes + 4) == 2);
     assert(qjs_intl_read_u32(image->bytes + 8) == (18u << 16));
     assert(qjs_intl_read_u32(image->bytes + 12) == (18u << 16));
     assert(qjs_intl_read_u32(image->bytes + 16) == image->length);
