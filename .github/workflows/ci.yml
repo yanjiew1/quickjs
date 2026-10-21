@@ -12,7 +12,7 @@ on:
       - '.github/workflows/ci.yml'
   push:
     branches:
-      - '*'
+      - 'intl'
 
 jobs:
   intl-source-data:

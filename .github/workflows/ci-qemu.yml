@@ -13,7 +13,7 @@ on:
       - '.github/workflows/ci-qemu.yml'
   push:
     branches:
-      - '*'
+      - 'intl'
 
 jobs:
   freebsd:
