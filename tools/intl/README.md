@@ -52,9 +52,10 @@ flags, then orders mappings by scalar sequence for deterministic lookup-table
 generation. Its audit reports observed sizes without making those sizes runtime
 limits. `collation_tables.py` encodes the optional section 36 and audits a full
 source roundtrip. Neither prerequisite executes locale tailorings or advertises
-Collator support. Both prepared profiles carry the same root mapping section;
-the allocation-free C reader is `src/intl/collation/root-data.c`. Full locale
-tailorings and the comparator remain separate runtime work.
+Collator support. Both prepared profiles carry the same diagnostic root mapping
+section; its allocation-free C reader is `src/intl/collation/root-data.c`.
+Executable locale tailorings use the separate compiled section 38 and ranked
+comparison pipeline described below.
 
 `collation_groups.py` collects source group identities for the host semantic
 compiler. It joins FractionalUCA's synthetic boundaries with pinned CLDR script
@@ -348,7 +349,8 @@ from live map terminals when packing.
 source identity before allocating program state, executes the rules and freezes
 all ordering axes. It reports successful programs, instructions and current
 mapping counts. This is a semantic compiler diagnostic, not runtime Collator
-publication. Normal builds still use the existing prepared runtime pack.
+publication. Normal builds consume the prepared runtime pack; they do not
+execute the host compiler or parse source tailorings.
 
 `collation-snapshot.c` freezes one successful program into independent host-owned
 arrays. It copies counted identity labels, sorts live mapping rows by combined
@@ -449,14 +451,21 @@ separate end condition. Comparison now accepts strengths 1 through 5; module
 capability and JS options remain separate integration layers.
 
 `collation/collation.h` and `native.c` provide the module's runtime service over
-the selected minimal/native profile. Opening validates compiled bytes and constructs exact
-locale/type slices; capability/default queries allocate nothing. Named-type
-support follows actual sort/search target IDs, not source labels or fallback.
+the selected minimal/native profile. Opening validates compiled bytes and
+constructs exact locale/type slices; capability/default queries allocate nothing.
+Named-type support follows actual sort/search target IDs, not source labels or fallback.
 Public sensitivity, numeric, case-first and punctuation options produce one
 effective policy per handle. Source backwards-secondary/reordering remain with
 the selected program. Handles retain no service arrays or caller option text
 and can be compared after service close because embedded data stays immutable.
 JS coercion, locale matching and realm/GC ownership belong to their callers.
+
+The JavaScript adapter in `src/quickjs/builtins/intl/collator.c` owns the resolved
+handle, locale strings and cached bound callback. It keeps the callback's realm
+and reference cycle visible to GC. Intrinsic `String.prototype.localeCompare`
+uses the same adapter after coercing its two operands, without consulting a
+mutable global `Intl.Collator`. Locale/collation inventory APIs query the
+module's executable capabilities rather than compiler source labels.
 
 The optional `test_intl_collation_compiled --archive image.qjcl --ordered file`
 audit selects the compiled root/standard program and checks neighboring strings
