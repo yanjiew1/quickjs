@@ -3,7 +3,7 @@
 QJCR version 1 is a private, generated **host compiler input**. It is independent
 of ordered QJCI tailoring programs and the QJIN runtime format. It is not loaded
 by the engine. `tools/intl/collation_root_input.py` owns its writer and structural
-auditor. Normal builds consume prepared runtime data rather than downloading
+auditor; `tools/intl/collation-root-input.{h,c}` owns the C reader. Normal builds consume prepared runtime data rather than downloading
 CLDR or generating QJCR.
 
 The source is the authenticated CLDR 49 beta 4 `common/uca/FractionalUCA.txt`.
@@ -112,6 +112,22 @@ section 12. Unique tokens are four-letter script names or `space`, `punct`,
 Hani starts at Han base, and the numeric reservation belongs to the digit group
 interval. These redundant relationships prevent individually valid sections
 from assigning protected coordinates to the wrong group.
+
+## C reader lifetime and validation
+
+`qjs_intl_root_input_open()` borrows immutable bytes and copies a CE-independent
+key-index view. It checks every pool once and retains only CE spans per mapping,
+with no expanded copy of shared vectors. Temporary allocation is one bounded
+bitmap reused for the exact Han permutation and unique token names; it is
+released before success or failure. Allocation failure remains distinguishable
+from malformed input. Lookup and implicit fallback allocate nothing.
+
+The reader checks both original context starts with pinned Unicode NFC boundary
+properties. These checks belong in C, independently of Python's structural audit.
+Isolated unsafe-prefix and unsafe-mapped-start fixtures retain valid key ordering
+so an unrelated sort check cannot hide a missing boundary check. The host tool's
+`--audit-root` command validates a complete QJCR file; CI runs it against the
+artifact generated from the pinned source.
 
 ## Updating the format
 
