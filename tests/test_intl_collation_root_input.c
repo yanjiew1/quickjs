@@ -97,6 +97,7 @@ static void test_borrowed_and_fallback(void)
     QJSIntlCollationCoordinate ce;
     uint8_t *bytes = malloc(intl_root_fixture_size + 1);
     uint32_t i, start, count;
+    unsigned int role;
     const uint32_t generic[] = {0, 1, 0xd800, 0xe000, 0x10ffff};
     assert(bytes);
     memcpy(bytes + 1, intl_root_fixture, intl_root_fixture_size);
@@ -106,6 +107,13 @@ static void test_borrowed_and_fallback(void)
     for (i = 0; i < 32; i++)
         assert(view.fingerprint[i] == i);
     assert(view.metadata.implicit_last_marker == view.metadata.generic_base);
+    assert(!qjs_intl_root_input_reset(&view, QJS_INTL_ROOT_FIRST_IMPLICIT, &role, &ce));
+    assert(role == QJS_INTL_ROOT_ARTIFICIAL_BOUNDARY &&
+           ce.weights[0] == view.metadata.implicit_first_marker && !ce.implicit);
+    assert(!qjs_intl_root_input_reset(&view, QJS_INTL_ROOT_LAST_REGULAR, &role, &ce));
+    assert(role == QJS_INTL_ROOT_DERIVED_INITIAL && ce.weights[0] == view.metadata.han_base);
+    assert(qjs_intl_root_input_reset(&view, 0, &role, &ce) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!role && !ce.weights[0]);
     assert(!qjs_intl_root_input_mapping(&view, 0, &start, &count) && count == 1);
     assert(!qjs_intl_root_input_element_at(&view, start, &ce));
     assert(!ce.weights[0] && !ce.weights[1] && !ce.weights[2] && !ce.weights[3]);
