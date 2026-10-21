@@ -18,7 +18,7 @@ typedef struct JSIntlDisplayNames {
     int type, style, fallback, language_display;
 } JSIntlDisplayNames;
 
-static QJSIntlDisplayService *display_service(JSContext *ctx)
+QJSIntlDisplayService *js_intl_display_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_display) {
@@ -66,7 +66,7 @@ static JSValue display_constructor(JSContext *ctx, JSValueConst new_target, int 
     options = js_intl_options_object(ctx, argv[1], FALSE);
     if (JS_IsException(options) || js_intl_locale_matcher(ctx, options) < 0)
         goto done;
-    service = display_service(ctx);
+    service = js_intl_display_service(ctx);
     if (!service || js_intl_error(ctx, qjs_intl_display_available(service, &available, &count), "display locales") ||
         js_intl_resolve_locale_index(ctx, available, count, &requested, &locale))
         goto done;
@@ -109,7 +109,7 @@ done:
 
 static JSValue display_supported(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    QJSIntlDisplayService *service = display_service(ctx);
+    QJSIntlDisplayService *service = js_intl_display_service(ctx);
     const QJSIntlBytes *available;
     size_t count;
     if (!service || js_intl_error(ctx, qjs_intl_display_available(service, &available, &count), "display locales"))
