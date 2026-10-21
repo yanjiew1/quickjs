@@ -146,6 +146,17 @@ cases require NumberFormat and do not modify the frozen 72-case comparison
 fixture. For example, run `build/qjs --std tests/microbench.js intl_number` from
 the source directory using an unsanitized build with assertions disabled.
 
+The live `intl_collation` cases separate constructor cost, cached bound
+comparison, numeric runs and canonical equivalence from explicit/default-locale
+`String.prototype.localeCompare` calls. Select each exact name in a fresh
+process with an unsanitized, non-LTO, assertion-disabled Intl build. The bound
+cases require Collator; the two string entry points can also run on older
+Intl builds, whose code-point fallback has different semantics. Such a ratio
+measures added functionality cost, not an equivalent collation algorithm.
+Bound callbacks initialize during their first timed invocation; the adaptive
+minimum reports warmed steady-state costs rather than cold service startup.
+These cases leave the frozen 72-case comparison fixture unchanged.
+
 Zoo's self-contained files are fetched only when requested, from the
 exact `ivankra/javascript-zoo` revision in the manifest. Every download
 has a SHA-256 check before execution. The original source notices remain
