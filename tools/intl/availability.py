@@ -4,6 +4,19 @@ import re
 from parents import ParentGraph
 
 
+def profile_locales(graph, profile):
+    """Project formatter/service identities; never change source parent graphs."""
+    if profile == 'native':
+        return graph.tags
+    if profile != 'minimal':
+        raise ValueError('unknown native Intl data profile')
+
+    # Keep the explicit US identity as well as generic English. Sparse authored
+    # fixtures need not contain every production seed.
+    seeds = (locale for locale in ('en', 'en-US') if locale in graph.tags)
+    return tuple(sorted({tag for locale in seeds for tag in graph.chain(locale)}))
+
+
 def complete(graph):
     """Add required language-region entries, mapping them to full CLDR records.
 
