@@ -8,7 +8,7 @@
 
 /* CCC occupies the unused high byte; normalization itself receives plain code
    points. Keep the original normalized sequence intact for prefix lookback. */
-#define SCALAR_MASK UINT32_C(0xffffff)
+#define SCALAR_MASK QJS_INTL_COLLATION_SCALAR_MASK
 
 typedef struct NormalizationAllocator {
     const QJSIntlAllocator *allocator;
@@ -57,6 +57,15 @@ QJSIntlStatus qjs_intl_collation_match_init(QJSIntlCollationMatch *it,
                                            const uint16_t *input, size_t length,
                                            const QJSIntlAllocator *allocator)
 {
+    return qjs_intl_collation_match_init_overlay(it, data, input, length, NULL, allocator);
+}
+
+QJSIntlStatus qjs_intl_collation_match_init_overlay(QJSIntlCollationMatch *it,
+                                                   const QJSIntlCollationContexts *data,
+                                                   const uint16_t *input, size_t length,
+                                                   const QJSIntlCollationOverlay *overlay,
+                                                   const QJSIntlAllocator *allocator)
+{
     NormalizationAllocator adapter;
     QJSIntlStatus status;
     uint32_t count = 0, i, end;
@@ -70,10 +79,18 @@ QJSIntlStatus qjs_intl_collation_match_init(QJSIntlCollationMatch *it,
     if (!allocator || !allocator->malloc || !allocator->realloc || !allocator->free ||
         (!input && length) || !data)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (overlay && (!overlay->longest_prefix || !overlay->begin || !overlay->step ||
+                    !overlay->terminal || !overlay->has_children ||
+                    !overlay->root_context_suppressed))
+        return QJS_INTL_INVALID_ARGUMENT;
     if (!data->section.bytes)
         return QJS_INTL_UNSUPPORTED;
     it->allocator = *allocator;
     it->data = *data;
+    if (overlay) {
+        it->overlay = *overlay;
+        it->has_overlay = 1;
+    }
     if (length > SIZE_MAX / sizeof(*input) || (uint64_t)length > (uint64_t)INT_MAX * 2)
         return QJS_INTL_OVERFLOW;
     while (position < length) {
@@ -174,7 +191,7 @@ static uint32_t key_at(const QJSIntlCollationEntry *entry, uint32_t depth)
     return qjs_intl_read_u32(entry->keys + (size_t)depth * 4);
 }
 
-static int cursor_step(const QJSIntlCollationMatch *it, RootCursor *cursor, uint32_t code)
+static int root_step(const QJSIntlCollationMatch *it, RootCursor *cursor, uint32_t code)
 {
     QJSIntlCollationEntry entry;
     uint32_t lo, hi, first;
@@ -226,7 +243,7 @@ static int source_context(const QJSIntlCollationMatch *it, uint32_t source,
     return 0;
 }
 
-static int cursor_full(const QJSIntlCollationMatch *it, const RootCursor *cursor,
+static int root_full(const QJSIntlCollationMatch *it, const RootCursor *cursor,
                        uint32_t prefix, QJSIntlCollationEntry *entry)
 {
     QJSIntlCollationContext context;
@@ -245,18 +262,74 @@ static int cursor_full(const QJSIntlCollationMatch *it, const RootCursor *cursor
     return 1;
 }
 
+typedef struct MatchCursor {
+    RootCursor root;
+    uint32_t node, depth;
+    int suppressed;
+} MatchCursor;
+
+static int cursor_step(const QJSIntlCollationMatch *it, MatchCursor *cursor, uint32_t code)
+{
+    int root = root_step(it, &cursor->root, code);
+    if (cursor->node != QJS_INTL_COLLATION_NODE_NONE)
+        cursor->node = it->overlay.step(it->overlay.opaque, cursor->node, code);
+    cursor->depth++;
+    return root || cursor->node != QJS_INTL_COLLATION_NODE_NONE;
+}
+
+static int cursor_full(const QJSIntlCollationMatch *it, const MatchCursor *cursor,
+                       uint32_t prefix, QJSIntlCollationMatchResult *result)
+{
+    QJSIntlCollationEntry entry;
+    uint32_t sequence;
+    int found = 0;
+    if (root_full(it, &cursor->root, prefix, &entry) &&
+        (!cursor->suppressed || (!prefix && entry.key_count == 1))) {
+        *result = (QJSIntlCollationMatchResult){.kind = QJS_INTL_COLLATION_MATCH_ROOT,
+                                              .entry = entry};
+        found = 1;
+    }
+    /* Both providers are at the same prefix/suffix key. Override only this
+       exact terminal; a short overlay must not hide a longer root contraction. */
+    if (cursor->node != QJS_INTL_COLLATION_NODE_NONE &&
+        (sequence = it->overlay.terminal(it->overlay.opaque, cursor->node)) !=
+        QJS_INTL_COLLATION_NODE_NONE) {
+        *result = (QJSIntlCollationMatchResult){.kind = QJS_INTL_COLLATION_MATCH_OVERLAY,
+                                              .sequence = sequence};
+        found = 1;
+    }
+    return found;
+}
+
+static int cursor_continues(const QJSIntlCollationMatch *it, const MatchCursor *cursor)
+{
+    uint32_t count = cursor->root.end - cursor->root.first;
+    if (count > 1)
+        return 1;
+    /* An overlay checkpoint need not have a matching root terminal. The sole
+       remaining root row can therefore still be a longer descendant. */
+    if (count == 1 && it->has_overlay) {
+        QJSIntlCollationEntry entry;
+        entry_at(it, cursor->root.first, &entry);
+        if (entry.key_count > cursor->root.depth)
+            return 1;
+    }
+    return cursor->node != QJS_INTL_COLLATION_NODE_NONE &&
+        it->overlay.has_children(it->overlay.opaque, cursor->node);
+}
+
 /* Full matches are checkpoints; partial contiguous matches may continue beyond
    them, but failed speculation never changes consumption or the saved cursor. */
 static int contiguous(QJSIntlCollationMatch *it, uint32_t start, uint32_t prefix,
-                      RootCursor cursor, RootCursor *best_cursor,
-                      QJSIntlCollationEntry *best)
+                      MatchCursor cursor, MatchCursor *best_cursor,
+                      QJSIntlCollationMatchResult *best)
 {
     uint32_t at = start;
     int found = 0;
     while (at < it->length && cursor_step(it, &cursor, it->text[at] & SCALAR_MASK)) {
-        QJSIntlCollationEntry entry;
-        if (cursor_full(it, &cursor, prefix, &entry)) {
-            *best = entry;
+        QJSIntlCollationMatchResult result;
+        if (cursor_full(it, &cursor, prefix, &result)) {
+            *best = result;
             *best_cursor = cursor;
             found = 1;
         }
@@ -266,22 +339,25 @@ static int contiguous(QJSIntlCollationMatch *it, uint32_t start, uint32_t prefix
 }
 
 static int initial_match(QJSIntlCollationMatch *it, uint32_t start,
-                         uint32_t *prefix_out, RootCursor *cursor_out,
-                         QJSIntlCollationEntry *entry)
+                         uint32_t *prefix_out, MatchCursor *cursor_out,
+                         QJSIntlCollationMatchResult *result)
 {
-    uint32_t limit = start + 1;
+    uint32_t limit = start + 1, first = it->text[start] & SCALAR_MASK;
+    int suppressed = it->has_overlay &&
+        it->overlay.root_context_suppressed(it->overlay.opaque, first);
     for (;;) {
         uint32_t prefix = 0, i;
-        RootCursor cursor = {0, it->data.root.section.count, 0};
+        MatchCursor cursor = {{0, it->data.root.section.count, 0},
+                              QJS_INTL_COLLATION_NODE_NONE, 0, suppressed};
         /* Prefixes inspect original, contiguous NFD text, including text which
            previously participated in an overlapping contraction. */
-        for (i = 0; i < it->data.section.count; i++) {
+        for (i = 0; !suppressed && i < it->data.section.count; i++) {
             QJSIntlCollationContext context;
             uint32_t count, j;
             qjs_intl_collation_context_at(&it->data, i, &context);
             count = context.before.key_count;
             if (count <= prefix || count >= limit || count > start ||
-                key_at(&context.mapping, 0) != (it->text[start] & SCALAR_MASK))
+                key_at(&context.mapping, 0) != first)
                 continue;
             for (j = 0; j < count; j++)
                 if (key_at(&context.before, j) != (it->text[start - count + j] & SCALAR_MASK))
@@ -289,12 +365,22 @@ static int initial_match(QJSIntlCollationMatch *it, uint32_t start,
             if (j == count)
                 prefix = count;
         }
+        if (it->has_overlay) {
+            uint32_t overlay_prefix = it->overlay.longest_prefix(it->overlay.opaque,
+                                                                 it->text, start, limit);
+            if (overlay_prefix > prefix)
+                prefix = overlay_prefix;
+            cursor.node = it->overlay.begin(it->overlay.opaque, first,
+                                            it->text + start - prefix, prefix);
+        }
         for (i = start - prefix; i < start; i++)
-            cursor_step(it, &cursor, it->text[i] & SCALAR_MASK);
-        if (contiguous(it, start, prefix, cursor, cursor_out, entry)) {
+            root_step(it, &cursor.root, it->text[i] & SCALAR_MASK);
+        if (contiguous(it, start, prefix, cursor, cursor_out, result)) {
             *prefix_out = prefix;
             return 1;
         }
+        /* No fallback terminal is synthesized inside this prefix's cursor.
+           In particular, ordinary c cannot seed skipping for a lone p|cd. */
         if (!prefix)
             return 0;
         limit = prefix;
@@ -304,25 +390,24 @@ static int initial_match(QJSIntlCollationMatch *it, uint32_t start,
 static void prepare(QJSIntlCollationMatch *it, uint32_t start,
                      QJSIntlCollationMatchResult *result)
 {
-    RootCursor cursor;
-    QJSIntlCollationEntry entry;
+    MatchCursor cursor;
     uint32_t prefix, i, at, blocked = 0;
-    if (!initial_match(it, start, &prefix, &cursor, &entry)) {
+    if (!initial_match(it, start, &prefix, &cursor, result)) {
         result->kind = QJS_INTL_COLLATION_MATCH_SCALAR;
         result->scalar = it->text[start] & SCALAR_MASK;
         consume(it, start);
         return;
     }
     at = start;
-    for (i = 0; i < entry.key_count; i++) {
+    for (i = 0; i < cursor.depth; i++) {
         uint32_t next = successor(it, at + 1);
         consume(it, at);
         at = next;
     }
-    while (at < it->length && cursor.end - cursor.first > 1) {
+    while (at < it->length && cursor_continues(it, &cursor)) {
         uint32_t ccc = it->text[at] >> 24;
-        RootCursor trial = cursor;
-        QJSIntlCollationEntry extension;
+        MatchCursor trial = cursor;
+        QJSIntlCollationMatchResult extension;
         if (!ccc)
             break;
         /* Only a FULL single-character extension may cross skipped marks.
@@ -330,7 +415,7 @@ static void prepare(QJSIntlCollationMatch *it, uint32_t start,
         if (ccc > blocked && cursor_step(it, &trial, it->text[at] & SCALAR_MASK) &&
             cursor_full(it, &trial, prefix, &extension)) {
             cursor = trial;
-            entry = extension;
+            *result = extension;
             consume(it, at);
             at = successor(it, at + 1);
         } else {
@@ -339,8 +424,6 @@ static void prepare(QJSIntlCollationMatch *it, uint32_t start,
             at = successor(it, it->groups[at]);
         }
     }
-    result->kind = QJS_INTL_COLLATION_MATCH_ROOT;
-    result->entry = entry;
 }
 
 /* Match one source mapping, not one CE. Expansion decoding and implicit-weight

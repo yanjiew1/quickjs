@@ -171,8 +171,14 @@ length, saves full contiguous checkpoints, and permits discontiguous extension
 only from a real full mapping. This lets compilation use the same canonical
 blocking and preceding-context behavior as execution. It returns a mapping,
 unmatched scalar or optional numeric run; CE decoding, implicit weights and
-comparison policy remain in consumers. The current adapter reads immutable root
-storage. Mutable tailoring and frozen executable adapters are subsequent work.
+comparison policy remain in consumers. Optional overlay queries merge with root
+cursors before choosing a terminal: longest prefix first, then longest suffix,
+with overlay replacement only for an identical key. A shorter tailored mapping
+does not hide an inherited contraction. Suppression filters inherited contexts
+without filtering later overlay additions. Node/sequence IDs are stable across
+storage growth; the query owner remains unchanged throughout a scan. The narrow
+descriptor is copied, but borrows that owner's lifetime. Mutable tailoring and
+frozen executable storage adapters are subsequent work.
 
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
