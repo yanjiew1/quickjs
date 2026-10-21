@@ -27,11 +27,17 @@ void qjs_intl_collation_builder_clear(QJSIntlCollationBuilder *);
    pinned engine Unicode library. Text resets resolve CURRENT mappings. */
 QJSIntlStatus qjs_intl_collation_builder_reset(QJSIntlCollationBuilder *,
                                               const uint32_t *, uint32_t count, unsigned int before);
-/* Internal logical-reset bridge: elements already use this owner's stable IDs.
-   The instruction owner constructs the requested logical position separately. */
+/* Internal cursor bridge: resolved elements already use this owner's stable
+   IDs. The logical-position owner constructs a single-CE result separately. */
 QJSIntlStatus qjs_intl_collation_builder_position(QJSIntlCollationBuilder *,
                                                  const QJSIntlRelationElement *, size_t count,
                                                  unsigned int before);
+/* Execute one of the six logical reset forms needed by the pinned corpus:
+   first/last PI, first/last SI, last TI and last regular. Other named forms return
+   UNSUPPORTED. Source baselines and established rule positions persist even when
+   their mapping is replaced/suppressed; text resets still use current lookup. */
+QJSIntlStatus qjs_intl_collation_builder_logical(QJSIntlCollationBuilder *,
+                                                QJSIntlRootReset, unsigned int before);
 /* strength 0 equality / 1..4 P/S/T/Q. Recompute case from immutable ROOT text;
    extension lookup uses CURRENT mappings before publishing this relation. */
 QJSIntlStatus qjs_intl_collation_builder_relate(QJSIntlCollationBuilder *, unsigned int strength,

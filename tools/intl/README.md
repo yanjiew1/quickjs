@@ -241,8 +241,19 @@ relation's cursor. Root and tailored lookup share the CE-independent matcher.
 The builder borrows immutable root bytes and owns its mutable map, ordering and
 cursor. Lookup results own independent CE arrays. A failed command poisons the
 builder: compilation must abort and clear it, since graph and map publication
-are separate transactions. It publishes no runtime data. Logical resets,
-settings, full program execution and freezing are subsequent layers.
+are separate transactions. It publishes no runtime data.
+
+The six logical reset forms used by the pinned corpus are executable: first/last
+primary ignorable, first/last secondary ignorable, last tertiary ignorable and
+last regular. They compare persistent source baselines with established rule CE
+positions using stable graph ordering. Replacing or suppressing a mapping does
+not undo its established position; a constructed SI seed remains meaningful
+after real T-only CEs exist. Retained successful sequence history deliberately
+supplies these positions, whereas live-terminal enumeration serves packing.
+Last regular selects the first-Hani interval `[han_base, han_base + 1)`, including
+primaries inserted before the first real Han CE regardless of their root origin.
+Other named resets fail explicitly until implemented. Settings, full program
+execution and freezing remain subsequent layers.
 
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix

@@ -264,6 +264,102 @@ QJSIntlStatus qjs_intl_collation_builder_position(QJSIntlCollationBuilder *build
     return finish(builder, status);
 }
 
+static QJSIntlStatus compare_position(const QJSIntlCollationBuilder *builder,
+                                       const QJSIntlRelationElement *a,
+                                       const QJSIntlRelationElement *b, int *order)
+{
+    unsigned int i;
+    *order = 0;
+    for (i = 0; i < 4; i++) {
+        QJSIntlStatus status = qjs_intl_weight_compare(&builder->relations.axes[i],
+                                                       a->weights[i], b->weights[i], order);
+        if (status || *order)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
+static QJSIntlStatus position_class(const QJSIntlCollationBuilder *builder, QJSIntlRootReset kind,
+                                     const QJSIntlRelationElement *ce, int *matches)
+{
+    uint32_t p = ce->weights[0], s = ce->weights[1], t = ce->weights[2];
+    *matches = 0;
+    if (kind == QJS_INTL_ROOT_LAST_REGULAR) {
+        uint32_t base = builder->root.metadata.han_base;
+        int left, right;
+        QJSIntlStatus status = qjs_intl_weight_compare(&builder->relations.axes[0], p, base, &left);
+        if (!status)
+            status = qjs_intl_weight_compare(&builder->relations.axes[0], p, base + 1, &right);
+        if (status)
+            return status;
+        /* Include primaries tailored before the first real Han root too.
+           Their original provenance is Han, but their position is in this gap. */
+        *matches = left >= 0 && right < 0;
+    } else if (!p) {
+        if (kind == QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE || kind == QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE)
+            *matches = s != 0;
+        else if (kind == QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE || kind == QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE)
+            *matches = !s && t;
+        else
+            *matches = !s && !t;
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_collation_builder_logical(QJSIntlCollationBuilder *builder,
+                                                QJSIntlRootReset kind, unsigned int before)
+{
+    QJSIntlRelationElement best;
+    QJSIntlStatus status;
+    unsigned int role;
+    uint32_t sequence;
+    if (!active(builder))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (before > 3)
+        return finish(builder, QJS_INTL_INVALID_ARGUMENT);
+    switch (kind) {
+    case QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE:
+    case QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE:
+    case QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE:
+    case QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE:
+    case QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE:
+    case QJS_INTL_ROOT_LAST_REGULAR:
+        break;
+    default:
+        return finish(builder, QJS_INTL_UNSUPPORTED);
+    }
+    status = qjs_intl_root_input_reset(&builder->root, kind, &role, &best);
+    if (status)
+        return finish(builder, status);
+    /* This arena intentionally retains established ordering positions. Removing
+       a mapping does not undo its rule position. Live-terminal iteration serves
+       packing instead; it would change reset-before ordering here. Keep source
+       seeds too: an empty SI band has a persistent constructed baseline. */
+    for (sequence = 0; sequence < builder->map.sequence_count; sequence++) {
+        QJSIntlRelationMapping mapping;
+        size_t i;
+        status = qjs_intl_collation_map_sequence(&builder->map, sequence, &mapping);
+        if (status)
+            return finish(builder, status);
+        for (i = 0; i < mapping.count; i++) {
+            int matches, order;
+            status = position_class(builder, kind, mapping.elements + i, &matches);
+            if (status)
+                return finish(builder, status);
+            if (!matches)
+                continue;
+            /* Compare from the current extremum: append-ordered long chains
+               then advance to their neighbour instead of walking their tail. */
+            status = compare_position(builder, &best, mapping.elements + i, &order);
+            if (status)
+                return finish(builder, status);
+            if ((kind % 2 == 0 && order < 0) || (kind % 2 != 0 && order > 0))
+                best = mapping.elements[i];
+        }
+    }
+    return qjs_intl_collation_builder_position(builder, &best, 1, before);
+}
+
 QJSIntlStatus qjs_intl_collation_builder_reset(QJSIntlCollationBuilder *builder,
                                               const uint32_t *codes, uint32_t count, unsigned int before)
 {
