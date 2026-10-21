@@ -221,6 +221,23 @@ and ICU's
 This choice changes glyph selection only; exponent calculation, rounding,
 signs, separators and part types retain their existing rules.
 
+`collation/collation.h` separates the plain C service contract from JS coercion
+and locale matching. The native owner opens the checked compiled profile once,
+cross-checks public default binding rows against its available locale registry,
+and exposes exact per-usage named types plus a sorted global type inventory.
+Source-parent program labels never become resolved public locale identities.
+Shared matching/ResolveLocale algorithms consume these capabilities separately.
+
+Locale/usage defaults come from the semantic null binding, independently of a
+later named collation selection. Sort sensitivity is variant; search projects
+source strength to the four public sensitivities, using variant when secondary
+plus case requires retaining case distinctions. Fully resolved options override
+numeric, case-first and shifted handling; ignoring punctuation uses the punct
+variable boundary and never adds a quaternary tie-breaker. Handles copy their
+program, policy and allocator, borrow only static prepared bytes, and can outlive
+service close. Comparison retains no input or scratch after return. The JS
+binding owns option ordering, resolved identity, realm state and bound callbacks.
+
 ## Service dependencies and equal backend implementations
 
 | Service or entry point | Required composition or coordination |
