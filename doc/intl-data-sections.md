@@ -679,9 +679,12 @@ ends. Full contiguous matches are checkpoints; discontiguous extension requires
 a full single-code-point match at each step. Skipped marks remain available for
 subsequent mappings. Input consumption does not rewrite the normalized text.
 
-The matcher returns a mapping, unmatched scalar or optional numeric run. The raw
+The matcher reads a CE-free key index over the validated rows. It returns a
+mapping ID and suffix scalar count, unmatched scalar or optional numeric run. The raw
 element facade in `src/intl/collation/elements.c` emits root expansion CEs or
-constructs implicit weights. Comparison settings and locale tailoring remain
+constructs implicit weights; its context reader applies the prefix CE skip.
+Mapping payload fields belong to that reader, not the shared key index.
+Comparison settings and locale tailoring remain
 separate responsibilities. Group
 skipping and iterative successor compression bound particular rescanning costs;
 contiguous lookahead still depends on the table's key depth, so this is not a
