@@ -11,13 +11,18 @@ typedef struct Primary {
     QJSIntlCollationNumber number;
 } Primary;
 
+typedef struct SavedElement {
+    QJSIntlCollationRankedElement ce;
+    int shifted;
+} SavedElement;
+
 typedef struct Stream {
     QJSIntlCollationRankedElements iterator;
-    QJSIntlCollationRankedElement *elements;
+    SavedElement *elements;
     size_t count, capacity;
-    uint32_t numeric, common_s, common_t, separator;
-    int retain;
-    QJSIntlCollationRankedElement small[8];
+    uint32_t numeric, common_s, common_t, separator, variable_limit;
+    int retain, retain_quaternary, shifted, variable_run, any_quaternary;
+    SavedElement small[8];
 } Stream;
 
 static int compare_u32(uint32_t a, uint32_t b)
@@ -65,7 +70,7 @@ static void stream_clear(Stream *s)
     qjs_intl_collation_ranked_elements_clear(&s->iterator);
 }
 
-static QJSIntlStatus retain(Stream *s, const QJSIntlCollationRankedElement *ce)
+static QJSIntlStatus retain(Stream *s, const QJSIntlCollationRankedElement *ce, int shifted)
 {
     const QJSIntlAllocator *a = &s->iterator.match.allocator;
 
@@ -73,7 +78,7 @@ static QJSIntlStatus retain(Stream *s, const QJSIntlCollationRankedElement *ce)
         return QJS_INTL_OK;
 
     if (s->count == s->capacity) {
-        QJSIntlCollationRankedElement *next;
+        SavedElement *next;
         size_t capacity;
 
         if (s->capacity > SIZE_MAX / sizeof(*next) / 2)
@@ -92,7 +97,7 @@ static QJSIntlStatus retain(Stream *s, const QJSIntlCollationRankedElement *ce)
         s->capacity = capacity;
     }
 
-    s->elements[s->count++] = *ce;
+    s->elements[s->count++] = (SavedElement){*ce, shifted};
     return QJS_INTL_OK;
 }
 
@@ -122,7 +127,29 @@ static QJSIntlStatus next_primary(Stream *s, Primary *out)
             !token.element.ranks[2] && !token.element.ranks[3])
             continue;
 
-        status = retain(s, &token.element);
+        if (s->shifted) {
+            const QJSIntlCollationRankedElement *ce = &token.element;
+            int variable = ce->ranks[0] && ce->ranks[0] != s->separator &&
+                ce->root_primary > s->iterator.program.root.metadata.field_separator &&
+                ce->root_primary < s->variable_limit;
+
+            if (variable) {
+                s->variable_run = 1;
+                s->any_quaternary = 1;
+                status = s->retain_quaternary ? retain(s, ce, 1) : QJS_INTL_OK;
+                if (status)
+                    return status;
+                continue;
+            }
+            if (!ce->ranks[0] && s->variable_run)
+                continue; /* Following primary-ignorables vanish through Q. */
+            if (ce->ranks[0])
+                s->variable_run = 0;
+        }
+
+        if (token.element.ranks[3])
+            s->any_quaternary = 1;
+        status = retain(s, &token.element, 0);
         if (status)
             return status;
         if (token.element.ranks[0]) {
@@ -133,15 +160,23 @@ static QJSIntlStatus next_primary(Stream *s, Primary *out)
     }
 }
 
-static int compare_primary(const Primary *a, const Primary *b)
+static int compare_primary_key(const Primary *a, const Primary *b)
 {
-    uint32_t i;
     int order = compare_u32(a->band, b->band);
 
     if (!order)
         order = compare_u32(a->group, b->group);
     if (!order)
         order = compare_u32(a->rank, b->rank);
+
+    return order;
+}
+
+static int compare_primary(const Primary *a, const Primary *b)
+{
+    uint32_t i;
+    int order = compare_primary_key(a, b);
+
     if (order || !a->number.length)
         return order;
 
@@ -170,8 +205,12 @@ static WeakWeight next_weak(const Stream *s, size_t *at, unsigned int level,
                             const QJSIntlCollationPolicy *policy)
 {
     while (*at < s->count) {
-        const QJSIntlCollationRankedElement *ce = s->elements + (*at)++;
+        const SavedElement *saved = s->elements + (*at)++;
+        const QJSIntlCollationRankedElement *ce = &saved->ce;
         WeakWeight weight = {0};
+
+        if (saved->shifted)
+            continue;
 
         if (level == SECONDARY) {
             weight.rank = ce->ranks[1];
@@ -221,6 +260,51 @@ static int compare_weak(const Stream *a, const Stream *b, unsigned int level,
     }
 }
 
+typedef struct Quaternary {
+    unsigned int band; /* End, shifted variable, regular/common. */
+    Primary primary;
+    uint32_t rank;
+} Quaternary;
+
+static Quaternary next_quaternary(const Stream *s, size_t *at)
+{
+    while (*at < s->count) {
+        const SavedElement *saved = s->elements + (*at)++;
+        const QJSIntlCollationRankedElement *ce = &saved->ce;
+
+        if (saved->shifted)
+            return (Quaternary){.band = 1, .primary = primary(s, ce)};
+
+        /* Q=0 on a regular CE is a common alignment marker, not a weight
+           to discard when another CE has an explicit Q distinction. Q-only
+           CEs share the same ordered Q domain; wholly zero CEs were omitted. */
+        return (Quaternary){.band = 2, .rank = ce->ranks[3]};
+    }
+
+    return (Quaternary){0};
+}
+
+static int compare_quaternary(const Stream *a, const Stream *b)
+{
+    size_t left = 0, right = 0;
+
+    /* Common markers alone must not invent a difference from CE counts. */
+    if (!a->any_quaternary && !b->any_quaternary)
+        return 0;
+
+    for (;;) {
+        Quaternary x = next_quaternary(a, &left), y = next_quaternary(b, &right);
+        int order = compare_u32(x.band, y.band);
+
+        if (!order && x.band == 1)
+            order = compare_primary_key(&x.primary, &y.primary);
+        if (!order && x.band == 2)
+            order = compare_u32(x.rank, y.rank);
+        if (order || !x.band)
+            return order;
+    }
+}
+
 QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationProgram *program,
                                                 const uint16_t *left, size_t left_length,
                                                 const uint16_t *right, size_t right_length,
@@ -243,7 +327,7 @@ QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationPr
         (unsigned int)policy.case_first > QJS_INTL_COLLATION_LOWER_FIRST ||
         (unsigned int)policy.max_variable > QJS_INTL_COLLATION_VARIABLE_CURRENCY)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (policy.strength > 3 || policy.shifted || policy.backwards_secondary)
+    if (policy.strength > 4 || policy.backwards_secondary)
         return QJS_INTL_UNSUPPORTED;
     if (left_length > SIZE_MAX / sizeof(*left) || right_length > SIZE_MAX / sizeof(*right))
         return QJS_INTL_OVERFLOW;
@@ -268,6 +352,10 @@ QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationPr
         s->elements = s->small;
         s->capacity = sizeof(s->small) / sizeof(*s->small);
         s->retain = policy.strength > 1 || policy.case_level;
+        s->retain_quaternary = policy.strength >= 4;
+        s->shifted = !!policy.shifted;
+        s->variable_limit = qjs_intl_read_u32(program->groups.bytes +
+            (size_t)(program->core_groups[policy.max_variable] + 1) * 8);
         qjs_intl_compiled_collation_root_rank(program, 0, m->numeric, &s->numeric);
         qjs_intl_compiled_collation_root_rank(program, 0, m->field_separator, &s->separator);
         qjs_intl_compiled_collation_root_rank(program, 1, m->limits.secondary_common, &s->common_s);
@@ -294,6 +382,8 @@ levels:
         *order = compare_weak(streams, streams + 1, CASE, &policy);
     if (!*order && policy.strength >= 3)
         *order = compare_weak(streams, streams + 1, TERTIARY, &policy);
+    if (!*order && policy.strength >= 4)
+        *order = compare_quaternary(streams, streams + 1);
 
 done:
     stream_clear(streams);
