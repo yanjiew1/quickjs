@@ -153,9 +153,27 @@ matcher callbacks non-failing after one complete validation pass.
 The C archive owner stages programs independently of snapshot/compiler lifetime.
 A failed append poisons staging; abort and clear it. Successful finish returns
 an independent byte image. `--compile-pair` emits no bytes until all programs and
-serialization succeed; Windows stdout is placed in binary mode.
+serialization and runtime semantic readback succeed; Windows stdout is placed
+in binary mode. `--audit-compiled archive.qjcl` runs the same reader independently
+on an existing archive.
 
 `tools/intl/collation_archive.py` captures the complete process output, checks
 framing and source identity, then atomically replaces its destination. It does
-not allocate weights, normalize text or claim full semantic validation. Runtime
-readers will own semantic validation before exposing any service capability.
+not allocate weights, normalize text or claim full semantic validation.
+
+## Runtime reader and lifetime
+
+`src/intl/collation/compiled-data.c` validates the complete archive before
+publishing any borrowed view. It shares root validation with `base.c`, and checks
+program policies, sparse offsets, NFD/canonical ordering, provenance and rank
+domains, group permutations and exact trie/key agreement. Temporary audit
+allocations are released on success and failure; malformed data and allocation
+failure have distinct statuses. Opening retains no heap storage.
+
+Program selection decodes fixed descriptors and the final offset per axis;
+element, root and implicit queries neither allocate nor repeat whole-data audits.
+Each program copies its root and group descriptors, so the parent archive
+descriptor need not remain alive. The immutable archive bytes must outlive every
+borrowed view. Once a matcher borrows a program's trie descriptor, that program
+must stay at a stable address. A successful data audit does not advertise public
+locale/type availability; resolved bindings remain a separate integration step.
