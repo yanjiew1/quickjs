@@ -436,6 +436,9 @@ typedef enum {
 extern const char unicode_sequence_prop_name_table[];
 extern const uint8_t unicode_rgi_emoji_tag_sequence[18];
 extern const uint8_t unicode_rgi_emoji_zwj_sequence[2392];
+extern const uint32_t unicode_break_starts[4855];
+extern const uint16_t unicode_break_values[4855];
+extern const uint16_t unicode_break_index[1089];
 #endif /* CONFIG_ALL_UNICODE */
 
 #endif /* LIBUNICODE_TABLE_H */
