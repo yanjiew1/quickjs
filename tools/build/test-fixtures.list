@@ -186,3 +186,4 @@ tests/test_intl_relative_time_format.js
 tests/test_intl_duration_format.js
 tests/test_intl_display_names.js
 tests/test_intl_locale_preferences.js
+tests/test_intl_supported_values.js
