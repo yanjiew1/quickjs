@@ -108,3 +108,18 @@ they do not incorporate locale abbreviation lists. `test_unicode_sentence`
 covers those contexts, paragraph ordering, lone surrogates and long prefixes.
 Unicode CI also checks every pinned `SentenceBreakTest.txt` case using the shared
 boundary-vector oracle.
+
+## Shared category point queries
+
+`category.c` queries the existing compressed General_Category table through
+generated checkpoints. Each `(code point, byte offset)` pair starts a whole
+encoded run; binary search selects a checkpoint, then at most 64 runs are
+decoded. Keeping the original run start preserves the parity of compressed
+alternating uppercase/lowercase runs. Unicode 18 needs 50 checkpoints, or
+400 bytes, alongside the unchanged category table.
+
+The full-range category decoder remains independent of this point-query index.
+`test_unicode --all-categories` walks its ranges as an oracle for all code points
+and all four letter/mark/digit/symbol-or-separator predicates. Unicode CI runs
+that exhaustive mode; the ordinary repository suite keeps the quick boundary
+and adjacent-point checks.
