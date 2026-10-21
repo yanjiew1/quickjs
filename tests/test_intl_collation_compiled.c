@@ -354,7 +354,7 @@ static void test_mutations(Fixture *f)
 
     {
         struct Mutation { uint8_t *at; uint32_t value; } cases[] = {
-            {bytes, 0}, {bytes + 4, 2}, {bytes + 8, 17u << 16},
+            {bytes, 0}, {bytes + 4, QJS_INTL_COMPILED_COLLATION_VERSION + 1}, {bytes + 8, 17u << 16},
             {bytes + 16, (uint32_t)f->image.length + 4}, {bytes + 20, 11}, {bytes + 24, 4}, {bytes + 28, 1},
             {bytes + 64, 2}, {bytes + 68, 255}, {bytes + 76, 0},
             {(uint8_t *)data.sections[QJS_INTL_COMPILED_META].bytes, UINT32_C(0x80000000)},
@@ -704,6 +704,114 @@ static void test_ranked_numbers(Fixture *f, const QJSIntlRootInput *root)
     }
 }
 
+static void test_binding_views(Fixture *f)
+{
+    static const char suffix[] = "enenemojifr";
+    QJSIntlAllocator a = allocator(f);
+    QJSIntlCompiledCollationData source, data;
+    QJSIntlCollationBinding binding;
+    uint8_t *bytes, *rows;
+    uint32_t i, at = 64 + 12 * 16, labels, label_start = 0;
+    size_t size, calls;
+
+    assert(!qjs_intl_compiled_collation_open(f->image.bytes, f->image.length, NULL, &a, &source));
+    labels = source.sections[QJS_INTL_COMPILED_LABELS].count;
+    size = f->image.length - source.sections[QJS_INTL_COMPILED_LABELS].length +
+        ((labels + sizeof(suffix) - 1 + 3) & ~(size_t)3) + 3 * 24;
+    bytes = calloc(size, 1);
+    assert(bytes);
+    memcpy(bytes, f->image.bytes, 64);
+    put32(bytes + 16, (uint32_t)size);
+
+    /* Authored populated envelope: preserve source sections and append a
+       canonical label suffix and three binding rows, with distinct usage IDs. */
+    for (i = 0; i < 12; i++) {
+        const QJSIntlSection *s = source.sections + i;
+        uint8_t *directory = bytes + 64 + i * 16;
+        uint32_t length = (uint32_t)s->length, count = s->count;
+
+        if (i == QJS_INTL_COMPILED_LABELS) {
+            label_start = at;
+            count = labels + sizeof(suffix) - 1;
+            length = (count + 3) & ~3u;
+            memcpy(bytes + at, s->bytes, labels);
+            memcpy(bytes + at + labels, suffix, sizeof(suffix) - 1);
+        } else if (i == QJS_INTL_COMPILED_BINDINGS) {
+            count = 3;
+            length = 3 * 24;
+        } else if (length) {
+            memcpy(bytes + at, s->bytes, length);
+        }
+
+        put32(directory, i + 1);
+        put32(directory + 4, at);
+        put32(directory + 8, length);
+        put32(directory + 12, count);
+        at += length;
+    }
+    assert(at == size);
+
+    rows = bytes + size - 3 * 24;
+    {
+        const uint32_t values[][6] = {
+            {labels, 2, labels + 2, 0, 0, 1},
+            {labels + 2, 2, labels + 4, 5, 0, UINT32_MAX},
+            {labels + 9, 2, labels + 11, 0, 1, 0},
+        };
+        unsigned int j;
+
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 6; j++)
+                put32(rows + (size_t)i * 24 + j * 4, values[i][j]);
+        }
+    }
+
+    assert(!qjs_intl_compiled_collation_open(bytes, size, source.fingerprint, &a, &data));
+    calls = f->calls;
+    assert(!qjs_intl_compiled_collation_binding(&data, 0, &binding));
+    assert(binding.locale.length == 2 && !memcmp(binding.locale.data, "en", 2));
+    assert(!binding.collation.length && binding.sort_program == 0 && binding.search_program == 1);
+    assert(!qjs_intl_compiled_collation_binding(&data, 1, &binding));
+    assert(binding.collation.length == 5 && !memcmp(binding.collation.data, "emoji", 5));
+    assert(binding.sort_program == 0 && binding.search_program == UINT32_MAX);
+    assert(!qjs_intl_compiled_collation_binding(&data, 2, &binding));
+    assert(binding.locale.length == 2 && !memcmp(binding.locale.data, "fr", 2));
+    assert(f->calls == calls);
+    assert(qjs_intl_compiled_collation_binding(&data, 3, &binding) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!binding.locale.data && !binding.collation.data);
+
+    /* Grammar/casing is checked at open, not deferred to public locale lookup. */
+    bytes[label_start + labels] = 'E';
+    rejected(f, bytes, size);
+    bytes[label_start + labels] = 'e';
+    bytes[label_start + labels + 4] = 'E';
+    rejected(f, bytes, size);
+    bytes[label_start + labels + 4] = 'e';
+
+    /* Source identities are opaque diagnostics, but public binding targets
+       must exclude both private prefixes and nonempty alternates. */
+    {
+        uint8_t *record = bytes + word(bytes + 64 + QJS_INTL_COMPILED_PROGRAMS * 16, 1);
+        uint32_t kind_at = word(record, 2);
+        uint8_t saved[8];
+
+        assert(word(record, 3) == sizeof(saved));
+        memcpy(saved, bytes + label_start + kind_at, sizeof(saved));
+        memcpy(bytes + label_start + kind_at, "private-", sizeof(saved));
+        rejected(f, bytes, size);
+        memcpy(bytes + label_start + kind_at, saved, sizeof(saved));
+
+        /* Repartition the same counted labels into a nonempty alternate,
+           keeping the program/label pools and following records unchanged. */
+        put32(record + 4, 1);
+        put32(record + 8, 1);
+        put32(record + 16, 9);
+        put32(record + 20, 1);
+        rejected(f, bytes, size);
+    }
+    free(bytes);
+}
+
 int main(void)
 {
     Fixture f = {0};
@@ -716,6 +824,7 @@ int main(void)
     test_root_only(&root);
     test_ranked_streams(&f, &root);
     test_ranked_numbers(&f, &root);
+    test_binding_views(&f);
     test_roundtrip_oom_and_lifetime(&f, &root);
     qjs_intl_compiled_collation_clear(&f.image);
     assert(!f.live);
