@@ -402,6 +402,24 @@ QJSIntlStatus qjs_intl_collation_map_visit(const QJSIntlCollationMap *map,
     return count == map->live_count ? QJS_INTL_OK : QJS_INTL_DATA_ERROR;
 }
 
+QJSIntlStatus qjs_intl_collation_map_visit_suppressed(const QJSIntlCollationMap *map,
+                                                     QJSIntlCollationSuppressedVisitor visitor, void *opaque)
+{
+    uint32_t node, steps = 0;
+    if (!map || !map->node_count || !visitor)
+        return QJS_INTL_INVALID_ARGUMENT;
+    /* First-scalar groups are the root's direct children. Do not scan retained
+       prefix/suffix history or the entire Unicode scalar domain. */
+    for (node = map->nodes[0].child; node != NONE; node = map->nodes[node].sibling) {
+        QJSIntlStatus status;
+        if (node >= map->node_count || ++steps >= map->node_count || map->nodes[node].parent != 0)
+            return QJS_INTL_DATA_ERROR;
+        if (map->nodes[node].suppressed && (status = visitor(opaque, map->nodes[node].code)) != QJS_INTL_OK)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
 typedef struct KeyInfo {
     uint32_t prefix_count, suffix_count, prefix_owner;
 } KeyInfo;
