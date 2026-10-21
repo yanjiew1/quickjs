@@ -5,6 +5,7 @@ import bundle
 import calendar_name_tables
 import calendar_era_tables
 import compact_tables
+import collation_tables
 import currency_tables
 import timezone_name_tables
 import timezone_presentation_tables
@@ -250,6 +251,7 @@ def validate(binary):
                 sections.get(bundle.TIMEZONE_PRESENTATION), strings),
             'dayperiod_rules': dayperiod_tables.decode(sections.get(bundle.DAYPERIOD_RULES), strings),
             'calendar_eras': calendar_era_tables.decode(sections.get(bundle.CALENDAR_ERAS), strings),
+            'collation_root': collation_tables.decode(sections.get(bundle.COLLATION_ROOT)),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
