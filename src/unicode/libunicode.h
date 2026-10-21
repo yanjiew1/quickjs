@@ -108,6 +108,11 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
    free; invalid/non-scalar input has no boundary. */
 int unicode_nfc_boundary_before(uint32_t c);
 
+/* NFD_Quick_Check=Yes for one code point, without allocation. Whole strings
+   also require canonical combining-class order. Unassigned/surrogate code
+   points use the property's default Yes; values above U+10FFFF return false. */
+int unicode_nfd_quick_check(uint32_t c);
+
 /* Unicode character range functions */
 
 int unicode_script(CharRange *cr, const char *script_name, int is_ext);
