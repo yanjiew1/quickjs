@@ -199,12 +199,20 @@ class CompilerTests(unittest.TestCase):
             result = subprocess.run(command, timeout=10, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.assertEqual(result.returncode, 0, result.stderr.decode())
             self.assertEqual(json.loads(result.stdout.decode())['instructions'], 2)
+            execute_command = [compiler, '--execute-pair', str(root_path), str(ir_path)]
+            result = subprocess.run(execute_command, timeout=10, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            self.assertEqual(json.loads(result.stdout.decode()),
+                             {'programs': 1, 'instructions': 2, 'mappings': 1})
             # A fingerprint is an identity label, not a content checksum. This
             # remains a valid standalone artifact but cannot pair with this root.
             changed_raw = raw[:20] + bytes([raw[20] ^ 1]) + raw[21:]
             self.audit(changed_raw)
             ir_path.write_bytes(changed_raw)
             result = subprocess.run(command, timeout=10, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(result.returncode, 1)
+            self.assertNotIn(b'Sanitizer', result.stderr)
+            result = subprocess.run(execute_command, timeout=10, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.assertEqual(result.returncode, 1)
             self.assertNotIn(b'Sanitizer', result.stderr)
 
