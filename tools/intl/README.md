@@ -46,6 +46,31 @@ Archive links, unsafe paths and source-cache symlinks are rejected.
 
 ## Consume verified source files
 
+`segment_sources.py` collects the relevant raw `common/segments` records with
+checked DTD attributes and source identities. It preserves variable redefinitions
+in document order, exact rule text, sentence suppressions and absent versus
+explicitly empty containers. Records from all published draft states are
+included; alternates are counted and excluded. Line-break groups are inventoried separately
+because Intl.Segmenter has no line granularity. Unsupported relevant source
+structures fail explicitly rather than being discarded.
+
+This collection does not resolve inheritance, evaluate expressions, emit binary
+data or advertise native Segmenter support. `segment_inheritance.py` applies the
+`segmentations` parent component and captures an immutable name-to-slot snapshot
+before each variable definition. All captured slots point backward, including
+the previous value of a redefined name. A later semantic compiler must resolve
+references through those snapshots, reject unresolved names and interpret the
+actual set/property/rule syntax; the capture step does none of those operations.
+The same inheritance module overlays rule IDs, applies explicit empty-rule
+deletions and orders surviving rules by their exact decimal IDs. It retains
+expression text and source provenance; it does not yet add the implicit
+start/end/default rules or compile boundary expressions.
+Audit the authenticated source inventory with:
+
+```sh
+python3 tools/intl/segment_sources.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
 `collation_root.py` validates the authenticated `common/uca/allkeys_CLDR.txt`
 root table. It retains contractions, expansions, all weight levels and variable
 flags, then orders mappings by scalar sequence for deterministic lookup-table
