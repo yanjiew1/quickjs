@@ -1966,6 +1966,25 @@ foreach profile : ['minimal', 'native']
     # Avoid reprocessing the same large immutable array at every LTO test link.
     override_options: ['b_lto=false'],
   )
+  intl_collation_profile_test = executable(
+    'test_intl_collation_' + profile,
+    files(
+      'test_intl_collation_profiles.c',
+      '../src/intl/collation/root-data.c',
+      '../src/intl/native/pack.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-collation-data-' + profile,
+    intl_collation_profile_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_calendar_era_test = executable(
     'test_intl_calendar_era_' + profile,
     intl_calendar_era_sources,
