@@ -71,6 +71,11 @@ QJSIntlStatus qjs_intl_root_input_mapping(const QJSIntlRootInput *, uint32_t map
                                          uint32_t *ce_start, uint32_t *ce_count);
 QJSIntlStatus qjs_intl_root_input_element_at(const QJSIntlRootInput *, uint32_t,
                                             QJSIntlCollationCoordinate *);
+/* Exact ASCII catalog token -> source group ID. Aliases can name the same
+   group; the semantic reorder owner handles duplicates and others/Zzzz.
+   No allocation; output resets on failure. */
+QJSIntlStatus qjs_intl_root_input_group(const QJSIntlRootInput *, QJSIntlBytes token,
+                                        uint32_t *group_id);
 /* Read an initial source position, not a derived current logical position.
    Role and CE outputs reset on failure. This query allocates nothing. */
 QJSIntlStatus qjs_intl_root_input_reset(const QJSIntlRootInput *, QJSIntlRootReset,
