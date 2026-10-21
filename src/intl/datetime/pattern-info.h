@@ -19,7 +19,14 @@ typedef struct QJSIntlDatePatternInfo {
     unsigned int year_kinds;
 } QJSIntlDatePatternInfo;
 
-/* Input must be an unchanged compiled ordinary pattern. Allocate/retain nothing;
+/* Apply the CLDR data workaround to a private mutable token program: Y becomes
+   y only when an unquoted M/L field is present and w/W fields are absent.
+   Preserve widths/literals and raw source bytes; return whether tokens changed.
+   Allocate nothing. This is compatibility policy, not an LDML/ECMA requirement. */
+int qjs_intl_date_pattern_fix_calendar_year(QJSIntlDatePattern *pattern);
+
+/* Input must be a compiled ordinary pattern, optionally corrected by the
+   calendar-year workaround above. Allocate/retain nothing;
    require output disjoint from input and clear output on failure. Unsupported
    fields, widths or repeated components return UNSUPPORTED, not malformed data.
    Literal-only and a-only patterns may yield empty public components. This is

@@ -14,15 +14,16 @@ typedef struct QJSIntlDatePreparedStyle {
     unsigned int adaptations;
 } QJSIntlDatePreparedStyle;
 
-/* First compile the exact selected DATE style. Only a width-one week-year Y
-   with otherwise supported date fields may request native reconstruction from
+/* First prepare the selected DATE style, including the shared month/no-week
+   CLDR data workaround. Remaining width-one Y sources with otherwise supported
+   date fields may request native reconstruction from
    the supplied locale/calendar's ordinary visible available pool. Require a
    real y-only whole source with the same fields/contexts; prefer exact widths,
    then SHORT-to-LONG month/weekday names whose source skeleton permits expansion.
    Preserve candidate punctuation and field order, not the unsupported style's.
    Missing/BLOCK/empty and all other unsupported sources stay unsupported.
    Keep original style/skeleton provenance plus actual replacement provenance and
-   REBUILT flag. No Y token becomes a legal y source. Generic source provenance
+   REBUILT flag. Raw pack/source strings stay unchanged. Generic source provenance
    never selects arithmetic; the caller retains its requested calendar identity.
    Use the style owner's own indexes; the pool has its independent owner indexes.
    Own the effective program, borrowing provenance from unchanged packs. Pool
