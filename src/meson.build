@@ -146,6 +146,7 @@ if intl_enabled
     'quickjs/builtins/intl/supported-values.c',
   )
   support_sources += files(
+    'intl/collation/root-data.c',
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
     'intl/common/range-compose.c',

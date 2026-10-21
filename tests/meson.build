@@ -615,6 +615,12 @@ if intl_enabled
     command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: intl_tool_dependencies,
   )
+  intl_collation_fixture = custom_target(
+    'intl-collation-authored-fixture',
+    output: 'intl-collation-authored-fixture.c',
+    command: [python, files('intl_collation_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
   intl_numbering_owner_sources = files(
     'test_intl_numbering_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -3336,6 +3342,11 @@ if intl_enabled
       'test_intl_pack.c',
       '../src/intl/native/pack.c',
     ),
+    'test_intl_collation_data': files(
+      'test_intl_collation_data.c',
+      '../src/intl/collation/root-data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_collation_fixture],
     'test_intl_locale_grammar': files(
       'test_intl_locale_grammar.c',
       '../src/intl/common/locale-grammar.c',
