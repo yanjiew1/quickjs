@@ -989,9 +989,6 @@ int unicode_compose_pair(uint32_t c0, uint32_t c1)
 }
 
 /* return the combining class of character c (between 0 and 255) */
-#ifndef USE_TEST
-static
-#endif
 int unicode_get_cc(uint32_t c)
 {
     uint32_t code, n, type, cc, c1, b;
@@ -1488,6 +1485,39 @@ static int unicode_prop1(CharRange *cr, int prop_idx)
         bit ^= 1;
     }
     return 0;
+}
+
+BOOL lre_is_soft_dotted(uint32_t c)
+{
+    const uint8_t *p = unicode_prop_Soft_Dotted_table;
+    const uint8_t *end = p + countof(unicode_prop_Soft_Dotted_table);
+    uint32_t limit = 0, bit = 0;
+    if (c < 128)
+        return c == 'i' || c == 'j';
+    /* Query the existing alternating-range encoding without materializing a
+       CharRange or creating another owner of the generated property table. */
+    while (p < end) {
+        uint32_t b = *p++;
+        if (b < 64) {
+            limit += (b >> 3) + 1;
+            if (c < limit)
+                return bit;
+            bit ^= 1;
+            limit += (b & 7) + 1;
+        } else if (b >= 0x80) {
+            limit += b - 0x80 + 1;
+        } else if (b < 0x60) {
+            limit += (((b - 0x40) << 8) | p[0]) + 1;
+            p++;
+        } else {
+            limit += (((b - 0x60) << 16) | (p[0] << 8) | p[1]) + 1;
+            p += 2;
+        }
+        if (c < limit)
+            return bit;
+        bit ^= 1;
+    }
+    return FALSE;
 }
 
 typedef enum {
