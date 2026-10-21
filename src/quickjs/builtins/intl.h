@@ -21,9 +21,13 @@ typedef struct JSIntlLocaleList {
 } JSIntlLocaleList;
 
 QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx);
-/* Runtime-owned number service shared by binding-level capability consumers. */
+/* Borrow runtime-owned services for binding-level capability queries. */
 QJSIntlNumberService *js_intl_number_service(JSContext *ctx);
 QJSIntlDateTimeService *js_intl_datetime_service(JSContext *ctx);
+QJSIntlDisplayService *js_intl_display_service(JSContext *ctx);
+QJSIntlRelativeService *js_intl_relative_service(JSContext *ctx);
+JSValue js_intl_supported_values(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv);
 const char *js_intl_default_locale(JSContext *ctx);
 QJSIntlAllocator js_intl_allocator(JSRuntime *rt);
 int js_intl_ensure_intrinsics(JSContext *ctx);
