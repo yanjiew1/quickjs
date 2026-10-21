@@ -155,6 +155,7 @@ A failed append poisons staging; abort and clear it. Successful finish returns
 an independent byte image. `--compile-pair` emits no bytes until all programs and
 serialization succeed; Windows stdout is placed in binary mode.
 
-A caller publishing this output must capture the complete successful process
-result and atomically replace its destination. Runtime readers will own semantic
-validation before exposing any service capability.
+`tools/intl/collation_archive.py` captures the complete process output, checks
+framing and source identity, then atomically replaces its destination. It does
+not allocate weights, normalize text or claim full semantic validation. Runtime
+readers will own semantic validation before exposing any service capability.

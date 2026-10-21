@@ -358,9 +358,16 @@ root omits compiler reset/weak/token tables; per-program blocks copy ranked CEs,
 keys, suppression, policy, sparse shifts and the compact trie. The compiler
 retains no snapshot pointers after append, and failed staging cannot finish.
 `--compile-pair root.qjcr input.qjci` emits a complete binary image on stdout.
-Public locale/type bindings and runtime service publication remain subsequent
-integration layers. A caller publishing the binary output must first capture the
-complete successful image and replace its destination atomically.
+The Python publication wrapper checks framing/source identity before atomically
+replacing its output; it never normalizes or executes rules. Public locale/type
+bindings and runtime service publication remain subsequent integration layers.
+
+```sh
+python3 tools/intl/collation_archive.py \
+  --compiler build/intl-collation-compile \
+  --root-input build/root.qjcr --program-input build/programs.qjci \
+  --output build/collation-runtime.qjcl
+```
 
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
