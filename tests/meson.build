@@ -635,6 +635,21 @@ if intl_enabled
     depend_files: intl_tool_dependencies + files('intl_collation_fixture.py'),
   )
 
+  intl_collation_root_input_fixture = custom_target(
+    'intl-collation-root-input-fixture',
+    output: 'intl-collation-root-input-fixture.c',
+    command: [python, files('intl_collation_root_input_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_collation_root_input.py',
+      'test_intl_collation_ordinals.py',
+      'test_intl_collation_fractional.py',
+      '../tools/intl/collation_root_input.py',
+      '../tools/intl/collation_ordinals.py',
+      '../tools/intl/collation_fractional.py',
+      '../tools/intl/collation_groups.py',
+    ),
+  )
+
 
   intl_numbering_owner_sources = files(
     'test_intl_numbering_data.c',
@@ -3466,6 +3481,16 @@ if intl_enabled
       '../src/unicode/libunicode.c',
       '../src/cutils/cutils.c',
     ) + unicode_tables + [intl_collation_elements_fixture],
+    'test_intl_collation_root_input': files(
+      'test_intl_collation_root_input.c',
+      '../tools/intl/collation-root-input.c',
+      '../src/intl/collation/match.c',
+      '../src/intl/collation/keys.c',
+      '../src/unicode/blocks.c',
+      '../src/unicode/category.c',
+      '../src/unicode/libunicode.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables + [intl_collation_root_input_fixture],
     'test_intl_collation_logical': files(
       'test_intl_collation_logical.c',
       '../src/intl/collation/logical.c',
@@ -4399,6 +4424,23 @@ if intl_enabled
     'intl-collation-root-ordinals',
     python,
     args: files('test_intl_collation_ordinals.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-root-cli',
+    python,
+    args: [files('test_intl_collation_root_reader.py'), '--compiler', collation_compile],
+    depends: collation_compile,
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-root-input',
+    python,
+    args: files('test_intl_collation_root_input.py'),
     suite: ['repo', 'generator', 'unit'],
     timeout: 30,
   )
