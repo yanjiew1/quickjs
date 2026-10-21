@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_DATETIME_DATE_CLOCK_PROGRAMS_H
 #define QJS_INTL_DATETIME_DATE_CLOCK_PROGRAMS_H
 #include "ordinary-programs.h"
+#include "../common/pair-pattern.h"
 
 typedef struct QJSIntlDateClockProgram {
     QJSIntlDateTimeComponents components;
@@ -32,7 +33,9 @@ typedef struct QJSIntlDateClockPrograms {
 
    Allocate no result when there are no combinations. Own both output programs,
    independent of input pattern/array lifetimes. Connector provenance still
-   borrows its immutable pack; retained input indexes are diagnostic only.
+   borrows its immutable pack. Retained indexes identify the original inputs
+   for callers that keep those inputs unchanged and alive; output patterns
+   themselves remain independent of those inputs.
    Names, chronology, matching, range construction and capability are not proved
    here. Require malloc/free and fresh disjoint output; reset/unwind errors.
    Clear with the retained allocator, including after failure or repeated clear. */
@@ -45,4 +48,16 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
                                                const QJSIntlAllocator *allocator,
                                                QJSIntlDateClockPrograms *out);
 void qjs_intl_date_clock_programs_clear(QJSIntlDateClockPrograms *programs);
+/* Apply a date-field append item before the date/time connector. Inputs are
+   unchanged validated ordinary patterns, an LDML connector and parsed literal
+   append layout. Own one final pattern, reset errors and release all temporary
+   patterns on every path. This performs composition, not field admission or
+   candidate selection. Follow pattern.h's allocator/disjoint-output contract. */
+QJSIntlStatus qjs_intl_date_clock_append_date_field(const QJSIntlAllocator *,
+                                                    const QJSIntlDatePattern *date,
+                                                    const QJSIntlDatePattern *clock,
+                                                    QJSIntlBytes connector,
+                                                    const QJSIntlPairPattern *append,
+                                                    const QJSIntlDatePattern *field,
+                                                    QJSIntlDatePattern *out);
 #endif
