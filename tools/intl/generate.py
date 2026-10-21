@@ -12,6 +12,7 @@ import calendar_name_tables
 import calendar_eras
 import calendar_era_tables
 import collation_contexts
+import collation_bundle
 import collation_root
 import collation_tables
 import compact_patterns
@@ -78,10 +79,17 @@ class Inputs:
         return result
 
 
-def generate(sources, profile):
+def generate(sources, profile, compiled_collation=None):
     if profile not in bundle.PROFILES:
         raise ValueError('unknown native Intl data profile')
     inputs_read = Inputs(sources)
+    # Authored fixtures can omit optional service sections. The production CLI
+    # requires the already compiled profile; generation never invents a fallback.
+    compiled_section = None
+    if compiled_collation is not None:
+        compiled_section = collation_bundle.pair(
+            inputs_read, profile, bytes.fromhex(sources.pin['manifest_sha256']), compiled_collation)
+
     inputs_read.read('LICENSE')
     graph, fallback_aliases = availability.complete(parents.load(inputs_read))
     locale_data = locale_metadata.collect(inputs_read, graph)
@@ -205,6 +213,8 @@ def generate(sources, profile):
     # Root UCA mappings are global scalar data, not locale-row projection.
     sections[bundle.COLLATION_ROOT] = collation_tables.encode(collation_data)
     sections[bundle.COLLATION_CONTEXTS] = collation_contexts.encode(collation_context_data, collation_data)
+    if compiled_section is not None:
+        sections[bundle.COMPILED_COLLATION] = compiled_section
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -225,7 +235,8 @@ def generate(sources, profile):
                          'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'available date patterns, append templates, interval and localized timezone source layers, '
                          'supplemental metazone presentation, day-period clock facts and explicit era name keys, '
-                         'root UCA mappings, layered display names and plural rules; '
+                         'root UCA mappings, optional bound compiled collation, '
+                         'layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
     return binary, manifest
@@ -235,10 +246,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--profile', choices=tuple(bundle.PROFILES), required=True)
+    parser.add_argument('--compiled-collation', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     args = parser.parse_args()
-    binary, manifest = generate(acquire.Sources(args.sources), args.profile)
+    binary, manifest = generate(acquire.Sources(args.sources), args.profile,
+                                args.compiled_collation.read_bytes())
     acquire.atomic_write(args.output, binary)
     acquire.atomic_write(args.manifest, acquire.json_bytes(manifest))
 
