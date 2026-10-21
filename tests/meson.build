@@ -4671,6 +4671,14 @@ test(
 )
 
 test(
+  'intl-collation-bindings',
+  python,
+  args: files('test_intl_collation_bindings.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-collation-programs',
   python,
   args: files('test_intl_collation_programs.py'),

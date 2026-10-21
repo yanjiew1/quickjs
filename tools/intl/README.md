@@ -130,6 +130,23 @@ locale Collator support.
 
 ### Host collation compiler input
 
+`collation_bindings.py` resolves the prepared profile's public locale/type
+inventory independently of compiler program identity. Default sort follows
+TR35's deliberate fallback, while search requires an actual inherited search
+program. Named public types use exact collation-component lookup, never
+permissive fallback to a different type. BCP47 alias/preferred records supply
+canonical names; private helpers, diagnostic alternates, standard and search
+are not public type values. A named type remains explicit even when it targets
+the same program as the locale default. Search initially exposes only the null
+default, independently of named sort targets.
+
+Profile projection is shared with prepared data generation, but internal root
+never becomes a public service locale. Synthetic language-region identities
+retain their deliberate source mapping before collation-specific inheritance.
+Resolved targets are still source identities here; archive binding and runtime
+service publication are subsequent layers. This collector alone does not
+advertise Collator capability or override the specified Intl.Locale exceptions.
+
 `collation_ir.py` expands the ordered program catalog into a counted build-time
 artifact. `intl-collation-compile --audit-ir input.qjci` reads it using explicit
 little-endian loads, runs text operands through the engine's pinned Unicode NFD
