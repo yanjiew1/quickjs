@@ -66,7 +66,8 @@ the string pool ends with UTF-8 bytes. Total pack size is bounded to 256 MiB.
 Many complex sections use the selected locale count even though their internal
 tables contain many more records. Section 33 counts zone descriptors; section
 34 counts explicit rule-list origins; section 35 counts explicit era mappings;
-section 36 counts root collation mappings independently of locale count.
+section 36 counts root collation mappings independently of locale count;
+section 37 counts their preceding-context metadata records.
 The section reference defines each case.
 
 The generation identity is not an authentication signature and is not checked
