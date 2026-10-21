@@ -10,10 +10,10 @@ import collation_programs
 import collation_rules as rules
 
 MAGIC = b'QJCI'
-VERSION = 1
+VERSION = 2
 UNICODE_VERSION = 18 << 16
 MAX_SIZE = 64 * 1024 * 1024
-HEADER = struct.Struct('<4s4I')
+HEADER = struct.Struct('<4s4I32s')
 PROGRAM = struct.Struct('<5I')
 NODE = struct.Struct('<6I')
 U32 = struct.Struct('<I')
@@ -83,7 +83,7 @@ def encode_node(node):
                      integer(len(source))) + body
 
 
-def encode(programs):
+def encode(programs, fingerprint):
     """Programs are already import-expanded; order and provenance stay intact.
 
     Records carry three scalar vectors. Reset uses text/special/empty;
@@ -91,6 +91,8 @@ def encode(programs):
     setting uses name/NUL-terminated values/empty. Only source labels are UTF-8.
     All fields are counted, so text NUL is preserved without C string inference.
     """
+    if not isinstance(fingerprint, bytes) or len(fingerprint) != 32:
+        raise DataError('collation IR needs a 32-byte source manifest fingerprint')
     output, previous, count = bytearray(HEADER.size), None, 0
     for program in programs:
         key = collation_programs.identity(program)
@@ -116,14 +118,14 @@ def encode(programs):
         if len(output) > MAX_SIZE:
             raise DataError('collation IR exceeds size budget')
         count += 1
-    HEADER.pack_into(output, 0, MAGIC, VERSION, UNICODE_VERSION, len(output), integer(count))
+    HEADER.pack_into(output, 0, MAGIC, VERSION, UNICODE_VERSION, len(output), integer(count), fingerprint)
     return bytes(output)
 
 
 def prepare(sources):
     catalog = collation_programs.load(sources)
-    return encode(catalog.programs[key]._replace(nodes=catalog.expand(catalog.programs[key]))
-                  for key in sorted(catalog.programs))
+    return encode((catalog.programs[key]._replace(nodes=catalog.expand(catalog.programs[key]))
+                   for key in sorted(catalog.programs)), bytes.fromhex(sources.pin['manifest_sha256']))
 
 
 def main():

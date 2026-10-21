@@ -2,6 +2,7 @@
  * This stage does not allocate weights or emit executable tailorings.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-root-input.h"
+#include "collation-ir.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -9,254 +10,125 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define IR_MAX_SIZE (64u * 1024 * 1024)
-#define IR_MAX_EXPANDED 1000000u
-#define IR_MAX_TOTAL_EXPANDED (4u * IR_MAX_EXPANDED)
+#define IR_MAX_SIZE QJS_INTL_IR_MAX_SIZE
 #define IR_UNICODE_VERSION (((uint32_t)LIBUNICODE_UNICODE_VERSION_MAJOR << 16) | \
                             (LIBUNICODE_UNICODE_VERSION_MINOR << 8) | LIBUNICODE_UNICODE_VERSION_PATCH)
 
-typedef struct Reader {
-    const uint8_t *at, *end;
-} Reader;
-
-typedef struct Scalars {
-    const uint8_t *data;
-    uint32_t count;
-} Scalars;
+typedef QJSIntlIRScalars Scalars;
 
 typedef struct Audit {
     uint64_t programs, instructions, texts, starred;
-    uint32_t program_starred;
-    const uint8_t *source;
-    uint32_t source_length, line, column;
     int preflight;
 } Audit;
 
-static uint32_t load32(const uint8_t *p)
-{
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-        ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
-}
-
-static int word(Reader *reader, uint32_t *out)
-{
-    if ((size_t)(reader->end - reader->at) < 4)
-        return -1;
-    *out = load32(reader->at);
-    reader->at += 4;
-    return 0;
-}
-
-static int label(Reader *reader, uint32_t length, const uint8_t **out)
-{
-    const uint8_t *end, *next;
-    int code;
-    if (length > (size_t)(reader->end - reader->at))
-        return -1;
-    end = reader->at + length;
-    /* Labels are diagnostics, not executable strings. Reject embedded control
-       bytes so a malformed artifact cannot forge extra diagnostic lines. */
-    for (*out = reader->at; reader->at < end; reader->at = next) {
-        code = unicode_from_utf8(reader->at, end - reader->at, &next);
-        if (code < 0x20 || code == 0x7f || code > 0x10ffff ||
-            (code >= 0xd800 && code <= 0xdfff))
-            return -1;
-    }
-    return 0;
-}
-
-static int scalars(Reader *reader, Scalars *out)
-{
-    uint32_t i, code;
-    if (word(reader, &out->count) || out->count > (size_t)(reader->end - reader->at) / 4)
-        return -1;
-    out->data = reader->at;
-    reader->at += (size_t)out->count * 4;
-    for (i = 0; i < out->count; i++) {
-        code = load32(out->data + (size_t)i * 4);
-        if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff))
-            return -1;
-    }
-    return 0;
-}
-
 static void *normalize_realloc(void *opaque, void *ptr, size_t size)
 {
-    (void)opaque;
+    QJSIntlStatus *failure = opaque;
+    void *result;
     if (!size) {
         free(ptr);
         return NULL;
     }
-    if (size > IR_MAX_SIZE)
+    if (size > IR_MAX_SIZE) {
+        if (failure)
+            *failure = QJS_INTL_OVERFLOW;
         return NULL;
-    return realloc(ptr, size);
+    }
+    result = realloc(ptr, size);
+    if (!result && failure)
+        *failure = QJS_INTL_NO_MEMORY;
+    return result;
 }
 
-static int normalize_text(const Scalars *text, Audit *audit)
+static QJSIntlStatus normalize_text(const Scalars *text, Audit *audit)
 {
     uint32_t *input, *normalized = NULL, i;
     int length;
+    QJSIntlStatus failure = QJS_INTL_OK;
     if (!text->count || audit->preflight)
-        return 0;
-    /* IR extents bound this allocation and the int count accepted by Unicode.
-       Decode rather than aliasing an unaligned little-endian scalar vector. */
+        return QJS_INTL_OK;
+    /* Decode counted wire scalars without assuming native alignment/endian. */
     input = malloc((size_t)text->count * sizeof(*input));
     if (!input)
-        return -1;
+        return QJS_INTL_NO_MEMORY;
     for (i = 0; i < text->count; i++)
-        input[i] = load32(text->data + (size_t)i * 4);
+        input[i] = qjs_intl_ir_scalar(text, i);
     length = unicode_normalize(&normalized, input, text->count, UNICODE_NFD,
-                               NULL, normalize_realloc);
+                               &failure, normalize_realloc);
     free(input);
     free(normalized);
     if (length < 0)
-        return -1;
+        return failure ? failure : QJS_INTL_DATA_ERROR;
     audit->texts++;
-    return 0;
+    return QJS_INTL_OK;
 }
 
-static int ranges(const Scalars *text, int starred, Audit *audit)
+static QJSIntlStatus audit_starred(const Scalars *text, Audit *audit)
 {
-    uint32_t i, first, last, code;
-    if ((text->count & 1) || (starred && !text->count))
-        return -1;
+    uint32_t i;
+    /* Structural preflight already counted cardinalities across every program.
+       Semantic checks still examine every interior scalar before normalization. */
     for (i = 0; i < text->count; i += 2) {
-        first = load32(text->data + (size_t)i * 4);
-        last = load32(text->data + (size_t)(i + 1) * 4);
-        if (first > last || (first <= 0xdfff && last >= 0xd800))
-            return -1;
-        if (!starred)
-            continue;
-        if (last - first + 1 > IR_MAX_EXPANDED - audit->program_starred)
-            return -1;
-        audit->program_starred += last - first + 1;
-        if (last - first + 1 > IR_MAX_TOTAL_EXPANDED - audit->starred)
-            return -1;
+        uint32_t first = qjs_intl_ir_scalar(text, i), last = qjs_intl_ir_scalar(text, i + 1), code;
         audit->starred += last - first + 1;
         if (audit->preflight)
             continue;
-        /* Starred ranges must be NFD-inert BEFORE normalization. Checking only
-           endpoints misses decomposable/combining characters in the interior. */
         for (code = first; code <= last; code++) {
             uint32_t *normalized = NULL;
             int length, inert;
+            QJSIntlStatus failure = QJS_INTL_OK;
             if (unicode_get_cc(code))
-                return -1;
+                return QJS_INTL_DATA_ERROR;
             length = unicode_normalize(&normalized, &code, 1, UNICODE_NFD,
-                                       NULL, normalize_realloc);
+                                       &failure, normalize_realloc);
             inert = length == 1 && normalized[0] == code;
             free(normalized);
+            if (length < 0)
+                return failure ? failure : QJS_INTL_DATA_ERROR;
             if (!inert)
-                return -1;
+                return QJS_INTL_DATA_ERROR;
         }
     }
-    return 0;
+    return QJS_INTL_OK;
 }
 
-static int node(Reader *program, Audit *audit)
+static QJSIntlStatus audit_instruction(void *opaque, const QJSIntlIRInstruction *node)
 {
-    Reader reader;
-    Scalars fields[3];
-    uint32_t size, kind, auxiliary, i, source_length, line, column;
-    const uint8_t *start = program->at, *source;
-    audit->source = NULL;
-    if (word(program, &size) || size < 36 || size > (size_t)(program->end - start))
-        return -1;
-    reader = (Reader){program->at, start + size};
-    program->at = reader.end;
-    if (word(&reader, &kind) || word(&reader, &auxiliary) ||
-        word(&reader, &line) || word(&reader, &column) ||
-        word(&reader, &source_length) || !line || !column ||
-        !source_length || label(&reader, source_length, &source))
-        return -1;
-    audit->source = source;
-    audit->source_length = source_length;
-    audit->line = line;
-    audit->column = column;
-    for (i = 0; i < 3; i++) {
-        if (scalars(&reader, &fields[i]))
-            return -1;
-    }
-    if (reader.at != reader.end)
-        return -1;
-    switch (kind) {
-    case 1: /* text reset or logical reset name */
-        if (auxiliary > 3 || !!fields[0].count == !!fields[1].count || fields[2].count)
-            return -1;
-        if (normalize_text(&fields[0], audit))
-            return -1;
+    Audit *audit = opaque;
+    QJSIntlStatus status = QJS_INTL_OK;
+    uint32_t i;
+    const Scalars *fields = node->fields;
+    switch (node->kind) {
+    case QJS_INTL_IR_RESET:
+        status = normalize_text(fields, audit);
         break;
-    case 2: /* prefix, relation string, extension */
-        if (auxiliary > 4 || !fields[1].count)
-            return -1;
-        /* Prefix and mapped text will normalize separately. Check their
-           ORIGINAL starts before normalization so context cannot cross the
-           split. Extension strings are independent lookups, not prefixes. */
+    case QJS_INTL_IR_RELATION:
+        /* Keep the ORIGINAL boundary check in the nonallocating semantic pass.
+           Extensions are independent text, not part of the prefix split. */
         if (fields[0].count &&
-            (!unicode_nfc_boundary_before(load32(fields[0].data)) ||
-             !unicode_nfc_boundary_before(load32(fields[1].data))))
-            return -1;
-        for (i = 0; i < 3; i++) {
-            if (normalize_text(&fields[i], audit))
-                return -1;
-        }
+            (!unicode_nfc_boundary_before(qjs_intl_ir_scalar(fields, 0)) ||
+             !unicode_nfc_boundary_before(qjs_intl_ir_scalar(fields + 1, 0))))
+            return QJS_INTL_DATA_ERROR;
+        for (i = 0; i < 3 && !status; i++)
+            status = normalize_text(fields + i, audit);
         break;
-    case 3: /* ordered starred ranges */
-    case 5: /* suppression set */
-    case 6: /* optimization hint set */
-        if (auxiliary > (kind == 3 ? 4 : 0) || fields[1].count || fields[2].count ||
-            ranges(&fields[0], kind == 3, audit))
-            return -1;
-        break;
-    case 4: /* name and NUL-separated values, interpreted by semantic compilation */
-        if (auxiliary || !fields[0].count || !fields[1].count || fields[2].count ||
-            load32(fields[1].data + (size_t)(fields[1].count - 1) * 4))
-            return -1;
+    case QJS_INTL_IR_STARRED:
+        status = audit_starred(fields, audit);
         break;
     default:
-        return -1;
+        break; /* Structural audit does not promise semantic setting support. */
     }
-    audit->instructions++;
-    return 0;
+    if (!status)
+        audit->instructions++;
+    return status;
 }
 
-static int audit_ir(const uint8_t *bytes, size_t length, Audit *audit)
+static QJSIntlStatus audit_end(void *opaque, const QJSIntlIRProgram *program)
 {
-    Reader reader = {bytes, bytes + length};
-    uint32_t version, unicode_version, size, count, i;
-    if (length < 20 || length > IR_MAX_SIZE || memcmp(bytes, "QJCI", 4))
-        return -1;
-    reader.at += 4;
-    if (word(&reader, &version) || version != 1 ||
-        word(&reader, &unicode_version) || unicode_version != IR_UNICODE_VERSION ||
-        word(&reader, &size) || size != length || word(&reader, &count) ||
-        count > (size_t)(reader.end - reader.at) / 20)
-        return -1;
-    for (i = 0; i < count; i++) {
-        Reader program;
-        uint32_t locale, type, alternate, operations, j;
-        const uint8_t *ignored, *start = reader.at;
-        audit->source = NULL;
-        if (word(&reader, &size) || size < 20 || size > (size_t)(reader.end - start))
-            return -1;
-        program = (Reader){reader.at, start + size};
-        reader.at = program.end;
-        if (word(&program, &locale) || !locale || word(&program, &type) || !type ||
-            word(&program, &alternate) || word(&program, &operations) ||
-            label(&program, locale, &ignored) || label(&program, type, &ignored) ||
-            label(&program, alternate, &ignored) ||
-            operations > (size_t)(program.end - program.at) / 36)
-            return -1;
-        audit->program_starred = 0;
-        for (j = 0; j < operations; j++) {
-            if (node(&program, audit))
-                return -1;
-        }
-        if (program.at != program.end)
-            return -1;
-        audit->programs++;
-    }
-    return reader.at == reader.end ? 0 : -1;
+    Audit *audit = opaque;
+    (void)program;
+    audit->programs++;
+    return QJS_INTL_OK;
 }
 
 static void *root_malloc(void *opaque, size_t size)
@@ -286,19 +158,13 @@ static int audit_root(const uint8_t *bytes, size_t size)
     return 0;
 }
 
-int main(int argc, char **argv)
+static int read_input(const char *path, uint8_t **bytes, size_t *length)
 {
-    FILE *file;
-    uint8_t *bytes;
+    FILE *file = fopen(path, "rb");
     long size;
-    Audit audit = {.preflight = 1};
-    int failed, root_mode;
-    if (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root"))) {
-        fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr\n", argv[0]);
-        return 2;
-    }
-    root_mode = !strcmp(argv[1], "--audit-root");
-    file = fopen(argv[2], "rb");
+    int failed;
+    *bytes = NULL;
+    *length = 0;
     if (!file)
         return 1;
     if (fseek(file, 0, SEEK_END) || (size = ftell(file)) < 20 || size > IR_MAX_SIZE ||
@@ -306,38 +172,83 @@ int main(int argc, char **argv)
         fclose(file);
         return 1;
     }
-    bytes = malloc((size_t)size);
-    if (!bytes) {
+    *bytes = malloc((size_t)size);
+    if (!*bytes) {
         fclose(file);
         return 1;
     }
-    failed = fread(bytes, 1, (size_t)size, file) != (size_t)size;
+    failed = fread(*bytes, 1, (size_t)size, file) != (size_t)size;
     if (fclose(file))
         failed = 1;
+    if (failed) {
+        free(*bytes);
+        *bytes = NULL;
+    } else {
+        *length = (size_t)size;
+    }
+    return failed;
+}
+
+int main(int argc, char **argv)
+{
+    uint8_t *bytes, *root_bytes = NULL;
+    size_t size, root_size;
+    QJSIntlRootInput root = {0};
+    QJSIntlIRView view;
+    QJSIntlIRDiagnostic error;
+    const QJSIntlIRVisitor visitor = {NULL, audit_instruction, audit_end};
+    QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
+    Audit audit = {.preflight = 1};
+    int failed, root_mode, pair_mode;
+    pair_mode = argc == 4 && !strcmp(argv[1], "--audit-pair");
+    if (!pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
+        fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr | "
+                "--audit-pair root.qjcr input.qjci\n", argv[0]);
+        return 2;
+    }
+    root_mode = !strcmp(argv[1], "--audit-root");
+    if (IR_UNICODE_VERSION != QJS_INTL_IR_UNICODE_VERSION) {
+        fputs("compiler Unicode version does not match its input schema\n", stderr);
+        return 1;
+    }
+    if (pair_mode) {
+        if (read_input(argv[2], &root_bytes, &root_size))
+            return 1;
+        if (qjs_intl_root_input_open(root_bytes, root_size, &allocator, &root)) {
+            free(root_bytes);
+            fputs("invalid logical root input or allocation failure\n", stderr);
+            return 1;
+        }
+    }
+    if (read_input(argv[pair_mode ? 3 : 2], &bytes, &size)) {
+        free(root_bytes);
+        return 1;
+    }
     if (root_mode) {
-        if (!failed)
-            failed = audit_root(bytes, (size_t)size);
+        failed = audit_root(bytes, size);
         free(bytes);
         return failed ? 1 : 0;
     }
-    /* Preflight the whole artifact before any allocating normalization. A
-       compact repeated range must not evade the budget by changing programs. */
+    /* Pair identities and preflight the whole artifact before allocating any
+       normalization or future per-program execution state. */
+    failed = qjs_intl_ir_open(bytes, size, root.fingerprint, &view, &error);
     if (!failed)
-        failed = audit_ir(bytes, (size_t)size, &audit);
+        failed = qjs_intl_ir_visit(&view, &visitor, &audit, &error);
     if (!failed) {
         audit = (Audit){0};
-        failed = audit_ir(bytes, (size_t)size, &audit);
+        failed = qjs_intl_ir_visit(&view, &visitor, &audit, &error);
     }
     if (failed) {
-        if (audit.source)
-            fprintf(stderr, "%.*s:%u:%u: ", (int)audit.source_length, (const char *)audit.source,
-                    audit.line, audit.column);
-        fputs("invalid tailoring IR or normalization constraint\n", stderr);
+        if (error.source.bytes)
+            fprintf(stderr, "%.*s:%u:%u: ", (int)error.source.length, (const char *)error.source.bytes,
+                    error.line, error.column);
+        fputs("invalid tailoring IR, source identity or normalization constraint\n", stderr);
     } else {
         printf("{\"programs\":%" PRIu64 ",\"instructions\":%" PRIu64
                ",\"normalized_texts\":%" PRIu64 ",\"starred_scalars\":%" PRIu64 "}\n",
                audit.programs, audit.instructions, audit.texts, audit.starred);
     }
     free(bytes);
+    free(root_bytes);
     return failed ? 1 : 0;
 }
