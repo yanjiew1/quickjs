@@ -591,3 +591,42 @@ occurs here. In particular, Chinese/Dangi sequential epoch records without a
 canonical code do not create era 0, and Japanese inherited Gregorian eras are
 resolved explicitly by the chronology/presentation consumer. Future canonical
 codes and noncontiguous raw IDs remain data, without changing a compiled table.
+
+## 36 — Root collation elements
+
+Encoder/decoder `tools/intl/collation_tables.py`; authenticated source collector
+`tools/intl/collation_root.py`. This optional section describes explicit CLDR
+root UCA mappings, independently of selected locale inventories. Its presence
+does not establish executable Collator support or apply locale tailorings.
+
+**N is the number of mappings**, and must be positive. Header words are
+`(1, unicode_version, K, E)`. The first word is this section's format version;
+`unicode_version` packs major/minor/patch in bits 16/8/0. The current source
+version is Unicode 18.0.0, encoded as `18 << 16`.
+
+The header is followed by:
+
+1. `mappings[N][4]` = `(key_start, key_length, element_start, element_length)`.
+2. `keys[K]`, Unicode scalar values stored as little-endian u32.
+3. `elements[E]`, each eight bytes: little-endian u16 primary, secondary,
+   tertiary and variable flag, in that order.
+
+Total length is exactly `4 + 4*N + K + 2*E` words. Each mapping has nonzero
+key and element lengths. Both start/length pairs form contiguous partitions
+of their entire respective pool, beginning at zero; no unused suffixes,
+overlaps or forward references are permitted. This initial representation
+keeps validation independent of temporary allocation or vector-interning state.
+
+Keys are strictly ordered by lexicographic scalar-sequence order, including
+prefixes before longer keys. Scalars include U+0000 and noncharacters, but
+exclude surrogate code points and values above U+10FFFF. These sequences do
+not enter the NUL-free UTF-8 string pool. Handling an unpaired UTF-16 surrogate
+at runtime is a separate collation algorithm concern.
+
+Weights retain all three source levels, including zero/ignorable weights.
+The variable flag must be 0 or 1; a variable element has nonzero primary
+weight. Source contractions and ordered expansions remain intact. Neither
+key length nor expansion length is restricted to the observed source maxima.
+Normalization, implicit-weight derivation, case/numeric options, variable
+handling and locale tailoring are consumers of this data, not encoded results
+or additional comparison levels.
