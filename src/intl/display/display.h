@@ -46,6 +46,13 @@ void qjs_intl_display_close(QJSIntlDisplayService *);
    Queries allocate nothing and reset non-NULL outputs on failure. */
 QJSIntlStatus qjs_intl_display_available(const QJSIntlDisplayService *, const QJSIntlBytes **,
                                          size_t *count);
+/* Canonical currency codes with a usable plain name (including explicit empty)
+   in at least one admitted locale. Excludes metadata-only/symbol-only entries.
+   Sorted unique borrowed output, no allocation. Start cursor at zero; advance
+   on success/exhaustion (UNSUPPORTED), preserve on other errors. Clear output
+   on errors/end. NumberFormat currency capability is a separate service query. */
+QJSIntlStatus qjs_intl_display_currency_next(const QJSIntlDisplayService *,
+                                             uint32_t *cursor, QJSIntlBytes *out);
 /* Exact available index and copied options, with a nonzero UTF-16 output bound.
    Formatter retains no service-owned pointers and may outlive the service. */
 QJSIntlStatus qjs_intl_display_formatter_open(const QJSIntlDisplayService *, size_t locale,
