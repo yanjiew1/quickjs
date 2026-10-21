@@ -1,20 +1,20 @@
-# Intl and shared internationalization services design
+# Intl and shared internationalization module design
 
 Version one adds complete standard Intl support to the existing Temporal fork
 using native C algorithms with minimal and full locale-data profiles. Version
 two adds ICU4C, and version three considers ICU4X, as equal implementations of
 the same private C contracts. Preserve their detailed interface, feasibility
 and delivery plans while keeping both backends out of version-one builds.
-The first version selects one coherent backend profile at build time. Services
-remain separately owned, but arbitrary combinations of service backends are a
-future extension. Implementation proceeds in small, testable steps; this plan
+The first version selects one coherent backend profile at build time. Functional
+modules retain separate ownership; arbitrary combinations of module backends
+are a future extension. Implementation proceeds in small, testable steps; this plan
 does not change the engine or claim the proposed interfaces already exist.
 
 ## Scope and source baselines
 
 The implementation target is the latest ECMA-262 and ECMA-402 living drafts
 plus all unmerged Stage 4 ECMA-402 specification text. Include every standard Intl
-service, its current methods, locale information, and integration with String,
+API, its current methods, locale information, and integration with String,
 Number, BigInt, Date and Temporal. Native full-data mode supports every CLDR
 locale with the data relevant to those operations. Intermediate milestones may
 have narrower coverage, identified explicitly until the full acceptance gates.
@@ -79,8 +79,8 @@ PR 1044 acceptance must also explicitly cover:
   accepted duration strings, object coercion and errors. Intl-on builds with
   Temporal constructors disabled still need the shared conversion semantics.
 
-Earlier Stage 4 services and additions already merged into the living draft
-remain required through the full service checklist below. An open normative PR
+Earlier Stage 4 features and additions already merged into the living draft
+remain required through the full feature checklist below. An open normative PR
 is not automatically a Stage 4 proposal. Track normative clarifications
 separately, including the multiple-numbering-system text in
 [PR 1074](https://redirect.github.com/tc39/ecma402/pull/1074), and verify approval
@@ -98,20 +98,36 @@ pack size as proof of full-native coverage.
 
 ## Architecture and ownership
 
+Terminology distinguishes code structure from runtime state:
+
+- A **functional module** owns a coherent responsibility and its dependencies,
+  such as number formatting or collation. A **shared module** supplies genuinely
+  common operations; one module may serve both roles, as plural evaluation does.
+- A **backend/provider** implements a module's selected algorithms and data.
+- A **service instance** is initialized runtime state exposed by a module, such
+  as `QJSIntlCollationService` holding checked data and capability inventories.
+  An operation handle, such as `QJSIntlCollator`, holds resolved configuration.
+  These objects are not dynamically loaded code modules.
+
+Use module terminology for architecture and ownership. Existing `*Service` C
+types name stateful runtime instances; stateless modules need no artificial
+service object. ECMA-402's term “service constructor” refers to its JavaScript
+API category and does not prescribe the project's code boundaries.
+
 Use three layers:
 
 1. **QuickJS bindings** own JS coercion, observable getter order, internal slots,
    realms, bound functions, exceptions, GC and JS result objects.
 2. **Shared C cores and facades** own fixed standard rules, common value/result
-   contracts, specified service composition and shared policies.
+   contracts, specified API composition and shared policies.
 3. **Selected backends** own versioned data and replaceable computation. Native
    and ICU4C implement the same contracts and may use different internal paths.
 
 API names do not define module boundaries. A binding or operation coordinator
 may query several functional modules without making those modules depend on
 one another. For example, an Intl.Locale information method may combine locale
-preferences with a formatter's capability inventory; the locale foundation must
-not open that formatter service to perform the query. Each service owns its
+preferences with a formatter's capability inventory; the locale foundation stays
+independent of formatter initialization. Each module owns its
 actual supported locales and options. A functional module may also serve other
 modules: plural evaluation remains in `plural/`, rather than moving into a
 generic common directory merely because several formatters use it.
@@ -135,7 +151,7 @@ is not inferred from its target. No region yields undefined; an unknown explicit
 region yields a fresh empty array.
 
 ECMAScript-defined semantics belong to the common contract. Fixed pure
-algorithms normally have a shared implementation. A service operation may
+algorithms normally have a shared implementation. A module operation may
 delegate a complete calculation to its backend when the observable behavior
 remains equivalent. All backend implementations are allowed that granularity;
 the interface is not a special bypass for ICU4C. Keep the chosen boundary explicit
@@ -144,14 +160,14 @@ for each operation, especially numeric rounding and date-format matching.
 Implementation-defined operations still have standard constraints. Shared
 runtime policy, such as DefaultLocale, is coordinated centrally even when the
 standard leaves its selection open. Backend-specific helpers shared only by
-native services stay in native support code; ICU4C adapters may likewise share
+native modules stay in native support code; ICU4C adapters may likewise share
 their own helpers.
 
 There is no runtime provider registration, loading, replacement, or vtable.
 Meson selects direct function definitions. Selecting a locale, calendar, or
 timezone within the compiled provider remains a runtime operation.
 
-## Shared services beyond Intl constructors
+## Shared modules beyond Intl constructors
 
 These are private C interfaces, independently usable by their actual consumers.
 They do not require new JavaScript constructors or public embedding APIs.
@@ -160,11 +176,11 @@ They do not require new JavaScript constructors or public embedding APIs.
 | --- | --- | --- |
 | Timezone facade | Identity, primary IDs, offsets, transitions and local-time candidates | Date, Temporal, DateTimeFormat |
 | Calendar facade | ISO core plus non-ISO conversion, months, eras and arithmetic | Temporal, DateTimeFormat; Date reuses the ISO core |
-| Locale foundation | Syntax, canonical identity, aliases, maximize/minimize and matching | Intl services, Intl.Locale, locale-sensitive casing |
+| Locale foundation | Syntax, canonical identity, aliases, maximize/minimize and matching | Intl functional modules, Intl.Locale, locale-sensitive casing |
 | Unicode normalization | Separate NFC/NFD/NFKC/NFKD operations | String.normalize and relevant backend algorithms |
 | Unicode case operations | Default/locale-sensitive case mapping and distinct simple/full folding | String, RegExp and relevant backend algorithms |
 | Unicode properties | Character properties and script/range queries | Parser, RegExp, segmentation and case algorithms |
-| Locale preferences | Hour cycles, calendars, numbering systems, week/text information | Intl.Locale and service locale resolution |
+| Locale preferences | Hour cycles, calendars, numbering systems, week/text information | Intl.Locale and module-specific locale resolution |
 | Runtime environment coordinator | Common default locale/zone, embedder overrides, host discovery policy | Bindings across realms, Date, Temporal, Intl |
 | Host clock | Obtain the current instant, independently of timezone lookup | Date.now, Temporal.Now |
 
@@ -185,10 +201,10 @@ inside the native data owner.
 
 | Operation | Shared responsibility | Backend responsibility |
 | --- | --- | --- |
-| Options and mathematical values | JS access/coercion order, ranges, defaults, exact numeric representation, negative zero/nonfinite distinctions | Execute an accepted service operation with those normalized inputs |
+| Options and mathematical values | JS access/coercion order, ranges, defaults, exact numeric representation, negative zero/nonfinite distinctions | Execute an accepted module operation with those normalized inputs |
 | Identifiers | Structural grammar, fixed ASCII rules, standard allowed-unit checks | Versioned aliases and locale identity operations requiring provider data |
 | Locale negotiation | Lookup, extension precedence, ResolveLocale/ResolveOptions orchestration | Available locales, extension capabilities, best-fit matching and preferences |
-| Number/Plural | Digit-option rules, rounding semantics and service contracts | Number presentation, currency/unit grammar and plural rules; native may share a decimal engine, ICU4C may use its formatter |
+| Number/Plural | Digit-option rules, rounding semantics and module contracts | Number presentation, currency/unit grammar and plural rules; native may share a decimal engine, ICU4C may use its formatter |
 | RelativeTimeFormat | Required checks and specified number/plural/pattern composition | Relative patterns and special forms, or an equivalent complete provider operation |
 | DurationFormat | Duration validation, signs, unit options and specified component composition | Digital preferences and selected number/list operations, or equivalent provider composition |
 | DateTimeFormat | Input rules, fixed BasicFormatMatcher behavior and common zone/calendar policy | Candidate formats, best-fit, localized fields/names and range presentation |
@@ -221,7 +237,7 @@ and ICU's
 This choice changes glyph selection only; exponent calculation, rounding,
 signs, separators and part types retain their existing rules.
 
-`collation/collation.h` separates the plain C service contract from JS coercion
+`collation/collation.h` separates the module's runtime interfaces from JS coercion
 and locale matching. The native owner opens the checked compiled profile once,
 cross-checks public default binding rows against its available locale registry,
 and exposes exact per-usage named types plus a sorted global type inventory.
@@ -238,27 +254,27 @@ program, policy and allocator, borrow only static prepared bytes, and can outliv
 service close. Comparison retains no input or scratch after return. The JS
 binding owns option ordering, resolved identity, realm state and bound callbacks.
 
-## Service dependencies and equal backend implementations
+## Module dependencies and equal backend implementations
 
-| Service or entry point | Required composition or coordination |
+| Module or API entry point | Required composition or coordination |
 | --- | --- |
 | RelativeTimeFormat | Intrinsic NumberFormat and PluralRules behavior |
 | DurationFormat | Intrinsic NumberFormat and ListFormat behavior |
-| DateTimeFormat | Intrinsic NumberFormat behavior for numeric fields; calendar/timezone services |
+| DateTimeFormat | Intrinsic NumberFormat behavior for numeric fields; calendar/timezone modules |
 | PluralRules | Shared digit-option/rounding semantics; no requirement to construct public NumberFormat objects |
 | NumberFormat | Locale plural/unit/currency grammar; do not invent a public PluralRules call where the spec does not require one |
-| Intl.Locale and supportedValuesOf | Actual service capabilities, locale preferences and common canonical identity |
+| Intl.Locale and supportedValuesOf | Actual module capabilities, locale preferences and common canonical identity |
 | String.localeCompare | Selected Collator |
 | Number/BigInt.toLocaleString | Selected NumberFormat |
 | Date/Temporal locale methods | Selected DateTimeFormat, with the prescribed type/calendar restrictions |
 | String locale-sensitive case methods | Locale foundation and selected case-mapping operation |
 
-Native services can call common service interfaces directly. For example,
+Native modules can call other modules through their common interfaces. For example,
 native RelativeTimeFormat can use NumberFormat and PluralRules facade handles.
 No additional central dispatcher is needed for each call.
 
-An ICU4C service can use ICU4C's internal dependencies. It need not route ICU4C's own
-calls through our facades. The first profile keeps all relevant services and
+An ICU4C module can use ICU4C's internal dependencies. It need not route ICU4C's own
+calls through our facades. The first profile keeps all relevant modules and
 Unicode/calendar/timezone data coherent, while adapters align ECMAScript options,
 locale resolution, precision and parts with the contract.
 
@@ -306,7 +322,7 @@ Extend existing calendar/timezone options with `auto` resolution where
 appropriate; ICU4C choices are a version-two addition. `auto` preserves today's
 native behavior with Intl disabled
 and selects the coherent dependencies with Intl enabled. Reject explicit
-incompatible combinations at setup. Do not expose per-Intl-service backend
+incompatible combinations at setup. Do not expose per-module backend
 selectors in version one. Temporal remains independently enabled or disabled.
 
 Source selection uses actual consumers, not `temporal` alone. Intl-on/Temporal-off
@@ -317,7 +333,7 @@ generators; preserve Meson 0.58 and cross-build support.
 
 Print the resolved Intl, Unicode, calendar and timezone providers, data versions,
 and ICU4C dependency source/version in the setup summary. Test option resolution
-without requiring complete service implementations. Existing explicit options
+without requiring complete module implementations. Existing explicit options
 retain their meaning with Intl disabled; enabled profiles reject conflicts.
 
 For version two, system ICU4C is the first dependency path. Probe required APIs and usable
@@ -330,10 +346,12 @@ alternative; ordinary builds never silently download ICU4C.
 
 ## Private C contracts
 
-Each service has a common header and opaque handle, with open/operate/close
-functions implemented using build-selected direct symbols. Headers expose no
-ICU4C/ICU4X types, JSValue, JSContext or backend-specific layout. A backend may span
-multiple translation units and use its own private header.
+Modules expose their shared contracts in owning private headers. Stateful
+interfaces can provide an opaque service instance and operation handles with
+open/operate/close functions; stateless helpers remain plain functions. Selected
+backends implement direct symbols at build time. Contracts expose no ICU4C/ICU4X
+types, JSValue, JSContext or backend-specific layout. A backend may span multiple
+translation units and use its own private headers.
 
 Shared contract families are:
 
@@ -349,9 +367,10 @@ Shared contract families are:
 - Explicit invalid-input, unsupported, allocation, data and provider errors.
   Binding code maps them to the correct JS exception; OOM is never a fallback.
 
-Open returns either a complete handle or failure. Queries preserve existing
-outputs until success, using temporary storage internally. Builders require a
-fresh output and leave it empty and clearable on failure. Close/clear
+Open returns either a complete instance/handle or failure. Each interface states
+whether an error clears an output or preserves it; cursor and value outputs can
+have different contracts. Builders require a fresh output and leave it empty
+and clearable on failure. Close/clear
 functions are safe for empty state and release only their own allocations.
 Each handle documents thread/reentrancy rules; immutable configuration does not
 make mutable result scratch buffers shareable. Do not hold borrowed pointers
@@ -381,7 +400,7 @@ compile/link/operation probes below, before attempting a complete backend:
 
 | Area | Required evidence |
 | --- | --- |
-| Coverage | Per-service and shared-service matrix distinguishing Rust APIs, stable C FFI, experimental APIs and missing operations |
+| Coverage | Functional/shared module matrix distinguishing Rust APIs, stable C FFI, experimental APIs and missing operations |
 | Standard semantics | Exact decimal/BigInt handling, rounding, ranges/parts, locale negotiation, calendar range/era/monthCode and timezone identity/offset/transition behavior |
 | Boundary safety | Handle/result ownership, borrowed data lifetime, embedded NUL/unpaired-surrogate behavior, reentrancy and thread rules |
 | Failure behavior | Whether allocations can fail recoverably or abort, panic policy, and prevention of Rust unwinding across the C boundary |
@@ -414,9 +433,9 @@ exceptions belong to their own realms. Constructors snapshot defaults where
 required; changing a default does not retroactively change existing formatters.
 
 Prefer a supported canonical host locale in the intersection of enabled
-services' locale sets, with an explicitly documented common fallback such as
+Intl service constructors' available locale sets, with an explicitly documented common fallback such as
 `en-US`. Validate embedder overrides against that intersection. Other requested
-locale sets may differ across services; preserve specified nested negotiation.
+locale sets may differ across constructors; preserve specified nested negotiation.
 Keep API capabilities and metadata consistent with executable behavior.
 See [service locale requirements](https://tc39.es/ecma402/#sec-internal-slots).
 
@@ -458,8 +477,8 @@ dependent engines/handles exist.
 `locale/resolve.[ch]` owns the fixed ResolveLocale key-processing algorithm after
 matching. The caller provides the matched base, requested Unicode extension,
 ordered relevant keys, supported defaults and membership callbacks for its own
-service/locale. Keep observable option getters and capability inventories with
-the frontend/service. Resolve all relevant keys before composing one final
+module/locale. Keep observable option getters in the binding and actual
+capability inventories in their owning module. Resolve all relevant keys before composing one final
 locale; repeated single-key composition would discard other retained keys.
 
 Null is distinct from an absent option and from an empty Boolean extension
@@ -473,7 +492,7 @@ values and canonicalize the retained extension together only once.
 Copy all result strings into the output allocator, freeing identity-service
 canonicalization scratch with its original allocator. Results can outlive the
 identity service. The existing one-key Number/RelativeTime/Duration bindings use
-a thin wrapper over this shared algorithm; no service queries another service's
+a thin wrapper over this shared algorithm; no module queries another module's
 capability inventory implicitly.
 
 ## Public embedding APIs
@@ -536,7 +555,8 @@ official data, then ICU4X, then ICU4C for missing implementation details.
 | Segmentation | UAX #29/property/emoji data, relevant CLDR tailoring/suppressions; dictionary/model gaps investigated in ICU4X first, then ICU4C |
 | Calendar calculation and named-zone rules | Existing independently owned calendar/timezone packs and provenance |
 
-Do not equate all CLDR locales with an imported name list. For every service,
+Do not equate all CLDR locales with an imported name list. For every
+locale-dependent functional module,
 record canonical source locale, inherited data, aliases, default-content
 relationships and successful execution. Root/parent data is valid coverage when
 the locale genuinely inherits it. Account for every source field relevant to
@@ -550,8 +570,8 @@ Advertised formatting calendars require complete computation and integration.
 
 Segmentation must include appropriate language behavior where default Unicode
 word boundaries are insufficient. Dictionary/model ownership, generation and
-licenses are part of the service, not a runtime ICU4C/Rust dependency. Do not add
-text shaping, line layout or unrelated CLDR services to this project implicitly.
+licenses are part of the module, not a runtime ICU4C/Rust dependency. Do not add
+text shaping, line layout or unrelated CLDR functionality to this project implicitly.
 
 Native uses the latest released CLDR when its source pin is established. ICU4C
 uses its own bundled versions; never combine newer native alias/plural data
@@ -565,12 +585,12 @@ This is an explicit prerelease exception to the normal release policy. Record
 the beta qualifier in generated provenance; upgrading to the final release
 requires regeneration and validation rather than silently changing the inputs.
 Use the complete release-tag source tree, since production ZIPs may omit
-records before our service collectors apply their documented selection policy.
+records before our module-specific collectors apply their documented selection policy.
 
 ## CLDR XML collection and resolution
 
 Read released CLDR XML using Python's standard-library ElementTree, one input
-file at a time. Service-specific collectors interpret known LDML structures and
+file at a time. Module-specific collectors interpret known LDML structures and
 produce typed records for numbers, dates, names, lists and other consumers.
 There is no generic XML-to-binary tree serialization and no runtime XML parser.
 
@@ -590,14 +610,14 @@ relevant input fails generation instead of silently disappearing.
 Validate normalized records before packing: locale/data-locale relationships,
 supported identifiers, plural categories, pattern operands and cross-section
 references. Produce an inventory recording direct, inherited and aliased data
-for every advertised service/locale. Algorithm coverage is checked separately
+for every advertised Intl API/locale. Algorithm coverage is checked separately
 from successful extraction of a record.
 
 The writer assigns deterministic IDs, pools strings/records, and emits typed
 sections with explicit widths, lengths, offsets and byte order. Separate reader
 tests compare decoded records with normalized inputs, exercise bounds/endian
 handling, and check reproducibility and full/minimal coverage manifests. XML
-collection, resolution, service normalization and binary packing remain separate
+collection, resolution, module-specific normalization and binary packing remain separate
 testable components.
 
 ## Data pipeline and packaging
@@ -624,15 +644,15 @@ linking the full pack. A later subset generator may operate on prepared data
 after its section-dependency contract is established.
 
 The Intl pack contains a versioned header/directory, shared locale registry,
-string pools and common numeric/plural records, followed by service sections.
+string pools and common numeric/plural records, followed by module-owned sections.
 Calendar and timezone packs remain separate. Localized calendar/zone names belong
 in Intl; numeric calendar transitions and zone rules stay with their owners.
 Unicode property tables retain one generated C owner and are not copied into
-each service pack. Choose widths, encoding, alignment and byte order explicitly;
+each module-specific pack. Choose widths, encoding, alignment and byte order explicitly;
 decode safely rather than casting untrusted byte offsets into C structs.
 
-Generation includes the union of selected native services and their actual
-dependencies. Full-native covers all required services/locales; minimal changes
+Generation includes the union of selected native modules and their actual
+dependencies. Full-native covers all required functionality/locales; minimal changes
 the locale-data selection. Shared pools and section references use stable,
 validated IDs. File structure and source generators remain modular even though
 the final pack is one file. Runtime file loading/replacement is outside version
@@ -648,22 +668,23 @@ the logical pack or duplicating its ownership.
 
 A shared manifest/generation ID protects cross-section compatibility. Readers
 validate required sections, bounds, IDs, versions and corruption before use;
-truncated or mismatched data is an error. A service never substitutes unrelated
+truncated or mismatched data is an error. A module never substitutes unrelated
 English data merely because a required section is missing.
 
 ## Source layout
 
-Keep bindings and engine-independent libraries separate. Proposed destinations:
+Keep bindings and engine-independent modules separate. Current module locations
+are listed below; ICU4C/ICU4X source sets remain later-version additions:
 
 ```text
 src/quickjs/builtins/intl/     JS bindings, slots, options and realm/GC integration
 src/quickjs/                  runtime default-locale/default-zone coordinators
 src/intl/common/              precise values, parts and common error contracts
 src/intl/locale/              locale facade/core and native/ICU4C implementations
-src/intl/number-format/       service contract/core and native/ICU4C source sets
-src/intl/plural-rules/        corresponding service files
-src/intl/relative-time-format/ corresponding service files
-src/intl/.../                other services, each with a semantic owner
+src/intl/number/              number-formatting contracts, native algorithms and state
+src/intl/plural/              plural evaluation, also shared by formatting modules
+src/intl/relative/            relative-time formatting and composition
+src/intl/.../                other functional/shared modules with semantic owners
 src/intl/native/              pack reader and genuinely shared native helpers
 src/intl/icu4c/               genuinely shared ICU4C conversion/error helpers
 src/unicode/                 Unicode facade, native implementation and ICU4C adapter
@@ -674,16 +695,16 @@ data/intl/                   source locks, prepared pack, manifests and licenses
 tests/                       JS subsystem regressions, C contract/OOM tests
 ```
 
-Each service directory may contain several backend files; avoid one giant source
+Each module directory may contain several backend files; avoid one giant source
 per backend. Do not create empty directories or one-file wrappers before a real
 ownership boundary exists. Existing Unicode/Temporal paths can be migrated only
 where extraction is needed, with source moves separate from behavior changes.
-Future service-local ICU4X sources and shared `src/intl/icu4x/` helpers follow
+Future module-local ICU4X sources and shared `src/intl/icu4x/` helpers follow
 the same ownership rules when implementation is authorized.
 
-## Complete service delivery checklist
+## Complete feature delivery checklist
 
-| Service group | Required delivery |
+| Feature/API group | Required delivery |
 | --- | --- |
 | Locale | Constructor, canonicalization, maximize/minimize, all current getters/information methods and capability integration |
 | ListFormat / DisplayNames | Styles/types, parts, fallback rules and all relevant names/locales |
@@ -711,7 +732,7 @@ part of the same feature change.
 
 | Stage | Work | Completion gate |
 | --- | --- | --- |
-| 1 | Audit saved Intl implementations/tests, API coverage, source licenses and specification deltas | Reuse map and per-service missing-work inventory |
+| 1 | Audit saved Intl implementations/tests, API coverage, source licenses and specification deltas | Reuse map and per-module missing-work inventory |
 | 2 | Extract shared clock/default-zone dependencies; build calendar/timezone by consumers | Existing behavior passes with Temporal on/off; no Intl required |
 | 3 | Add common C contracts and native build resolution; review future ICU4C/ICU4X interface feasibility | Native contract smoke tests and invalid configurations; no external backend linked |
 | 4 | Establish source locks, pack schema/generator/reader and locale coverage inventory | Offline deterministic generation, endian/bounds/corruption tests |
@@ -719,7 +740,7 @@ part of the same feature change.
 | 6 | Unicode facade and native case/property/normalization integration | String/RegExp/parser behavior preserved; Unicode conformance inputs |
 | 7 | Native ListFormat and DisplayNames | API/parts/fallback tests and complete relevant locale data |
 | 8 | Exact numeric foundation, PluralRules and NumberFormat in small independent increments | Precision/rounding/grammar/range and provider contract tests |
-| 9 | Native RelativeTimeFormat and DurationFormat | Selected service composition and standard semantics tests |
+| 9 | Native RelativeTimeFormat and DurationFormat | Selected module composition and standard semantics tests |
 | 10 | Native DateTimeFormat and shared calendar/timezone integration | Date/Temporal/Intl agree on zone/calendar behavior; Temporal-off builds |
 | 11 | Collator and locale comparison | Unicode/CLDR tailoring tests and localeCompare integration |
 | 12 | Segmenter, dictionary/model data and iterator integration | Boundary suites, original UTF-16 indices and language coverage |
@@ -729,13 +750,13 @@ Review future backend API feasibility in stage 3 before freezing a contract
 around native-only layouts. Isolated probes can inform that review without
 adding ICU4C/ICU4X to version-one builds or requiring their full CI matrices.
 Stage 10 delivers native calendar/zone integration; its dependents can be prepared
-while unrelated services proceed. Move dependency-free completed work forward
-when another service is blocked. Stages describe dependencies, not a demand to
-combine all their changes into one commit or defer an independent ready service.
+while unrelated modules proceed. Move dependency-free completed work forward
+when another module is blocked. Stages describe dependencies, not a demand to
+combine all their changes into one commit or defer an independent ready module.
 
 ### Initial Segmenter profile
 
-The `minimal` build exposes `Intl.Segmenter` with service-specific `en`/`en-US`
+The `minimal` build exposes `Intl.Segmenter` with module-specific `en`/`en-US`
 availability. Its plain C contract lives in `src/intl/segment/segment.h`; the
 Unicode-default backend delegates grapheme, word and sentence boundaries to the
 shared Unicode 18 algorithms. It does not claim to execute CLDR break rules or
@@ -1003,7 +1024,7 @@ sign, resolved hour cycles override raw h/H/K/k, and fractional milliseconds are
 truncated before formatting. Own output independently of programs and number
 services; unwind all temporary numeric results on failure. Named/zone fields
 remain explicitly unsupported by this numeric kernel, to be composed by the
-full renderer with chronology/name/zone services. The shared output vocabulary
+full renderer with chronology/name/zone modules. The shared output vocabulary
 now distinguishes date-field parts; number-bearing consumers retain their
 original number-only type bound.
 
@@ -1045,8 +1066,8 @@ Raw kernel callers can explicitly enable the point for contexts that need it.
 
 Missing/blocked/empty names or
 required templates return unsupported here, without invented lateral fallbacks.
-The final service owns admission and the standard's permitted unavailable-name
-fallback policy. Zones, complete service admission and the public constructor
+The final formatting module owns admission and the standard's permitted
+unavailable-name fallback policy. Zones, complete formatter admission and the public constructor
 remain separate work; this renderer alone does not advertise DateTimeFormat.
 
 `datetime/zone-offset.[ch]` prepares localized GMT presentation independently
@@ -1106,7 +1127,7 @@ indexes, exact append/connector provenance and backward construction links;
 borrow only provenance slices from unchanged packs. Missing/BLOCK/empty evidence
 is unsupported rather than a hardcoded English pattern. This closes mandatory
 single-date shape construction; arithmetic/name capability admission, range
-programs and the public service still have their own requirements.
+programs and the public formatter still have their own requirements.
 
 `datetime/zone-name.[ch]` renders all six standard zone styles over borrowed
 rule handles and validated name, presentation and locale metadata owners. It
@@ -1193,7 +1214,7 @@ alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.
 Aliases converging on one terminal are valid; conflicting terminals are data
 errors. Variable rows establish no identity. This shared operation allocates
-nothing and does not infer any service capability.
+nothing and does not infer any formatter capability.
 
 `datetime/calendar-identity.[ch]` applies that equivalence independently to
 available-pattern, style, connector, calendar-name and interval catalogs. Each
@@ -1338,7 +1359,7 @@ dominant targets without an explicit metazone row remain valid source facts.
 Canonical validation checks exact physical order, namespace-specific identities,
 contiguous spans, nonoverlap and historical golden-zone membership. It does not
 promise BCP47 cross-section or formatter-capability admission; the collector
-checks stable-ID membership, and service admission must check its complete
+checks stable-ID membership, and formatter admission must check its complete
 semantic dependencies. This small global section needs no locale projection.
 The immutable `datetime/timezone-presentation-data.[ch]` owner validates physical
 records and releases all scratch storage before return. Full signed timestamps
@@ -1351,7 +1372,7 @@ projection. Generation reuses the shared locale identity result and records the
 authenticated supplemental source in provenance. Profile tests exercise every
 physical period's inclusive start and exclusive end, source gaps, second-precise
 Monrovia data, Irish offset overrides and exact preferred/dominant queries.
-These records do not install or advertise a DateTimeFormat service.
+These records do not install or advertise the DateTimeFormat API.
 
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.
@@ -1388,7 +1409,7 @@ canonical ordering and complete reachability. Empty/point-only lists remain
 source facts. A list shared by formatting and selection must satisfy both
 referencing kinds, including formatting's clock-hour uniqueness constraint.
 Do not expand these small tables into the prepared locale inventory or infer
-service support from their presence.
+Intl API support from their presence.
 
 The immutable owner in `datetime/dayperiod-data.[ch]` validates physical bounds,
 canonical row/map order, source locale syntax, exact code/form constraints and
@@ -1436,7 +1457,7 @@ context and weekday width 6 for rendering. The initial z/v/O zone subset must
 be extended or explicitly synthesized for the pinned Persian generic Z pattern;
 Z must not be silently interpreted as z or O.
 
-Within each service, implement the common binding/contract, native algorithms
+Within each module, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
 complete. Preserve saved regressions only when they verify an actual contract;
@@ -1446,7 +1467,7 @@ remove redundant tests after reviewing their coverage, not just their count.
 
 Retain the ICU4C architecture and contracts above, including system/external
 dependency selection, coherent algorithms/data, timezone identity and lifetime,
-and use of ICU4C internal service dependencies. Add this backend only after
+and use of ICU4C internal module dependencies. Add this backend only after
 version one's native delivery, without changing native's Rust/ICU-free builds.
 
 1. Complete API feasibility probes and determine supported ICU4C versions.
@@ -1456,7 +1477,7 @@ version one's native delivery, without changing native's Rust/ICU-free builds.
    Record high-level call, finer adapter or unsupported for each operation.
 2. Add the icu4c build profile and shared locale/Unicode adapters, with explicit
    dependency checks and no silent native data substitution.
-3. Implement each service adapter behind existing C contracts. Verify numeric
+3. Implement each module adapter behind existing C contracts. Verify numeric
    precision, parts, prescribed component options, ownership and realm behavior.
 4. Deliver ICU4C calendar/timezone adapters and connect Date/Temporal/Intl to one
    default policy and consistent backend data, keeping ISO/UTC/offset core rules.
@@ -1493,7 +1514,7 @@ fraction operands and range identity. Text tests include embedded NUL, lone
 surrogates, supplementary characters and original UTF-16 part/segment indexes.
 
 Validate UAX normalization/break data, CLDR inheritance/aliases and every declared
-service-locale combination. Compare native with ICU4X/ICU4C on compatible pinned
+module-locale combination. Compare native with ICU4X/ICU4C on compatible pinned
 data, classifying version/policy differences; agreement is not automatic proof
 or permission to copy a reference bug. Validate suspected Test262 defects against
 the standard. Do not add skips or alter expected-error baselines to hide failures.
