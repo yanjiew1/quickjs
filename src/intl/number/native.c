@@ -322,6 +322,25 @@ QJSIntlStatus qjs_intl_number_currency_digits(const QJSIntlNumberService *servic
     return status;
 }
 
+QJSIntlStatus qjs_intl_number_currency_supported(const QJSIntlNumberService *service,
+                                                 QJSIntlBytes code, int *out)
+{
+    QJSIntlStatus status;
+    uint32_t index;
+    if (out)
+        *out = 0;
+    if (!service || !out || (!code.data && code.length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_currency_code_find(&service->currencies, code, &index);
+    if (status == QJS_INTL_INVALID_ARGUMENT)
+        return QJS_INTL_OK;
+    if (status == QJS_INTL_OK || status == QJS_INTL_UNSUPPORTED) {
+        *out = 1;
+        return QJS_INTL_OK;
+    }
+    return status;
+}
+
 /* The opened data owner already guarantees scalar UTF-8. Keep the bounded
    decoder here at the native-data boundary, outside the generic body engine. */
 static QJSIntlStatus decode(const QJSIntlAllocator *allocator, QJSIntlBytes text, QJSIntlUTF16 *out)
