@@ -2,6 +2,39 @@
 #include "pattern-info.h"
 #include <string.h>
 
+int qjs_intl_date_pattern_fix_calendar_year(QJSIntlDatePattern *pattern)
+{
+    size_t i;
+    int month = 0, changed = 0;
+
+    if (!pattern || !pattern->tokens)
+        return 0;
+
+    /* Some CLDR calendar-date patterns mistakenly use week-year Y. Treat it
+       as calendar-year y only with a month and no week fields. This workaround
+       for source-data mistakes is not required by LDML or ECMA-402. Quoted
+       letters are literal tokens, so they cannot enable or disable the rule. */
+    for (i = 0; i < pattern->count; i++) {
+        unsigned int symbol = pattern->tokens[i].symbol;
+
+        if (symbol == 'w' || symbol == 'W')
+            return 0;
+        if (symbol == 'M' || symbol == 'L')
+            month = 1;
+    }
+    if (!month)
+        return 0;
+
+    for (i = 0; i < pattern->count; i++) {
+        if (pattern->tokens[i].symbol == 'Y') {
+            pattern->tokens[i].symbol = 'y';
+            changed = 1;
+        }
+    }
+
+    return changed;
+}
+
 static int text_width(size_t count)
 {
     return count == 5 ? QJS_INTL_DATETIME_NARROW :
