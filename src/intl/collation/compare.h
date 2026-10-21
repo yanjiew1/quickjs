@@ -4,13 +4,6 @@
 #include "contexts.h"
 #include "policy.h"
 
-typedef enum QJSIntlCollationSensitivity {
-    QJS_INTL_COLLATION_VARIANT,
-    QJS_INTL_COLLATION_BASE,
-    QJS_INTL_COLLATION_ACCENT,
-    QJS_INTL_COLLATION_CASE
-} QJSIntlCollationSensitivity;
-
 typedef struct QJSIntlRootCollationOptions {
     int numeric; /* Nonzero: adjacent Nd runs compare by unbounded integer value. */
     QJSIntlCollationSensitivity sensitivity;
