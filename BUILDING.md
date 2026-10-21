@@ -86,8 +86,8 @@ into the interpreter used by runtime tests.
 
 Intl is currently incomplete and disabled by default. `-Dintl=minimal` and
 `-Dintl=native` enable the native implementation with English/root or full
-CLDR locale-data profiles. Both use the same algorithms and complete locale
-identity metadata. They require no ICU, source-data download or runtime XML
+CLDR locale-data profiles. Delivered formatting services share algorithms and
+complete locale identity metadata. They require no ICU, source-data download or runtime XML
 parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
 
 Current JavaScript APIs include `Intl.getCanonicalLocales()`,
@@ -103,9 +103,11 @@ NumberFormat; Temporal.Duration locale formatting uses the intrinsic DurationFor
 Temporal is enabled. String locale case conversion validates locale requests and
 implements Unicode's Turkish, Azeri and Lithuanian context-sensitive rules.
 DateTimeFormat, its range methods and Date/Temporal locale
-bridges are implemented, with acceptance testing still in progress. Collator and
-Segmenter are not yet implemented. Setup warns about this status; these options do not imply
-complete Intl conformance.
+bridges are implemented, with acceptance testing still in progress. The minimal
+profile also provides `Intl.Segmenter` for `en`/`en-US`, using Unicode 18 default
+grapheme/word/sentence boundaries. Native CLDR/dictionary segmentation and
+Collator remain in development. Setup warns about this status; these options
+do not imply complete Intl conformance.
 Intl can be enabled independently of `-Dtemporal=false`. The embedding entry
 point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
 after base objects are initialized. It is idempotent, reports exceptions on
