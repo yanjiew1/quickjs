@@ -3398,8 +3398,16 @@ standalone = {
     unicode_tables,
     '../src/cutils/cutils.c',
   ],
+  'test_unicode_word': [
+    'test_unicode_word.c',
+    'unicode_boundary_test.c',
+    '../src/unicode/word.c',
+    '../src/unicode/break-properties.c',
+    unicode_tables,
+  ],
   'test_unicode_grapheme': [
     'test_unicode_grapheme.c',
+    'unicode_boundary_test.c',
     '../src/unicode/grapheme.c',
     '../src/unicode/break-properties.c',
     unicode_tables,
