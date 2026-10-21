@@ -3,19 +3,16 @@
 #ifndef QJS_INTL_COMPILER_RELATIONS_H
 #define QJS_INTL_COMPILER_RELATIONS_H
 #include "collation-weights.h"
+#include "../../src/intl/collation/coordinates.h"
 
 /* The root catalog owns coordinate allocation, common aliases and protected
    WF2 boundaries. Relation execution must not infer them from one wire format. */
-typedef struct QJSIntlRelationRoots {
-    uint32_t primary_max, secondary_max, tertiary_max;
-    uint32_t secondary_common, tertiary_common;
-    uint32_t secondary_boundary, tertiary_boundary;
-} QJSIntlRelationRoots;
+typedef QJSIntlCollationRootLimits QJSIntlRelationRoots;
 
 enum {
-    QJS_INTL_RELATION_LOWER,
-    QJS_INTL_RELATION_MIXED,
-    QJS_INTL_RELATION_UPPER
+    QJS_INTL_RELATION_LOWER = QJS_INTL_COLLATION_LOWER,
+    QJS_INTL_RELATION_MIXED = QJS_INTL_COLLATION_MIXED,
+    QJS_INTL_RELATION_UPPER = QJS_INTL_COLLATION_UPPER
 };
 
 typedef struct QJSIntlRelationCase {
@@ -24,11 +21,7 @@ typedef struct QJSIntlRelationCase {
     unsigned int primary, case_value;
 } QJSIntlRelationCase;
 
-typedef struct QJSIntlRelationElement {
-    uint32_t weights[4]; /* Stable P/S/T/Q IDs until graph freeze/resolution. */
-    uint32_t root_primary; /* Original root anchor for grouping/variable policy. */
-    unsigned char case_value, variable, implicit;
-} QJSIntlRelationElement;
+typedef QJSIntlCollationCoordinate QJSIntlRelationElement;
 
 typedef struct QJSIntlRelationMapping {
     QJSIntlRelationElement *elements;
