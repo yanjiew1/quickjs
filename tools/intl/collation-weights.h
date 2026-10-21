@@ -41,6 +41,12 @@ QJSIntlStatus qjs_intl_weight_insert(QJSIntlWeightGraph *, uint32_t reference, i
                                     const QJSIntlWeightParents *, uint32_t *id);
 QJSIntlStatus qjs_intl_weight_parents(const QJSIntlWeightGraph *, uint32_t id,
                                      QJSIntlWeightParents *out);
+/* Compare stable IDs without freezing or allocating. Root/gap comparisons
+   are constant-time; two tailored IDs in one unfrozen gap require a bounded
+   linked walk. Frozen graphs use resolved ranks. This query does not prevent
+   later insertion. Output is -1/0/+1, reset on failure; storage is disjoint. */
+QJSIntlStatus qjs_intl_weight_compare(const QJSIntlWeightGraph *, uint32_t left,
+                                      uint32_t right, int *order);
 /* Freeze once all relations have executed. Allocate a sorted sparse root
    offset map, assign final uint32 ranks, then prohibit insertion. Failure is
    retryable. Repeated successful freeze is harmless. Resolution requires a
