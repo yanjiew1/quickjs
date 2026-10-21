@@ -227,6 +227,60 @@ static void authored_numeric(const QJSIntlAllocator *allocator,
     pattern_equal(allocator, &record->single.normal.pattern, "z' [zone] 'y-MM-dd");
 }
 
+static void zoned_date_clocks(const QJSIntlAllocator *allocator,
+                               const QJSIntlDatePattern *const *dates,
+                               const QJSIntlDateCombinationData *connectors)
+{
+    static const char *const fields[] = {"z", "zzzz", "O", "OOOO", "v", "vvvv"};
+    Allocation *state = allocator->opaque;
+    size_t kind, before = state->live;
+    for (kind = 0; kind < sizeof(fields) / sizeof(*fields); kind++) {
+        QJSIntlDateOrdinaryProgram clock = {0};
+        QJSIntlDateOrdinaryPrograms ordinary = {0};
+        QJSIntlDateClockPrograms result, zero = {0};
+        QJSIntlDatePatternInfo info;
+        char normal[64], twelve[64], combined[96];
+        size_t baseline, calls, i;
+        clock.single.allocator = *allocator;
+        snprintf(normal, sizeof(normal), "H:mm:ss %s", fields[kind]);
+        snprintf(twelve, sizeof(twelve), "a h:mm:ss %s", fields[kind]);
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(normal), &clock.single.normal.pattern));
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(twelve), &clock.single.twelve.pattern));
+        assert(!qjs_intl_date_pattern_info(&clock.single.normal.pattern, &info));
+        clock.single.normal.source_info = info;
+        clock.single.components = info.components;
+        assert(!qjs_intl_date_pattern_info(&clock.single.twelve.pattern, &info));
+        clock.single.twelve.source_info = info;
+        ordinary.records = &clock;
+        ordinary.count = 1;
+        baseline = state->live;
+        state->calls = 0;
+        assert(!qjs_intl_date_clock_programs_open(dates, 4, &ordinary, NULL, connectors,
+                                                  0, 0, allocator, &result));
+        calls = state->calls;
+        assert(result.count == 4);
+        assert(result.records[0].components.values[QJS_INTL_DATETIME_ZONE] == (int)kind + 1);
+        snprintf(combined, sizeof(combined), "EEEE, MMMM d, y' at 'H:mm:ss %s", fields[kind]);
+        pattern_equal(allocator, &result.records[0].normal, combined);
+        snprintf(combined, sizeof(combined), "EEEE, MMMM d, y' at 'a h:mm:ss %s", fields[kind]);
+        pattern_equal(allocator, &result.records[0].twelve, combined);
+        qjs_intl_date_clock_programs_clear(&result);
+        /* One style exhausts the common paired-program allocation path. The
+           other styles verify exact symbols, widths and component metadata. */
+        for (i = 1; kind == 0 && i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            memset(&result, 0xff, sizeof(result));
+            assert(qjs_intl_date_clock_programs_open(dates, 4, &ordinary, NULL, connectors,
+                       0, 0, allocator, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
+        qjs_intl_date_single_programs_clear(&clock.single);
+        assert(state->live == before);
+    }
+}
+
 static void date_clocks(const QJSIntlAllocator *allocator,
                          const QJSIntlDateOrdinaryPrograms *ordinary,
                          const QJSIntlDateCombinationData *connectors)
@@ -267,6 +321,7 @@ static void date_clocks(const QJSIntlAllocator *allocator,
         assert(!memcmp(&programs, &zero, sizeof(programs)) && state->live == baseline);
     }
     state->calls = state->fail_at = 0;
+    zoned_date_clocks(allocator, dates, connectors);
     {
         QJSIntlData pack;
         QJSIntlDateCombinationData partial;
