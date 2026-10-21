@@ -25,7 +25,8 @@ typedef struct QJSIntlDateSourceCandidates {
    contribute no candidate; their masked parents stay absent. Check syntax of
    eligible nonempty text, not filtered keys. Propagate malformed syntax, OOM
    and overflow. A populated APPEND inventory is an invalid argument.
-   Preserve distinct skeletons and raw fields even for identical components;
+   Preserve distinct skeletons and raw source provenance even for identical
+   components. Apply the month/no-week CLDR year workaround to owned tokens;
    final ECMA grouping, synthesis and renderer admission belong to consumers.
    Copy the owner/provenance and own compiled tokens; borrowed pack bytes must
    outlive the result. The input inventory may be cleared after success.
