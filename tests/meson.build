@@ -2312,6 +2312,68 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_collation_prepared_test = {
+      'name': ('test_intl_collation_prepared_' + profile),
+      'sources': files(
+        'test_intl_collation_prepared.c',
+        '../src/intl/collation/compiled-data.c',
+        '../src/intl/collation/base.c',
+        '../src/intl/collation/keys.c',
+        '../src/intl/collation/trie.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/unicode/libunicode.c',
+        '../src/cutils/cutils.c',
+      ) + unicode_tables,
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_collation_prepared_test,
+      'name': ('intl-collation-prepared-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_collation_service_test = {
+      'name': ('test_intl_collation_service_' + profile),
+      'sources': files(
+        'test_intl_collation_service.c',
+        '../src/intl/collation/native.c',
+        '../src/intl/collation/compiled-data.c',
+        '../src/intl/collation/ranked-elements.c',
+        '../src/intl/collation/ranked-compare.c',
+        '../src/intl/collation/base.c',
+        '../src/intl/collation/keys.c',
+        '../src/intl/collation/trie.c',
+        '../src/intl/collation/match.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/unicode/blocks.c',
+        '../src/unicode/category.c',
+        '../src/unicode/libunicode.c',
+        '../src/cutils/cutils.c',
+      ) + unicode_tables,
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_collation_service_test,
+      'name': ('intl-collation-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_calendar_era_test = {
       'name': ('test_intl_calendar_era_' + profile),
       'sources': intl_calendar_era_sources,
@@ -4589,6 +4651,15 @@ if intl_enabled
     'intl-collation-profile-preparation',
     python,
     args: [files('test_intl_collation_prepare.py'), '--compiler', collation_compile],
+    depends: collation_compile,
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-bundle',
+    python,
+    args: [files('test_intl_collation_bundle.py'), '--compiler', collation_compile],
     depends: collation_compile,
     suite: ['repo', 'generator', 'unit'],
     timeout: 30,
