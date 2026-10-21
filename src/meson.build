@@ -127,6 +127,7 @@ if intl_enabled
   )
   support_sources += files(
     'intl/collation/root-data.c',
+    'intl/collation/weights.c',
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
     'intl/common/range-compose.c',

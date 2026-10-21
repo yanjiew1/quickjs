@@ -3135,6 +3135,15 @@ standalone = {
     'test_intl_pack.c',
     '../src/intl/native/pack.c',
   ],
+  'test_intl_collation_weights': [
+    'test_intl_collation_weights.c',
+    '../src/intl/collation/weights.c',
+    '../src/unicode/blocks.c',
+    '../src/unicode/category.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+    unicode_tables,
+  ],
   'test_intl_collation_data': [
     'test_intl_collation_data.c',
     '../src/intl/collation/root-data.c',
