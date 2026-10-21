@@ -4428,6 +4428,22 @@ test(
 )
 
 test(
+  'intl-segment-sources',
+  python,
+  args: files('test_intl_segment_sources.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-inheritance',
+  python,
+  args: files('test_intl_segment_inheritance.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-dayperiod-tables',
   python,
   args: files('test_intl_dayperiod_tables.py'),
