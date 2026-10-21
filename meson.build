@@ -209,6 +209,9 @@ if get_option('unicode_data') != ''
       ucd / 'emoji-zwj-sequences.txt',
       ucd / 'PropList.txt',
       ucd / 'DerivedCoreProperties.txt',
+      ucd / 'auxiliary/GraphemeBreakProperty.txt',
+      ucd / 'auxiliary/WordBreakProperty.txt',
+      ucd / 'auxiliary/SentenceBreakProperty.txt',
     ),
     output: [
       'libunicode-table.c',
