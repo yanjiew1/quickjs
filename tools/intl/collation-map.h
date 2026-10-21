@@ -57,6 +57,12 @@ typedef QJSIntlStatus (*QJSIntlCollationMapVisitor)(void *opaque, uint32_t termi
                                                   const QJSIntlRelationMapping *);
 QJSIntlStatus qjs_intl_collation_map_visit(const QJSIntlCollationMap *,
                                           QJSIntlCollationMapVisitor, void *opaque);
+/* Enumerate root-context suppression independently of live terminals. Each
+   scalar is emitted once in unspecified order, including groups with no mapping.
+   No allocation/mutation/reentry; callback errors propagate immediately. */
+typedef QJSIntlStatus (*QJSIntlCollationSuppressedVisitor)(void *, uint32_t scalar);
+QJSIntlStatus qjs_intl_collation_map_visit_suppressed(const QJSIntlCollationMap *,
+                                                     QJSIntlCollationSuppressedVisitor, void *);
 /* Original-order NFD keys of a CURRENT terminal, without allocation/recursion.
    Count outputs reset on failure. Copy preflights both capacities and complete
    parent paths before modifying either buffer. Insufficient capacity returns
