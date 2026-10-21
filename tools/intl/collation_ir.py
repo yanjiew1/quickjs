@@ -7,6 +7,7 @@ from pathlib import Path
 import acquire
 from cldr_xml import DataError
 import collation_programs
+import collation_bindings
 import collation_rules as rules
 
 MAGIC = b'QJCI'
@@ -122,18 +123,31 @@ def encode(programs, fingerprint):
     return bytes(output)
 
 
-def prepare(sources):
-    catalog = collation_programs.load(sources)
+def encode_catalog(catalog, fingerprint, keys):
+    """Expand selected independent programs in their original identity order."""
     return encode((catalog.programs[key]._replace(nodes=catalog.expand(catalog.programs[key]))
-                   for key in sorted(catalog.programs)), bytes.fromhex(sources.pin['manifest_sha256']))
+                   for key in keys), fingerprint)
+
+
+def prepare(sources, profile=None):
+    catalog = collation_programs.load(sources)
+    keys = sorted(catalog.programs)
+    if profile is not None:
+        # Programs execute independently after ordered import expansion. Keep
+        # every usage target, but no standalone private/alternate/unused record
+        # solely because its rules were imported into a selected public program.
+        bindings = collation_bindings.from_catalog(catalog, profile)
+        keys = collation_bindings.program_targets(bindings)
+    return encode_catalog(catalog, bytes.fromhex(sources.pin['manifest_sha256']), keys)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--profile', choices=('minimal', 'native'))
     args = parser.parse_args()
-    acquire.atomic_write(args.output, prepare(acquire.Sources(args.sources)))
+    acquire.atomic_write(args.output, prepare(acquire.Sources(args.sources), args.profile))
 
 
 if __name__ == '__main__':
