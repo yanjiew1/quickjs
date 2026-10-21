@@ -22,7 +22,9 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cutils.h"
 #include "libunicode.h"
@@ -138,15 +140,24 @@ static int category_contains(const CharRange *range, uint32_t code)
     return 0;
 }
 
-static void test_category_points(void)
+static void test_category_points(int all)
 {
-    const char *names[] = {"L", "M"};
-    int (*predicates[])(uint32_t) = {lre_is_letter, lre_is_mark};
+    const char *names[] = {"L", "M", "Nd", "S"};
+    int (*predicates[])(uint32_t) = {
+        lre_is_letter, lre_is_mark, lre_is_decimal_digit, lre_is_symbol_or_separator
+    };
     int kind, i, delta;
-    for (kind = 0; kind < 2; kind++) {
+    for (kind = 0; kind < 4; kind++) {
         CharRange range;
         cr_init(&range, NULL, test_realloc);
         assert(!unicode_general_category(&range, names[kind]));
+        if (kind == 3) {
+            CharRange separators;
+            cr_init(&separators, NULL, test_realloc);
+            assert(!unicode_general_category(&separators, "Z"));
+            assert(!cr_op1(&range, separators.points, separators.len, CR_OP_UNION));
+            cr_free(&separators);
+        }
         for (i = 0; i < range.len; i++) {
             /* Every category boundary and its immediate neighbours, including
                supplementary ranges and alternating Lu/Ll table runs. */
@@ -160,6 +171,19 @@ static void test_category_points(void)
             assert(predicates[kind](i) == category_contains(&range, i));
         assert(!predicates[kind](0xd800) && !predicates[kind](0x10ffff));
         assert(!predicates[kind](0x110000) && !predicates[kind](UINT32_MAX));
+        if (all) {
+            uint32_t code;
+            int cursor = 0;
+            /* The full-range decoder does not use point-query checkpoints.
+               Walk its ranges once to provide an independent linear oracle. */
+            for (code = 0; code <= 0x10ffff; code++) {
+                int expected;
+                while (cursor + 1 < range.len && code >= range.points[cursor + 1])
+                    cursor += 2;
+                expected = cursor + 1 < range.len && code >= range.points[cursor];
+                assert(predicates[kind](code) == expected);
+            }
+        }
         cr_free(&range);
     }
     assert(lre_is_letter(0x02b0)); /* Modifier letter. */
@@ -199,13 +223,18 @@ static void test_case_context_properties(void)
     cr_free(&range);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    int all = argc == 2 && !strcmp(argv[1], "--all-categories");
+    if (argc > 1 && !all) {
+        fprintf(stderr, "usage: %s [--all-categories]\n", argv[0]);
+        return 1;
+    }
     test_range_capacity_limits();
     test_default_range_allocator();
     test_empty_range();
     test_case_folding();
-    test_category_points();
+    test_category_points(all);
     test_case_context_properties();
     return 0;
 }
