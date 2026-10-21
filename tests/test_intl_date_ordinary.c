@@ -281,6 +281,46 @@ static void zoned_date_clocks(const QJSIntlAllocator *allocator,
     }
 }
 
+static void appended_date_field(const QJSIntlAllocator *allocator)
+{
+    static const char *const templates[] = {"{0} [era] {1}", "{1} [era] {0}"};
+    static const char *const expected[] = {"y-MM-dd' [era] 'G' at 'H:mm", "G' [era] 'y-MM-dd' at 'H:mm"};
+    Allocation *state = allocator->opaque;
+    QJSIntlDatePattern date, clock, field;
+    size_t kind, before = state->live;
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("y-MM-dd"), &date));
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("H:mm"), &clock));
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("G"), &field));
+    for (kind = 0; kind < sizeof(templates) / sizeof(*templates); kind++) {
+        QJSIntlPairPattern layout;
+        QJSIntlDatePattern result, zero = {0};
+        size_t calls, i, baseline = state->live;
+        assert(!qjs_intl_pair_pattern_parse(bytes(templates[kind]), &layout));
+        state->calls = 0;
+        assert(!qjs_intl_date_clock_append_date_field(allocator, &date, &clock,
+                    bytes("{1} 'at' {0}"), &layout, &field, &result));
+        calls = state->calls;
+        pattern_equal(allocator, &result, expected[kind]);
+        qjs_intl_date_pattern_clear(allocator, &result);
+        assert(state->live == baseline);
+        /* Each failure crosses a different owned temporary: era-date,
+           compiled connector, or final date/clock program. */
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            memset(&result, 0xff, sizeof(result));
+            assert(qjs_intl_date_clock_append_date_field(allocator, &date, &clock,
+                       bytes("{1} 'at' {0}"), &layout, &field, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
+    }
+    qjs_intl_date_pattern_clear(allocator, &field);
+    qjs_intl_date_pattern_clear(allocator, &clock);
+    qjs_intl_date_pattern_clear(allocator, &date);
+    assert(state->live == before);
+}
+
 static void date_clocks(const QJSIntlAllocator *allocator,
                          const QJSIntlDateOrdinaryPrograms *ordinary,
                          const QJSIntlDateCombinationData *connectors)
@@ -487,6 +527,7 @@ int main(void)
 {
     Allocation state = {0};
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
+    appended_date_field(&allocator);
     run(&allocator, qjs_intl_date_ordinary_fixture_bytes, qjs_intl_date_ordinary_fixture_length, 0, 1, 0);
     run(&allocator, qjs_intl_date_ordinary_blocked_bytes, qjs_intl_date_ordinary_blocked_length, 1, 0, 0);
     run(&allocator, qjs_intl_date_ordinary_padded_bytes, qjs_intl_date_ordinary_padded_length, 0, 0, 1);
