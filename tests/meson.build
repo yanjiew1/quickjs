@@ -2228,6 +2228,25 @@ if intl_enabled
       # Avoid reprocessing the same large immutable array at every LTO test link.
       override_options: ['b_lto=false'],
     )
+    intl_collation_profile_test = {
+      'name': ('test_intl_collation_' + profile),
+      'sources': files(
+        'test_intl_collation_profiles.c',
+        '../src/intl/collation/root-data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_collation_profile_test,
+      'name': ('intl-collation-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_calendar_era_test = {
       'name': ('test_intl_calendar_era_' + profile),
       'sources': intl_calendar_era_sources,
