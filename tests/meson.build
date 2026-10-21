@@ -4185,6 +4185,22 @@ if intl_enabled
   )
 
   test(
+    'intl-collation-tables',
+    python,
+    args: files('test_intl_collation_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-root',
+    python,
+    args: files('test_intl_collation_root.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-plural-sources',
     python,
     args: files('test_intl_plural_rules.py'),
