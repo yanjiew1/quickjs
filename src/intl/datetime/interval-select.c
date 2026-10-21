@@ -38,6 +38,7 @@ static QJSIntlStatus skeleton_info(QJSIntlBytes source, QJSIntlDatePatternInfo *
         tokens[view.count].symbol = symbol;
         tokens[view.count++].width = at - first;
     }
+    qjs_intl_date_pattern_fix_calendar_year(&view);
     return view.count ? qjs_intl_date_pattern_info(&view, out) : QJS_INTL_UNSUPPORTED;
 }
 
