@@ -413,9 +413,14 @@ range. Numeric tokens use the reserved translated primary and common weak
 weights, keeping script and leading zeros out of ordinary comparisons. Separate
 secondary, case and tertiary passes preserve level priority and distinguish
 per-CE case-first tuples from a whole case level. Pure primary scans and wholly
-zero CEs need no weak buffer. This initial slice explicitly rejects shifted,
-backward-secondary and quaternary/identical policies until their consumers are
-implemented; it does not publish native Collator service capability.
+zero CEs need no weak buffer. Shifted handling classifies maxVariable against
+source provenance, then applies reordering to variables' old primaries at Q.
+Following primary-ignorables vanish through Q until a regular or numeric primary
+ends the run. Quaternary tuples keep variable and regular/common bands separate,
+preserve explicit Q-only ranks and retain Q=0 alignment markers when a real Q
+difference is possible. Common-only passes cannot invent differences from CE
+counts. Backward-secondary and identical policies remain explicitly unsupported
+until their consumers are implemented; no native Collator capability is published.
 
 ```sh
 python3 tools/intl/collation_archive.py \
