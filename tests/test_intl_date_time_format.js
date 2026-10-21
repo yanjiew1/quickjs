@@ -67,9 +67,48 @@ for (const digits of [1, 2, 3]) {
         ['minute', 'literal', 'second', 'literal', 'fractionalSecond']);
 }
 for (const [hourCycle, text] of [['h11', '0'], ['h12', '12'], ['h23', '0'], ['h24', '24']]) {
-    const formatter = new DTF('en', {...utc, hour: 'numeric', hourCycle});
+    // Isolate numeric hour-cycle arithmetic from best-fit source padding.
+    const formatter = new DTF('en', {...utc, hour: 'numeric', hourCycle, formatMatcher: 'basic'});
     assert(formatter.formatToParts(0).find(p => p.type === 'hour').value, text);
     assert(formatter.resolvedOptions().hourCycle, hourCycle);
+}
+
+// English's real Hms source has HH, while hms has h. Best fit keeps that
+// family-specific width; Basic follows its component score, and an explicit
+// two-digit request remains two-digit in either policy.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const formatMatcher of ['basic', 'best fit']) {
+        for (const fields of [
+            {}, {fractionalSecondDigits: 3},
+            {year: 'numeric', month: 'numeric', day: 'numeric'},
+            {year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short', era: 'short', timeZoneName: 'short'},
+        ]) {
+            for (const hour of ['numeric', '2-digit']) {
+                const formatter = new DTF('en', {...utc, ...fields, hourCycle, formatMatcher,
+                    hour, minute: 'numeric', second: 'numeric'});
+                const width = formatter.resolvedOptions().hour;
+                const padded = width === '2-digit';
+                assert(width === 'numeric' || width === '2-digit');
+                if (hour === '2-digit')
+                    assert(width, '2-digit');
+                // Bare clocks provide both source families. Fractional/mixed
+                // programs may select another truthful representative width.
+                if (Object.keys(fields).length === 0)
+                    assert(width, hour === '2-digit' || (formatMatcher === 'best fit' && hourCycle === 'h23')
+                        ? '2-digit' : 'numeric');
+                const value = Date.UTC(2024, 0, 1, 1, 23, 45, 678);
+                assert(formatter.formatToParts(value).find(part => part.type === 'hour').value, padded ? '01' : '1');
+                if (typeof Temporal !== 'undefined') {
+                    // PlainTime selects its own clock-only record, rather
+                    // than the ordinary date/clock record of resolvedOptions.
+                    const plainPadded = 'fractionalSecondDigits' in fields ? padded :
+                        hour === '2-digit' || (formatMatcher === 'best fit' && hourCycle === 'h23');
+                    assert(formatter.formatToParts(new Temporal.PlainTime(1, 23, 45, 678))
+                        .find(part => part.type === 'hour').value, plainPadded ? '01' : '1');
+                }
+            }
+        }
+    }
 }
 // A bare flexible period uses format-context names/rules, including exact
 // noon, without importing an hour or stand-alone-context labels. Midnight
