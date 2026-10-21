@@ -111,6 +111,11 @@ static void clear_intrinsics(JSContext *ctx)
     JS_SetClassProto(ctx, JS_CLASS_INTL_RELATIVE_TIME_FORMAT, JS_NULL);
     JS_SetClassProto(ctx, JS_CLASS_INTL_DURATION_FORMAT, JS_NULL);
     JS_SetClassProto(ctx, JS_CLASS_INTL_DISPLAY_NAMES, JS_NULL);
+#ifdef CONFIG_INTL_SEGMENTER
+    JS_SetClassProto(ctx, JS_CLASS_INTL_SEGMENTER, JS_NULL);
+    JS_SetClassProto(ctx, JS_CLASS_INTL_SEGMENTS, JS_NULL);
+    JS_SetClassProto(ctx, JS_CLASS_INTL_SEGMENT_ITERATOR, JS_NULL);
+#endif
 }
 
 int js_intl_ensure_intrinsics(JSContext *ctx)
@@ -137,6 +142,10 @@ int js_intl_ensure_intrinsics(JSContext *ctx)
         js_intl_init_display_names(ctx, object)) {
         goto fail;
     }
+#ifdef CONFIG_INTL_SEGMENTER
+    if (js_intl_init_segmenter(ctx, object))
+        goto fail;
+#endif
     ctx->intl_intrinsics = object;
     return 0;
 fail:
