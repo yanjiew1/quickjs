@@ -4329,6 +4329,23 @@ test(
 )
 
 test(
+  'intl-collation-compiler-input',
+  python,
+  args: [files('test_intl_collation_ir.py'), '--compiler', collation_compile],
+  depends: collation_compile,
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-collation-groups',
+  python,
+  args: files('test_intl_collation_groups.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-collation-programs',
   python,
   args: files('test_intl_collation_programs.py'),
