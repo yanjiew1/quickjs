@@ -59,7 +59,8 @@ jobs:
     - name: Compile intl source data tools
       run: |
         meson compile -C build-collation -j "$(getconf _NPROCESSORS_ONLN)" \
-          test_intl_collation_minimal
+          test_intl_collation_minimal \
+          intl-collation-compile
     - name: Compare the complete pinned root collation ordering
       run: |
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
@@ -78,6 +79,17 @@ jobs:
       run: |
         timeout 90s python3 tools/intl/collation_programs.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit root collation group identities and anchor keys
+      run: |
+        timeout 60s python3 tools/intl/collation_groups.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit compiler input with the pinned Unicode implementation
+      run: |
+        timeout 90s python3 tools/intl/collation_ir.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+          --output "$RUNNER_TEMP/collation-input.qjci"
+        timeout 60s build-collation/intl-collation-compile \
+          --audit-ir "$RUNNER_TEMP/collation-input.qjci"
     - name: Audit locale inheritance graphs
       run: |
         timeout 60s python3 tools/intl/parents.py \
