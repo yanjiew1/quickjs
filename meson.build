@@ -69,6 +69,11 @@ common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
 intl_enabled = get_option('intl') != 'disabled'
 if intl_enabled
   common_args += '-DCONFIG_INTL'
+  if get_option('intl') == 'minimal'
+    # Native Segmenter awaits its CLDR/dictionary profile; expose the verified
+    # Unicode default profile through the minimal configuration first.
+    common_args += '-DCONFIG_INTL_SEGMENTER'
+  endif
 endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
