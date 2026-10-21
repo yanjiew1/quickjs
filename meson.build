@@ -232,6 +232,26 @@ endif
 unicode_headers = declare_dependency(sources: unicode_table_headers)
 host_deps += [unicode_headers]
 native_deps += [unicode_headers]
+collation_compile_overrides = ['b_lto=false']
+if meson.is_cross_build()
+  # The generator runs on the build machine, independently of target runtimes.
+  collation_compile_overrides += ['b_sanitize=none']
+endif
+collation_compile = executable(
+  'intl-collation-compile',
+  [
+    'tools/intl/collation-compile.c',
+    'src/unicode/libunicode.c',
+    'src/cutils/cutils.c',
+    unicode_tables,
+  ],
+  native: true,
+  c_args: native_args,
+  include_directories: inc,
+  dependencies: native_deps,
+  override_options: collation_compile_overrides,
+  build_by_default: get_option('tests') and intl_enabled,
+)
 executable(
   'unicode_gen_test',
   [
