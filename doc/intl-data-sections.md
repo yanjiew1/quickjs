@@ -595,7 +595,8 @@ codes and noncontiguous raw IDs remain data, without changing a compiled table.
 ## 36 — Root collation elements
 
 Encoder/decoder `tools/intl/collation_tables.py`; authenticated source collector
-`tools/intl/collation_root.py`. This optional section describes explicit CLDR
+`tools/intl/collation_root.py`; C owner `src/intl/collation/root-data.c`.
+This optional section describes explicit CLDR
 root UCA mappings, independently of selected locale inventories. Its presence
 does not establish executable Collator support or apply locale tailorings.
 
@@ -630,3 +631,10 @@ key length nor expansion length is restricted to the observed source maxima.
 Normalization, implicit-weight derivation, case/numeric options, variable
 handling and locale tailoring are consumers of this data, not encoded results
 or additional comparison levels.
+
+The C reader borrows an immutable validated pack without allocation or a
+dependency on locale/string sections. It provides exact and longest contiguous
+scalar-prefix lookup; a missing section or mapping is `UNSUPPORTED`. Prefix
+lookup preserves an earlier complete key while narrowing its extensions, so a
+later mismatch can fall back to that key. It does not implement UCA's
+discontiguous contractions or establish executable service availability.
