@@ -1,6 +1,5 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-settings.h"
-#include <string.h>
 
 void qjs_intl_collation_settings_init(QJSIntlCollationPolicy *out)
 {
@@ -9,23 +8,11 @@ void qjs_intl_collation_settings_init(QJSIntlCollationPolicy *out)
             .case_first = QJS_INTL_COLLATION_CASE_OFF, .max_variable = QJS_INTL_COLLATION_VARIABLE_PUNCT};
 }
 
-static int text_equal(const QJSIntlIRScalars *text, const char *value, int terminated)
-{
-    size_t length = strlen(value), i;
-    if (text->count != length + (terminated != 0))
-        return 0;
-    for (i = 0; i < length; i++) {
-        if (qjs_intl_ir_scalar(text, (uint32_t)i) != (unsigned char)value[i])
-            return 0;
-    }
-    return !terminated || !qjs_intl_ir_scalar(text, (uint32_t)length);
-}
-
 static int boolean(const QJSIntlIRScalars *value, int *out)
 {
-    if (text_equal(value, "on", 1))
+    if (qjs_intl_ir_ascii_equal(value, "on", 1))
         *out = 1;
-    else if (text_equal(value, "off", 1))
+    else if (qjs_intl_ir_ascii_equal(value, "off", 1))
         *out = 0;
     else
         return 0;
@@ -45,44 +32,44 @@ QJSIntlStatus qjs_intl_collation_setting_apply(QJSIntlCollationPolicy *policy,
     name = node->fields;
     value = node->fields + 1;
     next = *policy;
-    if (text_equal(name, "strength", 0)) {
+    if (qjs_intl_ir_ascii_equal(name, "strength", 0)) {
         uint32_t code = qjs_intl_ir_scalar(value, 0);
         if (value->count == 2 && !qjs_intl_ir_scalar(value, 1) && code >= '1' && code <= '4')
             next.strength = (QJSIntlCollationStrength)(code - '0');
-        else if (text_equal(value, "I", 1))
+        else if (qjs_intl_ir_ascii_equal(value, "I", 1))
             next.strength = QJS_INTL_COLLATION_STRENGTH_IDENTICAL;
         else
             valid = 0;
-    } else if (text_equal(name, "alternate", 0)) {
-        if (text_equal(value, "shifted", 1))
+    } else if (qjs_intl_ir_ascii_equal(name, "alternate", 0)) {
+        if (qjs_intl_ir_ascii_equal(value, "shifted", 1))
             next.shifted = 1;
-        else if (text_equal(value, "non-ignorable", 1))
+        else if (qjs_intl_ir_ascii_equal(value, "non-ignorable", 1))
             next.shifted = 0;
         else
             valid = 0;
-    } else if (text_equal(name, "backwards", 0)) {
-        valid = text_equal(value, "2", 1);
+    } else if (qjs_intl_ir_ascii_equal(name, "backwards", 0)) {
+        valid = qjs_intl_ir_ascii_equal(value, "2", 1);
         next.backwards_secondary = 1;
-    } else if (text_equal(name, "normalization", 0)) {
+    } else if (qjs_intl_ir_ascii_equal(name, "normalization", 0)) {
         valid = boolean(value, &next.normalization);
-    } else if (text_equal(name, "caseLevel", 0)) {
+    } else if (qjs_intl_ir_ascii_equal(name, "caseLevel", 0)) {
         valid = boolean(value, &next.case_level);
-    } else if (text_equal(name, "numericOrdering", 0)) {
+    } else if (qjs_intl_ir_ascii_equal(name, "numericOrdering", 0)) {
         valid = boolean(value, &next.numeric);
-    } else if (text_equal(name, "caseFirst", 0)) {
-        if (text_equal(value, "off", 1))
+    } else if (qjs_intl_ir_ascii_equal(name, "caseFirst", 0)) {
+        if (qjs_intl_ir_ascii_equal(value, "off", 1))
             next.case_first = QJS_INTL_COLLATION_CASE_OFF;
-        else if (text_equal(value, "upper", 1))
+        else if (qjs_intl_ir_ascii_equal(value, "upper", 1))
             next.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
-        else if (text_equal(value, "lower", 1))
+        else if (qjs_intl_ir_ascii_equal(value, "lower", 1))
             next.case_first = QJS_INTL_COLLATION_LOWER_FIRST;
         else
             valid = 0;
-    } else if (text_equal(name, "maxVariable", 0)) {
+    } else if (qjs_intl_ir_ascii_equal(name, "maxVariable", 0)) {
         static const char *const names[] = {"space", "punct", "symbol", "currency"};
         unsigned int i;
         for (i = 0; i < 4; i++) {
-            if (text_equal(value, names[i], 1)) {
+            if (qjs_intl_ir_ascii_equal(value, names[i], 1)) {
                 next.max_variable = (QJSIntlCollationMaxVariable)i;
                 break;
             }

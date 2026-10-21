@@ -277,6 +277,15 @@ policy unchanged. Reordering belongs to its group owner; unsupported legacy
 settings fail explicitly. Recording normalization off does not waive canonical
 equivalence, and maxVariable does not retroactively change logical reset points.
 
+`collation-reorder.c` owns a permutation of source group IDs, preserving ordering
+within each group. It resolves script aliases through the root catalog, rejects
+duplicates even when spelled with different aliases, and expands `others` (or
+`Zzzz`) with the unmentioned groups in source order. Unmentioned special groups
+retain their prescribed leading order. A replacement list publishes atomically;
+allocation or validation failure leaves the previous ranks intact. Fixed and
+trailing primaries remain outside this permutation. Reordering does not alter
+construction weights, logical resets or maximum-variable classification.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension

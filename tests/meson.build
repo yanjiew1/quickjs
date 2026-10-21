@@ -3300,6 +3300,15 @@ standalone = {
     unicode_tables,
     intl_collation_root_input_fixture,
   ],
+  'test_intl_collation_reorder': [
+    'test_intl_collation_reorder.c',
+    '../tools/intl/collation-reorder.c',
+    '../tools/intl/collation-root-input.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+    unicode_tables,
+    intl_collation_root_input_fixture,
+  ],
   'test_intl_collation_settings': [
     'test_intl_collation_settings.c',
     '../tools/intl/collation-settings.c',
