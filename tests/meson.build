@@ -2250,6 +2250,7 @@ if intl_enabled
         '../src/intl/collation/compare.c',
         '../src/intl/collation/contexts.c',
         '../src/intl/collation/elements.c',
+        '../src/intl/collation/logical.c',
         '../src/intl/collation/weights.c',
         '../src/unicode/blocks.c',
         '../src/unicode/category.c',
@@ -3423,6 +3424,14 @@ if intl_enabled
       '../src/unicode/libunicode.c',
       '../src/cutils/cutils.c',
     ) + unicode_tables,
+    'test_intl_collation_weights_graph': files(
+      'test_intl_collation_weights_graph.c',
+      '../tools/intl/collation-weights.c',
+    ),
+    'test_intl_collation_logical': files(
+      'test_intl_collation_logical.c',
+      '../src/intl/collation/logical.c',
+    ),
     'test_intl_collation_data': files(
       'test_intl_collation_data.c',
       '../src/intl/collation/root-data.c',
