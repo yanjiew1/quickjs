@@ -28,6 +28,7 @@
 
 #include "cutils.h"
 #include "libunicode.h"
+#include <libunicode-table.h>
 
 static void *test_realloc(void *opaque, void *ptr, size_t size)
 {
@@ -223,11 +224,87 @@ static void test_case_context_properties(void)
     cr_free(&range);
 }
 
+static void test_implicit_properties(int all)
+{
+    const char *names[] = { "Cn", "Unified_Ideograph" };
+    int kind;
+    for (kind = 0; kind < 2; kind++) {
+        CharRange range;
+        uint32_t code;
+        int cursor = 0, i, delta;
+        cr_init(&range, NULL, test_realloc);
+        if (!kind)
+            assert(!unicode_general_category(&range, names[kind]));
+        else
+            assert(!unicode_prop(&range, names[kind]));
+        for (i = 0; i < range.len; i++) {
+            for (delta = -1; delta <= 1; delta++) {
+                int64_t point = (int64_t)range.points[i] + delta;
+                int actual;
+                if (point < 0 || point > 0x10ffff)
+                    continue;
+                actual = kind ? lre_is_unified_ideograph(point) : !lre_is_assigned(point);
+                assert(actual == category_contains(&range, point));
+            }
+        }
+        if (all) {
+            /* The materialized range reader is independent of point queries. */
+            for (code = 0; code <= 0x10ffff; code++) {
+                int expected;
+                while (cursor + 1 < range.len && code >= range.points[cursor + 1])
+                    cursor += 2;
+                expected = cursor + 1 < range.len && code >= range.points[cursor];
+                assert((kind ? lre_is_unified_ideograph(code) : !lre_is_assigned(code)) == expected);
+            }
+        }
+        cr_free(&range);
+    }
+    /* Assigned does not mean scalar, standardized character, or block member. */
+    assert(lre_is_assigned(0xd800) && lre_is_assigned(0xe000));
+    assert(!lre_is_assigned(0x378) && !lre_is_assigned(0xfdd0));
+    assert(!lre_is_assigned(0x110000) && !lre_is_assigned(UINT32_MAX));
+    assert(lre_is_unified_ideograph(0x4e00) && lre_is_unified_ideograph(0x20000));
+    assert(!lre_is_unified_ideograph(0x110000) && !lre_is_unified_ideograph(UINT32_MAX));
+    assert(unicode_get_block(0x4e00) == UNICODE_BLOCK_CJK_Unified_Ideographs);
+    assert(unicode_get_block(0xfa0e) == UNICODE_BLOCK_CJK_Compatibility_Ideographs);
+    assert(unicode_get_block(0x17000) == UNICODE_BLOCK_Tangut);
+    assert(unicode_get_block(0x18800) == UNICODE_BLOCK_Tangut_Components);
+    assert(unicode_get_block(0xd800) == UNICODE_BLOCK_High_Surrogates);
+    assert(unicode_get_block(0x2fe0) == UNICODE_BLOCK_No_Block);
+    assert(unicode_get_block(0x110000) == UNICODE_BLOCK_No_Block);
+    assert(unicode_get_block(UINT32_MAX) == UNICODE_BLOCK_No_Block);
+}
+
+/* Source ranges are read directly, without the generator parser or compiled
+   range array. Include unassigned holes within blocks and No_Block gaps. */
+static void test_block_source(const char *path)
+{
+    char line[1024];
+    FILE *file = fopen(path, "rb");
+    uint32_t cursor = 0;
+    int id = 0;
+    assert(file);
+    while (fgets(line, sizeof(line), file)) {
+        unsigned int first, last;
+        if (line[0] == '#' || sscanf(line, "%x..%x;", &first, &last) != 2)
+            continue;
+        assert(first >= cursor && first <= last && last <= 0x10ffff);
+        while (cursor < first)
+            assert(unicode_get_block(cursor++) == UNICODE_BLOCK_No_Block);
+        id++;
+        while (cursor <= last)
+            assert(unicode_get_block(cursor++) == id);
+    }
+    assert(id && !ferror(file) && !fclose(file));
+    while (cursor <= 0x10ffff)
+        assert(unicode_get_block(cursor++) == UNICODE_BLOCK_No_Block);
+}
+
 int main(int argc, char **argv)
 {
     int all = argc == 2 && !strcmp(argv[1], "--all-categories");
-    if (argc > 1 && !all) {
-        fprintf(stderr, "usage: %s [--all-categories]\n", argv[0]);
+    if (argc > 1 && !all && !(argc == 3 && !strcmp(argv[1], "--blocks"))) {
+        fprintf(stderr, "usage: %s [--all-categories | --blocks Blocks.txt]\n", argv[0]);
         return 1;
     }
     test_range_capacity_limits();
@@ -236,5 +313,8 @@ int main(int argc, char **argv)
     test_case_folding();
     test_category_points(all);
     test_case_context_properties();
+    test_implicit_properties(all);
+    if (argc == 3)
+        test_block_source(argv[2]);
     return 0;
 }
