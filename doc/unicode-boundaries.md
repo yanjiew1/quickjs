@@ -61,3 +61,22 @@ Use [UAX #29 revision 49](https://www.unicode.org/reports/tr29/tr29-49.html),
 the Unicode 18 rules, when consuming these tables. In particular, GB9c changed
 from Unicode 17. Importing an older implementation without updating its rules
 does not establish conformance to the pinned data release.
+
+## Default grapheme clusters
+
+`src/unicode/grapheme.c` implements the default **extended** grapheme rules.
+Call `unicode_grapheme_next()` starting at zero, then at each returned boundary.
+Positions are offsets into the original UTF-16 sequence; valid surrogate pairs
+remain intact and lone surrogates retain their original units. The function
+does not allocate, normalize, or apply locale tailoring.
+
+The scan keeps the previous GCB class, RI parity, Indic-linker context and
+emoji-ZWJ context. Context is updated as input is consumed rather than recovered
+by repeatedly scanning backward. Iterating the whole input is linear even for
+long flag, combining-mark or ZWJ sequences. Case conversion shares the same
+bounded UTF-16 decoding helper without sharing its algorithm-specific state.
+
+`test_unicode_grapheme` contains quick UTF-16/context/stress regressions. Passing
+the official `GraphemeBreakTest.txt` path additionally checks every source case,
+including the absence of boundaries inside supplementary pairs. Unicode CI
+runs that conformance mode against the same pinned release as the tables.
