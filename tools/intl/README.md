@@ -224,6 +224,19 @@ both the cursor and symbolic ordering. This host-only transition layer does not
 yet execute current-map lookup, settings, logical reset positions or runtime
 ranked comparison; it does not advertise locale Collator support by itself.
 
+`collation-builder.c` connects text resets and relations to logical root input,
+the current mapping store and the relation owner. Counted scalar text normalizes
+with pinned C Unicode. Resets and explicit extensions resolve current mappings;
+relation case metadata comes from immutable root lookup. Prefixes retain the
+original NFC boundary checks before NFD, and extensions do not enter the next
+relation's cursor. Root and tailored lookup share the CE-independent matcher.
+
+The builder borrows immutable root bytes and owns its mutable map, ordering and
+cursor. Lookup results own independent CE arrays. A failed command poisons the
+builder: compilation must abort and clear it, since graph and map publication
+are separate transactions. It publishes no runtime data. Logical resets,
+settings, full program execution and freezing are subsequent layers.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension
