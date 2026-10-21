@@ -65,6 +65,7 @@ QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx)
 
 static const JSCFunctionListEntry intl_functions[] = {
     JS_CFUNC_DEF("getCanonicalLocales", 1, js_intl_get_canonical_locales),
+    JS_CFUNC_DEF("supportedValuesOf", 1, js_intl_supported_values),
 };
 
 JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
