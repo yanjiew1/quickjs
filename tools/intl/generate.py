@@ -11,6 +11,7 @@ import calendar_names
 import calendar_name_tables
 import calendar_eras
 import calendar_era_tables
+import collation_contexts
 import collation_root
 import collation_tables
 import compact_patterns
@@ -108,6 +109,7 @@ def generate(sources, profile):
     dayperiod_data = dayperiod_rules.collect(inputs_read)
     calendar_era_data = calendar_eras.collect(inputs_read)
     collation_data = collation_root.collect(inputs_read)
+    collation_context_data = collation_contexts.collect(inputs_read, collation_data)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     # Only formatter locale rows are reduced for minimal. Global identity,
@@ -208,6 +210,7 @@ def generate(sources, profile):
     sections[bundle.CALENDAR_ERAS] = calendar_era_tables.encode(calendar_era_data, string_ids)
     # Root UCA mappings are global scalar data, not locale-row projection.
     sections[bundle.COLLATION_ROOT] = collation_tables.encode(collation_data)
+    sections[bundle.COLLATION_CONTEXTS] = collation_contexts.encode(collation_context_data, collation_data)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),

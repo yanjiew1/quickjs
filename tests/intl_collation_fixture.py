@@ -7,11 +7,12 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 from acquire import atomic_write
 import bundle
+import collation_contexts
 import collation_root
 import collation_tables
 
 
-def fixture():
+def fixture(contexts=False):
     # Deliberately exceed the pinned source's observed key/expansion maxima.
     rows = (
         ((0,), ((False, 0, 0, 0),)),
@@ -22,16 +23,28 @@ def fixture():
         ((0xfdd0,), ((False, 0x2000, 0, 0),)),
         ((0x1f600,), ((False, 0x3000, 0x20, 2),)),
     )
-    section = collation_tables.encode({'version': collation_root.VERSION, 'rows': rows})
+    if contexts:
+        rows = (
+            ((0x61,), ((False, 0x1000, 0x20, 2),)),
+            ((0x61, 0x62), ((False, 0x1000, 0x20, 2), (False, 0, 0x21, 2))),
+            ((0x61, 0x62, 0x63), ((False, 0x1000, 0x20, 2), (False, 0, 0x21, 2),
+                                (False, 0, 0x22, 2))),
+        )
+    root = {'version': collation_root.VERSION, 'rows': rows}
+    section = collation_tables.encode(root)
     # No locale or string section: root mappings have no such dependency.
-    return bundle.pack({bundle.COLLATION_ROOT: section}, bytes(32), 'minimal')
+    sections = {bundle.COLLATION_ROOT: section}
+    if contexts:
+        sections[bundle.COLLATION_CONTEXTS] = collation_contexts.encode(((1, 1, 1), (2, 2, 2)), root)
+    return bundle.pack(sections, bytes(32), 'minimal')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--contexts', action='store_true')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    binary = fixture()
+    binary = fixture(args.contexts)
     # The normal profile emitter requires locale/string sections. This fixture
     # intentionally omits those, so emit its validated root-only envelope here.
     lines = ['#include <stddef.h>', '#include <stdint.h>',
