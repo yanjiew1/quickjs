@@ -132,6 +132,7 @@ if intl_enabled
   support_sources += files(
     'intl/collation/contexts.c',
     'intl/collation/elements.c',
+    'intl/collation/logical.c',
     'intl/collation/root-data.c',
     'intl/collation/weights.c',
     'intl/common/decimal.c',
