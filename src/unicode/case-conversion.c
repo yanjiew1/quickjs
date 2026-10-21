@@ -2,21 +2,12 @@
  * Copyright (c) 2026 Yan-Jie Wang. SPDX-License-Identifier: MIT. */
 #include "case-conversion.h"
 #include "libunicode.h"
-
-static uint32_t next(const uint16_t *input, size_t length, size_t *position)
-{
-    uint32_t c = input[(*position)++];
-    if (c >= 0xd800 && c <= 0xdbff && *position < length &&
-        input[*position] >= 0xdc00 && input[*position] <= 0xdfff) {
-        c = 0x10000 + ((c - 0xd800) << 10) + input[(*position)++] - 0xdc00;
-    }
-    return c;
-}
+#include "utf16.h"
 
 static BOOL following_cased(const uint16_t *input, size_t length, size_t position)
 {
     while (position < length) {
-        uint32_t c = next(input, length, &position);
+        uint32_t c = unicode_utf16_next(input, length, &position);
         if (!lre_is_case_ignorable(c))
             return lre_is_cased(c);
     }
@@ -27,7 +18,7 @@ static BOOL following_above(const uint16_t *input, size_t length, size_t positio
                             BOOL before_dot)
 {
     while (position < length) {
-        uint32_t c = next(input, length, &position);
+        uint32_t c = unicode_utf16_next(input, length, &position);
         int cc = unicode_get_cc(c);
         /* Before_Dot must see the dot itself before its class-230 barrier.
            More_Above accepts any class-230 mark before the next starter. */
@@ -62,7 +53,7 @@ int unicode_case_convert(DynBuf *out, const uint16_t *input, size_t length,
     size_t position = 0;
     BOOL before_cased = FALSE, after_i = FALSE, after_soft_dotted = FALSE;
     while (position < length) {
-        uint32_t c = next(input, length, &position);
+        uint32_t c = unicode_utf16_next(input, length, &position);
         uint32_t mapped[LRE_CC_RES_LEN_MAX];
         int count = -1, i, cc;
         if (to_lower && c == 0x3a3 && before_cased &&
