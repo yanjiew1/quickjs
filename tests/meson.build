@@ -3541,6 +3541,7 @@ if intl_enabled
     'test_intl_collation_compiled': files(
       'test_intl_collation_compiled.c',
       '../src/intl/collation/compiled-data.c',
+      '../src/intl/collation/ranked-elements.c',
       '../tools/intl/collation-archive.c',
       '../tools/intl/collation-trie.c',
       '../src/intl/collation/trie.c',
