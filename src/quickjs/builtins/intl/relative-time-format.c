@@ -30,7 +30,7 @@ static QJSIntlStatus system_supported(void *opaque, QJSIntlBytes name, int *out)
     return qjs_intl_relative_system_supported(capabilities->service, capabilities->locale, name, out);
 }
 
-static QJSIntlRelativeService *relative_service(JSContext *ctx)
+QJSIntlRelativeService *js_intl_relative_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_relative) {
@@ -81,7 +81,7 @@ static JSValue relative_constructor(JSContext *ctx, JSValueConst new_target, int
     if (JS_IsException(options) || js_intl_locale_matcher(ctx, options) < 0 ||
         js_intl_unicode_type_option(ctx, options, "numberingSystem", &option, &owned_option))
         goto done;
-    service = relative_service(ctx);
+    service = js_intl_relative_service(ctx);
     if (!service || js_intl_error(ctx, qjs_intl_relative_available(service, &available, &count),
                                     "relative locales") ||
         js_intl_resolve_locale_match(ctx, available, count, &requested, &match) ||
@@ -127,7 +127,7 @@ done:
 
 static JSValue relative_supported(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    QJSIntlRelativeService *service = relative_service(ctx);
+    QJSIntlRelativeService *service = js_intl_relative_service(ctx);
     const QJSIntlBytes *available;
     size_t count;
     if (!service || js_intl_error(ctx, qjs_intl_relative_available(service, &available, &count), "relative locales"))
