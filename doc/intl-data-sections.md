@@ -728,3 +728,40 @@ upper-threshold check that would also erase reserved U+FFFE. Symbols, currency,
 trailing weights and implicit continuations remain significant. The CI shifted
 ordering audit checks only the implemented first three levels, allowing ties
 which the source file's fourth level may distinguish.
+
+### Tailoring source syntax (no executable section yet)
+
+`tools/intl/collation_rules.py` collects the pinned release's ordered rule
+programs before semantic compilation. Source-located nodes retain reset
+positions, relation strengths, prefix and extension strings, starred scalar
+ranges, settings, imports, suppression and optimization commands. Tool escapes
+are decoded before rule syntax; decoded syntax and whitespace still require
+apostrophe quoting to be literals. Unquoted whitespace ends a rule string.
+UnicodeSet commands accept the pinned scalar/range/pattern-escape subset and
+reject unsupported operators instead of discarding them.
+
+Programs retain locale, type, alternate, draft and reference metadata. An empty
+root standard program is present data, distinct from missing or alternate
+programs. Repeated operations/imports stay ordered. Source positions identify
+the XML collation and original rule-text line/column, not an invented absolute
+XML line. The source catalog described below resolves aliases, collation-specific parents
+and ordered imports. NFD-inert star validation, canonical closure and CE
+allocation remain semantic weight-compilation work. This collector creates no binary section
+and advertises no executable locale collation capability.
+
+`tools/intl/collation_programs.py` owns that source catalog. It reuses
+`parents.ParentGraph` with the `collations` component and aliases/preferred names
+from `locale_metadata`; it does not duplicate a language-wide inheritance or
+hardcoded collation alias table. Exact lookup searches a requested type through
+its parents without concatenating ancestor programs. Normal profile selection
+applies TR35's requested/search/default/standard/root type fallback. Explicit
+alternate lookup does not substitute short/proposed and normal programs.
+
+Import lookup is separate from profile fallback: a missing imported type is an
+error, and absent `co` means standard, not the imported locale's default. Import
+expansion preserves execution order, including repeated imports of cached
+immutable syntax. An explicit stack detects active cycles, limits depth and
+counts all visited nodes, including imports into empty programs; a branching
+empty import graph must not bypass the work budget. Original node provenance
+survives expansion. Private programs may be imported but are excluded from complete-profile
+selection and establish no public service inventory; private defaults reject. The root standard program must exist and be empty.
