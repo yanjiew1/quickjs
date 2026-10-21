@@ -67,6 +67,48 @@ outside the reorderable group list. Authored tests cover aliases, missing real
 anchors, version/ordering errors and coarse lead-byte collisions; CI audits the
 complete pinned catalog.
 
+### Host collation compiler input
+
+`collation_ir.py` expands the ordered program catalog into a counted build-time
+artifact. `intl-collation-compile --audit-ir input.qjci` reads it using explicit
+little-endian loads, runs text operands through the engine's pinned Unicode NFD
+implementation, and requires every scalar inside starred ranges to be NFD-inert
+before normalization. Compatibility decompositions do not disqualify a scalar;
+canonical decompositions, Hangul syllables and nonzero combining classes do.
+Starred range order remains significant and is not sorted by the serializer.
+
+This is the compiler input/normalization stage, not completed semantic weight
+allocation. It does not execute settings, prove prefix normalization boundaries,
+or emit executable locale tailorings. Python retains ownership of XML, syntax,
+parents, type aliases and import expansion; it never substitutes its host Unicode
+version for the C algorithms. Normal builds still consume prepared runtime packs.
+The tool runs on the build machine in cross builds; native local sanitizer builds
+also instrument its C reader and normalization paths.
+
+The private `QJCI` version 1 layout is independent of the runtime `QJIN` format.
+All integers are unsigned little-endian 32-bit values. Record sizes include their
+headers, labels are counted UTF-8 without C0/DEL characters, and there is no
+alignment padding:
+
+| Record | Fields |
+| --- | --- |
+| File header | `QJCI` magic, version, Unicode version (`18 << 16`), total bytes, program count |
+| Program | record bytes, locale bytes, collation bytes, alternate bytes, instruction count; then the three labels and instructions |
+| Instruction | record bytes, kind, auxiliary, rule-text line, rule-text column, source-label bytes; then the source label and three scalar vectors |
+| Scalar vector | element count, followed by that many Unicode scalar values |
+
+Instruction kinds are reset (1), relation (2), starred relation (3), setting (4),
+suppression (5) and optimization hint (6). Reset vectors are text/special-name/
+empty, with auxiliary `before` strength; relation vectors are prefix/text/
+extension, with auxiliary relation strength. Range instructions carry inclusive
+endpoint pairs in the first vector; only starred relations have a strength.
+Setting vectors contain name/NUL-terminated values/empty, with zero auxiliary.
+Imports must already be expanded. Source positions refer to original rule text,
+not invented XML line coordinates. Artifacts and normalization allocations are
+bounded; starred expansion has per-program and artifact-wide work budgets,
+checked in a non-allocating preflight before normalization. A format change must
+update the Python writer, C reader, regression fixtures and this description.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
