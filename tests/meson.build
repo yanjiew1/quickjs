@@ -3209,6 +3209,7 @@ standalone += {
   'test_unicode': files(
     'test_unicode.c',
     '../src/unicode/category.c',
+    '../src/unicode/blocks.c',
     '../src/unicode/libunicode.c',
   ) + unicode_tables + files(
     '../src/cutils/cutils.c',
