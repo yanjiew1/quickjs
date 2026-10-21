@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "ordinary-programs.h"
+#include "append-layout.h"
 #include "../common/format-builder.h"
 #include <string.h>
 
@@ -104,9 +105,8 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
     QJSIntlDatePatternToken token = {{0}, width, symbol};
     QJSIntlDatePattern field = {0};
     QJSIntlDatePatternInfo info;
-    QJSIntlPairPattern layout;
+    QJSIntlDateAppendLayout layout;
     QJSIntlStatus status = QJS_INTL_UNSUPPORTED;
-    size_t i;
     initialize(build, &record);
     field.tokens = &token;
     field.count = 1;
@@ -116,38 +116,24 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
     if (qjs_intl_datetime_component_mask(&info.components) &
         qjs_intl_datetime_component_mask(&build->result.records[base].single.components))
         return QJS_INTL_INVALID_ARGUMENT;
-    for (i = 0; i < build->append->count; i++) {
-        QJSIntlDateAvailableGroup group;
-        status = qjs_intl_date_available_source_at(build->append, i, &record.append, &record.origin);
-        if (!status)
-            status = qjs_intl_date_available_group_at(&build->append->data, record.origin.group, &group);
-        if (status)
-            return status;
-        if (group.family != QJS_INTL_DATE_AVAILABLE_APPEND)
-            return QJS_INTL_INVALID_ARGUMENT;
-        if (record.append.plural != QJS_INTL_DATE_NO_PLURAL || record.append.alt.length ||
-            record.append.code.length != strlen(key) || memcmp(record.append.code.data, key, strlen(key)))
-            continue;
-        if (record.append.blocked || !record.append.text.length)
-            return QJS_INTL_UNSUPPORTED;
-        status = qjs_intl_pair_pattern_parse(record.append.text, &layout);
-        if (status)
-            return status;
-        status = qjs_intl_date_pattern_join(&build->result.allocator, &layout,
-                   &build->result.records[base].single.normal.pattern, &field, &record.single.normal.pattern);
-        if (status)
-            return status;
-        record.first = base;
-        record.single.components = build->result.records[base].single.components;
-        /* Derive metadata from the actual field token, including zone style,
-           rather than from the append item's key or punctuation. */
-        for (size_t component = 0; component < QJS_INTL_DATETIME_COMPONENT_COUNT; component++)
-            if (info.components.values[component])
-                record.single.components.values[component] = info.components.values[component];
-        record.construction = QJS_INTL_DATE_ORDINARY_APPEND;
-        return add(build, &record);
-    }
-    return QJS_INTL_UNSUPPORTED;
+    status = qjs_intl_date_append_layout(build->append, (QJSIntlBytes){key, strlen(key)}, &layout);
+    if (status)
+        return status;
+    status = qjs_intl_date_pattern_join(&build->result.allocator, &layout.pattern,
+               &build->result.records[base].single.normal.pattern, &field, &record.single.normal.pattern);
+    if (status)
+        return status;
+    record.append = layout.entry;
+    record.origin = layout.origin;
+    record.first = base;
+    record.single.components = build->result.records[base].single.components;
+    /* Derive metadata from the actual field token, including zone style,
+       rather than from the append item's key or punctuation. */
+    for (size_t component = 0; component < QJS_INTL_DATETIME_COMPONENT_COUNT; component++)
+        if (info.components.values[component])
+            record.single.components.values[component] = info.components.values[component];
+    record.construction = QJS_INTL_DATE_ORDINARY_APPEND;
+    return add(build, &record);
 }
 
 /* Construct a plain clock pair. An explicit B layout can supply AM/PM's
