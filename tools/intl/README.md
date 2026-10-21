@@ -375,6 +375,18 @@ group views, while archive bytes remain immutable and alive for all consumers.
 Matcher overlays borrow the program's trie descriptor, which must stay at a
 stable address. See the format document for validation and lifetime contracts.
 
+`src/intl/collation/ranked-elements.c` connects these views to the shared matcher
+without passing rank32 data through the older raw16 diagnostic emitter. It
+drains each matched root/overlay expansion before consuming another match,
+translates only root/implicit coordinates, and preserves independent provenance
+and case flags. An empty overlay output consumes text without root fallback;
+an all-zero CE remains an emitted element. Numeric mode is fixed per scan and
+returns complete adjacent decimal-digit runs before digit tailoring lookup.
+Input is owned as normalized text after initialization, and next calls allocate
+nothing. The iterator copies program views and initializes directly at its
+final address because its matcher borrows its embedded trie; a live iterator
+cannot be copied or moved. Comparison policy is a separate consumer.
+
 ```sh
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
