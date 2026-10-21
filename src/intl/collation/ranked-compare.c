@@ -260,6 +260,66 @@ static int compare_weak(const Stream *a, const Stream *b, unsigned int level,
     }
 }
 
+static size_t segment_end(const Stream *s, size_t start)
+{
+    while (start < s->count) {
+        const SavedElement *value = s->elements + start;
+
+        if (!value->shifted && value->ce.ranks[0] == s->separator)
+            break;
+        start++;
+    }
+
+    return start;
+}
+
+static uint32_t previous_secondary(const Stream *s, size_t start, size_t *at)
+{
+    while (*at > start) {
+        const SavedElement *value = s->elements + --*at;
+
+        if (!value->shifted && value->ce.ranks[1])
+            return value->ce.ranks[1];
+    }
+
+    return 0;
+}
+
+static int compare_backwards_secondary(const Stream *a, const Stream *b)
+{
+    size_t left = 0, right = 0;
+
+    for (;;) {
+        size_t left_end = segment_end(a, left), right_end = segment_end(b, right);
+        size_t x = left_end, y = right_end;
+        int order;
+
+        /* Reverse weights within a segment, keeping the segments themselves
+           in forward order. Segment exhaustion precedes any later segment. */
+        for (;;) {
+            uint32_t p = previous_secondary(a, left, &x), q = previous_secondary(b, right, &y);
+
+            order = compare_u32(p, q);
+            if (order)
+                return order;
+            if (!p)
+                break;
+        }
+
+        if (left_end == a->count || right_end == b->count)
+            return compare_u32(left_end != a->count, right_end != b->count);
+
+        /* Primary equality normally aligns identical separators. The reader
+           also permits separator aliases with changed weak payload: compare
+           it explicitly, rather than asserting it can never differ. */
+        order = compare_u32(a->elements[left_end].ce.ranks[1], b->elements[right_end].ce.ranks[1]);
+        if (order)
+            return order;
+        left = left_end + 1;
+        right = right_end + 1;
+    }
+}
+
 typedef struct Quaternary {
     unsigned int band; /* End, shifted variable, regular/common. */
     Primary primary;
@@ -305,6 +365,26 @@ static int compare_quaternary(const Stream *a, const Stream *b)
     }
 }
 
+static int compare_identical(const Stream *a, const Stream *b)
+{
+    const QJSIntlCollationMatch *left = &a->iterator.match, *right = &b->iterator.match;
+    uint32_t i, count = left->length < right->length ? left->length : right->length;
+
+    /* Consumption changes only matcher indexes, not the original NFD text.
+       U+FFFE has a unique minimum weight, below even U+0000. Exhaustion is
+       handled by length, independently of that zero-like separator key. */
+    for (i = 0; i < count; i++) {
+        uint32_t x = left->text[i] & QJS_INTL_COLLATION_SCALAR_MASK;
+        uint32_t y = right->text[i] & QJS_INTL_COLLATION_SCALAR_MASK;
+        int order = compare_u32(x == 0xfffe ? 0 : x + 1, y == 0xfffe ? 0 : y + 1);
+
+        if (order)
+            return order;
+    }
+
+    return compare_u32(left->length, right->length);
+}
+
 QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationProgram *program,
                                                 const uint16_t *left, size_t left_length,
                                                 const uint16_t *right, size_t right_length,
@@ -327,8 +407,6 @@ QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationPr
         (unsigned int)policy.case_first > QJS_INTL_COLLATION_LOWER_FIRST ||
         (unsigned int)policy.max_variable > QJS_INTL_COLLATION_VARIABLE_CURRENCY)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (policy.strength > 4 || policy.backwards_secondary)
-        return QJS_INTL_UNSUPPORTED;
     if (left_length > SIZE_MAX / sizeof(*left) || right_length > SIZE_MAX / sizeof(*right))
         return QJS_INTL_OVERFLOW;
 
@@ -376,14 +454,20 @@ QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationPr
     }
 
 levels:
-    if (!*order && policy.strength >= 2)
-        *order = compare_weak(streams, streams + 1, SECONDARY, &policy);
+    if (!*order && policy.strength >= 2) {
+        if (policy.backwards_secondary)
+            *order = compare_backwards_secondary(streams, streams + 1);
+        else
+            *order = compare_weak(streams, streams + 1, SECONDARY, &policy);
+    }
     if (!*order && policy.case_level)
         *order = compare_weak(streams, streams + 1, CASE, &policy);
     if (!*order && policy.strength >= 3)
         *order = compare_weak(streams, streams + 1, TERTIARY, &policy);
     if (!*order && policy.strength >= 4)
         *order = compare_quaternary(streams, streams + 1);
+    if (!*order && policy.strength >= 5)
+        *order = compare_identical(streams, streams + 1);
 
 done:
     stream_clear(streams);
