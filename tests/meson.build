@@ -3345,6 +3345,7 @@ standalone = {
     'test_intl_collation_compiled.c',
     '../src/intl/collation/compiled-data.c',
     '../src/intl/collation/ranked-elements.c',
+    '../src/intl/common/locale-grammar.c',
     '../tools/intl/collation-archive.c',
     '../tools/intl/collation-trie.c',
     '../src/intl/collation/trie.c',
@@ -4666,6 +4667,14 @@ test(
   'intl-collation-root-input',
   python,
   args: files('test_intl_collation_root_input.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-collation-bindings',
+  python,
+  args: files('test_intl_collation_bindings.py'),
   suite: ['repo', 'generator'],
   timeout: 30,
 )
