@@ -137,6 +137,52 @@ static void test_zero_empty_and_invalid(void)
     assert(!state.live);
 }
 
+static void test_compare_before_and_after_freeze(void)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlWeightGraph graph;
+    uint32_t ids[40], i, j, count = 8;
+    int orders[40][40], order;
+    size_t calls;
+    assert(!qjs_intl_weight_graph_init(&graph, &a, 7));
+    for (i = 0; i < count; i++)
+        ids[i] = i;
+    for (i = 0; i < 24; i++) {
+        /* Alternate insertion beside roots and older tailored IDs, including
+           before-insertion in the previous gap and after the final root. */
+        uint32_t reference = ids[(i * 7 + 3) % count];
+        ids[count++] = insert(&graph, reference, (i & 1) && reference != 0);
+        calls = state.calls;
+        assert(!qjs_intl_weight_compare(&graph, reference, ids[count - 1], &order));
+        assert(order == ((i & 1) && reference != 0 ? 1 : -1));
+        assert(state.calls == calls && !graph.frozen);
+    }
+    calls = state.calls;
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < count; j++)
+            assert(!qjs_intl_weight_compare(&graph, ids[i], ids[j], &orders[i][j]));
+    }
+    assert(state.calls == calls && !graph.frozen);
+    assert(qjs_intl_weight_compare(&graph, UINT32_MAX, 0, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
+    assert(qjs_intl_weight_compare(&graph, 0, 8, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
+    assert(!qjs_intl_weight_freeze(&graph));
+    calls = state.calls;
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < count; j++) {
+            uint32_t left = resolve(&graph, ids[i]), right = resolve(&graph, ids[j]);
+            int expected = left < right ? -1 : left > right ? 1 : 0;
+            assert(orders[i][j] == expected);
+            assert(!qjs_intl_weight_compare(&graph, ids[i], ids[j], &order) && order == expected);
+        }
+    }
+    assert(state.calls == calls);
+    qjs_intl_weight_graph_clear(&graph);
+    assert(qjs_intl_weight_compare(&graph, 0, 0, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
+    assert(qjs_intl_weight_compare(NULL, 0, 0, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
+    assert(!state.live);
+}
+
 static size_t allocation_case(size_t fail_at, uint32_t expected[160])
 {
     Allocation state = {.fail_at = fail_at};
@@ -214,6 +260,7 @@ int main(void)
     size_t calls, failure;
     test_order_and_aliases();
     test_zero_empty_and_invalid();
+    test_compare_before_and_after_freeze();
     calls = allocation_case(0, expected);
     for (failure = 1; failure <= calls; failure++)
         allocation_case(failure, expected);
