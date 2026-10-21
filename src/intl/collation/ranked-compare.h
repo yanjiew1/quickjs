@@ -9,9 +9,9 @@
    Archive bytes are immutable/alive for the call; allocator callbacks cannot
    reenter it. Arguments/output are disjoint; order resets on failure.
 
-   This initial comparison slice supports forward P/S/T, caseLevel/caseFirst,
-   numeric tokens and group reordering. Shifted, backwards secondary and
-   quaternary/identical policies explicitly return UNSUPPORTED until their
+   This comparison slice supports forward P/S/T/Q, caseLevel/caseFirst, shifted
+   variables, numeric tokens and group reordering. Backwards secondary and
+   identical policies explicitly return UNSUPPORTED until their
    level consumers are present. It does not advertise public service support. */
 QJSIntlStatus qjs_intl_collation_compare_ranked(const QJSIntlCompiledCollationProgram *,
                                                 const uint16_t *left, size_t left_length,
