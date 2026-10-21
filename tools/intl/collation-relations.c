@@ -24,20 +24,28 @@ void qjs_intl_relations_clear(QJSIntlRelations *owner)
     memset(owner, 0, sizeof(*owner));
 }
 
-QJSIntlStatus qjs_intl_relations_init(QJSIntlRelations *owner, const QJSIntlAllocator *allocator)
+QJSIntlStatus qjs_intl_relations_init(QJSIntlRelations *owner, const QJSIntlAllocator *allocator,
+                                      const QJSIntlRelationRoots *roots)
 {
-    static const uint32_t maxima[] = {
-        QJS_INTL_COLLATION_PRIMARY_ROOT_MAX,
-        QJS_INTL_RELATION_WEAK_MAX, QJS_INTL_RELATION_WEAK_MAX, 0
-    };
+    uint32_t maxima[4];
     QJSIntlStatus status;
     unsigned int i;
     if (!owner)
         return QJS_INTL_INVALID_ARGUMENT;
     memset(owner, 0, sizeof(*owner));
-    if (!allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
+    if (!allocator || !allocator->malloc || !allocator->realloc || !allocator->free ||
+        !roots || !roots->secondary_common || !roots->tertiary_common ||
+        roots->secondary_common >= roots->secondary_boundary ||
+        roots->tertiary_common >= roots->tertiary_boundary ||
+        roots->secondary_boundary > roots->secondary_max ||
+        roots->tertiary_boundary > roots->tertiary_max)
         return QJS_INTL_INVALID_ARGUMENT;
     owner->allocator = *allocator;
+    owner->roots = *roots;
+    maxima[0] = roots->primary_max;
+    maxima[1] = roots->secondary_max;
+    maxima[2] = roots->tertiary_max;
+    maxima[3] = 0;
     for (i = 0; i < 4; i++) {
         status = qjs_intl_weight_graph_init(&owner->axes[i], allocator, maxima[i]);
         if (status) {
@@ -46,36 +54,6 @@ QJSIntlStatus qjs_intl_relations_init(QJSIntlRelations *owner, const QJSIntlAllo
         }
     }
     owner->ready = 1;
-    return QJS_INTL_OK;
-}
-
-static unsigned int root_case_value(unsigned int tertiary)
-{
-    return ((tertiary >= 0x08 && tertiary <= 0x0c) || tertiary == 0x0e ||
-            tertiary == 0x11 || tertiary == 0x12 || tertiary == 0x1d) ?
-        QJS_INTL_RELATION_UPPER : QJS_INTL_RELATION_LOWER;
-}
-
-QJSIntlStatus qjs_intl_relation_root(const QJSIntlCollationLogical *root,
-                                     QJSIntlRelationElement *out)
-{
-    if (out)
-        memset(out, 0, sizeof(*out));
-    if (!root || !out || root->primary > QJS_INTL_COLLATION_PRIMARY_ROOT_MAX ||
-        root->variable > 1 || root->implicit > 1 ||
-        (root->primary && (!root->secondary || !root->tertiary)) ||
-        (root->secondary && !root->tertiary) ||
-        ((root->variable || root->implicit) && !root->primary))
-        return QJS_INTL_INVALID_ARGUMENT;
-    out->weights[0] = out->root_primary = root->primary;
-    out->weights[1] = root->secondary ? root->secondary +
-        (root->primary ? 0 : QJS_INTL_RELATION_WEAK_BOUNDARY) : 0;
-    out->weights[2] = root->tertiary ? root->tertiary +
-        (root->primary || root->secondary ? 0 : QJS_INTL_RELATION_WEAK_BOUNDARY) : 0;
-    out->case_value = !root->primary && !root->secondary && root->tertiary ?
-        QJS_INTL_RELATION_UPPER : root_case_value(root->tertiary);
-    out->variable = root->variable;
-    out->implicit = root->implicit;
     return QJS_INTL_OK;
 }
 
@@ -98,7 +76,7 @@ static QJSIntlStatus allocate_mapping(const QJSIntlAllocator *allocator, size_t 
 }
 
 QJSIntlStatus qjs_intl_relations_reset(QJSIntlRelations *owner,
-                                      const QJSIntlRelationElement *elements, size_t count)
+                                       const QJSIntlRelationElement *elements, size_t count)
 {
     QJSIntlRelationMapping next = {0};
     QJSIntlStatus status;
@@ -119,7 +97,7 @@ QJSIntlStatus qjs_intl_relations_reset(QJSIntlRelations *owner,
 /* Case comes from immutable root mappings, not inherited or allocated T ranks.
    Only primary CEs participate in the distribution; extension CEs are excluded. */
 static void assign_case(QJSIntlRelationMapping *mapping,
-                         const QJSIntlCollationLogical *root, size_t root_count)
+                         const QJSIntlRelationCase *root, size_t root_count)
 {
     size_t i, primary_count = 0, primary_at = 0, root_at = 0;
     for (i = 0; i < mapping->count; i++)
@@ -131,13 +109,13 @@ static void assign_case(QJSIntlRelationMapping *mapping,
             while (root_at < root_count && !root[root_at].primary)
                 root_at++;
             if (root_at < root_count) {
-                value = root_case_value(root[root_at++].tertiary);
+                value = root[root_at++].case_value;
                 if (++primary_at == primary_count) {
                     /* The final primary absorbs any remaining root primaries;
                        mixed upper/lower is distinct from either homogeneous case. */
                     while (root_at < root_count) {
                         if (root[root_at].primary &&
-                            root_case_value(root[root_at].tertiary) != value)
+                            root[root_at].case_value != value)
                             value = QJS_INTL_RELATION_MIXED;
                         root_at++;
                     }
@@ -164,15 +142,15 @@ static size_t strong_length(const QJSIntlRelationMapping *mapping, unsigned int 
 }
 
 QJSIntlStatus qjs_intl_relations_apply(QJSIntlRelations *owner, unsigned int strength, int before,
-                                      const QJSIntlCollationLogical *root, size_t root_count,
-                                      const QJSIntlRelationElement *extension, size_t extension_count,
-                                      QJSIntlRelationMapping *out)
+                                       const QJSIntlRelationCase *root, size_t root_count,
+                                       const QJSIntlRelationElement *extension, size_t extension_count,
+                                       QJSIntlRelationMapping *out)
 {
     QJSIntlRelationMapping next = {0}, mapping = {0};
     QJSIntlStatus status;
     QJSIntlRelationElement *last;
     uint32_t reference, id;
-    size_t kept, count;
+    size_t kept, count, at;
     unsigned int i;
     if (out)
         *out = (QJSIntlRelationMapping){0};
@@ -180,6 +158,9 @@ QJSIntlStatus qjs_intl_relations_apply(QJSIntlRelations *owner, unsigned int str
         (before && (!strength || strength > 3)) || (!root && root_count) ||
         (!extension && extension_count))
         return QJS_INTL_INVALID_ARGUMENT;
+    for (at = 0; at < root_count; at++)
+        if (root[at].primary > 1 || root[at].case_value > QJS_INTL_RELATION_UPPER)
+            return QJS_INTL_INVALID_ARGUMENT;
     kept = strength ? strong_length(&owner->cursor, strength) : owner->cursor.count;
     count = kept ? kept : 1;
     if (extension_count > SIZE_MAX - count)
@@ -203,8 +184,10 @@ QJSIntlStatus qjs_intl_relations_apply(QJSIntlRelations *owner, unsigned int str
         }
         /* A newly nonzero weak weight belongs above ALL ordinary weights,
            not in gap zero. This also handles the root's empty tertiary-only band. */
-        if (!reference && (strength == 2 || strength == 3))
-            reference = QJS_INTL_RELATION_WEAK_BOUNDARY;
+        if (!reference && strength == 2)
+            reference = owner->roots.secondary_boundary;
+        else if (!reference && strength == 3)
+            reference = owner->roots.tertiary_boundary;
         status = qjs_intl_weight_insert(&owner->axes[strength - 1], reference, before,
             &(QJSIntlWeightParents){strength > 1 ? last->weights[0] : 0,
                                    strength > 2 ? last->weights[1] : 0}, &id);
@@ -213,7 +196,8 @@ QJSIntlStatus qjs_intl_relations_apply(QJSIntlRelations *owner, unsigned int str
         last->weights[strength - 1] = id;
         /* All potentially failing operations precede the graph mutation. */
         for (i = strength; i < 4; i++)
-            last->weights[i] = i == 1 ? 0x20 : i == 2 ? 2 : 0;
+            last->weights[i] = i == 1 ? owner->roots.secondary_common :
+                i == 2 ? owner->roots.tertiary_common : 0;
     }
     assign_case(&next, root, root_count);
     memcpy(mapping.elements, next.elements, count * sizeof(*next.elements));
