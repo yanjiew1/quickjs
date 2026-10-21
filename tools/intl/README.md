@@ -80,11 +80,25 @@ Han references remain symbolic rather than adopting ICU's implicit byte
 encoding. Declared ideograph ranges retain their order, and the radical-stroke
 section is expanded and checked for exact membership with no duplicates. The
 latter supports CLDR's `unihan` root-order assumptions. FDD0 synthetic records
-(including incomplete numeric anchors) remain separate from executable mappings.
+(including numeric reservations) remain separate from executable mappings.
 Footer `last regular` is retained as a source fact; TR35's logical reset instead
-uses the artificial first-Hani boundary. Python does not normalize with its host
-Unicode version. Runtime ordinal encoding and ranked root integration follow
-this source stage.
+uses the artificial first-Hani boundary. Original root keys are retained;
+lookup input and tailoring keys normalize to NFD with pinned C Unicode. Do not
+synthesize new normalized-root contractions: even baseline-equivalent ones could
+hide subsequent tailoring of component characters.
+
+`collation_ordinals.py` assigns sorted explicit primary coordinates and reserves
+virtual Han and generic implicit domains. Han uses the authenticated radical
+order; generic positions are arithmetic across all code points, including
+ill-formed UTF-16 fallback units. The generic interval is strictly after the
+source E4 unassigned-group boundary and before the fixed E5 trailing boundary.
+E0/E4 remain named source marker facts, separate from current-map reset extrema.
+No million-entry generic table is created.
+Secondary/ordinary-tertiary coordinates preserve common aliases 32/2 and source
+ignorable boundaries. Independent case bits do not enter ordinary T ordering.
+Every executable CE is checked against WF1/WF2; FDD0 synthetic reservations stay
+outside that check. U+FFFE remains fixed and nonvariable, even below variable
+top. Runtime ordinal encoding and ranked root integration follow this catalog.
 
 ### Host collation compiler input
 
