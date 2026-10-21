@@ -17,7 +17,7 @@ typedef struct ElementStream {
 static void stream_clear(ElementStream *stream)
 {
     if (stream->elements && stream->elements != stream->small)
-        stream->iterator.allocator.free(stream->iterator.allocator.opaque, stream->elements);
+        stream->iterator.match.allocator.free(stream->iterator.match.allocator.opaque, stream->elements);
     qjs_intl_collation_elements_clear(&stream->iterator);
 }
 
@@ -62,7 +62,7 @@ static QJSIntlStatus stream_primary(ElementStream *stream, PrimaryWeight *out)
         if (!element.primary && !element.secondary && !element.tertiary)
             continue;
         if (stream->count == stream->capacity) {
-            QJSIntlAllocator *a = &stream->iterator.allocator;
+            QJSIntlAllocator *a = &stream->iterator.match.allocator;
             QJSIntlCollationElement *next;
             size_t capacity;
             if (stream->capacity > SIZE_MAX / sizeof(*next) / 2)
