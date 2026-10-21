@@ -108,6 +108,8 @@ jobs:
           --root-input "$RUNNER_TEMP/collation-root.qjcr" \
           --program-input "$RUNNER_TEMP/collation-input.qjci" \
           --output "$RUNNER_TEMP/collation-runtime.qjcl"
+        timeout 60s build-collation/intl-collation-compile \
+          --audit-compiled "$RUNNER_TEMP/collation-runtime.qjcl"
     - name: Audit locale inheritance graphs
       run: |
         timeout 60s python3 tools/intl/parents.py \
