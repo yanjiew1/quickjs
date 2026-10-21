@@ -94,3 +94,17 @@ split dictionary-script text. Those decisions belong to the segmentation service
 `test_unicode_word` exercises punctuation, ignored characters, Hebrew quotes,
 surrogates and long runs; Unicode CI additionally checks the pinned
 `WordBreakTest.txt` through the same boundary-vector oracle used for graphemes.
+
+## Default sentence boundaries
+
+`src/unicode/sentence.c` keeps raw paragraph adjacency separate from the
+significant context after ignored characters. It retains a terminal's Close/Sp
+prefix and caches SB8's lowercase lookahead while that prefix remains active.
+This prevents repeated scanning of an arbitrarily long punctuation/space run.
+The scan is allocation-free and preserves the same UTF-16 boundary contract.
+
+The default full-stop rules recognize numeric, case and continuation contexts;
+they do not incorporate locale abbreviation lists. `test_unicode_sentence`
+covers those contexts, paragraph ordering, lone surrogates and long prefixes.
+Unicode CI also checks every pinned `SentenceBreakTest.txt` case using the shared
+boundary-vector oracle.
