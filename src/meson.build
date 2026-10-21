@@ -143,6 +143,7 @@ if intl_enabled
     'quickjs/builtins/intl/parts.c',
     'quickjs/builtins/intl/plural-rules.c',
     'quickjs/builtins/intl/relative-time-format.c',
+    'quickjs/builtins/intl/supported-values.c',
   )
   support_sources += files(
     'intl/common/decimal.c',
