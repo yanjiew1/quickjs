@@ -33,7 +33,7 @@ jobs:
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
       - name: Audit pinned root collation elements
         run: |
-          timeout 60s python3 tools/intl/collation_root.py \
+          timeout 60s python3 tools/intl/collation_tables.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
       - name: Audit locale inheritance graphs
         run: |
