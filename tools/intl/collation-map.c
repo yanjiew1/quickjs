@@ -7,7 +7,7 @@
 #define MASK QJS_INTL_COLLATION_SCALAR_MASK
 
 typedef struct QJSIntlMapNode {
-    uint32_t parent, child, sibling, sequence, suffix;
+    uint32_t parent, child, sibling, sequence, suffix, code, live_previous, live_next;
     int suppressed;
 } Node;
 
@@ -43,10 +43,11 @@ static QJSIntlStatus reserve_nodes(QJSIntlCollationMap *map)
     return QJS_INTL_OK;
 }
 
-static uint32_t append_node(QJSIntlCollationMap *map, uint32_t parent)
+static uint32_t append_node(QJSIntlCollationMap *map, uint32_t parent, uint32_t code)
 {
     uint32_t id = map->node_count++;
-    map->nodes[id] = (Node){parent, NONE, NONE, NONE, NONE, 0};
+    map->nodes[id] = (Node){.parent = parent, .child = NONE, .sibling = NONE,
+        .sequence = NONE, .suffix = NONE, .code = code, .live_previous = NONE, .live_next = NONE};
     return id;
 }
 
@@ -59,10 +60,11 @@ QJSIntlStatus qjs_intl_collation_map_init(QJSIntlCollationMap *map, const QJSInt
     if (!allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
     map->allocator = *allocator;
+    map->live_first = map->live_last = NONE;
     status = reserve_nodes(map);
     if (status)
         return status;
-    append_node(map, NONE); /* Reverse-prefix trie root, grouped by first scalar. */
+    append_node(map, NONE, NONE); /* Reverse-prefix trie root, grouped by first scalar. */
     return QJS_INTL_OK;
 }
 
@@ -148,7 +150,7 @@ static QJSIntlStatus ensure_child(QJSIntlCollationMap *map, uint32_t parent, uin
         status = reserve_edges(map);
         if (status)
             return status;
-        id = append_node(map, parent);
+        id = append_node(map, parent, code);
         map->nodes[id].sibling = map->nodes[parent].child;
         map->nodes[parent].child = id;
         *edge_slot(map->edges, map->edge_capacity, parent, code) = (Edge){parent, code, id};
@@ -227,7 +229,9 @@ QJSIntlStatus qjs_intl_collation_map_put(QJSIntlCollationMap *map,
         status = reserve_nodes(map);
         if (status)
             goto fail;
-        map->nodes[node].suffix = append_node(map, NONE);
+        /* A suffix root's parent records its reverse-prefix owner. Traversal
+           of either trie still stops at its own explicit root. */
+        map->nodes[node].suffix = append_node(map, node, NONE);
     }
     node = map->nodes[node].suffix;
     for (i = 0; i < suffix_count; i++) {
@@ -236,9 +240,19 @@ QJSIntlStatus qjs_intl_collation_map_put(QJSIntlCollationMap *map,
             goto fail;
     }
     /* Only this terminal publication changes the visible mapping. Old sequence
-       arrays remain immutable for expansions and future logical-reset scans. */
+       arrays remain immutable for copied expansions; current visits follow
+       only the live terminals, not the retained sequence arena. */
     *sequence = map->sequence_count++;
     map->sequences[*sequence] = copy;
+    if (map->nodes[node].sequence == NONE) {
+        map->nodes[node].live_previous = map->live_last;
+        if (map->live_last == NONE)
+            map->live_first = node;
+        else
+            map->nodes[map->live_last].live_next = node;
+        map->live_last = node;
+        map->live_count++;
+    }
     map->nodes[node].sequence = *sequence;
     return QJS_INTL_OK;
 fail:
@@ -271,6 +285,24 @@ static uint32_t subtree_next(const QJSIntlCollationMap *map, uint32_t root, uint
     return NONE;
 }
 
+static void unlink_terminal(QJSIntlCollationMap *map, uint32_t id)
+{
+    Node *node = map->nodes + id;
+    if (node->sequence == NONE)
+        return;
+    if (node->live_previous == NONE)
+        map->live_first = node->live_next;
+    else
+        map->nodes[node->live_previous].live_next = node->live_next;
+    if (node->live_next == NONE)
+        map->live_last = node->live_previous;
+    else
+        map->nodes[node->live_next].live_previous = node->live_previous;
+    node->live_previous = node->live_next = NONE;
+    node->sequence = NONE;
+    map->live_count--;
+}
+
 QJSIntlStatus qjs_intl_collation_map_suppress(QJSIntlCollationMap *map, uint32_t code)
 {
     QJSIntlStatus status;
@@ -289,7 +321,7 @@ QJSIntlStatus qjs_intl_collation_map_suppress(QJSIntlCollationMap *map, uint32_t
             continue;
         for (node = root; node != NONE; node = subtree_next(map, root, node))
             if (prefix != first || map->nodes[node].parent != root)
-                map->nodes[node].sequence = NONE;
+                unlink_terminal(map, node);
     }
     return QJS_INTL_OK;
 }
@@ -348,5 +380,105 @@ QJSIntlStatus qjs_intl_collation_map_overlay(const QJSIntlCollationMap *map,
         return QJS_INTL_INVALID_ARGUMENT;
     *out = (QJSIntlCollationOverlay){map, overlay_prefix, overlay_begin, overlay_step,
                                      overlay_terminal, overlay_children, overlay_suppressed};
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_collation_map_visit(const QJSIntlCollationMap *map,
+                                          QJSIntlCollationMapVisitor visitor, void *opaque)
+{
+    uint32_t node, count = 0;
+    if (!map || !map->node_count || !visitor)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (node = map->live_first; node != NONE; node = map->nodes[node].live_next) {
+        uint32_t sequence;
+        QJSIntlStatus status;
+        if (node >= map->node_count || count++ >= map->live_count ||
+            (sequence = map->nodes[node].sequence) >= map->sequence_count)
+            return QJS_INTL_DATA_ERROR;
+        status = visitor(opaque, node, sequence, map->sequences + sequence);
+        if (status)
+            return status;
+    }
+    return count == map->live_count ? QJS_INTL_OK : QJS_INTL_DATA_ERROR;
+}
+
+typedef struct KeyInfo {
+    uint32_t prefix_count, suffix_count, prefix_owner;
+} KeyInfo;
+
+static QJSIntlStatus key_info(const QJSIntlCollationMap *map, uint32_t id, KeyInfo *out)
+{
+    uint32_t node, steps = 0;
+    *out = (KeyInfo){0};
+    if (!map || !map->node_count || id >= map->node_count || map->nodes[id].sequence == NONE)
+        return QJS_INTL_INVALID_ARGUMENT;
+    /* Reverse the suffix-parent chain only when copying; counting allocates
+       nothing and checks the complete path before either output is modified. */
+    node = id;
+    while (node < map->node_count && map->nodes[node].code != NONE) {
+        if (++steps > map->node_count)
+            return QJS_INTL_DATA_ERROR;
+        out->suffix_count++;
+        node = map->nodes[node].parent;
+    }
+    if (node >= map->node_count || !out->suffix_count ||
+        (node = map->nodes[node].parent) >= map->node_count)
+        return QJS_INTL_DATA_ERROR;
+    out->prefix_owner = node;
+    steps = 0;
+    while (map->nodes[node].parent != 0) {
+        if (++steps > map->node_count || map->nodes[node].code == NONE)
+            return QJS_INTL_DATA_ERROR;
+        out->prefix_count++;
+        node = map->nodes[node].parent;
+        if (node >= map->node_count)
+            return QJS_INTL_DATA_ERROR;
+    }
+    return map->nodes[node].code == NONE ? QJS_INTL_DATA_ERROR : QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_collation_map_key_size(const QJSIntlCollationMap *map, uint32_t id,
+                                             uint32_t *prefix_count, uint32_t *suffix_count)
+{
+    KeyInfo key;
+    QJSIntlStatus status;
+    if (prefix_count)
+        *prefix_count = 0;
+    if (suffix_count)
+        *suffix_count = 0;
+    if (!prefix_count || !suffix_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = key_info(map, id, &key);
+    if (!status) {
+        *prefix_count = key.prefix_count;
+        *suffix_count = key.suffix_count;
+    }
+    return status;
+}
+
+QJSIntlStatus qjs_intl_collation_map_key_copy(const QJSIntlCollationMap *map, uint32_t id,
+                                             uint32_t *prefix, size_t prefix_capacity,
+                                             uint32_t *suffix, size_t suffix_capacity)
+{
+    KeyInfo key;
+    QJSIntlStatus status = key_info(map, id, &key);
+    uint32_t node = id, i;
+    if (status)
+        return status;
+    if ((!prefix && key.prefix_count) || !suffix)
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (prefix_capacity < key.prefix_count || suffix_capacity < key.suffix_count)
+        return QJS_INTL_OVERFLOW;
+    for (i = key.suffix_count; i; i--) {
+        suffix[i - 1] = map->nodes[node].code;
+        node = map->nodes[node].parent;
+    }
+    /* Reverse-prefix insertion stores the last prefix scalar nearest its
+       first-suffix group. Walking back from its owner restores original order. */
+    node = key.prefix_owner;
+    for (i = 0; i < key.prefix_count; i++) {
+        prefix[i] = map->nodes[node].code;
+        node = map->nodes[node].parent;
+    }
     return QJS_INTL_OK;
 }

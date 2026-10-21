@@ -13,6 +13,7 @@ typedef struct QJSIntlCollationMap {
     struct QJSIntlMapEdge *edges;
     QJSIntlRelationMapping *sequences;
     uint32_t node_count, edge_count, sequence_count;
+    uint32_t live_first, live_last, live_count;
     size_t node_capacity, edge_capacity, sequence_capacity;
 } QJSIntlCollationMap;
 
@@ -42,4 +43,29 @@ QJSIntlStatus qjs_intl_collation_map_sequence(const QJSIntlCollationMap *, uint3
    first-scalar record; failure preserves suppression and visible mappings. */
 QJSIntlStatus qjs_intl_collation_map_suppress(QJSIntlCollationMap *, uint32_t scalar);
 QJSIntlStatus qjs_intl_collation_map_overlay(const QJSIntlCollationMap *, QJSIntlCollationOverlay *);
+/* Visit CURRENT terminals, never abandoned paths or historical sequences.
+   The descriptor is borrowed only during its callback; later mutation may move
+   descriptor storage. Copy its fields to retain a CE view: its immutable element
+   array remains valid until map clear. Do not free that borrowed array.
+   Opaque terminal IDs
+   identify a key: replacement preserves them, and suppression/reintroduction can
+   make the same ID live again. They are not generation-checked handles.
+   No mutation/reentrant mutation during the visit; callback errors propagate.
+   Traversal allocates nothing and costs O(current terminal count). */
+typedef QJSIntlStatus (*QJSIntlCollationMapVisitor)(void *opaque, uint32_t terminal_id,
+                                                  uint32_t sequence_id,
+                                                  const QJSIntlRelationMapping *);
+QJSIntlStatus qjs_intl_collation_map_visit(const QJSIntlCollationMap *,
+                                          QJSIntlCollationMapVisitor, void *opaque);
+/* Original-order NFD keys of a CURRENT terminal, without allocation/recursion.
+   Count outputs reset on failure. Copy preflights both capacities and complete
+   parent paths before modifying either buffer. Insufficient capacity returns
+   OVERFLOW without writes. A zero-length prefix may use NULL. Buffers/counts
+   are disjoint from the map and each other; the map is unchanged between size
+   and copy. Work is proportional to the combined key length. */
+QJSIntlStatus qjs_intl_collation_map_key_size(const QJSIntlCollationMap *, uint32_t terminal_id,
+                                             uint32_t *prefix_count, uint32_t *suffix_count);
+QJSIntlStatus qjs_intl_collation_map_key_copy(const QJSIntlCollationMap *, uint32_t terminal_id,
+                                             uint32_t *prefix, size_t prefix_capacity,
+                                             uint32_t *suffix, size_t suffix_capacity);
 #endif
