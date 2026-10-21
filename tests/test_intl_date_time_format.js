@@ -133,6 +133,39 @@ for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset', 'short
             .some(part => part.type === 'timeZoneName'), false);
 }
 
+// A real zone-bearing clock must also remain available when joined to a date.
+// This exercises both clock families without prescribing localized punctuation.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const formatMatcher of ['basic', 'best fit']) {
+        const formatter = new DTF('en', {...utc, year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric',
+            timeZoneName: 'shortGeneric', hourCycle, formatMatcher});
+        const parts = formatter.formatToParts(0);
+        for (const field of ['year', 'month', 'day', 'hour', 'minute', 'second', 'timeZoneName'])
+            assert(parts.some(part => part.type === field));
+        assert(parts.map(part => part.value).join(''), formatter.format(0));
+    }
+}
+
+// Source Timezone append items also supply specific names and offsets when a
+// whole matching clock is absent. Plain Temporal values still omit the zone.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset']) {
+        for (const formatMatcher of ['basic', 'best fit']) {
+            const formatter = new DTF('en', {...utc, year: 'numeric', month: 'numeric', day: 'numeric',
+                hour: 'numeric', minute: 'numeric', second: 'numeric',
+                timeZoneName, hourCycle, formatMatcher});
+            assert(formatter.resolvedOptions().timeZoneName, timeZoneName);
+            const parts = formatter.formatToParts(0);
+            assert(parts.some(part => part.type === 'timeZoneName'));
+            assert(parts.map(part => part.value).join(''), formatter.format(0));
+            if (typeof Temporal !== 'undefined')
+                assert(formatter.formatToParts(Temporal.PlainDateTime.from('1970-01-01T00:00'))
+                    .some(part => part.type === 'timeZoneName'), false);
+        }
+    }
+}
+
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
 for (const calendar of ['chinese', 'dangi']) {
@@ -261,6 +294,13 @@ if (typeof Temporal !== 'undefined') {
     const zoned = Temporal.ZonedDateTime.from('2024-07-01T12:00Z[UTC]');
     assertThrows(TypeError, () => f.format(zoned));
     assert(typeof zoned.toLocaleString('en'), 'string');
+    const instant = zoned.toInstant();
+    const noName = instant.toLocaleString('en', utc);
+    const shortName = instant.toLocaleString('en', {...utc, timeZoneName: 'short'});
+    const longName = instant.toLocaleString('en', {...utc, timeZoneName: 'long'});
+    assert(shortName !== noName);
+    assert(longName !== shortName);
+    assert(zoned.toLocaleString('en') !== noName);
     assertThrows(TypeError, () => zoned.toLocaleString('en', {timeZone: {toString() {throw 0;}}}));
 }
 
