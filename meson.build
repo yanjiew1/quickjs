@@ -259,6 +259,7 @@ collation_compile = executable(
     'src/unicode/blocks.c',
     'src/unicode/category.c',
     'tools/intl/collation-root-input.c',
+    'src/intl/collation/base.c',
     'src/unicode/libunicode.c',
     'src/cutils/cutils.c',
     unicode_tables,
