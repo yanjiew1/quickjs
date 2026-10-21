@@ -451,10 +451,23 @@ static void test_mutations(Fixture *f)
         put32((uint8_t *)q.offsets[3].bytes + 4, high);
         for (i = 0; i < q.elements.count; i++)
             put32((uint8_t *)q.elements.bytes + i * 24 + 12, high);
+        /* The final fullwidth digit retains a small Q rank as a comparison
+           control against the high-bit q/w ranks. */
+        put32((uint8_t *)q.elements.bytes + (q.elements.count - 1) * 24 + 12, 1);
 
         assert(!qjs_intl_compiled_collation_open(bytes, f->image.length, NULL, &a, &large));
         assert(!qjs_intl_compiled_collation_program(&large, 2, &p) && p.final_maxima[3] == high);
         assert(!qjs_intl_compiled_collation_element(&p, 0, &ce) && ce.ranks[3] == high);
+        {
+            const uint16_t large_q = 'q', small_q = 0xff17;
+            QJSIntlCollationPolicy policy = p.policy;
+            int order;
+
+            policy.numeric = 0;
+            policy.strength = QJS_INTL_COLLATION_STRENGTH_QUATERNARY;
+            assert(!qjs_intl_collation_compare_ranked(&p, &large_q, 1, &small_q, 1, &a, &policy, &order));
+            assert(order == 1);
+        }
         assert(!qjs_intl_compiled_collation_root_rank(&p, 3, 0, &value) && !value);
 
         put32((uint8_t *)q.offsets[3].bytes + 4, 1);
@@ -1030,13 +1043,128 @@ static void test_ranked_comparison(Fixture *f)
     {
         int order = 99;
 
-        policy.shifted = 1;
+        policy.backwards_secondary = 1;
         assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_UNSUPPORTED && !order);
         policy = fr.policy;
         policy.case_first = (QJSIntlCollationCaseFirst)99;
         order = 99;
         assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
     }
+}
+
+static void test_ranked_shifted_and_quaternary(const QJSIntlRootInput *root)
+{
+    Fixture f = {0};
+    QJSIntlAllocator a = allocator(&f);
+    QJSIntlCollationProgram builder;
+    const QJSIntlIRProgram identity = {{(const uint8_t *)"xx", 2}, {(const uint8_t *)"standard", 8}, {0}, 0};
+    const uint32_t a_key = 'a', b_key = 'b', x = 'x', y = 'y', u = 'u', v = 'v', q = 'q';
+    const uint32_t xb[] = {'x', 'b'}, ay[] = {'a', 'y'};
+    const uint16_t variables[] = {' ', '!', '+', '$'};
+    const uint32_t group_keys[] = {0xa0, 0x201c, 0x263a, 0x20ac};
+    QJSIntlCompiledCollationData data;
+    QJSIntlCompiledCollationProgram p;
+    QJSIntlCollationPolicy policy;
+    unsigned int i, j;
+
+    init_program(&builder, root, &f);
+    for (i = 0; i < 4; i++) {
+        QJSIntlRelationMapping value = {0};
+        const uint32_t key[] = {0xfdd1, group_keys[i]};
+        uint32_t target = variables[i], sequence;
+
+        /* Copy each authenticated source-group boundary onto a visible test
+           character, preserving original provenance/default-variable flags. */
+        assert(!qjs_intl_collation_builder_lookup(&builder.builder, key, 2, &value));
+        assert(!qjs_intl_collation_map_put(&builder.builder.map, NULL, 0, &target, 1,
+                                         value.elements, value.count, &sequence));
+        qjs_intl_relation_mapping_clear(&a, &value);
+    }
+
+    /* Equal stronger-level expansions with Q on different CE positions.
+       Dropping common Q=0 markers would incorrectly tie u and v. */
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, &a_key, 1, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 4, NULL, 0, &x, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, &b_key, 1, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 4, NULL, 0, &y, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, xb, 2, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 0, NULL, 0, &u, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, ay, 2, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 0, NULL, 0, &v, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_logical(&builder.builder, QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 4, NULL, 0, &q, 1, NULL, 0));
+
+    /* Reorder punctuation before space. Classification must still use the
+       source groups, while shifted Q primaries use the saved permutation. */
+    {
+        uint8_t name[7 * 4], values[12 * 4];
+        const char tokens[] = "punct\0space";
+        QJSIntlIRInstruction node = {.kind = QJS_INTL_IR_SETTING};
+
+        for (i = 0; i < 7; i++)
+            put32(name + i * 4, (uint8_t)"reorder"[i]);
+        for (i = 0; i < sizeof(tokens); i++)
+            put32(values + i * 4, (uint8_t)tokens[i]);
+        node.fields[0] = (QJSIntlIRScalars){name, 7};
+        node.fields[1] = (QJSIntlIRScalars){values, sizeof(tokens)};
+        assert(!qjs_intl_collation_reorder_apply(&builder.reorder, &node));
+    }
+
+    assert(!qjs_intl_collation_archive_init(&f.archive, root, &a));
+    assert(!retain(&f, &identity, &builder));
+    clear_program(&builder);
+    assert(!qjs_intl_collation_archive_finish(&f.archive, &f.image));
+    qjs_intl_collation_archive_clear(&f.archive);
+    assert(!qjs_intl_compiled_collation_open(f.image.bytes, f.image.length, NULL, &a, &data));
+    assert(!qjs_intl_compiled_collation_program(&data, 0, &p));
+
+    policy = p.policy;
+    check_ascii_order(&f, &p, &policy, "u", "v", 0);
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_QUATERNARY;
+    check_ascii_order(&f, &p, &policy, "u", "v", 1);
+    check_ascii_order(&f, &p, &policy, "", "q", -1);
+    check_ascii_order(&f, &p, &policy, "q", "qq", -1);
+
+    policy.shifted = 1;
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_TERTIARY;
+    for (i = 0; i < 4; i++) {
+        policy.max_variable = (QJSIntlCollationMaxVariable)i;
+        for (j = 0; j < 4; j++)
+            check_order(&f, &p, &policy, variables + j, 1, NULL, 0, j <= i ? 0 : 1);
+    }
+
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_QUATERNARY;
+    policy.max_variable = QJS_INTL_COLLATION_VARIABLE_PUNCT;
+    check_ascii_order(&f, &p, &policy, " ", "!", 1);
+    check_ascii_order(&f, &p, &policy, "!q", "!", 0);
+    check_ascii_order(&f, &p, &policy, "!a", "!", 1);
+    policy.numeric = 1;
+    check_ascii_order(&f, &p, &policy, "!2q", "!2", 1);
+
+    /* A shifted-only primary tie still retains variable positions for Q.
+       Sweep failures through that buffer's growth and both init paths. */
+    {
+        uint16_t input[128];
+        size_t baseline = f.live, calls = f.calls, allocations, k;
+        int order;
+
+        for (k = 0; k < 128; k++)
+            input[k] = '!';
+        assert(!qjs_intl_collation_compare_ranked(&p, input, 128, NULL, 0, &a, &policy, &order) && order == 1);
+        allocations = f.calls - calls;
+        assert(f.live == baseline);
+        for (k = 1; k <= allocations; k++) {
+            f.fail_at = f.calls + k;
+            order = 99;
+            assert(qjs_intl_collation_compare_ranked(&p, input, 128, NULL, 0, &a, &policy, &order) == QJS_INTL_NO_MEMORY);
+            assert(!order && f.live == baseline);
+        }
+        f.fail_at = 0;
+    }
+
+    clear_sources(&f);
+    qjs_intl_compiled_collation_clear(&f.image);
+    assert(!f.live);
 }
 
 int main(void)
@@ -1054,6 +1182,7 @@ int main(void)
     test_binding_views(&f);
     test_ranked_comparison(&f);
     test_ranked_case_levels(&root);
+    test_ranked_shifted_and_quaternary(&root);
     test_roundtrip_oom_and_lifetime(&f, &root);
     qjs_intl_compiled_collation_clear(&f.image);
     assert(!f.live);
