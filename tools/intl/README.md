@@ -307,6 +307,25 @@ all ordering axes. It reports successful programs, instructions and current
 mapping counts. This is a semantic compiler diagnostic, not runtime Collator
 publication. Normal builds still use the existing prepared runtime pack.
 
+`collation-snapshot.c` freezes one successful program into independent host-owned
+arrays. It copies counted identity labels, sorts live mapping rows by combined
+key and prefix split, resolves all four CE ranks, and preserves empty CE outputs.
+Its key/context rows use the existing endian-safe key-index layout; other arrays
+are host data, not a serialized C struct ABI. Compiler history and trie capacity
+do not enter the snapshot. Only immutable root bytes and allocator state remain
+borrowed; the builder and input program can be cleared immediately afterward.
+
+Suppressed root-context scalars have a separate sorted set, including scalars
+without live mappings. Each axis also retains sorted sparse root-gap offsets:
+root ordinal `r` adds insertions from gaps **strictly below** `r`, preserving zero
+and the order before insertions in its own gap. These tables translate unchanged
+and implicit root CEs into each program's distinct final-rank domain. Full uint32
+ranks must not be narrowed into the older raw-root 16-bit element format. Case,
+root-primary provenance, scalar policy and group permutation remain separate;
+the copied variable flag is only the root default, not effective maxVariable.
+Snapshot creation is staged and leaves empty output on failure; partial axis
+freezing requires aborting that compilation rather than resuming rules.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension

@@ -3,6 +3,7 @@
 #include "collation-root-input.h"
 #include "collation-ir.h"
 #include "collation-program.h"
+#include "collation-snapshot.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -29,17 +30,17 @@ static QJSIntlStatus execute_end(void *opaque, const QJSIntlIRProgram *identity,
                                   QJSIntlCollationProgram *program)
 {
     Executed *result = opaque;
-    unsigned int i;
-    /* Validate final rankability while the callback still owns a borrowed
-       program. Packing/copying the live map remains a separate output layer. */
-    for (i = 0; i < 4; i++) {
-        QJSIntlStatus status = qjs_intl_weight_freeze(program->builder.relations.axes + i);
-        if (status)
-            return status;
-    }
+    QJSIntlCollationSnapshot snapshot;
+    QJSIntlStatus status;
+    /* Exercise the immutable output model while borrowing the active program.
+       Wire encoding and runtime publication remain separate output layers. */
+    status = qjs_intl_collation_snapshot_create(program, identity, &snapshot);
+    if (status)
+        return status;
     result->programs++;
     result->instructions += identity->instruction_count;
-    result->mappings += program->builder.map.live_count;
+    result->mappings += snapshot.keys.row_count;
+    qjs_intl_collation_snapshot_clear(&snapshot);
     return QJS_INTL_OK;
 }
 
