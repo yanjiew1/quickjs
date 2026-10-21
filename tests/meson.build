@@ -2023,6 +2023,7 @@ foreach profile : ['minimal', 'native']
     'test_intl_collation_' + profile,
     files(
       'test_intl_collation_profiles.c',
+      'intl_collation_ordered.c',
       '../src/intl/collation/compare.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/elements.c',
@@ -3343,6 +3344,7 @@ standalone = {
   ],
   'test_intl_collation_compiled': [
     'test_intl_collation_compiled.c',
+    'intl_collation_ordered.c',
     '../src/intl/collation/compiled-data.c',
     '../src/intl/collation/ranked-elements.c',
     '../src/intl/collation/ranked-compare.c',

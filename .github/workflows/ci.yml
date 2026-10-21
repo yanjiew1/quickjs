@@ -66,9 +66,9 @@ jobs:
           timeout 60s python3 tools/intl/collation_root_input.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
             --output "$RUNNER_TEMP/collation-root.qjcr"
-      - name: Audit compiler input with the pinned Unicode implementation
+      - name: Compile and verify collation programs with pinned Unicode
         run: |
-          meson compile -C build-collation -j2 intl-collation-compile
+          meson compile -C build-collation -j2 intl-collation-compile test_intl_collation_compiled
           timeout 60s build-collation/intl-collation-compile \
             --audit-root "$RUNNER_TEMP/collation-root.qjcr"
           timeout 90s python3 tools/intl/collation_ir.py \
@@ -86,6 +86,12 @@ jobs:
             --output "$RUNNER_TEMP/collation-runtime.qjcl"
           timeout 60s build-collation/intl-collation-compile \
             --audit-compiled "$RUNNER_TEMP/collation-runtime.qjcl"
+          timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_compiled \
+            --archive "$RUNNER_TEMP/collation-runtime.qjcl" \
+            --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
+          timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_compiled \
+            --archive "$RUNNER_TEMP/collation-runtime.qjcl" \
+            --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
       - name: Audit locale inheritance graphs
         run: |
           timeout 60s python3 tools/intl/parents.py \

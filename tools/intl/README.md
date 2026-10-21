@@ -426,6 +426,14 @@ uses the original NFD text, with the field separator below even NUL and a
 separate end condition. Comparison now accepts strengths 1 through 5; service
 availability and JS options remain separate integration layers.
 
+The optional `test_intl_collation_compiled --archive image.qjcl --ordered file`
+audit selects the compiled root/standard program and checks neighboring strings
+in the authenticated full CLDR ordering file. `--ordered-shifted` additionally
+enables shifted handling; both use quaternary strength. Raw and ranked audits
+share only the bounded source-file parser, not their weight readers/comparators.
+CI runs the complete non-ignorable and shifted corpora after compilation; quick
+repository tests retain their small authored fixtures.
+
 ```sh
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
