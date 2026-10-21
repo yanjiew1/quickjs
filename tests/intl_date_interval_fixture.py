@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import re
 import sys
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 from acquire import atomic_write
@@ -18,7 +19,7 @@ from test_intl_date_intervals import Sources, alias, data_calendar, formats, ite
 from test_intl_list_patterns import graph
 
 
-def pack(empty=False):
+def pack(empty=False, calendar_year=False):
     source = Sources()
     inheritance = ParentGraph(graph().tags + ('en-1901-1996',), {}, {}, {'und': 'en-Latn-US'}, (), False)
     tags = ('de', 'en', 'en-GB', 'root')
@@ -49,6 +50,14 @@ def pack(empty=False):
         source.set('en_1901_1996', data_calendar(formats(item(leaf('greatestDifference', "'external'", id='d')))))
         source.set('de', data_calendar(formats(alias("../../../calendar[@type='gregorian']/dateTimeFormats/"
                                                     'intervalFormats', 'en_1901_1996')), code='generic'))
+        if calendar_year:
+            # Selector-only regression: normalize the skeleton as well as the
+            # interval program, leaving reader fixture cardinalities unchanged.
+            document = ET.fromstring(source.read('common/main/root.xml'))
+            document.find('./dates/calendars').append(ET.fromstring(data_calendar(formats(item(
+                leaf('greatestDifference', 'Y/M/d – Y/M/d', id='d'), skeleton='YMd')),
+                code='islamic')))
+            source.files['common/main/root.xml'] = ET.tostring(document, encoding='utf-8')
     data = wire.select(date_intervals.collect(source, inheritance), tags)
     if empty:
         data['groups'] = (('gregorian', '', 'fallback', '', ''),)
@@ -71,6 +80,7 @@ if __name__ == '__main__':
     # Reader and selector tests share the authored model without colliding
     # with the prepared profile's symbols in the selector's linked executable.
     empty = 'date_interval_empty' if args.prefix == 'qjs_intl_native' else args.prefix + '_empty'
-    text = embed.render(pack()).replace('qjs_intl_native', args.prefix)
+    text = embed.render(pack(calendar_year=args.prefix == 'qjs_intl_interval_selector_fixture')).replace(
+        'qjs_intl_native', args.prefix)
     text += '\n' + embed.render(pack(True)).replace('qjs_intl_native', empty)
     atomic_write(args.output, text.encode('ascii'))
