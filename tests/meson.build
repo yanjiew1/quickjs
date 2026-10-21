@@ -3522,6 +3522,12 @@ standalone = {
     unicode_tables,
     '../src/cutils/cutils.c',
   ],
+  'test_unicode_normalization_boundary': [
+    'test_unicode_normalization_boundary.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+    unicode_tables,
+  ],
   'test_fuzz_regexp_timeout': [
     'test_fuzz_regexp_timeout.c',
     '../src/regexp/compile.c',
