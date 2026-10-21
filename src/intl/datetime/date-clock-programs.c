@@ -28,6 +28,30 @@ void qjs_intl_date_clock_programs_clear(QJSIntlDateClockPrograms *programs)
     memset(programs, 0, sizeof(*programs));
 }
 
+QJSIntlStatus qjs_intl_date_clock_append_date_field(const QJSIntlAllocator *allocator,
+                                                    const QJSIntlDatePattern *date,
+                                                    const QJSIntlDatePattern *clock,
+                                                    QJSIntlBytes connector,
+                                                    const QJSIntlPairPattern *append,
+                                                    const QJSIntlDatePattern *field,
+                                                    QJSIntlDatePattern *out)
+{
+    QJSIntlDatePattern extended = {0}, layout = {0};
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!allocator || !allocator->malloc || !allocator->free || !out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_date_pattern_join(allocator, append, date, field, &extended);
+    if (!status)
+        status = qjs_intl_date_combination_compile(allocator, connector, &layout);
+    if (!status)
+        status = qjs_intl_date_pattern_combine(allocator, &layout, clock, &extended, out);
+    qjs_intl_date_pattern_clear(allocator, &layout);
+    qjs_intl_date_pattern_clear(allocator, &extended);
+    return status;
+}
+
 QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const *dates,
                                                size_t date_count,
                                                const QJSIntlDateOrdinaryPrograms *ordinary,
