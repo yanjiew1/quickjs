@@ -250,6 +250,41 @@ static void case_settings(const QJSIntlCollationContexts *data)
 #undef V
 }
 
+static void shifted_comparisons(const QJSIntlCollationContexts *data)
+{
+    QJSIntlRootCollationOptions options = {.ignore_punctuation = 1};
+#define V(...) {__VA_ARGS__}
+#define S(left, right, expected) do { \
+    const uint16_t x[] = left, y[] = right; \
+    check_options(data, x, sizeof(x) / sizeof(*x), y, sizeof(y) / sizeof(*y), \
+                  &options, expected); \
+} while (0)
+    S(V(' ','a'), V('a'), 0);
+    S(V('a','-',0x301), V('a'), 0); /* Accents after a variable are shifted too. */
+    S(V('a',' ',0x34f,0x301), V('a'), 0);
+    S(V('a',0x301), V('a'), 1); /* Ordinary accents remain significant. */
+    S(V('-',0x301,'a',0x301), V('a'), 1); /* New primary restores accent weights. */
+    S(V('g'), V('a'), 0); /* Expansion members retain their own variable flags. */
+    S(V(0xfffe), V(' '), 1); /* Reserved low primary is not a variable. */
+    S(V(0xffff), V(' '), 1);
+    S(V(0xd800), V(' '), 1);
+    S(V(0x20c4), V(' '), 1); /* Currency/symbol bands remain significant. */
+    options.numeric = 1;
+    S(V('-','0','0','2'), V('2'), 0);
+    S(V('-','2',0x301), V('2'), 1); /* Numeric primary ends a variable sequence. */
+    S(V('1','-','2'), V('1','2'), -1); /* Removed punctuation still delimits numbers. */
+    {
+        int sensitivity;
+        for (sensitivity = QJS_INTL_COLLATION_VARIANT; sensitivity <= QJS_INTL_COLLATION_CASE;
+             sensitivity++) {
+            options.sensitivity = sensitivity;
+            S(V('-','a',' '), V('a'), 0);
+        }
+    }
+#undef S
+#undef V
+}
+
 static void numeric_allocation_failures(const QJSIntlCollationContexts *data)
 {
     const QJSIntlRootCollationOptions options = {.numeric = 1};
@@ -291,6 +326,7 @@ int main(void)
     comparisons(&data);
     numeric_comparisons(&data);
     case_settings(&data);
+    shifted_comparisons(&data);
     allocation_failures(&data);
     numeric_allocation_failures(&data);
     assert(qjs_intl_collation_compare_root(&data, NULL, 1, NULL, 0, &a, NULL, &order) ==

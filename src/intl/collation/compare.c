@@ -10,6 +10,7 @@ typedef struct ElementStream {
     QJSIntlCollationElement *elements;
     size_t count, capacity;
     uint32_t numeric_weight;
+    int shifted, variable_run;
     QJSIntlCollationElement small[8];
 } ElementStream;
 
@@ -41,6 +42,17 @@ static QJSIntlStatus stream_primary(ElementStream *stream, PrimaryWeight *out)
             status = qjs_intl_collation_elements_next(&stream->iterator, &element, &present);
         if (status || !present)
             return status;
+        if (stream->shifted) {
+            /* Shift variables and following primary-ignorables out of the
+               levels exposed by Intl sensitivity. A new nonvariable primary
+               (including a numeric token) ends the variable sequence. */
+            if (out->number.length || (element.primary && !element.variable))
+                stream->variable_run = 0;
+            else if (element.variable)
+                stream->variable_run = 1;
+            if (element.variable || stream->variable_run)
+                continue;
+        }
         if (out->number.length) {
             /* One logical numeric CE: script and leading-zero count must not
                leak into lower levels once two numeric values are equal. */
@@ -193,6 +205,7 @@ QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *da
         goto done;
     for (level = 0; level < 2; level++) {
         streams[level].numeric_weight = numeric_weight;
+        streams[level].shifted = options && options->ignore_punctuation;
         streams[level].elements = streams[level].small;
         streams[level].capacity = sizeof(streams[level].small) / sizeof(*streams[level].small);
     }

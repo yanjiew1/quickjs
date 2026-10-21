@@ -716,3 +716,15 @@ is distinct from `lower`. Primary-ignorable accents do not contribute to
 case-only comparison, while tertiary-only CEs keep the artificial highest case
 rank required by well-formedness even with upper-first order. These root rules
 do not substitute for recomputing case metadata on future locale tailorings.
+
+`ignore_punctuation` uses CLDR's root variable flags, which cover the space and
+punctuation groups in this pin (`maxVariable=punct`). Shifted variables and the
+primary-ignorable CEs following them do not contribute through tertiary; the
+next nonvariable primary restores ordinary handling. Numeric tokens count as
+nonvariable primaries, but removed punctuation still terminates source digit
+runs. No quaternary level is exposed by these sensitivity options. Source flags
+are per CE, not a test of the input character's General_Category or an unsafe
+upper-threshold check that would also erase reserved U+FFFE. Symbols, currency,
+trailing weights and implicit continuations remain significant. The CI shifted
+ordering audit checks only the implemented first three levels, allowing ties
+which the source file's fourth level may distinguish.

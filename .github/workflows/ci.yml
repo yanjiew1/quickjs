@@ -35,6 +35,8 @@ jobs:
           meson compile -C build-collation -j2 test_intl_collation_minimal
           timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
             --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
+          timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
+            --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
       - name: Audit pinned XML documents and DTD attribute schema
         run: |
           timeout 120s python3 tools/intl/cldr_xml.py \

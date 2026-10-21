@@ -46,6 +46,9 @@ def fixture():
     rows[(0x345,)] = ((False, 0, 0, 0x19),)
     rows[(0x346,)] = ((False, 0, 0, 0x1d),)  # Artificial tertiary-only CE.
     rows[(ord('u'),)] = (ce(0x1000, 0x21),)
+    rows[(ord('-'),)] = ((True, 0x501, 0x20, 2),)
+    rows[(ord('g'),)] = ((True, 0x500, 0x20, 2), (False, 0x1000, 0x20, 2),
+                         (True, 0x501, 0x20, 2))
     rows[(0x20,)] = ((True, 0x500, 0x20, 2),)
     rows[(0x34f,)] = ((False, 0, 0, 0),)
     # allkeys combines the prefix CEs with the contextual suffix CEs. The context

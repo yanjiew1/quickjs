@@ -142,6 +142,14 @@ static void check_settings(const QJSIntlCollationContexts *data)
     CHECK(V('0','0','2'), V(0x662), 0);
     CHECK(V(0x20c4), V('0'), -1);
     CHECK(V('9','9'), V(0x24ea), -1);
+    options.ignore_punctuation = 1;
+    options.sensitivity = QJS_INTL_COLLATION_VARIANT;
+    CHECK(V('a','-',0x301), V('a'), 0);
+    CHECK(V('a',0x301), V('a'), 1);
+    CHECK(V('$'), V(' '), 1);
+    CHECK(V('+'), V(' '), 1);
+    CHECK(V(0xfffe), V(' '), 1);
+    CHECK(V('1','-','2'), V('1','2'), -1);
 #undef CHECK
 #undef V
 }
@@ -149,9 +157,10 @@ static void check_settings(const QJSIntlCollationContexts *data)
 /* Optional complete source-file audit belongs in CI, not the quick repository
    suite. Parse code points before ';'; comments contain diagnostic sort keys only.
    Bounds are explicit: reject an unexpectedly larger future fixture. */
-static void ordered_file(const QJSIntlCollationContexts *data, const char *path)
+static void ordered_file(const QJSIntlCollationContexts *data, const char *path, int shifted)
 {
     QJSIntlAllocator a = {NULL, allocate, resize, release};
+    QJSIntlRootCollationOptions options = {.ignore_punctuation = shifted};
     uint16_t previous[1024], current[1024];
     size_t previous_length = 0, previous_line = 0, line_number = 0, count = 0;
     char line[4096];
@@ -187,7 +196,7 @@ static void ordered_file(const QJSIntlCollationContexts *data, const char *path)
         assert(length);
         if (count) {
             QJSIntlStatus status = qjs_intl_collation_compare_root(data, previous, previous_length,
-                                                                   current, length, &a, NULL, &order);
+                                                                   current, length, &a, &options, &order);
             if (status || order > 0) {
                 fprintf(stderr, "%s: lines %zu/%zu out of root order (status %d)\n",
                         path, previous_line, line_number, status);
@@ -216,8 +225,8 @@ int main(int argc, char **argv)
     assert(!qjs_intl_collation_contexts_open(&pack, &contexts));
     check_settings(&contexts);
     if (argc != 1) {
-        assert(argc == 3 && !strcmp(argv[1], "--ordered"));
-        ordered_file(&contexts, argv[2]);
+        assert(argc == 3 && (!strcmp(argv[1], "--ordered") || !strcmp(argv[1], "--ordered-shifted")));
+        ordered_file(&contexts, argv[2], !strcmp(argv[1], "--ordered-shifted"));
         return 0;
     }
     for (index = 0; index < root.section.count; index++) {

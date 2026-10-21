@@ -20,6 +20,7 @@ typedef struct QJSIntlRootCollationOptions {
     int numeric; /* Nonzero: adjacent Nd runs compare by unbounded integer value. */
     QJSIntlCollationSensitivity sensitivity;
     QJSIntlCollationCaseFirst case_first;
+    int ignore_punctuation; /* CLDR root shifted, default maxVariable=punct. */
 } QJSIntlRootCollationOptions;
 
 /* Default root comparison: forward primary, secondary and tertiary levels,
