@@ -182,6 +182,13 @@ in its own gap, preserving the zero sentinel and common root aliases. Node
 provenance records the stronger parents; copied mappings can retain IDs even
 when another mapping is replaced.
 
+Read-only stable-ID comparison is available before freezing. Different virtual
+root gaps compare directly; two tailored IDs in one unfrozen gap follow its
+linked ordering rather than allocation order. This query allocates nothing and
+allows subsequent insertion. Same-gap walks are bounded by inserted node count;
+callers performing repeated scans must account for that linear cost. Once frozen,
+comparison uses resolved ranks.
+
 This generic arena does not decide relation strength, ignorable bands, logical
 reset extrema, case policy or implicit-primary coalescing. The semantic compiler
 must supply those rules. IDs and final ranks are different domains: bit 31
@@ -224,6 +231,30 @@ both the cursor and symbolic ordering. This host-only transition layer does not
 yet execute current-map lookup, settings, logical reset positions or runtime
 ranked comparison; it does not advertise locale Collator support by itself.
 
+`collation-builder.c` connects text resets and relations to logical root input,
+the current mapping store and the relation owner. Counted scalar text normalizes
+with pinned C Unicode. Resets and explicit extensions resolve current mappings;
+relation case metadata comes from immutable root lookup. Prefixes retain the
+original NFC boundary checks before NFD, and extensions do not enter the next
+relation's cursor. Root and tailored lookup share the CE-independent matcher.
+
+The builder borrows immutable root bytes and owns its mutable map, ordering and
+cursor. Lookup results own independent CE arrays. A failed command poisons the
+builder: compilation must abort and clear it, since graph and map publication
+are separate transactions. It publishes no runtime data.
+
+The six logical reset forms used by the pinned corpus are executable: first/last
+primary ignorable, first/last secondary ignorable, last tertiary ignorable and
+last regular. They compare persistent source baselines with established rule CE
+positions using stable graph ordering. Replacing or suppressing a mapping does
+not undo its established position; a constructed SI seed remains meaningful
+after real T-only CEs exist. Retained successful sequence history deliberately
+supplies these positions, whereas live-terminal enumeration serves packing.
+Last regular selects the first-Hani interval `[han_base, han_base + 1)`, including
+primaries inserted before the first real Han CE regardless of their root origin.
+Other named resets fail explicitly until implemented. Settings, full program
+execution and freezing remain subsequent layers.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension
@@ -252,6 +283,16 @@ A reverse-prefix trie grouped by first mapped scalar selects original-text
 lookback; each prefix has its own suffix trie. Stable node/sequence IDs survive
 arena growth, and CE arrays are copied into immutable sequence storage. Replacing
 or suppressing a mapping cannot change an expansion copied earlier.
+
+A live-terminal chain supports nonallocating visits proportional to current
+mapping count, excluding old sequences and abandoned paths. Replacement retains
+terminal identity; suppression removes it from that chain, and reintroduction
+can reuse the same identity. Opaque terminal IDs are not generation handles.
+Callbacks borrow descriptors only for their visit; copying a descriptor retains
+a view of its immutable CE array until map clear. Mutation during visits is
+forbidden. Separate count/copy queries reconstruct original-order prefix/suffix
+keys iteratively from parent links, preflighting both output capacities before
+any writes. These queries allocate no scratch or recursion stack.
 
 Insertion publishes its terminal only after all fallible operations succeed.
 Unused trie paths/capacity may remain after failure, but no resolved mapping
