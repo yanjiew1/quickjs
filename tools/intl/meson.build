@@ -12,6 +12,7 @@ intl_tool_dependencies = files(
   'calendar_names.py',
   'calendar_sources.py',
   'cldr_xml.py',
+  'collation_contexts.py',
   'collation_root.py',
   'collation_tables.py',
   'compact_pattern_syntax.py',
