@@ -37,7 +37,7 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
                                                const QJSIntlAllocator *allocator,
                                                QJSIntlDateClockPrograms *out)
 {
-    enum { CLOCKS = 5 };
+    enum { SHAPES = 5, ZONE_STYLES = 7, CLOCKS = SHAPES * ZONE_STYLES };
     const unsigned int clock = BIT(HOUR) | BIT(MINUTE) | BIT(SECOND);
     const unsigned int date_fields = BIT(WEEKDAY) | BIT(ERA) | BIT(YEAR) | BIT(MONTH) | BIT(DAY);
     size_t indexes[CLOCKS], count = 0, i, j, capacity;
@@ -55,9 +55,13 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
         const QJSIntlDateTimeComponents *components = &ordinary->records[i].single.components;
         unsigned int fields = qjs_intl_datetime_component_mask(components);
         int fraction = components->values[QJS_INTL_DATETIME_FRACTION];
+        int zone = components->values[QJS_INTL_DATETIME_ZONE];
         size_t at;
         if (admitted && !admitted[i])
             continue;
+        if (zone < 0 || zone >= ZONE_STYLES)
+            return QJS_INTL_INVALID_ARGUMENT;
+        fields &= ~BIT(ZONE);
         if (fields == (clock & ~BIT(SECOND)))
             at = 0;
         else if (fields == clock)
@@ -66,6 +70,10 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
             at = fraction + 1;
         else
             continue;
+        /* Preserve a whole admitted zone-bearing clock for each actual style.
+           Empty slots allocate nothing; do not manufacture the Cartesian
+           product of every shape and zone style. */
+        at += (size_t)zone * SHAPES;
         if (indexes[at] == SIZE_MAX) {
             indexes[at] = i;
             count++;
