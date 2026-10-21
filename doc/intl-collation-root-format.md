@@ -133,8 +133,10 @@ artifact generated from the pinned source.
 ## Updating the format
 
 Change the version when changing any layout or invariant, and update the writer,
-auditors, readers, fixtures and this document together. A future driver must
-pair the root and program artifacts using their authenticated source identities;
-matching Unicode versions alone is insufficient. Source facts must not be
+auditors, readers, fixtures and this document together. QJCI version 2 carries the same source-manifest identity. The host tool's
+`--audit-pair` requires all 32 bytes to match before normalization; matching
+Unicode versions alone is insufficient. The identity labels do not authenticate
+arbitrary modified artifacts. A semantic driver must preserve this pairing
+before building program state. Source facts must not be
 silently treated as implemented reset operations. A frozen runtime artifact will
 have its own version and layout.
