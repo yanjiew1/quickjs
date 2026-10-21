@@ -275,6 +275,7 @@ native_test_names = [
   'test_intl_case_oom',
   'test_intl_defaults',
   'test_intl_list_oom',
+  'test_intl_segmenter_oom',
   'test_intl_plural_oom',
   'test_intl_number_oom',
   'test_intl_date_time_oom',
@@ -3444,6 +3445,21 @@ if intl_enabled
     ),
   }
 endif
+if get_option('intl') == 'minimal'
+  standalone += {
+    'test_intl_segment_minimal': files(
+      'test_intl_segment_minimal.c',
+      '../src/intl/segment/minimal.c',
+      '../src/unicode/grapheme.c',
+      '../src/unicode/word.c',
+      '../src/unicode/sentence.c',
+      '../src/unicode/break-properties.c',
+      '../src/unicode/category.c',
+      '../src/unicode/libunicode.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables,
+  }
+endif
 standalone += {
   'test_unicode_sentence': files(
     'test_unicode_sentence.c',
@@ -3804,6 +3820,9 @@ if intl_enabled
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
     'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
   }
+endif
+if get_option('intl') == 'minimal'
+  js_tests += {'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js']}
 endif
 if intl_enabled
   test(
