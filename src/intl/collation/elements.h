@@ -2,16 +2,14 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_COLLATION_ELEMENTS_H
 #define QJS_INTL_COLLATION_ELEMENTS_H
-#include "contexts.h"
+#include "match.h"
 
 typedef struct QJSIntlCollationElements {
-    QJSIntlCollationContexts data;
-    QJSIntlAllocator allocator;
-    uint32_t *text, *indexes, *groups;
-    uint32_t length, pending_at;
+    QJSIntlCollationMatch match;
+    uint32_t pending_at;
     QJSIntlCollationEntry pending;
     QJSIntlCollationElement implicit[2];
-    int ready, use_implicit;
+    int use_implicit;
 } QJSIntlCollationElements;
 
 /* data must be an unchanged successfully opened contexts view, including a
@@ -35,10 +33,6 @@ QJSIntlStatus qjs_intl_collation_elements_next(QJSIntlCollationElements *,
    looking up their initial digit. digits borrows the immutable normalized text
    until clear; leading zeros are removed once, retaining one digit for zero.
    A returned number has no ordinary CE. Do not mix modes within an iterator. */
-typedef struct QJSIntlCollationNumber {
-    const uint32_t *digits;
-    uint32_t length;
-} QJSIntlCollationNumber;
 QJSIntlStatus qjs_intl_collation_elements_next_numeric(QJSIntlCollationElements *,
                                                       QJSIntlCollationElement *,
                                                       QJSIntlCollationNumber *, int *present);
