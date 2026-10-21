@@ -73,6 +73,21 @@ class ArchiveTests(unittest.TestCase):
             output = directory / 'accepted.qjcl'
             archive.compile_archive(Path(compiler), root_path, ir_path, output)
             self.assertEqual(output.read_bytes(), accepted)
+            audit = subprocess.run([compiler, '--audit-compiled', str(output)], timeout=10,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(audit.returncode, 0, audit.stderr.decode())
+
+            # Framing alone is not a semantic acceptance check. The native
+            # reader rejects out-of-domain policy flags in an otherwise framed image.
+            invalid = bytearray(accepted)
+            _, blocks_at, _, _ = archive.DIRECTORY.unpack_from(invalid, 64 + 10 * 16)
+            struct.pack_into('<I', invalid, blocks_at + 12, 32)
+            output.write_bytes(invalid)
+            audit = subprocess.run([compiler, '--audit-compiled', str(output)], timeout=10,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(audit.returncode, 1)
+            self.assertNotIn(b'Sanitizer', audit.stderr)
+            output.write_bytes(accepted)
             failures = [subprocess.CompletedProcess([], 1, b'partial', b'error'),
                         subprocess.CompletedProcess([], 0, accepted[:-1], b''),
                         subprocess.CompletedProcess([], 0, accepted[:32] + b'x' * 32 + accepted[64:], b'')]
