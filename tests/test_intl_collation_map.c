@@ -86,6 +86,95 @@ static uint32_t put(QJSIntlCollationMap *map, const uint32_t *prefix, uint32_t p
     return sequence;
 }
 
+typedef struct Visit {
+    uint32_t count, wanted, terminal;
+    QJSIntlStatus stop;
+} Visit;
+
+static QJSIntlStatus visit(void *opaque, uint32_t terminal, uint32_t sequence,
+                            const QJSIntlRelationMapping *mapping)
+{
+    Visit *state = opaque;
+    assert(mapping && (mapping->elements || !mapping->count));
+    state->count++;
+    if (sequence == state->wanted)
+        state->terminal = terminal;
+    return state->stop;
+}
+
+static uint32_t current_count(const QJSIntlCollationMap *map)
+{
+    Visit state = {.wanted = NONE, .terminal = NONE};
+    assert(!qjs_intl_collation_map_visit(map, visit, &state));
+    return state.count;
+}
+
+static uint32_t terminal(const QJSIntlCollationMap *map, uint32_t sequence)
+{
+    Visit state = {.wanted = sequence, .terminal = NONE};
+    assert(!qjs_intl_collation_map_visit(map, visit, &state));
+    return state.terminal;
+}
+
+static void test_current_iteration_and_keys(void)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlCollationMap map;
+    QJSIntlRelationElement ce = {.weights = {100, 32, 2, 0}};
+    QJSIntlRelationMapping retained;
+    const uint32_t prefix[] = {0, 0x1f600}, suffix[] = {'x', 'y', 0}, zero = 0;
+    uint32_t copied_prefix[2] = {77, 77}, copied_suffix[3] = {88, 88, 88};
+    uint32_t first, replacement, prefix_count, suffix_count, id;
+    Visit stopped = {.wanted = NONE, .terminal = NONE, .stop = QJS_INTL_UNSUPPORTED};
+    size_t calls;
+    assert(!qjs_intl_collation_map_init(&map, &a) && !current_count(&map));
+    put(&map, NULL, 0, &zero, 1, &ce, 1);
+    first = put(&map, prefix, 2, suffix, 3, &ce, 1);
+    put(&map, NULL, 0, suffix, 3, &ce, 1);
+    put(&map, NULL, 0, suffix, 1, &ce, 1);
+    assert(current_count(&map) == 4);
+    id = terminal(&map, first);
+    assert(id != NONE && !qjs_intl_collation_map_sequence(&map, first, &retained));
+    calls = state.calls;
+    assert(!qjs_intl_collation_map_key_size(&map, id, &prefix_count, &suffix_count));
+    assert(prefix_count == 2 && suffix_count == 3);
+    assert(qjs_intl_collation_map_key_copy(&map, id, copied_prefix, 1, copied_suffix, 3) == QJS_INTL_OVERFLOW);
+    assert(qjs_intl_collation_map_key_copy(&map, id, copied_prefix, 2, copied_suffix, 2) == QJS_INTL_OVERFLOW);
+    assert(copied_prefix[0] == 77 && copied_prefix[1] == 77 && copied_suffix[0] == 88 && copied_suffix[1] == 88 && copied_suffix[2] == 88);
+    assert(qjs_intl_collation_map_key_copy(&map, id, NULL, 0, copied_suffix, 3) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!qjs_intl_collation_map_key_copy(&map, id, copied_prefix, 2, copied_suffix, 3));
+    assert(!memcmp(copied_prefix, prefix, sizeof(prefix)) && !memcmp(copied_suffix, suffix, sizeof(suffix)));
+    assert(state.calls == calls);
+    ce.weights[0] = 200;
+    replacement = put(&map, prefix, 2, suffix, 3, &ce, 1);
+    assert(current_count(&map) == 4 && terminal(&map, first) == NONE && terminal(&map, replacement) == id);
+    assert(retained.elements[0].weights[0] == 100);
+    assert(!qjs_intl_collation_map_suppress(&map, 'x'));
+    assert(current_count(&map) == 2 && terminal(&map, replacement) == NONE);
+    assert(qjs_intl_collation_map_key_size(&map, id, &prefix_count, &suffix_count) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!prefix_count && !suffix_count);
+    replacement = put(&map, prefix, 2, suffix, 3, NULL, 0);
+    assert(current_count(&map) == 3 && terminal(&map, replacement) == id);
+    assert(!qjs_intl_collation_map_sequence(&map, replacement, &retained) && !retained.count);
+    calls = state.calls;
+    assert(qjs_intl_collation_map_visit(&map, visit, &stopped) == QJS_INTL_UNSUPPORTED && stopped.count == 1);
+    assert(current_count(&map) == 3 && state.calls == calls);
+    qjs_intl_collation_map_clear(&map);
+    assert(qjs_intl_collation_map_visit(&map, visit, &stopped) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!state.live);
+    /* Exercise both list endpoints becoming empty, then a new publication. */
+    assert(!qjs_intl_collation_map_init(&map, &a));
+    put(&map, prefix, 2, suffix, 3, &ce, 1);
+    assert(current_count(&map) == 1);
+    assert(!qjs_intl_collation_map_suppress(&map, 'x') && !current_count(&map));
+    put(&map, prefix, 2, suffix, 3, &ce, 1);
+    assert(current_count(&map) == 1);
+    assert(!qjs_intl_collation_map_suppress(&map, 'x') && !current_count(&map));
+    qjs_intl_collation_map_clear(&map);
+    assert(!state.live);
+}
+
 static void test_copies_and_contexts(void)
 {
     Allocation state = {0};
@@ -138,8 +227,9 @@ static void test_suppression_and_long_keys(void)
     QJSIntlRelationElement ce = {.weights = {100, 32, 2, 0}};
     uint32_t *key = malloc((LENGTH + 1) * sizeof(*key));
     const uint32_t prefix[] = {'l'}, suffix[] = {0xb7, 'x'};
-    uint32_t i, plain, context, contraction;
-    assert(key && !qjs_intl_collation_map_init(&map, &a));
+    uint32_t i, plain, context, contraction, id, prefix_count, suffix_count;
+    uint32_t *copy = malloc((LENGTH + 2) * sizeof(*copy));
+    assert(key && copy && !qjs_intl_collation_map_init(&map, &a));
     for (i = 0; i < LENGTH; i++)
         key[i] = 'a';
     key[LENGTH] = suffix[0];
@@ -148,6 +238,16 @@ static void test_suppression_and_long_keys(void)
     context = put(&map, prefix, 1, key, LENGTH, &ce, 1);
     put(&map, prefix, 1, suffix, 2, &ce, 1);
     put(&map, key, LENGTH, suffix, 2, &ce, 1);
+    id = terminal(&map, contraction);
+    assert(!qjs_intl_collation_map_key_size(&map, id, &prefix_count, &suffix_count));
+    assert(!prefix_count && suffix_count == LENGTH);
+    assert(!qjs_intl_collation_map_key_copy(&map, id, NULL, 0, copy, LENGTH));
+    assert(!memcmp(copy, key, LENGTH * sizeof(*key)));
+    id = terminal(&map, lookup(&map, key, LENGTH, suffix, 2));
+    assert(!qjs_intl_collation_map_key_size(&map, id, &prefix_count, &suffix_count));
+    assert(prefix_count == LENGTH && suffix_count == 2);
+    assert(!qjs_intl_collation_map_key_copy(&map, id, copy, LENGTH, copy + LENGTH, 2));
+    assert(!memcmp(copy, key, LENGTH * sizeof(*key)) && !memcmp(copy + LENGTH, suffix, sizeof(suffix)));
     assert(!qjs_intl_collation_map_sequence(&map, contraction, &retained));
     assert(!qjs_intl_collation_map_suppress(&map, 'a'));
     assert(lookup(&map, NULL, 0, key, 1) == plain);
@@ -172,6 +272,7 @@ static void test_suppression_and_long_keys(void)
     assert(lookup(&map, prefix, 1, suffix, 1) == NONE);
     qjs_intl_collation_map_clear(&map);
     free(key);
+    free(copy);
     assert(!state.live);
 }
 
@@ -228,6 +329,7 @@ static size_t allocation_case(size_t fail_at)
         if (status) {
             assert(status == QJS_INTL_NO_MEMORY && state.failures == 1 && id == NONE);
             assert(map.sequence_count == old_count && lookup(&map, prefix, 2, &code, 1) == NONE);
+            assert(current_count(&map) == i);
             state.fail_at = 0;
             assert(!qjs_intl_collation_map_put(&map, prefix, 2, &code, 1, &ce, 1, &id));
         }
@@ -239,6 +341,7 @@ static size_t allocation_case(size_t fail_at)
         uint32_t last = 0xe000 + 95;
         assert(status == QJS_INTL_NO_MEMORY && state.failures == 1 && id == NONE);
         assert(map.sequence_count == 96 && lookup(&map, prefix, 2, &last, 1) == previous);
+        assert(current_count(&map) == 96);
         assert(lookup(&map, prefix, 2, key, 180) == NONE);
         state.fail_at = 0;
         assert(!qjs_intl_collation_map_put(&map, prefix, 2, key, 180, &ce, 1, &id));
@@ -253,6 +356,7 @@ static size_t allocation_case(size_t fail_at)
         assert(!qjs_intl_collation_map_put(&map, prefix, 2, key, 180, &ce, 1, &id));
     }
     assert(id == 97 && (!fail_at || state.failures == 1));
+    assert(current_count(&map) == 97);
     previous = state.calls;
     qjs_intl_collation_map_clear(&map);
     assert(!state.live);
@@ -282,7 +386,7 @@ static void test_large_starred_shape(void)
         assert(lookup(&map, NULL, 0, &code, 1) == i);
     }
     assert(retained.count == 1 && retained.elements[0].weights[0] == 100);
-    assert(map.sequence_count == COUNT);
+    assert(map.sequence_count == COUNT && current_count(&map) == COUNT);
     qjs_intl_collation_map_clear(&map);
     assert(!state.live);
 }
@@ -349,6 +453,7 @@ static void test_real_matcher_adapter(void)
 int main(void)
 {
     size_t calls, failure;
+    test_current_iteration_and_keys();
     test_copies_and_contexts();
     test_suppression_and_long_keys();
     test_suppression_failure();
