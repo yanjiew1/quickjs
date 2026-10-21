@@ -1290,6 +1290,41 @@ function intl_number_unit(n)
     return n * 100;
 }
 
+/* Locale negotiation and Unicode contexts are separate from ordinary casing.
+   Each case reuses its source string while producing an observable result. */
+function intl_case_default(n)
+{
+    var input = "Default I and Greek ΟΣ\u0301", result, i, j;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = input.toLocaleLowerCase("en");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_case_lower(n)
+{
+    var input = "I\u0323\u0307 I\u0301\u0307 İ I\u034f\u0307", result, i, j;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = input.toLocaleLowerCase("tr");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_case_upper(n)
+{
+    var input = "i\u0307\u0307 j\u0323\u0307 \u{1d422}\u0307", result, i, j;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = input.toLocaleUpperCase("lt");
+        global_res = result;
+    }
+    return n * 100;
+}
+
 function intl_relative_construct(n)
 {
     var i, j, result;
@@ -2220,6 +2255,11 @@ function main(argc, argv, g)
     test_list.push(sort_bench);
 
     /* Additional feature cases do not change the frozen comparison suite. */
+    if (typeof Intl === "object") {
+        test_list.push(intl_case_default);
+        test_list.push(intl_case_lower);
+        test_list.push(intl_case_upper);
+    }
     if (typeof Intl === "object" && typeof Intl.ListFormat === "function") {
         test_list.push(intl_list_construct);
         test_list.push(intl_list_ascii);
