@@ -272,7 +272,8 @@ static void adjusted_date_style(const QJSIntlAllocator *allocator,
     qjs_intl_datetime_formatter_close(formatter);
 }
 
-static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service, size_t locale)
+static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service,
+                      size_t locale, int zone_append)
 {
     Allocation *state = allocator->opaque;
     QJSIntlDateTimeOptions options = {0};
@@ -280,14 +281,26 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     QJSTimeZoneIdentifier zone;
     size_t baseline = state->live, calls, i;
     options.maximum_output_length = 1000;
-    options.date_style = options.time_style = QJS_INTL_DATE_STYLE_FULL + 1;
+    if (zone_append) {
+        options.hour_cycle = QJS_INTL_DATE_H23;
+        options.components.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
+        options.components.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
+        options.components.values[QJS_INTL_DATETIME_SECOND] = QJS_INTL_DATETIME_NUMERIC;
+        options.components.values[QJS_INTL_DATETIME_ZONE] = QJS_INTL_DATETIME_ZONE_SHORT;
+        options.forced_zone = 1;
+    } else {
+        options.date_style = options.time_style = QJS_INTL_DATE_STYLE_FULL + 1;
+    }
     assert(!qjs_timezone_parse_identifier(&zone, test_zone(), strlen(test_zone())));
     state->calls = 0;
     assert(!qjs_intl_datetime_formatter_open(service, locale, bytes("gregory"), bytes("latn"), &zone, &options, &formatter));
     calls = state->calls;
     qjs_intl_datetime_formatter_close(formatter);
     assert(state->live == baseline);
-    for (i = 1; i <= calls; i++) {
+    /* The style path exhausts the common constructor. Zone synthesis adds
+       late selected-record joins; cover their tail without repeating the
+       entire program-building sweep for a second option configuration. */
+    for (i = zone_append && calls > 32 ? calls - 31 : 1; i <= calls; i++) {
         state->calls = 0;
         state->fail_at = i;
         formatter = (void *)1;
@@ -563,7 +576,8 @@ int main(int argc, char **argv)
         if (supported)
             styles(&allocator, service, en, tags[en], identifier, 0);
     }
-    failures(&allocator, service, en);
+    failures(&allocator, service, en, 0);
+    failures(&allocator, service, en, 1);
     options.maximum_output_length = 1000;
     options.date_style = QJS_INTL_DATE_STYLE_FULL + 1;
     formatter = open_formatter(service, en, &options);
