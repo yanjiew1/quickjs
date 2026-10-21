@@ -52,6 +52,7 @@ struct JSRuntime {
     struct QJSIntlListService *intl_list;
     struct QJSIntlPluralService *intl_plural;
     struct QJSIntlNumberService *intl_number;
+    struct QJSIntlCollationService *intl_collation;
     struct QJSIntlDateTimeService *intl_datetime;
     struct QJSIntlRelativeService *intl_relative;
     struct QJSIntlDurationService *intl_duration;
@@ -227,6 +228,7 @@ struct JSContext {
     JSValue intl_intrinsics;
     JSValue intl_locale_ctor;
     JSValue intl_number_ctor;
+    JSValue intl_collator_ctor;
     JSValue intl_datetime_ctor;
     JSValue intl_duration_ctor;
     JSValue intl_fallback_symbol;
