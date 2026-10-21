@@ -4,6 +4,7 @@
 #include "../src/intl/collation/compiled-data.h"
 #include "../src/intl/collation/ranked-elements.h"
 #include "../src/intl/collation/ranked-compare.h"
+#include "intl_collation_ordered.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1202,10 +1203,74 @@ static void test_ranked_shifted_and_quaternary(const QJSIntlRootInput *root)
     assert(!f.live);
 }
 
-int main(void)
+typedef struct OrderedRanked {
+    QJSIntlCompiledCollationProgram program;
+    QJSIntlCollationPolicy policy;
+    QJSIntlAllocator allocator;
+} OrderedRanked;
+
+static QJSIntlStatus ordered_ranked_compare(void *opaque, const uint16_t *left, size_t left_length,
+                                           const uint16_t *right, size_t right_length, int *order)
+{
+    OrderedRanked *root = opaque;
+
+    return qjs_intl_collation_compare_ranked(&root->program, left, left_length, right, right_length,
+                                            &root->allocator, &root->policy, order);
+}
+
+static void ordered_archive(const char *archive, const char *path, int shifted)
+{
+    Fixture f = {0};
+    QJSIntlAllocator a = allocator(&f);
+    QJSIntlCompiledCollationData data;
+    OrderedRanked root = {.allocator = a};
+    uint8_t *bytes;
+    long size;
+    uint32_t i;
+    int found = 0;
+    FILE *file = fopen(archive, "rb");
+
+    assert(file && !fseek(file, 0, SEEK_END));
+    size = ftell(file);
+    assert(size >= 256 && size <= QJS_INTL_COMPILED_COLLATION_MAX_SIZE);
+    assert(!fseek(file, 0, SEEK_SET));
+    bytes = malloc(size);
+    assert(bytes && fread(bytes, 1, size, file) == (size_t)size && !ferror(file));
+    assert(!fclose(file));
+    assert(!qjs_intl_compiled_collation_open(bytes, size, NULL, &a, &data));
+
+    for (i = 0; i < data.program_count; i++) {
+        QJSIntlCompiledCollationProgram p;
+
+        assert(!qjs_intl_compiled_collation_program(&data, i, &p));
+        if (p.locale.length == 4 && !memcmp(p.locale.data, "root", 4) &&
+            p.collation.length == 8 && !memcmp(p.collation.data, "standard", 8) && !p.alternate.length) {
+            assert(!found);
+            root.program = p;
+            found = 1;
+        }
+    }
+    assert(found);
+
+    root.policy = root.program.policy;
+    root.policy.strength = QJS_INTL_COLLATION_STRENGTH_QUATERNARY;
+    root.policy.shifted = shifted;
+    qjs_test_intl_collation_ordered(path, ordered_ranked_compare, &root);
+    assert(!f.live);
+    free(bytes);
+}
+
+int main(int argc, char **argv)
 {
     Fixture f = {0};
     QJSIntlRootInput root;
+
+    if (argc != 1) {
+        assert(argc == 5 && !strcmp(argv[1], "--archive") &&
+               (!strcmp(argv[3], "--ordered") || !strcmp(argv[3], "--ordered-shifted")));
+        ordered_archive(argv[2], argv[4], !strcmp(argv[3], "--ordered-shifted"));
+        return 0;
+    }
 
     make(&f, &root);
     test_mutations(&f);
