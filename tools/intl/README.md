@@ -366,6 +366,15 @@ The Python publication wrapper checks framing/source identity before atomically
 replacing its output; it never normalizes or executes rules. Public locale/type
 bindings and runtime service publication remain subsequent integration layers.
 
+The runtime owner `src/intl/collation/compiled-data.c` audits all shared and
+per-program semantics before exposing borrowed views. Compile mode reads back
+its complete output through that reader before writing stdout; `--audit-compiled`
+also checks an existing archive. Opening releases all temporary audit storage,
+and program/element queries allocate nothing. Program descriptors copy root and
+group views, while archive bytes remain immutable and alive for all consumers.
+Matcher overlays borrow the program's trie descriptor, which must stay at a
+stable address. See the format document for validation and lifetime contracts.
+
 ```sh
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
