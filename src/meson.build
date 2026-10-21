@@ -158,6 +158,7 @@ if intl_enabled
     'intl/collation/keys.c',
     'intl/collation/base.c',
     'intl/collation/compiled-data.c',
+    'intl/collation/native.c',
     'intl/collation/ranked-elements.c',
     'intl/collation/ranked-compare.c',
     'intl/collation/trie.c',
