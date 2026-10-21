@@ -111,6 +111,8 @@ int unicode_general_category(CharRange *cr, const char *gc_name);
 int lre_is_letter(uint32_t c);
 int lre_is_mark(uint32_t c);
 int lre_is_decimal_digit(uint32_t c);
+/* Unicode Decimal_Digit_Value, or -1 for non-Nd / out-of-range input. */
+int lre_decimal_value(uint32_t c);
 int lre_is_symbol_or_separator(uint32_t c);
 /* Assigned means General_Category != Cn, including Cs/Co; invalid values false. */
 int lre_is_assigned(uint32_t c);
