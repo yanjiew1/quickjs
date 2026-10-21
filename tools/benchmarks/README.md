@@ -132,6 +132,13 @@ updated script on both engines; these cases do not change the frozen 72-case
 catalog. Already ordered and ASCII inputs are useful additional controls when
 evaluating changes to canonical ordering.
 
+The live repository microbenchmark has `intl_case_default`, `intl_case_lower`
+and `intl_case_upper` for validated locale negotiation and Turkish/Lithuanian
+Unicode contexts. These require an Intl-enabled build. Run each exact name in
+a fresh process, for example `build/qjs --std tests/microbench.js intl_case_lower`,
+using an unsanitized build with assertions disabled. They do not modify the
+frozen comparison catalog.
+
 The live repository microbenchmark additionally offers the `intl_number`
 prefix for constructor, bound numeric formatting, exact decimal/BigInt inputs,
 currency parts, ranges and compact division-unit formatting. These optional
