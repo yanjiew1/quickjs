@@ -441,6 +441,71 @@ static JSValue locale_numbering_systems(JSContext *ctx, JSValueConst this_val,
     return result;
 }
 
+static int append_collation(JSContext *ctx, JSValueConst result, uint32_t index, QJSIntlBytes name)
+{
+    JSValue value = JS_NewStringLen(ctx, name.data, name.length);
+
+    if (JS_IsException(value))
+        return -1;
+    return JS_DefinePropertyValueUint32(ctx, result, index, value, JS_PROP_C_W_E | JS_PROP_THROW);
+}
+
+static JSValue locale_collations(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlCollationService *service;
+    const QJSIntlBytes *available;
+    QJSIntlLocaleMatch match;
+    QJSIntlBytes tag;
+    size_t count;
+    uint32_t cursor = 0, index = 0;
+    JSValue result;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        return result;
+    /* Explicit co is returned even when unsupported. An unmatched locale has
+       its specified emoji/eor fallback, not the runtime's default locale. */
+    if (locale->slots[SLOT_CO]) {
+        if (append_collation(ctx, result, 0,
+                (QJSIntlBytes){locale->slots[SLOT_CO], strlen(locale->slots[SLOT_CO])}) < 0)
+            goto fail;
+        return result;
+    }
+    service = js_intl_collation_service(ctx);
+    tag = (QJSIntlBytes){locale->tag, strlen(locale->tag)};
+    if (!service || js_intl_error(ctx, qjs_intl_collation_available(service, &available, &count), "collation locales") ||
+        js_intl_error(ctx, qjs_intl_lookup_matching_locale(available, count, &tag, 1, &match), "locale collations"))
+        goto fail;
+    if (!match.found) {
+        if (append_collation(ctx, result, 0, (QJSIntlBytes){"emoji", 5}) < 0 ||
+            append_collation(ctx, result, 1, (QJSIntlBytes){"eor", 3}) < 0)
+            goto fail;
+        return result;
+    }
+    for (;;) {
+        QJSIntlBytes name;
+        QJSIntlStatus status = qjs_intl_collation_type_next(service, match.available_index,
+            QJS_INTL_COLLATION_SORT, &cursor, &name);
+
+        if (status == QJS_INTL_UNSUPPORTED)
+            return result;
+        if (js_intl_error(ctx, status, "locale collations"))
+            goto fail;
+        if (index == UINT32_MAX) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
+        if (append_collation(ctx, result, index++, name) < 0)
+            goto fail;
+    }
+fail:
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
 static JSValue locale_calendars(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
@@ -734,6 +799,7 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_MAGIC_DEF("getTextInfo", 0, locale_info, INFO_TEXT),
     JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
     JS_CFUNC_DEF("getNumberingSystems", 0, locale_numbering_systems),
+    JS_CFUNC_DEF("getCollations", 0, locale_collations),
     JS_CFUNC_DEF("getCalendars", 0, locale_calendars),
     JS_CFUNC_DEF("getTimeZones", 0, locale_timezones),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
