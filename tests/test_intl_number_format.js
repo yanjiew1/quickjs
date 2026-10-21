@@ -42,6 +42,27 @@ assert(new NumberFormat('en', {style: 'currency', currency: 'USD', currencyDispl
 assert(new NumberFormat('en', {style: 'unit', unit: 'meter-per-second', unitDisplay: 'long'}).format(2), '2 meters per second');
 assert(new NumberFormat('en', {notation: 'scientific'}).format(1234), '1.234E3');
 assert(new NumberFormat('en', {notation: 'engineering'}).format(12345), '12.345E3');
+
+// Match ICU/CLDR's selected digits for exponents, including zero and characters
+// outside the BMP. Keep exponent signs/separators and part boundaries separate.
+for (const [notation, cases] of [
+    ['scientific', [[1e25, '٢٥', '𝟐𝟓'], [1e-25, '٢٥', '𝟐𝟓'], [0, '٠', '𝟎']]],
+    ['engineering', [[1e25, '٢٤', '𝟐𝟒'], [1e-25, '٢٧', '𝟐𝟕'], [0, '٠', '𝟎']]],
+]) {
+    for (const [number, arab, mathbold] of cases) {
+        for (const [numberingSystem, expected] of [['arab', arab], ['mathbold', mathbold]]) {
+            const f = new NumberFormat('en', {notation, numberingSystem});
+            const parts = f.formatToParts(number);
+            const exponent = parts.filter(p => p.type === 'exponentInteger');
+
+            assert(parts.map(p => p.value).join(''), f.format(number));
+            assert(exponent.length, 1);
+            assert(exponent[0].value, expected);
+            assert(parts.some(p => p.type === 'exponentMinusSign'), number > 0 && number < 1);
+        }
+    }
+}
+
 assert(new NumberFormat('en', {notation: 'compact'}).format(1234), '1.2K');
 assert(new NumberFormat('en', {maximumFractionDigits: 0, roundingMode: 'ceil'}).format(1.1), '2');
 assert(new NumberFormat('en', {minimumFractionDigits: 2, trailingZeroDisplay: 'stripIfInteger'}).format(1), '1');
