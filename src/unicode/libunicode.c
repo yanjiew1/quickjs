@@ -1487,13 +1487,12 @@ static int unicode_prop1(CharRange *cr, int prop_idx)
     return 0;
 }
 
-BOOL lre_is_soft_dotted(uint32_t c)
+static int unicode_prop_contains(const uint8_t *p, size_t length, uint32_t c)
 {
-    const uint8_t *p = unicode_prop_Soft_Dotted_table;
-    const uint8_t *end = p + countof(unicode_prop_Soft_Dotted_table);
+    const uint8_t *end = p + length;
     uint32_t limit = 0, bit = 0;
-    if (c < 128)
-        return c == 'i' || c == 'j';
+    if (c > 0x10ffff)
+        return FALSE;
     /* Query the existing alternating-range encoding without materializing a
        CharRange or creating another owner of the generated property table. */
     while (p < end) {
@@ -1518,6 +1517,20 @@ BOOL lre_is_soft_dotted(uint32_t c)
         bit ^= 1;
     }
     return FALSE;
+}
+
+BOOL lre_is_soft_dotted(uint32_t c)
+{
+    if (c < 128)
+        return c == 'i' || c == 'j';
+    return unicode_prop_contains(unicode_prop_Soft_Dotted_table,
+                                 countof(unicode_prop_Soft_Dotted_table), c);
+}
+
+int lre_is_unified_ideograph(uint32_t c)
+{
+    return unicode_prop_contains(unicode_prop_Unified_Ideograph_table,
+                                 countof(unicode_prop_Unified_Ideograph_table), c);
 }
 
 typedef enum {
