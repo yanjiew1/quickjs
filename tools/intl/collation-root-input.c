@@ -400,6 +400,23 @@ QJSIntlStatus qjs_intl_root_input_element_at(const QJSIntlRootInput *view, uint3
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_root_input_reset(const QJSIntlRootInput *view, QJSIntlRootReset kind,
+                                        unsigned int *role, QJSIntlCollationCoordinate *out)
+{
+    const uint8_t *row;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (role)
+        *role = 0;
+    if (!view || !view->fingerprint || !role || !out ||
+        kind < QJS_INTL_ROOT_FIRST_TERTIARY_IGNORABLE || kind > QJS_INTL_ROOT_LAST_TRAILING)
+        return QJS_INTL_INVALID_ARGUMENT;
+    row = view->sections[QJS_INTL_ROOT_RESETS].bytes + (size_t)(kind - 1) * 32;
+    *role = word(row, 1);
+    element(row + 8, out);
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_root_input_implicit(const QJSIntlRootInput *view, uint32_t code,
                                           QJSIntlCollationCoordinate *out)
 {
