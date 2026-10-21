@@ -269,6 +269,14 @@ primaries inserted before the first real Han CE regardless of their root origin.
 Other named resets fail explicitly until implemented. Settings, full program
 execution and freezing remain subsequent layers.
 
+`collation-settings.c` interprets scalar comparison settings into the plain
+`policy.h` contract. It records strength, alternate handling, secondary direction,
+normalization, case level/order, numeric ordering and maximum variable group,
+without allocating or changing construction weights. Invalid values leave the
+policy unchanged. Reordering belongs to its group owner; unsupported legacy
+settings fail explicitly. Recording normalization off does not waive canonical
+equivalence, and maxVariable does not retroactively change logical reset points.
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension

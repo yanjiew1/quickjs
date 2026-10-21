@@ -3300,6 +3300,10 @@ standalone = {
     unicode_tables,
     intl_collation_root_input_fixture,
   ],
+  'test_intl_collation_settings': [
+    'test_intl_collation_settings.c',
+    '../tools/intl/collation-settings.c',
+  ],
   'test_intl_collation_ir': [
     'test_intl_collation_ir.c',
     '../tools/intl/collation-ir.c',
