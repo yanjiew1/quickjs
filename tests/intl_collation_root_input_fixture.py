@@ -20,6 +20,11 @@ def main():
     with args.output.open('w') as output:
         output.write('#include <stddef.h>\n')
         emit(output, 'intl_root_fixture', wire.encode(root(), GROUPS, FINGERPRINT))
+        # An authored shared group checks alias identity, independently of the
+        # script represented by the tiny fixture's arbitrary source weights.
+        aliases = tuple(group._replace(tokens=('Hira', 'Kana', 'Hrkt'))
+                        if group.tokens == ('Latn',) else group for group in GROUPS)
+        emit(output, 'intl_root_shared_group', wire.encode(root(), aliases, FINGERPRINT))
         # A second Han range checks rank-pool offsets and binary-search gaps.
         source = SOURCE.replace('4E00..4E02', '4E00..4E02 20000..20001')
         source = source.replace('丂一丁', '丂一丁𠀁𠀀')
