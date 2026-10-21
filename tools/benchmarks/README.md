@@ -91,6 +91,13 @@ fixture, even if a later repository commit adds new microbenchmarks.
 New cases should be added to a separate versioned catalog so historical
 comparisons remain meaningful.
 
+The live `string_normalize_short` and `string_normalize_long` cases contrast
+ordinary short NFC input with a disordered nonstarter NFD run. Each caches its
+source string on first use and reports normalization operations. Run the same
+updated script on both engines; these cases do not change the frozen 72-case
+catalog. Already ordered and ASCII inputs are useful additional controls when
+evaluating changes to canonical ordering.
+
 The live repository microbenchmark has `intl_case_default`, `intl_case_lower`
 and `intl_case_upper` for validated locale negotiation and Turkish/Lithuanian
 Unicode contexts. These require an Intl-enabled build. Run each exact name in

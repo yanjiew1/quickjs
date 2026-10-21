@@ -698,6 +698,18 @@ function test_string_normalize()
         assert(input.normalize(form), reordered);
     for (const form of ["NFC", "NFKC"])
         assert(input.normalize(form), composed);
+
+    // Equal combining classes retain their source order, including across
+    // the short/long-run sorting boundary. Starters separate ordering runs.
+    for (const count of [20, 21, 22, 1000]) {
+        const marks = "\u0301\u0300\u0323".repeat(count);
+        const ordered = "\u0323".repeat(count) + "\u0301\u0300".repeat(count);
+        for (const form of ["NFC", "NFD", "NFKC", "NFKD"]) {
+            assert(marks.normalize(form), ordered);
+            assert(("1" + marks + "2" + marks).normalize(form), "1" + ordered + "2" + ordered);
+            assert(ordered.normalize(form), ordered);
+        }
+    }
 }
 
 function test_string_unicode_18()
