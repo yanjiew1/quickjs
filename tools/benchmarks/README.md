@@ -91,6 +91,13 @@ fixture, even if a later repository commit adds new microbenchmarks.
 New cases should be added to a separate versioned catalog so historical
 comparisons remain meaningful.
 
+The live repository microbenchmark has `intl_case_default`, `intl_case_lower`
+and `intl_case_upper` for validated locale negotiation and Turkish/Lithuanian
+Unicode contexts. These require an Intl-enabled build. Run each exact name in
+a fresh process, for example `build/qjs --std tests/microbench.js intl_case_lower`,
+using an unsanitized build with assertions disabled. They do not modify the
+frozen comparison catalog.
+
 The live repository microbenchmark additionally offers the `intl_number`
 prefix for constructor, bound numeric formatting, exact decimal/BigInt inputs,
 currency parts, ranges and compact division-unit formatting. These optional
