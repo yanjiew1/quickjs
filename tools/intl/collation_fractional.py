@@ -128,8 +128,8 @@ def _resolve(rows, ideographs, common_s, common_t):
                     ce = base._replace(tertiary=ce.overrides[0])
                 else:
                     ce = base._replace(secondary=ce.overrides[0], tertiary=ce.overrides[1])
-            # Synthetic FDD0 records include deliberately incomplete numeric
-            # anchors. Preserve them separately; never admit them as mappings.
+            # Synthetic FDD0 records can include incomplete numeric anchors.
+            # Preserve them separately; never admit them as mappings.
             if row.text[0] != 0xfdd0:
                 p = ce.primary.kind == 'han' or bool(ce.primary.value)
                 if (p and not ce.secondary) or ((p or ce.secondary) and not ce.tertiary):
@@ -143,7 +143,7 @@ def _resolve(rows, ideographs, common_s, common_t):
 
 
 def parse(raw, expected_version=collation_root.VERSION):
-    """Parse source semantics only; pinned C Unicode later normalizes the keys.
+    """Parse source semantics; keep original root keys and counted source identity.
 
     Keep fractional byte vectors and Han references independent of any chosen
     ordinal/implicit encoding. Footer limits are source facts, not a replacement
