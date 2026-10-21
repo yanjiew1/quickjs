@@ -7,6 +7,7 @@
 
 typedef struct QJSIntlDateClockProgram {
     QJSIntlDateTimeComponents components;
+    unsigned char source_hour_width[2]; /* Original normal/twelve clock widths. */
     QJSIntlDatePattern normal, twelve;
     QJSIntlDateCombinationRecord connector;
     QJSIntlDateStyleWidth connector_width;
