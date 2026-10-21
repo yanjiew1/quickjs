@@ -109,6 +109,11 @@ QJSIntlStatus qjs_intl_number_system_next(const QJSIntlNumberService *,
    Allocation-free; failure resets output to zero. */
 QJSIntlStatus qjs_intl_number_currency_digits(const QJSIntlNumberService *, QJSIntlBytes code,
                                               uint32_t *out);
+/* Currency-code formatting accepts every three-letter uppercase code, with
+   the standard unknown-code symbol/name/fraction fallback. No allocation;
+   malformed codes are OK/false and operational errors clear output. */
+QJSIntlStatus qjs_intl_number_currency_supported(const QJSIntlNumberService *,
+                                                 QJSIntlBytes code, int *out);
 /* Empty system chooses the locale default. An explicit system is exact;
    absent/algorithmic definitions return UNSUPPORTED, without fallback. The
    frontend resolves defaults, options and Unicode extensions before opening.
