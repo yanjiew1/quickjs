@@ -705,3 +705,14 @@ weights and places a numeric token in the odd band immediately before ordinary
 zero. Script reordering and locale-tailored numeric processing are separate
 integration work. The Unicode decimal query reuses indexed category runs; the
 generator checks repeated ascending decimal values at their original origins.
+
+Root comparison sensitivity selects primary only (`base`), primary and
+secondary (`accent`), primary and case (`case`), or all three original levels
+(`variant`, the default). Root case is derived separately for each CE from
+TR35's allkeys tertiary classes, including Kana size distinctions. `caseFirst`
+changes case priority within each tertiary CE; it does not insert a whole case
+pass ahead of other tertiary variants. `off` preserves raw tertiary order and
+is distinct from `lower`. Primary-ignorable accents do not contribute to
+case-only comparison, while tertiary-only CEs keep the artificial highest case
+rank required by well-formedness even with upper-first order. These root rules
+do not substitute for recomputing case metadata on future locale tailorings.

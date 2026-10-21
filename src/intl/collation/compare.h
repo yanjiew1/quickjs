@@ -3,8 +3,23 @@
 #define QJS_INTL_COLLATION_COMPARE_H
 #include "contexts.h"
 
+typedef enum QJSIntlCollationSensitivity {
+    QJS_INTL_COLLATION_VARIANT,
+    QJS_INTL_COLLATION_BASE,
+    QJS_INTL_COLLATION_ACCENT,
+    QJS_INTL_COLLATION_CASE
+} QJSIntlCollationSensitivity;
+
+typedef enum QJSIntlCollationCaseFirst {
+    QJS_INTL_COLLATION_CASE_OFF,
+    QJS_INTL_COLLATION_UPPER_FIRST,
+    QJS_INTL_COLLATION_LOWER_FIRST
+} QJSIntlCollationCaseFirst;
+
 typedef struct QJSIntlRootCollationOptions {
     int numeric; /* Nonzero: adjacent Nd runs compare by unbounded integer value. */
+    QJSIntlCollationSensitivity sensitivity;
+    QJSIntlCollationCaseFirst case_first;
 } QJSIntlRootCollationOptions;
 
 /* Default root comparison: forward primary, secondary and tertiary levels,

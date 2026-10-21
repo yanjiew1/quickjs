@@ -36,6 +36,15 @@ def fixture():
     rows[(0x20c4,)] = (ce(0x8ff),)  # Immediately before the ordinary digit band.
     rows[(0,)] = ((False, 0, 0, 0),)
     rows[(ord('A'),)] = ((False, 0x1000, 0x20, 8),)
+    rows[(ord('H'),)] = ((False, 0x1900, 0x20, 8),)
+    rows[(ord('h'),)] = ((False, 0x1900, 0x20, 13),)
+    rows[(ord('w'),)] = ((False, 0x1000, 0x20, 3),)
+    rows[(ord('m'),)] = ((False, 0x1000, 0x20, 8), (False, 0x1000, 0x20, 2))
+    rows[(ord('n'),)] = ((False, 0x1000, 0x20, 2), (False, 0x1000, 0x20, 8))
+    rows[(ord('p'),)] = ((False, 0x1000, 0x20, 3), (False, 0x1000, 0x20, 2))
+    rows[(0x30b,)] = ((False, 0, 0x31, 8),)  # Synthetic upper secondary CE.
+    rows[(0x345,)] = ((False, 0, 0, 0x19),)
+    rows[(0x346,)] = ((False, 0, 0, 0x1d),)  # Artificial tertiary-only CE.
     rows[(ord('u'),)] = (ce(0x1000, 0x21),)
     rows[(0x20,)] = ((True, 0x500, 0x20, 2),)
     rows[(0x34f,)] = ((False, 0, 0, 0),)

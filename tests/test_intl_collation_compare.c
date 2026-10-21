@@ -98,7 +98,7 @@ static void comparisons(const QJSIntlCollationContexts *data)
 
 static void numeric_comparisons(const QJSIntlCollationContexts *data)
 {
-    const QJSIntlRootCollationOptions options = {1};
+    const QJSIntlRootCollationOptions options = {.numeric = 1};
 #define V(...) {__VA_ARGS__}
 #define N(left, right, expected) do { \
     const uint16_t x[] = left, y[] = right; \
@@ -197,9 +197,62 @@ static void allocation_failures(const QJSIntlCollationContexts *data)
     assert(!order && !state.calls);
 }
 
+static void case_settings(const QJSIntlCollationContexts *data)
+{
+    QJSIntlRootCollationOptions options = {0};
+#define V(...) {__VA_ARGS__}
+#define C(left, right, expected) do { \
+    const uint16_t x[] = left, y[] = right; \
+    check_options(data, x, sizeof(x) / sizeof(*x), y, sizeof(y) / sizeof(*y), \
+                  &options, expected); \
+} while (0)
+    options.sensitivity = QJS_INTL_COLLATION_BASE;
+    C(V('A'), V('u'), 0);
+    C(V('a',0x301), V('a'), 0);
+    options.sensitivity = QJS_INTL_COLLATION_ACCENT;
+    C(V('A'), V('a'), 0);
+    C(V('A'), V('u'), -1);
+    C(V('a',0x301), V('a'), 1);
+    options.sensitivity = QJS_INTL_COLLATION_CASE;
+    C(V('A'), V('a'), 1);
+    C(V('A'), V('u'), 1);
+    C(V('a'), V('w'), 0); /* Other tertiary variants are ignored. */
+    C(V('a',0x30b), V('a'), 0); /* Even a synthetic UPPER accent is ignored. */
+    C(V('a',0x345), V('a',0x346), 0);
+    options.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
+    C(V('A'), V('a'), -1);
+    options.sensitivity = QJS_INTL_COLLATION_VARIANT;
+    C(V('A'), V('a'), -1);
+    C(V('a',0x345), V('a',0x346), -1); /* T-only case rank never inverts. */
+    options.case_first = QJS_INTL_COLLATION_LOWER_FIRST;
+    C(V('n'), V('p'), -1); /* Promote case within each CE, not a whole case pass. */
+    options.sensitivity = QJS_INTL_COLLATION_CASE;
+    C(V('n'), V('p'), 1);
+    options.sensitivity = QJS_INTL_COLLATION_VARIANT;
+    C(V('H'), V('h'), 1);
+    options.case_first = QJS_INTL_COLLATION_CASE_OFF;
+    C(V('H'), V('h'), -1); /* Off preserves raw order; it is not lower-first. */
+    {
+        int sensitivity, case_first;
+        options.numeric = 1;
+        for (sensitivity = QJS_INTL_COLLATION_VARIANT; sensitivity <= QJS_INTL_COLLATION_CASE;
+             sensitivity++) {
+            options.sensitivity = sensitivity;
+            for (case_first = QJS_INTL_COLLATION_CASE_OFF; case_first <= QJS_INTL_COLLATION_LOWER_FIRST;
+                 case_first++) {
+                options.case_first = case_first;
+                C(V('0','0','2'), V('2'), 0);
+                C(V('0','0'), V('0'), 0);
+            }
+        }
+    }
+#undef C
+#undef V
+}
+
 static void numeric_allocation_failures(const QJSIntlCollationContexts *data)
 {
-    const QJSIntlRootCollationOptions options = {1};
+    const QJSIntlRootCollationOptions options = {.numeric = 1};
     uint16_t left[200], right[300];
     Allocation state = {0};
     QJSIntlAllocator a = {&state, allocate, resize, release};
@@ -231,11 +284,13 @@ int main(void)
     Allocation state = {0};
     QJSIntlAllocator a = {&state, allocate, resize, release};
     int order = 9;
+    QJSIntlRootCollationOptions bad = {.sensitivity = (QJSIntlCollationSensitivity)-1};
     assert(!qjs_intl_pack_open(qjs_intl_collation_fixture_bytes,
                               qjs_intl_collation_fixture_length, &pack));
     assert(!qjs_intl_collation_contexts_open(&pack, &data));
     comparisons(&data);
     numeric_comparisons(&data);
+    case_settings(&data);
     allocation_failures(&data);
     numeric_allocation_failures(&data);
     assert(qjs_intl_collation_compare_root(&data, NULL, 1, NULL, 0, &a, NULL, &order) ==
@@ -245,5 +300,11 @@ int main(void)
            QJS_INTL_INVALID_ARGUMENT && !order);
     assert(qjs_intl_collation_compare_root(&data, NULL, 0, NULL, 0, &a, NULL, NULL) ==
            QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_collation_compare_root(&data, NULL, 0, NULL, 0, &a, &bad, &order) ==
+           QJS_INTL_INVALID_ARGUMENT && !order);
+    bad.sensitivity = QJS_INTL_COLLATION_VARIANT;
+    bad.case_first = (QJSIntlCollationCaseFirst)3;
+    assert(qjs_intl_collation_compare_root(&data, NULL, 0, NULL, 0, &a, &bad, &order) ==
+           QJS_INTL_INVALID_ARGUMENT && !order);
     return 0;
 }

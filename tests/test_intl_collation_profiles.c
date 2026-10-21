@@ -101,6 +101,51 @@ static void check_elements(const QJSIntlCollationContexts *data,
     free(input);
 }
 
+static void check_settings(const QJSIntlCollationContexts *data)
+{
+    QJSIntlAllocator a = {NULL, allocate, resize, release};
+    QJSIntlRootCollationOptions options = {0};
+    int order;
+#define V(...) {__VA_ARGS__}
+#define CHECK(left, right, expected) do { \
+    const uint16_t x[] = left, y[] = right; \
+    assert(!qjs_intl_collation_compare_root(data, x, sizeof(x) / sizeof(*x), \
+                                           y, sizeof(y) / sizeof(*y), &a, &options, &order)); \
+    assert(order == expected); \
+    assert(!qjs_intl_collation_compare_root(data, y, sizeof(y) / sizeof(*y), \
+                                           x, sizeof(x) / sizeof(*x), &a, &options, &order)); \
+    assert(order == -(expected)); \
+} while (0)
+    CHECK(V('a'), V('A'), -1);
+    options.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
+    CHECK(V('a'), V('A'), 1);
+    CHECK(V(0x3041), V(0x3042), 1); /* Kana size, not Unicode letter case. */
+    options.case_first = QJS_INTL_COLLATION_LOWER_FIRST;
+    CHECK(V(0x3041), V(0x3042), -1);
+    CHECK(V(0x1c5), V(0x1c4), -1); /* Titlecase expansion: UPPER, lower. */
+    options.sensitivity = QJS_INTL_COLLATION_CASE;
+    CHECK(V('a'), V(0xe4), 0);
+    CHECK(V('a'), V(0xff41), 0);
+    CHECK(V(0xfb00), V('f','f'), 0);
+    CHECK(V(0xdf), V('s','s'), 0);
+    CHECK(V(0x1c5), V(0x1c4), -1);
+    CHECK(V(0x1c5), V(0x1c6), 1);
+    options.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
+    CHECK(V(0x1c5), V(0x1c4), 1);
+    CHECK(V(0x1c5), V(0x1c6), -1);
+    options.sensitivity = QJS_INTL_COLLATION_BASE;
+    CHECK(V('A'), V(0xe4), 0);
+    options.sensitivity = QJS_INTL_COLLATION_ACCENT;
+    CHECK(V('a'), V(0xe4), -1);
+    CHECK(V('a'), V('A'), 0);
+    options.numeric = 1;
+    CHECK(V('0','0','2'), V(0x662), 0);
+    CHECK(V(0x20c4), V('0'), -1);
+    CHECK(V('9','9'), V(0x24ea), -1);
+#undef CHECK
+#undef V
+}
+
 /* Optional complete source-file audit belongs in CI, not the quick repository
    suite. Parse code points before ';'; comments contain diagnostic sort keys only.
    Bounds are explicit: reject an unexpectedly larger future fixture. */
@@ -169,6 +214,7 @@ int main(int argc, char **argv)
     assert(!qjs_intl_pack_open(qjs_intl_native_bytes, qjs_intl_native_length, &pack));
     assert(!qjs_intl_collation_root_open(&pack, &root));
     assert(!qjs_intl_collation_contexts_open(&pack, &contexts));
+    check_settings(&contexts);
     if (argc != 1) {
         assert(argc == 3 && !strcmp(argv[1], "--ordered"));
         ordered_file(&contexts, argv[2]);

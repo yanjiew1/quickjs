@@ -96,11 +96,44 @@ static int compare_primary(const PrimaryWeight *left, const PrimaryWeight *right
     return 0;
 }
 
-static unsigned int next_level(const ElementStream *stream, size_t *at, int tertiary)
+/* Root case belongs to each CE, including Kana size variants. Unicode letter
+   case cannot reconstruct it from a code point or an expansion as a whole. */
+static int root_upper(unsigned int tertiary)
+{
+    return (tertiary >= 0x08 && tertiary <= 0x0c) || tertiary == 0x0e ||
+        tertiary == 0x11 || tertiary == 0x12 || tertiary == 0x1d;
+}
+
+enum { LEVEL_SECONDARY, LEVEL_TERTIARY, LEVEL_CASE };
+
+static unsigned int next_level(const ElementStream *stream, size_t *at, int level,
+                                QJSIntlCollationCaseFirst case_first)
 {
     while (*at < stream->count) {
         const QJSIntlCollationElement *element = &stream->elements[(*at)++];
-        unsigned int weight = tertiary ? element->tertiary : element->secondary;
+        unsigned int weight, c;
+        if (level == LEVEL_SECONDARY) {
+            weight = element->secondary;
+        } else if (level == LEVEL_TERTIARY && case_first == QJS_INTL_COLLATION_CASE_OFF) {
+            weight = element->tertiary;
+        } else {
+            c = root_upper(element->tertiary) ? 3 : 1;
+            if (case_first == QJS_INTL_COLLATION_UPPER_FIRST)
+                c = 4 - c;
+            if (level == LEVEL_CASE) {
+                /* Primary-ignorable accents must not distinguish a from ä
+                   when sensitivity ignores accents but retains case. */
+                weight = element->primary ? c : 0;
+            } else if (!element->tertiary) {
+                weight = 0;
+            } else {
+                /* Tertiary-only CEs keep the highest artificial case rank
+                   even in upper-first order (TR35's WF2 requirement). */
+                if (!element->primary && !element->secondary)
+                    c = 3;
+                weight = (c << 16) | element->tertiary;
+            }
+        }
         if (weight)
             return weight;
     }
@@ -117,12 +150,17 @@ QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *da
     QJSIntlStatus status;
     unsigned int x, y;
     uint32_t numeric_weight = 0;
-    int level;
+    QJSIntlCollationSensitivity sensitivity = options ? options->sensitivity : QJS_INTL_COLLATION_VARIANT;
+    QJSIntlCollationCaseFirst case_first = options ? options->case_first : QJS_INTL_COLLATION_CASE_OFF;
+    int level, levels[2], level_count;
     if (!order)
         return QJS_INTL_INVALID_ARGUMENT;
     *order = 0;
     if (!data || !allocator || !allocator->malloc || !allocator->realloc ||
         !allocator->free || (!left && left_length) || (!right && right_length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if ((unsigned int)sensitivity > QJS_INTL_COLLATION_CASE ||
+        (unsigned int)case_first > QJS_INTL_COLLATION_LOWER_FIRST)
         return QJS_INTL_INVALID_ARGUMENT;
     if (!data->section.bytes)
         return QJS_INTL_UNSUPPORTED;
@@ -174,11 +212,16 @@ QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *da
     }
     /* Each level compares complete nonzero streams. Comparing CEs one by one
        would let an early accent/case difference override a later primary. */
-    for (level = 0; level < 2; level++) {
+    if (sensitivity == QJS_INTL_COLLATION_BASE)
+        goto done;
+    levels[0] = sensitivity == QJS_INTL_COLLATION_CASE ? LEVEL_CASE : LEVEL_SECONDARY;
+    levels[1] = LEVEL_TERTIARY;
+    level_count = sensitivity == QJS_INTL_COLLATION_VARIANT ? 2 : 1;
+    for (level = 0; level < level_count; level++) {
         size_t a = 0, b = 0;
         do {
-            x = next_level(&streams[0], &a, level);
-            y = next_level(&streams[1], &b, level);
+            x = next_level(&streams[0], &a, levels[level], case_first);
+            y = next_level(&streams[1], &b, levels[level], case_first);
             if (x != y) {
                 *order = x < y ? -1 : 1;
                 goto done;
