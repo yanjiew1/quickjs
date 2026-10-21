@@ -51,14 +51,18 @@ int dbuf_claim(DynBuf *s, size_t len)
     size_t new_size, size;
     uint8_t *new_buf;
     new_size = s->size + len;
-    if (new_size < len)
+    if (new_size < len) {
+        s->error = TRUE;
         return -1; /* overflow case */
+    }
     if (new_size > s->allocated_size) {
         if (s->error)
             return -1;
         size = s->allocated_size + (s->allocated_size / 2);
-        if (size < s->allocated_size)
+        if (size < s->allocated_size) {
+            s->error = TRUE;
             return -1; /* overflow case */
+        }
         if (size > new_size)
             new_size = size;
         new_buf = s->realloc_func(s->opaque, s->buf, new_size);
