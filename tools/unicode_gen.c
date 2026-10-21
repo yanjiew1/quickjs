@@ -2193,9 +2193,8 @@ void dump_name_table(UnicodeTableOutput *out, const char *cname, const char **ta
     fprintf(f, ";\n\n");
 }
 
-/* Parallel arrays avoid struct padding. A small bucket index bounds each
-   binary search while sharing all five properties in a single 16-bit word. */
-static void dump_break_array(UnicodeTableOutput *out, const char *name,
+/* Emit fixed-width data with matching declarations in the private header. */
+static void dump_fixed_array(UnicodeTableOutput *out, const char *name,
                              const void *data, uint32_t count, unsigned int width,
                              int index)
 {
@@ -2218,6 +2217,8 @@ static void dump_break_array(UnicodeTableOutput *out, const char *name,
     }
 }
 
+/* Parallel arrays avoid struct padding. A small bucket index bounds each
+   binary search while sharing all five properties in a single 16-bit word. */
 static void build_break_tables(UnicodeTableOutput *out)
 {
     uint32_t c, count = 1, i = 0, bucket;
@@ -2252,17 +2253,17 @@ static void build_break_tables(UnicodeTableOutput *out)
             i++;
         index[bucket] = i;
     }
-    dump_break_array(out, "unicode_break_starts", starts, count, 32, FALSE);
-    dump_break_array(out, "unicode_break_values", values, count, 16, FALSE);
-    dump_break_array(out, "unicode_break_index", index, countof(index), 16, TRUE);
+    dump_fixed_array(out, "unicode_break_starts", starts, count, 32, FALSE);
+    dump_fixed_array(out, "unicode_break_values", values, count, 16, FALSE);
+    dump_fixed_array(out, "unicode_break_index", index, countof(index), 16, TRUE);
     free(starts);
     free(values);
 }
 
 void build_general_category_table(UnicodeTableOutput *out)
 {
-    int i, v, j, n, n1;
-    DynBuf dbuf_s, *dbuf = &dbuf_s;
+    int i, v, j, n, n1, runs = 0;
+    DynBuf dbuf_s, *dbuf = &dbuf_s, index;
 #ifdef DUMP_TABLE_SIZE
     int cw_count, cw_len_count[4], cw_start;
 #endif
@@ -2279,12 +2280,19 @@ void build_general_category_table(UnicodeTableOutput *out)
 
 
     dbuf_init(dbuf);
+    dbuf_init(&index);
 #ifdef DUMP_TABLE_SIZE
     cw_count = 0;
     for(i = 0; i < 4; i++)
         cw_len_count[i] = 0;
 #endif
     for(i = 0; i <= CHARCODE_MAX;) {
+        /* Restart at a whole encoded run, preserving Lu/Ll alternation's
+           original starting code point as well as the byte position. */
+        if ((runs++ & 63) == 0) {
+            dbuf_put_u32(&index, i);
+            dbuf_put_u32(&index, dbuf->size);
+        }
         v = unicode_db[i].general_category;
         j = i + 1;
         while (j <= CHARCODE_MAX && unicode_db[j].general_category == v)
@@ -2340,8 +2348,14 @@ void build_general_category_table(UnicodeTableOutput *out)
     printf(" ], length=%d bytes\n", (int)dbuf->size);
 #endif
 
+    if (dbuf_error(dbuf) || dbuf_error(&index)) {
+        fprintf(stderr, "Out of memory building category checkpoints\n");
+        exit(1);
+    }
     dump_byte_table(out, "unicode_gc_table", dbuf->buf, dbuf->size);
 
+    dump_fixed_array(out, "unicode_gc_index", index.buf, index.size / sizeof(uint32_t), 32, TRUE);
+    dbuf_free(&index);
     dbuf_free(dbuf);
 }
 
