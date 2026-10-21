@@ -4385,6 +4385,14 @@ if intl_enabled
   )
 
   test(
+    'intl-collation-fractional-source',
+    python,
+    args: files('test_intl_collation_fractional.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-collation-programs',
     python,
     args: files('test_intl_collation_programs.py'),
