@@ -103,6 +103,11 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
                       UnicodeNormalizationEnum n_type,
                       void *opaque, void *(*realloc_func)(void *opaque, void *ptr, size_t size));
 
+/* NFC normalization can begin before this scalar without inspecting preceding
+   text. Uses canonical decomposition, not compatibility mapping. Allocation
+   free; invalid/non-scalar input has no boundary. */
+int unicode_nfc_boundary_before(uint32_t c);
+
 /* Unicode character range functions */
 
 int unicode_script(CharRange *cr, const char *script_name, int is_ext);
