@@ -226,18 +226,23 @@ static void mapping_interface(const QJSIntlCollationContexts *data)
     Allocation state = {0};
     QJSIntlAllocator a = allocator(&state);
     QJSIntlCollationMatch match;
+    QJSIntlCollationKeyIndex keys;
+    QJSIntlCollationEntry entry;
     QJSIntlCollationMatchResult result;
     QJSIntlCollationNumber number;
     QJSIntlCollationElement element;
     int present;
-    assert(!qjs_intl_collation_match_init(&match, data, input,
+    assert(!qjs_intl_collation_contexts_keys(data, &keys));
+    assert(!qjs_intl_collation_match_init(&match, &keys, input,
                                          sizeof(input) / sizeof(*input), &a));
     /* The shared matcher identifies storage or an unmatched scalar. It does
        not invent implicit CEs or expose an expansion one element at a time. */
     assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
     assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT && !number.length);
-    assert(result.entry.key_count == 3 && result.entry.element_count == 1);
-    assert(!qjs_intl_collation_element_at(&result.entry, 0, &element));
+    assert(result.suffix_length == 3);
+    assert(!qjs_intl_collation_contexts_mapping(data, result.mapping_id, &entry));
+    assert(entry.key_count == 3 && entry.element_count == 1);
+    assert(!qjs_intl_collation_element_at(&entry, 0, &element));
     assert(element.primary == 0x2000);
     assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
     assert(result.kind == QJS_INTL_COLLATION_MATCH_SCALAR && result.scalar == 0x378);
