@@ -143,8 +143,8 @@ default, independently of named sort targets.
 Profile projection is shared with prepared data generation, but internal root
 never becomes a public service locale. Synthetic language-region identities
 retain their deliberate source mapping before collation-specific inheritance.
-Resolved targets are still source identities here; archive binding and runtime
-service publication are subsequent layers. This collector alone does not
+Resolved targets are still source identities here; archive publication maps
+them to checked program IDs. This collector alone does not
 advertise Collator capability or override the specified Intl.Locale exceptions.
 
 `collation_ir.py` expands the ordered program catalog into a counted build-time
@@ -380,8 +380,10 @@ keys, suppression, policy, sparse shifts and the compact trie. The compiler
 retains no snapshot pointers after append, and failed staging cannot finish.
 `--compile-pair root.qjcr input.qjci` emits a complete binary image on stdout.
 The Python publication wrapper checks framing/source identity before atomically
-replacing its output; it never normalizes or executes rules. Public locale/type
-bindings and runtime service publication remain subsequent integration layers.
+replacing its output; it never normalizes or executes rules. With `--sources`
+and `--profile`, it attaches resolved locale/type targets, validates them against
+the compiled program identities and performs C semantic readback before replacing
+the destination. Runtime service publication remains a subsequent layer.
 
 The runtime owner `src/intl/collation/compiled-data.c` audits all shared and
 per-program semantics before exposing borrowed views. Compile mode reads back
@@ -408,6 +410,7 @@ cannot be copied or moved. Comparison policy is a separate consumer.
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
   --root-input build/root.qjcr --program-input build/programs.qjci \
+  --sources build/intl-cache/cldr-49-beta4 --profile native \
   --output build/collation-runtime.qjcl
 ```
 
