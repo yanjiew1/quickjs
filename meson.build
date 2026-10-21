@@ -247,6 +247,7 @@ collation_compile = executable(
     'tools/intl/collation-trie.c',
     'tools/intl/collation-archive.c',
     'src/intl/collation/trie.c',
+    'src/intl/collation/compiled-data.c',
     'tools/intl/collation-settings.c',
     'tools/intl/collation-reorder.c',
     'tools/intl/collation-builder.c',
