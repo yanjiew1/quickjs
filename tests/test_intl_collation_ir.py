@@ -78,6 +78,54 @@ class IRTests(unittest.TestCase):
             raw = ir.prepare(Sources())
         self.assertEqual(ir.HEADER.unpack_from(raw)[-1], FINGERPRINT)
 
+    def test_profile_targets_keep_expanded_imports_and_all_usage_bindings(self):
+        from test_intl_collation_programs import catalog, program as source_program, keyword
+        import parents
+
+        c = catalog((source_program('en', text='[import fr-u-co-private-helper] &x<y'),
+                     source_program('en-US', 'special', '&w<z'),
+                     source_program('fr', text='&d<e'),
+                     source_program('fr', 'private-helper', '&a<b'),
+                     source_program('root', 'emoji', '&u<v'),
+                     source_program('en', 'special', '&e<f', 'short')),
+                    keywords=(keyword('special'), keyword('emoji')))
+        graph = parents.ParentGraph(('root', 'en', 'en-US', 'fr'), {}, {'collations': {}},
+                                    {'und': 'en-Latn-US'}, (), False)
+        c = type(c)(dict(c.programs), dict(c.defaults), graph,
+                    (keyword('special'), keyword('emoji')))
+        class Sources:
+            pin = {'manifest_sha256': FINGERPRINT.hex()}
+
+        def identities(raw):
+            at, result = ir.HEADER.size, []
+            while at < len(raw):
+                size, locale, kind, alternate, count = ir.PROGRAM.unpack_from(raw, at)
+                cursor, labels = at + ir.PROGRAM.size, []
+                for length in (locale, kind, alternate):
+                    labels.append(raw[cursor:cursor + length].decode('utf-8'))
+                    cursor += length
+                result.append((tuple(labels), count))
+                at += size
+            return dict(result)
+
+        with patch.object(ir.collation_programs, 'load', return_value=c):
+            minimal = ir.prepare(Sources(), 'minimal')
+            native = ir.prepare(Sources(), 'native')
+            complete = ir.prepare(Sources())
+        expected = {target for row in ir.collation_bindings.from_catalog(c, 'minimal')
+                    for target in (row.sort, row.search) if target is not None}
+        self.assertEqual(set(identities(minimal)), expected)
+        self.assertIn(('en-US', 'special', ''), expected)
+        self.assertIn(('root', 'search', ''), expected)
+        self.assertIn(('root', 'emoji', ''), expected)
+        self.assertNotIn(('fr', 'private-helper', ''), expected)
+        self.assertNotIn(('en', 'special', 'short'), expected)
+        self.assertEqual(identities(minimal)['en', 'standard', ''], 4)
+        self.assertIn(('fr', 'standard', ''), identities(native))
+        self.assertIn(('fr', 'private-helper', ''), identities(complete))
+        self.assertGreater(len(identities(complete)), len(identities(native)))
+        self.assertEqual(ir.HEADER.unpack_from(minimal)[-1], FINGERPRINT)
+
     def test_unexpanded_imports_and_bad_manual_nodes_reject(self):
         p = program('&a<b')
         cases = [p._replace(nodes=(rules.Import(rules.Position('x', 1, 1), 'en', 'standard'),)),
