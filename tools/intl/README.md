@@ -724,11 +724,12 @@ empty currency replacements never create a gap. Formatter state owns fallback
 codes and otherwise borrows only immutable compiled metadata.
 
 Scientific/engineering output applies the exact scale-before-round operation,
-then emits localized exponent separator/sign and ASCII decimal exponent digits
-with explicit part types, following the pinned PartitionNotationSubPattern.
-Its explicit `"0"` exponent and missing transliteration differ from established
-ICU behavior; the open [ECMA-402 issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
-tracks that specification gap. Mantissa digits still use the selected repertoire.
+then emits the localized exponent separator/sign and uses the selected digit
+repertoire for both mantissa and exponent, including zero. This follows ICU/CLDR
+presentation rather than the pinned PartitionNotationSubPattern's ASCII
+exponent text. The open [ECMA-402 issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
+tracks the missing exponent transliteration; it is not an adopted spec correction.
+Part spans and output bounds count UTF-16 units, including supplementary digits.
 Positive scientific-pattern literals wrap the complete notation body; the
 style's sign is outside it. Nonfinite values omit the exponent and notation
 wrappers. Source fraction defaults, exponent plus signs and zero-padding do
