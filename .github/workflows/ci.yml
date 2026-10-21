@@ -37,7 +37,8 @@ jobs:
     - name: Compile unicode tools
       run: |
         meson compile -C build-unicode -j "$(getconf _NPROCESSORS_ONLN)" \
-          unicode-tables
+          unicode-tables \
+          unicode_gen_test
     - name: Compare generated tables with the repository
       run: |
         status=0
@@ -45,6 +46,9 @@ jobs:
           diff -u "src/unicode/$file" "build-unicode/$file" || status=1
         done
         exit "$status"
+    - name: Check Unicode normalization conformance
+      run: |
+        build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
     - name: Preserve generated tables on failure
       if: failure()
       uses: actions/upload-artifact@v7
