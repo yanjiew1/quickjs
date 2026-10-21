@@ -173,11 +173,13 @@ Ordinary `P << 16` and implicit `(head << 16) | tail` keys map arithmetically to
 7,471,103 virtual nonzero root coordinates, with zero remaining ignorable. The
 domain includes unused anchors but preserves real root order; it needs no
 per-codepoint table. Exhaustive ordinal adjacency tests and both prepared
-profiles' actual NFD/lookup streams validate this bridge. Current production
-comparison still uses raw root weights; compiler/ranked comparison integration
-is subsequent work.
+profiles' actual NFD/lookup streams validate this bridge. The diagnostic comparator
+uses raw root weights; semantic compilation uses the direct FractionalUCA catalog.
+Ranked comparison integration is subsequent work.
 
 `collation-relations.c` executes one ordered relation over those stable IDs.
+It copies the root catalog's maxima, common aliases and protected boundaries;
+case input is explicit metadata, independent of raw or allocated tertiary IDs.
 It copies the reset cursor, modifies the last CE strong enough for a non-equality
 relation, drops following weaker CEs, and resets lower levels to shared common
 aliases. Separate ordinary/ignorable weak-weight bands preserve UCA WF2, even
