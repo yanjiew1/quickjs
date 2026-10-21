@@ -16,10 +16,16 @@ QJSIntlStatus qjs_intl_collation_elements_init(QJSIntlCollationElements *it,
                                               const uint16_t *input, size_t length,
                                               const QJSIntlAllocator *allocator)
 {
+    QJSIntlCollationKeyIndex keys;
+    QJSIntlStatus status;
     if (!it)
         return QJS_INTL_INVALID_ARGUMENT;
     memset(it, 0, sizeof(*it));
-    return qjs_intl_collation_match_init(&it->match, data, input, length, allocator);
+    status = qjs_intl_collation_contexts_keys(data, &keys);
+    if (status)
+        return status;
+    it->data = *data;
+    return qjs_intl_collation_match_init(&it->match, &keys, input, length, allocator);
 }
 
 static QJSIntlStatus elements_next(QJSIntlCollationElements *it,
@@ -45,7 +51,7 @@ static QJSIntlStatus elements_next(QJSIntlCollationElements *it,
         if (it->use_implicit)
             qjs_intl_collation_implicit(result.scalar, it->implicit);
         else
-            it->pending = result.entry;
+            qjs_intl_collation_contexts_mapping(&it->data, result.mapping_id, &it->pending);
         it->pending_at = 0;
     }
     if (it->use_implicit)
