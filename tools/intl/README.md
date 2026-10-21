@@ -40,6 +40,13 @@ Archive links, unsafe paths and source-cache symlinks are rejected.
 
 ## Consume verified source files
 
+`collation_root.py` validates the authenticated `common/uca/allkeys_CLDR.txt`
+root table. It retains contractions, expansions, all weight levels and variable
+flags, then orders mappings by scalar sequence for deterministic lookup-table
+generation. Its audit reports observed sizes without making those sizes runtime
+limits. This prerequisite does not yet execute locale tailorings or advertise
+Collator support.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file

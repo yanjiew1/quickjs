@@ -4185,6 +4185,14 @@ test(
 )
 
 test(
+  'intl-collation-root',
+  python,
+  args: files('test_intl_collation_root.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-plural-sources',
   python,
   args: files('test_intl_plural_rules.py'),
