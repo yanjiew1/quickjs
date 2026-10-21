@@ -671,6 +671,16 @@ The current four mappings require 56 bytes, excluding the pack directory row.
 
 The reader validates both the root section and all metadata without allocation,
 then returns borrowed `before` and `mapping` slices plus the source index. It
-provides storage metadata only. The future comparator must replace the marked
-pseudo-contractions with prefix rules and perform longest-prefix matching on
-unchanged normalized text; storage lookup itself does not do this.
+provides storage metadata only. The raw element iterator in
+`src/intl/collation/elements.c` replaces the marked pseudo-contractions with prefix
+rules and matches preceding context against unchanged NFD text. It owns the
+normalized input, successor links for consumed positions and equal-CCC group
+ends. Full contiguous matches are checkpoints; discontiguous extension requires
+a full single-code-point match at each step. Skipped marks remain available for
+subsequent mappings. Input consumption does not rewrite the normalized text.
+
+The iterator emits raw root elements and implicit weights. Comparison settings,
+numeric handling and locale tailoring remain separate responsibilities. Group
+skipping and iterative successor compression bound particular rescanning costs;
+contiguous lookahead still depends on the table's key depth, so this is not a
+claim of universal linear matching for arbitrary tables.

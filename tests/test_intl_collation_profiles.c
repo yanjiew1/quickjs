@@ -1,12 +1,102 @@
 /* Exercise storage lookup over every mapping in each prepared root profile.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
-#include "../src/intl/collation/contexts.h"
+#include "../src/intl/collation/elements.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 extern const uint8_t qjs_intl_native_bytes[];
 extern const size_t qjs_intl_native_length;
+
+static void *allocate(void *opaque, size_t size)
+{
+    (void)opaque;
+    assert(size);
+    return malloc(size);
+}
+
+static void *resize(void *opaque, void *ptr, size_t size)
+{
+    (void)opaque;
+    assert(size);
+    return realloc(ptr, size);
+}
+
+static void release(void *opaque, void *ptr)
+{
+    (void)opaque;
+    free(ptr);
+}
+
+static unsigned int weight(const QJSIntlCollationElement *element, int level)
+{
+    return level == 0 ? element->primary : level == 1 ? element->secondary : element->tertiary;
+}
+
+/* Compare each level's nonzero weights with the independent allkeys source
+   mapping. NFD and contractions may regroup CEs without changing those levels. */
+static void check_elements(const QJSIntlCollationContexts *data,
+                           const QJSIntlCollationEntry *expected,
+                           const uint32_t *key, uint32_t source_index)
+{
+    QJSIntlAllocator a = {NULL, allocate, resize, release};
+    QJSIntlCollationElements it;
+    QJSIntlCollationElement *actual = NULL, element;
+    size_t count = 0, capacity = 0, units = 0, i;
+    uint16_t *input;
+    uint64_t bytes = (uint64_t)expected->key_count * 2 * sizeof(*input);
+    int present, level;
+    assert(bytes <= SIZE_MAX);
+    input = malloc((size_t)bytes);
+    assert(input);
+    for (i = 0; i < expected->key_count; i++) {
+        uint32_t c = key[i];
+        if (c <= 0xffff) {
+            input[units++] = c;
+        } else {
+            input[units++] = 0xd800 + ((c - 0x10000) >> 10);
+            input[units++] = 0xdc00 + ((c - 0x10000) & 0x3ff);
+        }
+    }
+    assert(!qjs_intl_collation_elements_init(&it, data, input, units, &a));
+    for (;;) {
+        assert(!qjs_intl_collation_elements_next(&it, &element, &present));
+        if (!present)
+            break;
+        if (count == capacity) {
+            QJSIntlCollationElement *next;
+            assert(capacity <= SIZE_MAX / sizeof(*actual) / 2);
+            capacity = capacity ? capacity * 2 : 8;
+            assert(capacity <= SIZE_MAX / sizeof(*actual));
+            next = realloc(actual, capacity * sizeof(*actual));
+            assert(next);
+            actual = next;
+        }
+        actual[count++] = element;
+    }
+    qjs_intl_collation_elements_clear(&it);
+    for (level = 0; level < 3; level++) {
+        size_t left = 0, right = 0;
+        for (;;) {
+            unsigned int x = 0, y = 0;
+            while (left < expected->element_count && !x) {
+                assert(!qjs_intl_collation_element_at(expected, left++, &element));
+                x = weight(&element, level);
+            }
+            while (right < count && !y)
+                y = weight(&actual[right++], level);
+            if (x != y) {
+                fprintf(stderr, "root mapping %u, level %d: expected %x, got %x\n",
+                        source_index, level + 1, x, y);
+                abort();
+            }
+            if (!x)
+                break;
+        }
+    }
+    free(actual);
+    free(input);
+}
 
 int main(void)
 {
@@ -17,6 +107,7 @@ int main(void)
     size_t capacity = 0;
     assert(!qjs_intl_pack_open(qjs_intl_native_bytes, qjs_intl_native_length, &pack));
     assert(!qjs_intl_collation_root_open(&pack, &root));
+    assert(!qjs_intl_collation_contexts_open(&pack, &contexts));
     for (index = 0; index < root.section.count; index++) {
         QJSIntlCollationEntry entry, found;
         size_t i, needed;
@@ -35,13 +126,13 @@ int main(void)
         assert(!qjs_intl_collation_root_find(&root, key, entry.key_count, &found));
         assert(found.keys == entry.keys && found.elements == entry.elements &&
                found.element_count == entry.element_count);
+        check_elements(&contexts, &entry, key, index);
         /* No stored scalar can extend this suffix: preserve this complete
            mapping even if nearby longer contraction keys share its prefix. */
         key[entry.key_count] = 0x110000;
         assert(!qjs_intl_collation_root_prefix(&root, key, needed, &found));
         assert(found.keys == entry.keys && found.key_count == entry.key_count);
     }
-    assert(!qjs_intl_collation_contexts_open(&pack, &contexts));
     assert(contexts.section.count == 4);
     for (index = 0; index < contexts.section.count; index++) {
         QJSIntlCollationContext context;

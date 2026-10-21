@@ -370,6 +370,13 @@ intl_collation_context_fixture = custom_target(
   command: [python, files('intl_collation_fixture.py'), '--contexts', '--output', '@OUTPUT@'],
   depend_files: intl_tool_dependencies,
 )
+intl_collation_elements_fixture = custom_target(
+  'intl-collation-elements-fixture',
+  output: 'intl-collation-elements-fixture.c',
+  command: [python, files('intl_collation_elements_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files('intl_collation_fixture.py'),
+)
+
 
 intl_numbering_owner_sources = files(
   'test_intl_numbering_data.c',
@@ -1978,9 +1985,15 @@ foreach profile : ['minimal', 'native']
     files(
       'test_intl_collation_profiles.c',
       '../src/intl/collation/contexts.c',
+      '../src/intl/collation/elements.c',
+      '../src/intl/collation/weights.c',
+      '../src/unicode/blocks.c',
+      '../src/unicode/category.c',
+      '../src/unicode/libunicode.c',
+      '../src/cutils/cutils.c',
       '../src/intl/collation/root-data.c',
       '../src/intl/native/pack.c',
-    ),
+    ) + unicode_tables,
     c_args: host_args,
     include_directories: inc,
     dependencies: host_deps,
@@ -3142,6 +3155,20 @@ standalone = {
   'test_intl_pack': [
     'test_intl_pack.c',
     '../src/intl/native/pack.c',
+  ],
+  'test_intl_collation_elements': [
+    'test_intl_collation_elements.c',
+    '../src/intl/collation/elements.c',
+    '../src/intl/collation/contexts.c',
+    '../src/intl/collation/root-data.c',
+    '../src/intl/collation/weights.c',
+    '../src/intl/native/pack.c',
+    '../src/unicode/blocks.c',
+    '../src/unicode/category.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+    unicode_tables,
+    intl_collation_elements_fixture,
   ],
   'test_intl_collation_contexts': [
     'test_intl_collation_contexts.c',
