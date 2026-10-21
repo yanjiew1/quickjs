@@ -154,6 +154,8 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
             record = &result.records[result.count++];
             record->date_index = i;
             record->clock_index = indexes[j];
+            memcpy(record->source_hour_width, ordinary->records[indexes[j]].source_hour_width,
+                   sizeof(record->source_hour_width));
             record->connector = layout;
             record->connector_width = width;
             record->components = date.components;
