@@ -3394,6 +3394,7 @@ standalone = {
   'test_unicode': [
     'test_unicode.c',
     '../src/unicode/category.c',
+    '../src/unicode/blocks.c',
     '../src/unicode/libunicode.c',
     unicode_tables,
     '../src/cutils/cutils.c',
