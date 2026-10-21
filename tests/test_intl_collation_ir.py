@@ -162,6 +162,28 @@ class CompilerTests(unittest.TestCase):
         for text in ('&a<\u0301', '&a<a|b/\u0301', '&a<\u212b|b'):
             self.audit(encode([program(text)]))
 
+    def test_c_reader_requires_sorted_unique_identities(self):
+        first = encode([program('&a<b', 'en')])[ir.HEADER.size:]
+        last = encode([program('&a<b', 'fr')])[ir.HEADER.size:]
+        def combined(left, right):
+            body = left + right
+            return ir.HEADER.pack(ir.MAGIC, ir.VERSION, ir.UNICODE_VERSION,
+                                  ir.HEADER.size + len(body), 2, FINGERPRINT) + body
+        self.audit(combined(first, last))
+        self.audit(combined(first, first), False)
+        self.audit(combined(last, first), False)
+        # Alternate participates in the tuple; distinct ordered alternates are
+        # not duplicates of their locale/type's ordinary program.
+        base = program('&a<b')
+        self.audit(encode([base, base._replace(alternate='proposed')]))
+
+    def test_suppression_work_is_bounded_before_semantic_visits(self):
+        # Suppression would enumerate these scalars; optimize is only a hint.
+        self.audit(encode([program('[suppressContractions [\U00010000-\U0010FFFF]]')]), False)
+        text = '[suppressContractions [\U00040000-\U000ba11f\U00040000-\U000ba11f]]'
+        self.audit(encode([program(text, 'en-x-p' + str(i)) for i in range(5)]), False)
+        self.audit(encode([program('[optimize [\U00010000-\U0010FFFF]]')]))
+
     def test_pair_requires_the_same_source_identity(self):
         if compiler is None:
             self.skipTest('pass --compiler to exercise paired input')

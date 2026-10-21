@@ -172,9 +172,20 @@ manifest identity stored by QJCR; `--audit-pair root.qjcr input.qjci` requires e
 equality before normalization. It identifies acquired inputs rather than serving
 as a checksum/authentication signature for arbitrary modified artifacts. Source positions refer to original rule text,
 not invented XML line coordinates. Artifacts and normalization allocations are
-bounded; starred expansion has per-program and artifact-wide work budgets,
-checked in a non-allocating preflight before normalization. A format change must
-update the Python writer, C reader, regression fixtures and this description.
+bounded. Enumerated work (starred relations and suppression ranges) is limited
+to 1,000,000 scalars per program and 4,000,000 per artifact, counting repeated
+ranges. Optimize records are validated hints and do not enumerate their scalars.
+A format change must update the writer, reader, fixtures and this description.
+
+`collation-ir.c` owns reusable structural preflight and borrowed program visits.
+Opening validates the complete artifact, strictly sorted unique identity tuples,
+UTF-8 labels, scalar vectors, record grammar and work budgets without allocation
+or callbacks. Only then may a visitor process begin/instruction/end events.
+Descriptor pointers last for their callbacks; byte slices borrow the unchanged
+input lifetime. Callback errors propagate without later callbacks, and end is a
+success finalizer rather than error cleanup. Execution owns unconditional cleanup
+of an active builder. The CLI remains a separate pinned-Unicode audit adapter,
+retaining its nonallocating prefix-check pass before allocating normalization.
 
 `collation-weights.c` provides the compiler's sparse symbolic ordering arena.
 Root IDs denote virtual ordinal coordinates without allocating root nodes.

@@ -216,6 +216,7 @@ collation_compile = executable(
   'intl-collation-compile',
   [
     'tools/intl/collation-compile.c',
+    'tools/intl/collation-ir.c',
     'tools/intl/collation-root-input.c',
     'src/unicode/libunicode.c',
     'src/cutils/cutils.c',

@@ -378,6 +378,17 @@ intl_collation_elements_fixture = custom_target(
   depend_files: intl_tool_dependencies + files('intl_collation_fixture.py'),
 )
 
+intl_collation_ir_fixture = custom_target(
+  'intl-collation-ir-fixture',
+  output: 'intl-collation-ir-fixture.c',
+  command: [python, files('intl_collation_ir_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_collation_ir.py',
+    '../tools/intl/collation_ir.py',
+    '../tools/intl/collation_rules.py',
+    '../tools/intl/collation_programs.py',
+  ),
+)
 intl_collation_root_input_fixture = custom_target(
   'intl-collation-root-input-fixture',
   output: 'intl-collation-root-input-fixture.c',
@@ -3288,6 +3299,12 @@ standalone = {
     '../src/cutils/cutils.c',
     unicode_tables,
     intl_collation_root_input_fixture,
+  ],
+  'test_intl_collation_ir': [
+    'test_intl_collation_ir.c',
+    '../tools/intl/collation-ir.c',
+    '../src/cutils/cutils.c',
+    intl_collation_ir_fixture,
   ],
   'test_intl_collation_builder': [
     'test_intl_collation_builder.c',
