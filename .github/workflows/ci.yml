@@ -79,6 +79,10 @@ jobs:
       run: |
         timeout 90s python3 tools/intl/collation_programs.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+        timeout 90s python3 tools/intl/collation_bindings.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile native
+        timeout 90s python3 tools/intl/collation_bindings.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile minimal
     - name: Audit root collation group identities and anchor keys
       run: |
         timeout 60s python3 tools/intl/collation_groups.py \
@@ -107,6 +111,7 @@ jobs:
           --compiler build-collation/intl-collation-compile \
           --root-input "$RUNNER_TEMP/collation-root.qjcr" \
           --program-input "$RUNNER_TEMP/collation-input.qjci" \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile native \
           --output "$RUNNER_TEMP/collation-runtime.qjcl"
         timeout 60s build-collation/intl-collation-compile \
           --audit-compiled "$RUNNER_TEMP/collation-runtime.qjcl"
