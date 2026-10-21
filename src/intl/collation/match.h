@@ -2,11 +2,11 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_COLLATION_MATCH_H
 #define QJS_INTL_COLLATION_MATCH_H
-#include "contexts.h"
+#include "keys.h"
 #include "overlay.h"
 
 typedef struct QJSIntlCollationMatch {
-    QJSIntlCollationContexts data;
+    QJSIntlCollationKeyIndex data;
     QJSIntlAllocator allocator;
     QJSIntlCollationOverlay overlay;
     uint32_t *text, *indexes, *groups;
@@ -23,8 +23,7 @@ enum {
 };
 
 typedef struct QJSIntlCollationMatchResult {
-    QJSIntlCollationEntry entry;
-    uint32_t scalar, sequence;
+    uint32_t mapping_id, suffix_length, scalar, sequence;
     unsigned int kind;
 } QJSIntlCollationMatchResult;
 
@@ -33,31 +32,32 @@ typedef struct QJSIntlCollationNumber {
     uint32_t length;
 } QJSIntlCollationNumber;
 
-/* Copy an unchanged validated root/context view and allocator callbacks.
+/* Copy an unchanged validated key-index view and allocator callbacks.
    Pack bytes and allocator opaque state outlive the matcher; input is borrowed
    only during init. Initialize fresh/cleared storage, clear before reuse, and
    do not copy live matchers. Inputs/outputs/storage are disjoint. Failure is
    clearable. Prefix lookback always sees the original normalized text. */
 QJSIntlStatus qjs_intl_collation_match_init(QJSIntlCollationMatch *,
-                                           const QJSIntlCollationContexts *,
-                                           const uint16_t *, size_t, const QJSIntlAllocator *);
+                                            const QJSIntlCollationKeyIndex *,
+                                            const uint16_t *, size_t, const QJSIntlAllocator *);
 /* As above, with an optional copied query descriptor. Its opaque owner and pack
    bytes must remain alive and unchanged until clear; mutation during/between
    next calls of this scan is forbidden. Root-only init needs no descriptor. */
 QJSIntlStatus qjs_intl_collation_match_init_overlay(QJSIntlCollationMatch *,
-                                                   const QJSIntlCollationContexts *,
-                                                   const uint16_t *, size_t,
-                                                   const QJSIntlCollationOverlay *,
-                                                   const QJSIntlAllocator *);
+                                                    const QJSIntlCollationKeyIndex *,
+                                                    const uint16_t *, size_t,
+                                                    const QJSIntlCollationOverlay *,
+                                                    const QJSIntlAllocator *);
 void qjs_intl_collation_match_clear(QJSIntlCollationMatch *);
 /* Return one mapping, unmatched scalar, or (when number != NULL) adjacent Nd
    run. Matching consumes suffix text only; callers decode/emit its CEs. Only
-   entry for ROOT, scalar for SCALAR, or sequence for OVERLAY is meaningful.
-   Root entries borrow pack bytes; overlay sequence IDs belong to its owner.
+   mapping_id for ROOT, scalar for SCALAR, or sequence for OVERLAY is meaningful.
+   Mapping/sequence IDs belong to their readers; suffix_length counts matched
+   scalars (excluding lookback and skipped marks), independently of CE payload.
    Number digits borrow immutable normalized text
    until clear and have leading zeros removed, retaining one zero. Do not mix
    numeric/non-numeric calls. Exhaustion is success with present=0, repeatable. */
 QJSIntlStatus qjs_intl_collation_match_next(QJSIntlCollationMatch *,
-                                           QJSIntlCollationMatchResult *,
-                                           QJSIntlCollationNumber *, int *present);
+                                            QJSIntlCollationMatchResult *,
+                                            QJSIntlCollationNumber *, int *present);
 #endif
