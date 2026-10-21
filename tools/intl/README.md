@@ -67,6 +67,25 @@ outside the reorderable group list. Authored tests cover aliases, missing real
 anchors, version/ordering errors and coarse lead-byte collisions; CI audits the
 complete pinned catalog.
 
+`collation_fractional.py` collects logical root CEs directly from FractionalUCA
+for semantic compilation. Raw allkeys comparison remains an independent
+diagnostic: some single fractional CEs expand into multiple allkeys CEs, so
+logical reset classes cannot be inferred from raw expansion fragments. The
+collector retains variable-length fractional bytes, independent case bits,
+prefixes, source limits, synthetic anchors and metadata. One/two/three-field
+references copy all/P+S/P respectively, retaining explicit secondary/tertiary
+overrides.
+
+Han references remain symbolic rather than adopting ICU's implicit byte
+encoding. Declared ideograph ranges retain their order, and the radical-stroke
+section is expanded and checked for exact membership with no duplicates. The
+latter supports CLDR's `unihan` root-order assumptions. FDD0 synthetic records
+(including incomplete numeric anchors) remain separate from executable mappings.
+Footer `last regular` is retained as a source fact; TR35's logical reset instead
+uses the artificial first-Hani boundary. Python does not normalize with its host
+Unicode version. Runtime ordinal encoding and ranked root integration follow
+this source stage.
+
 ### Host collation compiler input
 
 `collation_ir.py` expands the ordered program catalog into a counted build-time
