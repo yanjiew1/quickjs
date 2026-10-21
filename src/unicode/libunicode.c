@@ -2,6 +2,7 @@
  * Unicode utilities
  *
  * Copyright (c) 2017-2018 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1044,40 +1045,89 @@ int unicode_get_cc(uint32_t c)
     }
 }
 
-static void sort_cc(int *buf, int len)
+/* Stable counting sort bounds long nonstarter runs independently of their
+   input order. Short runs retain insertion sort without allocating scratch. */
+static int sort_cc_large(int *buf, int len, DynBuf *scratch)
 {
-    int i, j, k, cc, cc1, start, ch1;
-
-    for(i = 0; i < len; i++) {
+    int offsets[256] = {0};
+    int i, cc, count, total = 0;
+    uint32_t *characters;
+    if ((size_t)len > SIZE_MAX / sizeof(*buf) ||
+        dbuf_claim(scratch, (size_t)len * sizeof(*buf)))
+        return -1;
+    characters = (uint32_t *)scratch->buf;
+    /* Nonzero CCC implies a Unicode code point, leaving the high byte free.
+       Cache that class beside the character for counting and stable emission,
+       avoiding another property lookup and a final copy-back pass. */
+    for (i = 0; i < len; i++) {
         cc = unicode_get_cc(buf[i]);
-        if (cc != 0) {
-            start = i;
-            j = i + 1;
-            while (j < len) {
-                ch1 = buf[j];
-                cc1 = unicode_get_cc(ch1);
-                if (cc1 == 0)
-                    break;
-                k = j - 1;
-                while (k >= start) {
-                    if (unicode_get_cc(buf[k]) <= cc1)
-                        break;
+        offsets[cc]++;
+        characters[i] = (uint32_t)buf[i] | ((uint32_t)cc << 24);
+    }
+    for (cc = 1; cc < 256; cc++) {
+        count = offsets[cc];
+        offsets[cc] = total;
+        total += count;
+    }
+    assert(total == len); /* This helper receives only nonzero-CCC runs. */
+    for (i = 0; i < len; i++) {
+        uint32_t character = characters[i];
+        cc = character >> 24;
+        buf[offsets[cc]++] = character & 0xffffff;
+    }
+    return 0;
+}
+
+static no_inline int sort_cc(int *buf, int len, const DynBuf *allocator)
+{
+    int i = 0, j, k, cc, previous, start, ch;
+    BOOL unordered, have_scratch = FALSE;
+    DynBuf scratch;
+    while (i < len) {
+        cc = unicode_get_cc(buf[i]);
+        if (cc == 0) {
+            i++;
+            continue;
+        }
+        start = i;
+        j = i + 1;
+        previous = cc;
+        unordered = FALSE;
+        while (j < len) {
+            cc = unicode_get_cc(buf[j]);
+            if (!cc)
+                break;
+            unordered |= cc < previous;
+            previous = cc;
+            j++;
+        }
+        if (unordered && j - start >= 64) {
+            if (!have_scratch) {
+                dbuf_init2(&scratch, allocator->opaque, allocator->realloc_func);
+                have_scratch = TRUE;
+            }
+            if (sort_cc_large(buf + start, j - start, &scratch)) {
+                dbuf_free(&scratch);
+                return -1;
+            }
+        } else if (unordered) {
+            for (i = start + 1; i < j; i++) {
+                ch = buf[i];
+                cc = unicode_get_cc(ch);
+                k = i - 1;
+                while (k >= start && unicode_get_cc(buf[k]) > cc) {
                     buf[k + 1] = buf[k];
                     k--;
                 }
-                buf[k + 1] = ch1;
-                j++;
+                buf[k + 1] = ch;
             }
-#if 0
-            printf("cc:");
-            for(k = start; k < j; k++) {
-                printf(" %3d", unicode_get_cc(buf[k]));
-            }
-            printf("\n");
-#endif
-            i = j;
         }
+        /* j is either end-of-input or the already inspected next starter. */
+        i = j < len ? j + 1 : len;
     }
+    if (have_scratch)
+        dbuf_free(&scratch);
+    return 0;
 }
 
 static void to_nfd_rec(DynBuf *dbuf,
@@ -1162,7 +1212,8 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
     buf = (int *)dbuf->buf;
     buf_len = dbuf->size / sizeof(int);
 
-    sort_cc(buf, buf_len);
+    if (sort_cc(buf, buf_len, dbuf))
+        goto fail;
 
     if (buf_len <= 1 || (n_type & 1) != 0) {
         /* NFD / NFKD */

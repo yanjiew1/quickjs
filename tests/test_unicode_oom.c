@@ -76,6 +76,36 @@ static void test_canonicalization_oom(void)
     }
 }
 
+static void test_normalization_sort_oom(void)
+{
+    uint32_t source[385], *dst;
+    Allocator a = { 0, 0, 0 };
+    int i, calls, fail;
+    for (i = 0; i < 128; i++)
+        source[i] = i < 64 ? 0x301 : 0x323;
+    source[128] = '1';
+    for (i = 0; i < 256; i++)
+        source[129 + i] = i < 128 ? 0x301 : 0x323;
+    assert(unicode_normalize(&dst, source, 385, UNICODE_NFD, &a, alloc) == 385);
+    calls = a.calls;
+    /* Output, initial scratch, then scratch growth after a completed run. */
+    assert(calls >= 3);
+    for (i = 0; i < 128; i++)
+        assert(dst[i] == (i < 64 ? 0x323 : 0x301));
+    assert(dst[128] == '1');
+    for (i = 0; i < 256; i++)
+        assert(dst[129 + i] == (i < 128 ? 0x323 : 0x301));
+    alloc(&a, dst, 0);
+    assert(!a.live);
+    for (fail = 1; fail <= calls; fail++) {
+        a.calls = 0;
+        a.fail_at = fail;
+        dst = (uint32_t *)(uintptr_t)1;
+        assert(unicode_normalize(&dst, source, 385, UNICODE_NFD, &a, alloc) == -1);
+        assert(!dst && !a.live);
+    }
+}
+
 static void test_script_oom(const char *name, int is_ext)
 {
     Allocator a = { 0, 0, 0 };
@@ -183,6 +213,7 @@ static void test_sequence_failures(void)
 int main(void)
 {
     test_normalization_oom();
+    test_normalization_sort_oom();
     test_canonicalization_oom();
     test_script_oom("Hebrew", 0);
     test_script_oom("Hebrew", 1);
