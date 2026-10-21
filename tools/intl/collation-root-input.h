@@ -4,6 +4,7 @@
 #define QJS_INTL_COMPILER_ROOT_INPUT_H
 #include "../../src/intl/collation/coordinates.h"
 #include "../../src/intl/collation/keys.h"
+#include "../../src/intl/collation/base.h"
 
 enum {
     QJS_INTL_ROOT_META, QJS_INTL_ROOT_MAPPINGS, QJS_INTL_ROOT_KEYS,
@@ -53,6 +54,7 @@ typedef struct QJSIntlRootInputMetadata {
 typedef struct QJSIntlRootInput {
     QJSIntlRootInputSection sections[QJS_INTL_ROOT_SECTION_COUNT];
     QJSIntlRootInputMetadata metadata;
+    QJSIntlCollationBase base; /* Opened common semantics; compiler facts stay here. */
     QJSIntlCollationKeyIndex keys;
     const uint8_t *fingerprint; /* Borrowed 32-byte source-manifest identity. */
 } QJSIntlRootInput;
