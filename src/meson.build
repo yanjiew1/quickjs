@@ -99,6 +99,7 @@ support_library_sources = files(
   'regexp/compile.c',
   'regexp/exec.c',
   'unicode/libunicode.c',
+  'unicode/case-conversion.c',
   'unicode/category.c',
   'cutils/cutils.c',
 )
