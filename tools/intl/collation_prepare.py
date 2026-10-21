@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Compile one prepared profile's exact collation targets with the host tool."""
+import argparse
+import json
+from pathlib import Path
+import tempfile
+
+import acquire
+import collation_archive
+import collation_bindings
+import collation_ir
+import collation_programs
+import collation_root_input
+
+
+def prepare(sources, profile, compiler, output):
+    catalog = collation_programs.load(sources)
+    bindings = collation_bindings.from_catalog(catalog, profile)
+    targets = collation_bindings.program_targets(bindings)
+    fingerprint = bytes.fromhex(sources.pin['manifest_sha256'])
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    # Keep large transient compiler inputs beside the requested destination;
+    # normal engine builds use the resulting prepared bytes without downloads.
+    with tempfile.TemporaryDirectory(dir=str(output.parent)) as temporary:
+        root, programs = Path(temporary) / 'root.qjcr', Path(temporary) / 'programs.qjci'
+        root.write_bytes(collation_root_input.prepare(sources))
+        programs.write_bytes(collation_ir.encode_catalog(catalog, fingerprint, targets))
+        collation_archive.compile_archive(compiler, root, programs, output, (fingerprint, bindings))
+
+    return {'profile': profile, 'programs': len(targets), 'binding_rows': len(bindings),
+            'bytes': output.stat().st_size}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--sources', type=Path, required=True)
+    parser.add_argument('--profile', choices=('minimal', 'native'), required=True)
+    parser.add_argument('--compiler', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    print(json.dumps(prepare(acquire.Sources(args.sources), args.profile, args.compiler, args.output),
+                     sort_keys=True, indent=2))
+
+
+if __name__ == '__main__':
+    main()
