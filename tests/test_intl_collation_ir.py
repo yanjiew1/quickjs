@@ -127,6 +127,17 @@ class CompilerTests(unittest.TestCase):
         for length in list(range(21)) + [first, first + ir.NODE.size, len(raw) - 1]:
             self.audit(raw[:length], False)
 
+    def test_prefix_boundaries_use_original_recursive_canonical_leads(self):
+        for code in ('\u0301', '\u09be', '\u1161', '\u11a8', '\U000113c5',
+                     '\U00016121', '\U00016d68'):
+            for text in ('&a<' + code + '|b', '&a<a|' + code):
+                with self.subTest(text=text):
+                    self.audit(ir.encode([program(text)]), False)
+        # No-prefix relations and independent extension lookups do not acquire
+        # the prefix split restriction. A canonical singleton may be safe.
+        for text in ('&a<\u0301', '&a<a|b/\u0301', '&a<\u212b|b'):
+            self.audit(ir.encode([program(text)]))
+
     def test_artifact_expansion_budget_precedes_normalization(self):
         # Each small record encodes a million otherwise-inert scalars. Repeating
         # it across programs must be rejected without millions of allocations.
