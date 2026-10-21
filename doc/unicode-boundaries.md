@@ -61,3 +61,50 @@ Use [UAX #29 revision 49](https://www.unicode.org/reports/tr29/tr29-49.html),
 the Unicode 18 rules, when consuming these tables. In particular, GB9c changed
 from Unicode 17. Importing an older implementation without updating its rules
 does not establish conformance to the pinned data release.
+
+## Default grapheme clusters
+
+`src/unicode/grapheme.c` implements the default **extended** grapheme rules.
+Call `unicode_grapheme_next()` starting at zero, then at each returned boundary.
+Positions are offsets into the original UTF-16 sequence; valid surrogate pairs
+remain intact and lone surrogates retain their original units. The function
+does not allocate, normalize, or apply locale tailoring.
+
+The scan keeps the previous GCB class, RI parity, Indic-linker context and
+emoji-ZWJ context. Context is updated as input is consumed rather than recovered
+by repeatedly scanning backward. Iterating the whole input is linear even for
+long flag, combining-mark or ZWJ sequences. Case conversion shares the same
+bounded UTF-16 decoding helper without sharing its algorithm-specific state.
+
+`test_unicode_grapheme` contains quick UTF-16/context/stress regressions. Passing
+the official `GraphemeBreakTest.txt` path additionally checks every source case,
+including the absence of boundaries inside supplementary pairs. Unicode CI
+runs that conformance mode against the same pinned release as the tables.
+
+## Default word boundaries
+
+`src/unicode/word.c` supplies the default word rules with the same forward,
+original-UTF-16 boundary contract. It distinguishes raw adjacency for WB3c and
+WB3d from the significant-character context after WB4 ignores. Punctuation
+rules use bounded additional lookahead across an ignored run; RI parity is
+updated without scanning backward. Full iteration is linear and allocation-free.
+
+These positions alone do not identify meaningful words, apply locale rules or
+split dictionary-script text. Those decisions belong to the segmentation service.
+`test_unicode_word` exercises punctuation, ignored characters, Hebrew quotes,
+surrogates and long runs; Unicode CI additionally checks the pinned
+`WordBreakTest.txt` through the same boundary-vector oracle used for graphemes.
+
+## Default sentence boundaries
+
+`src/unicode/sentence.c` keeps raw paragraph adjacency separate from the
+significant context after ignored characters. It retains a terminal's Close/Sp
+prefix and caches SB8's lowercase lookahead while that prefix remains active.
+This prevents repeated scanning of an arbitrarily long punctuation/space run.
+The scan is allocation-free and preserves the same UTF-16 boundary contract.
+
+The default full-stop rules recognize numeric, case and continuation contexts;
+they do not incorporate locale abbreviation lists. `test_unicode_sentence`
+covers those contexts, paragraph ordering, lone surrogates and long prefixes.
+Unicode CI also checks every pinned `SentenceBreakTest.txt` case using the shared
+boundary-vector oracle.
