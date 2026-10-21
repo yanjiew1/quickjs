@@ -779,6 +779,53 @@ distinction is observable: Unicode 18 GB9c joins a leading Indic linker with its
 consonant, whereas the pinned CLDR beta root still has the older consonant-led
 rule. Tests preserve that distinction instead of treating the profiles as equal.
 
+### Native Segmenter data preparation
+
+Native preparation must keep three inputs separate: pinned Unicode break properties,
+CLDR locale rules and sentence suppressions, and separately versioned dictionary
+data. A CLDR release label does not establish the version of every break
+algorithm. In particular, the beta root's GB9c rule differs from the Unicode 18
+default described above. Keep that difference explicit in the selected profile
+and its tests; do not replace the shared Unicode default silently.
+
+Resolve CLDR segmentation inheritance through the `segmentations` parent
+component, independently of ordinary locale parents. Variable declarations are
+ordered definitions, not an unordered map of recursively expanded expressions.
+For example, Japanese rules redefine `$Hiragana` using its previous value, and
+`en_US_POSIX` redefines word-break variables using inherited values. Preserve
+the earlier environment when expanding each definition. Rejecting repeated
+names or resolving such references against the final map would lose valid data
+or create artificial cycles. Preserve rule order and source identities too.
+
+Compile the relevant checked set/property/rule syntax into bounded native data;
+normal builds and runtime execution must not parse XML or depend on Python's
+Unicode database. Grapheme, word and sentence are Segmenter granularities.
+CLDR line-break records belong to a different facility and need an explicit
+inventory exclusion. Sentence suppressions are another data layer: retain their
+inheritance and suffix/context semantics separately from ordinary break rules,
+and document the policy selecting them. Do not invent support for `ss`, `lb`
+or other Unicode extension keys: Segmenter's relevant extension-key list is empty.
+
+Dictionary selection follows the input's script runs, not just the requested
+locale; English-locale text can contain Thai or Japanese words. Pin dictionary
+sources, generation versions, hashes and file-specific licenses separately from
+CLDR. ICU4X's dictionary matcher is a reference for a native C implementation,
+not a Rust runtime dependency or an automatic oracle for newer Unicode rules.
+Check ambiguous matches, unknown text and grapheme-safe forward progress before
+publishing locale capabilities. Root inheritance establishes support only when
+all required rules and input-script refinements are executable.
+
+Keep prepared bytes immutable and shared, resolved configuration in the module's
+operation handle, and per-input text or boundary caches with their input owner.
+Never put a mutable iterator cursor in a shared Segmenter. If an algorithm needs
+allocating scratch or a cached boundary index, expose that ownership and failure
+path in the private contract rather than changing an allocation-free query
+silently. Reuse the binding's original UTF-16 positions and independent cursors.
+
+References: [ECMA-402 Segmenter internal slots](https://tc39.es/ecma402/#sec-intl.segmenter-internal-slots),
+[Unicode 18 text segmentation](https://www.unicode.org/reports/tr29/tr29-49.html),
+and the pinned [CLDR segmentation specification](https://github.com/unicode-org/cldr/blob/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2/docs/ldml/tr35-general.md#segmentations).
+
 DateTimeFormat preparation starts with `tools/intl/date_pattern_syntax.py`, a
 host-side TR35 date-pattern tokenizer. It preserves field symbols/run lengths
 and decodes quoted literals independently of format selection or calendar
