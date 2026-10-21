@@ -217,7 +217,8 @@ jobs:
           test_unicode_grapheme \
           test_unicode_word \
           test_unicode_sentence \
-          unicode_gen_test
+          unicode_gen_test \
+          test_unicode
     - name: Check compiled boundary properties against every Unicode code point
       run: |
         build-unicode/tests/test_unicode_break_properties "$RUNNER_TEMP/unicode"
@@ -240,6 +241,9 @@ jobs:
     - name: Check Unicode normalization conformance
       run: |
         build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
+    - name: Check indexed category predicates against full Unicode ranges
+      run: |
+        build-unicode/tests/test_unicode --all-categories
     - name: Preserve generated tables on failure
       if: failure()
       uses: actions/upload-artifact@v7
