@@ -75,6 +75,21 @@ int main(void)
         assert(!state.live);
     }
     state.calls = state.fail_at = 0;
+    {
+        const char *sources[] = {"Y MMM d – Y MMM d", "MMM d Y – d Y"};
+        size_t j;
+
+        /* Correct the complete format before splitting: one endpoint can
+           omit the shared month but still needs calendar-year interpretation. */
+        for (j = 0; j < sizeof(sources) / sizeof(*sources); j++) {
+            assert(!qjs_intl_date_interval_program_open(&allocator, bytes(sources[j]),
+                                                        &info, QJS_INTL_DATE_H23, &program));
+            for (i = 0; i < program.pattern.count; i++)
+                assert(program.pattern.tokens[i].symbol != 'Y');
+            qjs_intl_date_interval_program_clear(&program);
+        }
+        failed(&allocator, &info, "Y w MMM d – Y w MMM d", QJS_INTL_DATE_H23, QJS_INTL_UNSUPPORTED);
+    }
     assert(!qjs_intl_date_interval_program_open(&allocator, bytes("latestFirst:MMM d – d, y"),
                                                 &info, QJS_INTL_DATE_H23, &program));
     assert(program.pattern.order == QJS_INTL_DATE_INTERVAL_LATEST_FIRST &&

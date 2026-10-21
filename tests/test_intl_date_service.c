@@ -103,6 +103,24 @@ static void selector_authored(const QJSIntlAllocator *allocator)
     state->calls = state->fail_at = 0;
     qjs_intl_date_pattern_clear(allocator, &ordinary);
 
+    /* The calendar-date workaround applies to the source skeleton before
+       scoring as well as to the selected interval before endpoint splitting. */
+    for (calendar = 0; calendar < data.calendar_count; calendar++) {
+        assert(!qjs_intl_date_interval_calendar_at(&data, calendar, &tag));
+        if (tag.length == 7 && !memcmp(tag.data, "islamic", 7))
+            break;
+    }
+    assert(calendar < data.calendar_count);
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("y/M/d"), &ordinary));
+    assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
+                                           QJS_CAL_GREGORY, &names, &admission, allocator, &set));
+    program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_DAY);
+    assert(program);
+    for (i = 0; i < program->pattern.count; i++)
+        assert(program->pattern.tokens[i].symbol != 'Y');
+    qjs_intl_date_interval_set_clear(&set);
+    qjs_intl_date_pattern_clear(allocator, &ordinary);
+
     /* A better-scored source repeats U but shares r. Use real cyclic names
        so rejection cannot accidentally be explained by unavailable name data. */
     {
