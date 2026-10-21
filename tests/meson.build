@@ -4940,6 +4940,33 @@ test(
   timeout: 30,
 )
 
+# Exercise the actual C compiler's initialization of opaque prepared bytes.
+if intl_enabled
+  intl_embedding_fixture = custom_target(
+    'intl-embedding-fixture',
+    output: 'intl-embedding-fixture.c',
+    command: [python, files('intl_embed_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_embedding_test = {
+    'name': 'test_intl_embedding',
+    'sources': files(
+      'test_intl_embedding.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_embedding_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_embedding_test,
+    'name': 'intl-embedding',
+    'options': {
+      'suite': ['repo', 'generator'],
+      'timeout': 30,
+    },
+  }]
+endif
+
 # Share only identical component translation units within this configuration.
 # Component declarations use the same host compiler, include directories and
 # dependencies; source identity, ordered flags and overrides distinguish keys.

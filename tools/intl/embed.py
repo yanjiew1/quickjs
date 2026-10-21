@@ -13,10 +13,16 @@ def render(binary):
              ' * Derived from Unicode CLDR; Copyright Unicode, Inc.',
              ' * See data/intl/LICENSE-CLDR and the matching data manifest.',
              ' */', '#include "src/intl/native/data.h"', '',
-             'const uint8_t qjs_intl_native_bytes[] = {']
-    for at in range(0, len(binary), 16):
-        lines.append('    ' + ', '.join('0x%02x' % byte for byte in binary[at:at + 16]) + ',')
-    lines += ['};', '', 'const size_t qjs_intl_native_length = sizeof(qjs_intl_native_bytes);', '']
+             '/* Counted binary bytes, not a NUL-terminated C string. */',
+             '#if defined(__has_attribute)', '#if __has_attribute(nonstring)',
+             '__attribute__((nonstring))', '#endif', '#endif',
+             'const uint8_t qjs_intl_native_bytes[%d] =' % len(binary)]
+    # A string initializer avoids a compiler AST node per byte of a large pack.
+    # C's explicit array bound omits only the implicit literal terminator; real
+    # embedded/trailing zero bytes remain part of the exact binary object.
+    for at in range(0, len(binary), 64):
+        lines.append('    "' + ''.join('\\x%02x' % byte for byte in binary[at:at + 64]) + '"')
+    lines += [';', '', 'const size_t qjs_intl_native_length = sizeof(qjs_intl_native_bytes);', '']
     return '\n'.join(lines)
 
 
