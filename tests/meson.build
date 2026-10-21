@@ -4391,7 +4391,27 @@ if intl_enabled
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
+endif
 
+if get_option('intl') == 'native'
+  test(
+    'intl-segment-sources',
+    python,
+    args: files('test_intl_segment_sources.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-inheritance',
+    python,
+    args: files('test_intl_segment_inheritance.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
+
+if intl_enabled
   test(
     'intl-dayperiod-tables',
     python,
