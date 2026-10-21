@@ -7,7 +7,7 @@
 
 #define M(id) (1U << UNICODE_GC_ ## id)
 
-static int unicode_gc_contains(uint32_t code, uint32_t mask)
+static inline int unicode_gc_contains(uint32_t code, uint32_t mask, uint32_t *run_start)
 {
     const uint8_t *p = unicode_gc_table;
     const uint8_t *end = p + countof(unicode_gc_table);
@@ -31,6 +31,8 @@ static int unicode_gc_contains(uint32_t code, uint32_t mask)
         UNICODE_GC_READ(p, b, length, category);
         length++;
         if (code - start < length) {
+            if (run_start)
+                *run_start = start;
             /* Category 31 is an alternating Lu/Ll run, beginning with Lu. */
             if (category == 31)
                 category = (code - start) & 1 ? UNICODE_GC_Ll : UNICODE_GC_Lu;
@@ -45,31 +47,43 @@ int lre_is_letter(uint32_t c)
 {
     if (c < 128)
         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-    return unicode_gc_contains(c, M(Lu) | M(Ll) | M(Lt) | M(Lm) | M(Lo));
+    return unicode_gc_contains(c, M(Lu) | M(Ll) | M(Lt) | M(Lm) | M(Lo), NULL);
 }
 
 int lre_is_mark(uint32_t c)
 {
     if (c < 128)
         return 0;
-    return unicode_gc_contains(c, M(Mn) | M(Mc) | M(Me));
+    return unicode_gc_contains(c, M(Mn) | M(Mc) | M(Me), NULL);
 }
 
 int lre_is_assigned(uint32_t c)
 {
     /* UCD Assigned includes private-use characters and surrogate code points.
        Scalar validity is a separate question for the consuming algorithm. */
-    return c <= 0x10ffff && !unicode_gc_contains(c, M(Cn));
+    return c <= 0x10ffff && !unicode_gc_contains(c, M(Cn), NULL);
 }
 
 int lre_is_decimal_digit(uint32_t c)
 {
     if (c < 128)
         return c >= '0' && c <= '9';
-    return unicode_gc_contains(c, M(Nd));
+    return unicode_gc_contains(c, M(Nd), NULL);
 }
 
 int lre_is_symbol_or_separator(uint32_t c)
 {
-    return unicode_gc_contains(c, M(Sm) | M(Sc) | M(Sk) | M(So) | M(Zs) | M(Zl) | M(Zp));
+    return unicode_gc_contains(c, M(Sm) | M(Sc) | M(Sk) | M(So) | M(Zs) | M(Zl) | M(Zp), NULL);
+}
+
+int lre_decimal_value(uint32_t c)
+{
+    uint32_t start;
+    if (c < 128)
+        return c >= '0' && c <= '9' ? (int)(c - '0') : -1;
+    /* Adjacent decimal alphabets can form one GC run (for example the five
+       mathematical sets). The generator verifies repeated ascending 0..9. */
+    if (!unicode_gc_contains(c, M(Nd), &start))
+        return -1;
+    return (c - start) % 10;
 }
