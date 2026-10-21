@@ -63,6 +63,59 @@ static QJSIntlDatePatternInfo inspect(const QJSIntlAllocator *allocator, const c
     return info;
 }
 
+static void calendar_year_workaround(const QJSIntlAllocator *allocator)
+{
+    static const struct {
+        const char *source;
+        int changed;
+        QJSIntlStatus status;
+        int year;
+    } cases[] = {
+        {"dd/MM/Y G", 1, QJS_INTL_OK, QJS_INTL_DATETIME_NUMERIC},
+        {"YY LLL 'Y'", 1, QJS_INTL_OK, QJS_INTL_DATETIME_TWO_DIGIT},
+        {"EEEE, d MMMM YYYY", 1, QJS_INTL_OK, QJS_INTL_DATETIME_NUMERIC},
+        {"Y 'w W' MM", 1, QJS_INTL_OK, QJS_INTL_DATETIME_NUMERIC},
+        {"Y M w", 0, QJS_INTL_UNSUPPORTED, 0},
+        {"W Y L", 0, QJS_INTL_UNSUPPORTED, 0},
+        {"Y d", 0, QJS_INTL_UNSUPPORTED, 0},
+        {"Y 'M'", 0, QJS_INTL_UNSUPPORTED, 0},
+        {"Y mm", 0, QJS_INTL_UNSUPPORTED, 0},
+        {"Y M Y", 1, QJS_INTL_UNSUPPORTED, 0},
+        {"'Y M'", 0, QJS_INTL_OK, 0},
+        {"y MM", 0, QJS_INTL_OK, QJS_INTL_DATETIME_NUMERIC},
+    };
+    Allocation *state = allocator->opaque;
+    size_t i;
+
+    for (i = 0; i < sizeof(cases) / sizeof(*cases); i++) {
+        QJSIntlDatePattern pattern;
+        QJSIntlDatePatternToken before[32];
+        QJSIntlDatePatternInfo info;
+        size_t j, calls;
+
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(cases[i].source), &pattern));
+        assert(pattern.count <= sizeof(before) / sizeof(*before));
+        memcpy(before, pattern.tokens, pattern.count * sizeof(*before));
+        calls = state->calls;
+        assert(qjs_intl_date_pattern_fix_calendar_year(&pattern) == cases[i].changed);
+        assert(!qjs_intl_date_pattern_fix_calendar_year(&pattern));
+        assert(state->calls == calls);
+
+        for (j = 0; j < pattern.count; j++) {
+            unsigned int symbol = cases[i].changed && before[j].symbol == 'Y' ? 'y' : before[j].symbol;
+
+            assert(pattern.tokens[j].symbol == symbol && pattern.tokens[j].width == before[j].width);
+            assert(pattern.tokens[j].literal.data == before[j].literal.data);
+            assert(pattern.tokens[j].literal.length == before[j].literal.length);
+        }
+        assert(qjs_intl_date_pattern_info(&pattern, &info) == cases[i].status);
+        if (!cases[i].status)
+            assert(info.components.values[QJS_INTL_DATETIME_YEAR] == cases[i].year);
+        qjs_intl_date_pattern_clear(allocator, &pattern);
+        assert(!state->live);
+    }
+}
+
 int main(void)
 {
     static const struct {
@@ -117,6 +170,8 @@ int main(void)
     QJSIntlDatePatternInfo info;
     QJSIntlDatePattern pattern;
     size_t i;
+
+    calendar_year_workaround(&allocator);
     for (i = 0; i < sizeof(cases) / sizeof(*cases); i++) {
         info = inspect(&allocator, cases[i].source, QJS_INTL_OK);
         assert(info.components.values[cases[i].field] == cases[i].value);
