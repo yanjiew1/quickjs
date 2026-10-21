@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_COLLATION_ROOT_DATA_H
 #define QJS_INTL_COLLATION_ROOT_DATA_H
 #include "../native/pack.h"
+#include "weights.h"
 
 typedef struct QJSIntlCollationRoot {
     QJSIntlSection section;
@@ -14,11 +15,6 @@ typedef struct QJSIntlCollationEntry {
     const uint8_t *keys, *elements;
     uint32_t key_count, element_count;
 } QJSIntlCollationEntry;
-
-typedef struct QJSIntlCollationElement {
-    uint16_t primary, secondary, tertiary;
-    unsigned int variable;
-} QJSIntlCollationElement;
 
 /* Borrow an unchanged validated pack, independent of locale/string tables.
    Validate the optional section without allocation; missing is UNSUPPORTED.
