@@ -273,6 +273,16 @@ lookback; each prefix has its own suffix trie. Stable node/sequence IDs survive
 arena growth, and CE arrays are copied into immutable sequence storage. Replacing
 or suppressing a mapping cannot change an expansion copied earlier.
 
+A live-terminal chain supports nonallocating visits proportional to current
+mapping count, excluding old sequences and abandoned paths. Replacement retains
+terminal identity; suppression removes it from that chain, and reintroduction
+can reuse the same identity. Opaque terminal IDs are not generation handles.
+Callbacks borrow descriptors only for their visit; copying a descriptor retains
+a view of its immutable CE array until map clear. Mutation during visits is
+forbidden. Separate count/copy queries reconstruct original-order prefix/suffix
+keys iteratively from parent links, preflighting both output capacities before
+any writes. These queries allocate no scratch or recursion stack.
+
 Insertion publishes its terminal only after all fallible operations succeed.
 Unused trie paths/capacity may remain after failure, but no resolved mapping
 changes. Suppression removes existing contextual terminals iteratively, retains
