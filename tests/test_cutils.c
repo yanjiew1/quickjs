@@ -69,6 +69,29 @@ static void test_formatted_buffer(void)
     dbuf_free(&b);
 }
 
+static void test_buffer_size_overflow(void)
+{
+    DynBuf b;
+    size_t requested = 0;
+
+    /* Capacity-only fixtures: both arithmetic failures precede allocation or
+       access to buffer bytes. Callers such as Unicode normalization inspect
+       the persistent error flag after a sequence of unchecked appends. */
+    dbuf_init2(&b, &requested, reject_printf_allocation);
+    b.size = b.allocated_size = SIZE_MAX - 1;
+    assert(dbuf_claim(&b, 2) < 0);
+    assert(dbuf_error(&b) && !b.buf && !requested);
+    assert(b.size == SIZE_MAX - 1 && b.allocated_size == SIZE_MAX - 1);
+    dbuf_free(&b);
+
+    dbuf_init2(&b, &requested, reject_printf_allocation);
+    b.allocated_size = SIZE_MAX - 2;
+    assert(dbuf_claim(&b, SIZE_MAX - 1) < 0);
+    assert(dbuf_error(&b) && !b.buf && !requested);
+    assert(!b.size && b.allocated_size == SIZE_MAX - 2);
+    dbuf_free(&b);
+}
+
 static void test_bounded_strings(void)
 {
     char buffer[5] = "old";
@@ -157,6 +180,7 @@ int main(void)
 {
     test_empty_dbuf();
     test_formatted_buffer();
+    test_buffer_size_overflow();
     test_bounded_strings();
     test_typed_buffer_growth();
     return 0;
