@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     text = embed.render(pack())
-    for name, source in (('candidate_bad_quote', "'"), ('candidate_bad_field', 'P')):
+    for name, source in (('candidate_bad_quote', "'"), ('candidate_bad_field', 'P'),
+                         ('candidate_calendar_year', 'Y/M/d'), ('candidate_week_year', 'Y-w-M-d')):
         text += '\n' + embed.render(pack(source)).replace('qjs_intl_native', name)
     atomic_write(args.output, text.encode('ascii'))
