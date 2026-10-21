@@ -57,6 +57,7 @@ QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
     status = qjs_intl_date_pattern_compile(allocator, result.source.text, &result.pattern);
     if (status)
         return status;
+    qjs_intl_date_pattern_fix_calendar_year(&result.pattern);
     status = qjs_intl_date_pattern_info(&result.pattern, &result.info);
     if (status)
         goto fail;
