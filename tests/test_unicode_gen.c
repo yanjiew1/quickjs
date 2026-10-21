@@ -122,6 +122,48 @@ static void check_break_properties(UnicodeTableOutput *output)
         "# @missing: 0000..10FFFF; InCB; None\n0041 ; InCB\n") < 0);
 }
 
+static int parse_block_fixture(const char *text)
+{
+    FILE *file = tmpfile();
+    assert(file);
+    assert(fputs(text, file) >= 0);
+    assert(fflush(file) == 0);
+    rewind(file);
+    return parse_blocks_stream(file, "authored block fixture");
+}
+
+static void check_blocks(UnicodeTableOutput *output)
+{
+    static const char *const invalid[] = {
+        "0000..000F; Block A\n", /* Missing neutral default. */
+        "# @missing: 0000..10FFFF; Block A\n0000..000F; Block A\n",
+        "# @missing: 0000..10FFFF; No_Block\n", /* No ranges. */
+        "# @missing: 0000..10FFFF; No_Block\n0000..000F; No Block\n",
+        "# @missing: 0000..10FFFF; No_Block\n0000..000F; A\n0000..001F; B\n",
+        "# @missing: 0000..10FFFF; No_Block\n0000..000F; Latin-A\n0010..001F; latin a\n",
+        "# @missing: 0000..10FFFF; No_Block\n0001..000F; A\n",
+        "# @missing: 0000..10FFFF; No_Block\n0010..000F; A\n",
+        "# @missing: 0000..10FFFF; No_Block\n110000..11000F; A\n",
+        "# @missing: 0000..10FFFF; No_Block\n0000..000F; A; B\n"
+    };
+    size_t i;
+    assert(!parse_block_fixture(
+        "# @missing: 0000..10FFFF; No_Block\n"
+        "0000..000F; Basic Latin\n10000..1001F; Supplementary-Test # comment\n"));
+    assert(block_count == 2 && block_ranges[1].first == 0x10000);
+    assert(!strcmp(block_ranges[1].name, "Supplementary_Test"));
+    assert(fseek(output->source, 0, SEEK_END) == 0);
+    assert(fseek(output->header, 0, SEEK_END) == 0);
+    build_block_table(output);
+    assert(fflush(output->source) == 0);
+    assert(read_table_word(output->source, "unicode_block_ranges", 2) == 0x10000);
+    assert(read_table_word(output->source, "unicode_block_ranges", 3) == 0x1001f);
+    for (i = 0; i < countof(invalid); i++) {
+        assert(parse_block_fixture(invalid[i]) < 0);
+        assert(!block_ranges && !block_count);
+    }
+}
+
 int main(int argc, char **argv)
 {
     int decomposition = 0x4e3d;
@@ -154,6 +196,7 @@ int main(int argc, char **argv)
     assert(packed & 1);
     check_declarations(output.header);
     check_break_properties(&output);
+    check_blocks(&output);
     assert(fclose(output.header) == 0);
     assert(fclose(file) == 0);
     free(unicode_db);
