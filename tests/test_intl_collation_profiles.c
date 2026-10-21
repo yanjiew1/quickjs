@@ -142,7 +142,7 @@ static void ordered_file(const QJSIntlCollationContexts *data, const char *path)
         assert(length);
         if (count) {
             QJSIntlStatus status = qjs_intl_collation_compare_root(data, previous, previous_length,
-                                                                   current, length, &a, &order);
+                                                                   current, length, &a, NULL, &order);
             if (status || order > 0) {
                 fprintf(stderr, "%s: lines %zu/%zu out of root order (status %d)\n",
                         path, previous_line, line_number, status);

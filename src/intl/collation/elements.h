@@ -30,4 +30,16 @@ void qjs_intl_collation_elements_clear(QJSIntlCollationElements *);
    (case, numeric, alternate handling or locale tailoring) are applied here. */
 QJSIntlStatus qjs_intl_collation_elements_next(QJSIntlCollationElements *,
                                               QJSIntlCollationElement *, int *present);
+
+/* Numeric mode recognizes complete adjacent Nd runs in NFD input before
+   looking up their initial digit. digits borrows the immutable normalized text
+   until clear; leading zeros are removed once, retaining one digit for zero.
+   A returned number has no ordinary CE. Do not mix modes within an iterator. */
+typedef struct QJSIntlCollationNumber {
+    const uint32_t *digits;
+    uint32_t length;
+} QJSIntlCollationNumber;
+QJSIntlStatus qjs_intl_collation_elements_next_numeric(QJSIntlCollationElements *,
+                                                      QJSIntlCollationElement *,
+                                                      QJSIntlCollationNumber *, int *present);
 #endif

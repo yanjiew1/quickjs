@@ -1,12 +1,15 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "compare.h"
 #include "elements.h"
+#include "../../cutils/cutils.h"
+#include "../../unicode/libunicode.h"
 #include <string.h>
 
 typedef struct ElementStream {
     QJSIntlCollationElements iterator;
     QJSIntlCollationElement *elements;
     size_t count, capacity;
+    uint32_t numeric_weight;
     QJSIntlCollationElement small[8];
 } ElementStream;
 
@@ -17,18 +20,33 @@ static void stream_clear(ElementStream *stream)
     qjs_intl_collation_elements_clear(&stream->iterator);
 }
 
+typedef struct PrimaryWeight {
+    uint32_t weight;
+    QJSIntlCollationNumber number;
+} PrimaryWeight;
+
 /* Keep lower-level weights only while primaries tie. This avoids building two
    complete sort keys just to decide strings with an early primary difference. */
-static QJSIntlStatus stream_primary(ElementStream *stream, unsigned int *weight)
+static QJSIntlStatus stream_primary(ElementStream *stream, PrimaryWeight *out)
 {
     QJSIntlStatus status;
     QJSIntlCollationElement element;
     int present;
-    *weight = 0;
+    memset(out, 0, sizeof(*out));
     for (;;) {
-        status = qjs_intl_collation_elements_next(&stream->iterator, &element, &present);
+        if (stream->numeric_weight)
+            status = qjs_intl_collation_elements_next_numeric(&stream->iterator, &element,
+                                                              &out->number, &present);
+        else
+            status = qjs_intl_collation_elements_next(&stream->iterator, &element, &present);
         if (status || !present)
             return status;
+        if (out->number.length) {
+            /* One logical numeric CE: script and leading-zero count must not
+               leak into lower levels once two numeric values are equal. */
+            element.secondary = 0x20;
+            element.tertiary = 2;
+        }
         if (!element.primary && !element.secondary && !element.tertiary)
             continue;
         if (stream->count == stream->capacity) {
@@ -51,11 +69,31 @@ static QJSIntlStatus stream_primary(ElementStream *stream, unsigned int *weight)
             stream->capacity = capacity;
         }
         stream->elements[stream->count++] = element;
-        if (element.primary) {
-            *weight = element.primary;
+        if (element.primary || out->number.length) {
+            /* Doubling stored primaries leaves an insertion band immediately
+               before ordinary zero without changing the serialized CE format. */
+            out->weight = out->number.length ? stream->numeric_weight : 2U * element.primary;
             return QJS_INTL_OK;
         }
     }
+}
+
+static int compare_primary(const PrimaryWeight *left, const PrimaryWeight *right)
+{
+    uint32_t i;
+    if (left->weight != right->weight)
+        return left->weight < right->weight ? -1 : 1;
+    if (!left->number.length)
+        return 0;
+    if (left->number.length != right->number.length)
+        return left->number.length < right->number.length ? -1 : 1;
+    for (i = 0; i < left->number.length; i++) {
+        int x = lre_decimal_value(left->number.digits[i]);
+        int y = lre_decimal_value(right->number.digits[i]);
+        if (x != y)
+            return x < y ? -1 : 1;
+    }
+    return 0;
 }
 
 static unsigned int next_level(const ElementStream *stream, size_t *at, int tertiary)
@@ -72,11 +110,13 @@ static unsigned int next_level(const ElementStream *stream, size_t *at, int tert
 QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *data,
                                              const uint16_t *left, size_t left_length,
                                              const uint16_t *right, size_t right_length,
-                                             const QJSIntlAllocator *allocator, int *order)
+                                             const QJSIntlAllocator *allocator,
+                                             const QJSIntlRootCollationOptions *options, int *order)
 {
     ElementStream streams[2] = {0};
     QJSIntlStatus status;
     unsigned int x, y;
+    uint32_t numeric_weight = 0;
     int level;
     if (!order)
         return QJS_INTL_INVALID_ARGUMENT;
@@ -88,6 +128,18 @@ QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *da
         return QJS_INTL_UNSUPPORTED;
     if (left_length > SIZE_MAX / sizeof(*left) || right_length > SIZE_MAX / sizeof(*right))
         return QJS_INTL_OVERFLOW;
+    if (options && options->numeric) {
+        uint32_t zero = '0';
+        QJSIntlCollationEntry entry;
+        QJSIntlCollationElement element;
+        status = qjs_intl_collation_root_find(&data->root, &zero, 1, &entry);
+        if (status || !entry.element_count)
+            return QJS_INTL_DATA_ERROR;
+        qjs_intl_collation_element_at(&entry, 0, &element);
+        if (!element.primary)
+            return QJS_INTL_DATA_ERROR;
+        numeric_weight = 2U * element.primary - 1;
+    }
     /* Identity is safe even across contraction boundaries; a common-prefix
        shortcut would not be, since context can change following elements. */
     if (left_length == right_length &&
@@ -102,21 +154,22 @@ QJSIntlStatus qjs_intl_collation_compare_root(const QJSIntlCollationContexts *da
     if (status)
         goto done;
     for (level = 0; level < 2; level++) {
+        streams[level].numeric_weight = numeric_weight;
         streams[level].elements = streams[level].small;
         streams[level].capacity = sizeof(streams[level].small) / sizeof(*streams[level].small);
     }
     for (;;) {
-        status = stream_primary(&streams[0], &x);
+        PrimaryWeight left_weight, right_weight;
+        status = stream_primary(&streams[0], &left_weight);
         if (status)
             goto done;
-        status = stream_primary(&streams[1], &y);
+        status = stream_primary(&streams[1], &right_weight);
         if (status)
             goto done;
-        if (x != y) {
-            *order = x < y ? -1 : 1;
+        *order = compare_primary(&left_weight, &right_weight);
+        if (*order)
             goto done;
-        }
-        if (!x)
+        if (!left_weight.weight)
             break;
     }
     /* Each level compares complete nonzero streams. Comparing CEs one by one

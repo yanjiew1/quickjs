@@ -342,20 +342,38 @@ static void prepare(QJSIntlCollationElements *it, uint32_t start)
     it->use_implicit = 0;
 }
 
-QJSIntlStatus qjs_intl_collation_elements_next(QJSIntlCollationElements *it,
-                                              QJSIntlCollationElement *out, int *present)
+static QJSIntlStatus elements_next(QJSIntlCollationElements *it,
+                                   QJSIntlCollationElement *out,
+                                   QJSIntlCollationNumber *number, int *present)
 {
     uint32_t at, count;
     if (out)
         memset(out, 0, sizeof(*out));
     if (present)
         *present = 0;
+    if (number)
+        memset(number, 0, sizeof(*number));
     if (!it || !it->ready || !out || !present)
         return QJS_INTL_INVALID_ARGUMENT;
     count = it->use_implicit ? 2 : it->pending.element_count;
     if (it->pending_at == count) {
         if (!it->length || (at = successor(it, 0)) == it->length)
             return QJS_INTL_OK;
+        if (number && lre_decimal_value(it->text[at] & SCALAR_MASK) >= 0) {
+            uint32_t first = at, end = at;
+            do {
+                consume(it, end++);
+            } while (end < it->length &&
+                     lre_decimal_value(it->text[end] & SCALAR_MASK) >= 0);
+            /* Even an ignorable non-digit is a boundary. Do not use the CE
+               stream to find runs, or remove zeros again at an ICU chunk cap. */
+            while (first + 1 < end && !lre_decimal_value(it->text[first] & SCALAR_MASK))
+                first++;
+            number->digits = it->text + first;
+            number->length = end - first;
+            *present = 1;
+            return QJS_INTL_OK;
+        }
         prepare(it, at);
         it->pending_at = 0;
     }
@@ -365,4 +383,25 @@ QJSIntlStatus qjs_intl_collation_elements_next(QJSIntlCollationElements *it,
         qjs_intl_collation_element_at(&it->pending, it->pending_at++, out);
     *present = 1;
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_collation_elements_next(QJSIntlCollationElements *it,
+                                              QJSIntlCollationElement *out, int *present)
+{
+    return elements_next(it, out, NULL, present);
+}
+
+QJSIntlStatus qjs_intl_collation_elements_next_numeric(QJSIntlCollationElements *it,
+                                                      QJSIntlCollationElement *out,
+                                                      QJSIntlCollationNumber *number,
+                                                      int *present)
+{
+    if (!number) {
+        if (present)
+            *present = 0;
+        if (out)
+            memset(out, 0, sizeof(*out));
+        return QJS_INTL_INVALID_ARGUMENT;
+    }
+    return elements_next(it, out, number, present);
 }

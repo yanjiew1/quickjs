@@ -29,6 +29,12 @@ def fixture():
     for text, secondary in (('\u0301', 0x31), ('\u0304', 0x32),
                             ('\u030a', 0x34), ('\u0323', 0x35), ('\u0331', 0x37)):
         rows[tuple(map(ord, text))] = (ce(0, secondary),)
+    for digit in range(10):
+        rows[(ord('0') + digit,)] = (ce(0x900 + digit),)
+    rows[(0x2460,)] = ((False, 0x901, 0x20, 6),)  # Circled one is not Nd.
+    rows[(0x24ea,)] = ((False, 0x900, 0x20, 6),)  # Circled zero.
+    rows[(0x20c4,)] = (ce(0x8ff),)  # Immediately before the ordinary digit band.
+    rows[(0,)] = ((False, 0, 0, 0),)
     rows[(ord('A'),)] = ((False, 0x1000, 0x20, 8),)
     rows[(ord('u'),)] = (ce(0x1000, 0x21),)
     rows[(0x20,)] = ((True, 0x500, 0x20, 2),)

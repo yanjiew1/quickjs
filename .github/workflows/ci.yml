@@ -246,6 +246,7 @@ jobs:
           meson compile -C build-unicode test_unicode -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode --all-categories
           build-unicode/tests/test_unicode --blocks "$RUNNER_TEMP/unicode/Blocks.txt"
+          build-unicode/tests/test_unicode --decimal "$RUNNER_TEMP/unicode/UnicodeData.txt"
       - name: Preserve generated tables on failure
         if: failure()
         uses: actions/upload-artifact@v7

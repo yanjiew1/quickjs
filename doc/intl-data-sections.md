@@ -693,3 +693,15 @@ code-point tie-breaker. This foundation does not establish locale-tailoring or
 Collator capability. The source-data CI job checks adjacent strings in the full
 pinned CLDR non-ignorable ordering file; quick repository tests use authored
 weights, level precedence, canonical equivalence and allocation failures.
+
+Numeric root comparison recognizes adjacent Unicode `Nd` runs in NFD text,
+before mapping individual digits. It removes leading zeros once per complete
+run, then compares significant length and decimal values without a machine
+integer limit or ICU's 254-digit segmentation. Non-digits terminate runs even
+when their collation weights are ignorable. Equal numbers share one logical
+secondary/tertiary weight, independent of digit script and leading-zero count.
+Stored CEs remain unchanged: the comparison layer doubles ordinary primary
+weights and places a numeric token in the odd band immediately before ordinary
+zero. Script reordering and locale-tailored numeric processing are separate
+integration work. The Unicode decimal query reuses indexed category runs; the
+generator checks repeated ascending decimal values at their original origins.
