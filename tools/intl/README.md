@@ -46,7 +46,9 @@ flags, then orders mappings by scalar sequence for deterministic lookup-table
 generation. Its audit reports observed sizes without making those sizes runtime
 limits. `collation_tables.py` encodes the optional section 36 and audits a full
 source roundtrip. Neither prerequisite executes locale tailorings or advertises
-Collator support; prepared profiles will add the section with its runtime owner.
+Collator support. Both prepared profiles carry the same root mapping section;
+the allocation-free C reader is `src/intl/collation/root-data.c`. Full locale
+tailorings and the comparator remain separate runtime work.
 
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
