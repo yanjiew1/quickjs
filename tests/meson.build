@@ -3428,6 +3428,11 @@ if intl_enabled
       'test_intl_collation_weights_graph.c',
       '../tools/intl/collation-weights.c',
     ),
+    'test_intl_collation_relations': files(
+      'test_intl_collation_relations.c',
+      '../tools/intl/collation-relations.c',
+      '../tools/intl/collation-weights.c',
+    ),
     'test_intl_collation_logical': files(
       'test_intl_collation_logical.c',
       '../src/intl/collation/logical.c',
