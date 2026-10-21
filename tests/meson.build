@@ -3542,6 +3542,7 @@ if intl_enabled
       'test_intl_collation_compiled.c',
       '../src/intl/collation/compiled-data.c',
       '../src/intl/collation/ranked-elements.c',
+      '../src/intl/collation/ranked-compare.c',
       '../src/intl/common/locale-grammar.c',
       '../tools/intl/collation-archive.c',
       '../tools/intl/collation-trie.c',
