@@ -671,6 +671,60 @@ The current four mappings require 56 bytes, excluding the pack directory row.
 
 The reader validates both the root section and all metadata without allocation,
 then returns borrowed `before` and `mapping` slices plus the source index. It
-provides storage metadata only. The future comparator must replace the marked
-pseudo-contractions with prefix rules and perform longest-prefix matching on
-unchanged normalized text; storage lookup itself does not do this.
+provides storage metadata only. The raw element iterator in
+`src/intl/collation/elements.c` replaces the marked pseudo-contractions with prefix
+rules and matches preceding context against unchanged NFD text. It owns the
+normalized input, successor links for consumed positions and equal-CCC group
+ends. Full contiguous matches are checkpoints; discontiguous extension requires
+a full single-code-point match at each step. Skipped marks remain available for
+subsequent mappings. Input consumption does not rewrite the normalized text.
+
+The iterator emits raw root elements and implicit weights. Comparison settings,
+numeric handling and locale tailoring remain separate responsibilities. Group
+skipping and iterative successor compression bound particular rescanning costs;
+contiguous lookahead still depends on the table's key depth, so this is not a
+claim of universal linear matching for arbitrary tables.
+
+The private root comparator in `src/intl/collation/compare.c` consumes those
+streams in primary, secondary, then tertiary order. It retains nonzero CEs for
+later levels only while primaries tie, with a small inline cache and checked
+allocator-backed growth. Variable weights are non-ignorable; there is no
+code-point tie-breaker. This foundation does not establish locale-tailoring or
+Collator capability. The source-data CI job checks adjacent strings in the full
+pinned CLDR non-ignorable ordering file; quick repository tests use authored
+weights, level precedence, canonical equivalence and allocation failures.
+
+Numeric root comparison recognizes adjacent Unicode `Nd` runs in NFD text,
+before mapping individual digits. It removes leading zeros once per complete
+run, then compares significant length and decimal values without a machine
+integer limit or ICU's 254-digit segmentation. Non-digits terminate runs even
+when their collation weights are ignorable. Equal numbers share one logical
+secondary/tertiary weight, independent of digit script and leading-zero count.
+Stored CEs remain unchanged: the comparison layer doubles ordinary primary
+weights and places a numeric token in the odd band immediately before ordinary
+zero. Script reordering and locale-tailored numeric processing are separate
+integration work. The Unicode decimal query reuses indexed category runs; the
+generator checks repeated ascending decimal values at their original origins.
+
+Root comparison sensitivity selects primary only (`base`), primary and
+secondary (`accent`), primary and case (`case`), or all three original levels
+(`variant`, the default). Root case is derived separately for each CE from
+TR35's allkeys tertiary classes, including Kana size distinctions. `caseFirst`
+changes case priority within each tertiary CE; it does not insert a whole case
+pass ahead of other tertiary variants. `off` preserves raw tertiary order and
+is distinct from `lower`. Primary-ignorable accents do not contribute to
+case-only comparison, while tertiary-only CEs keep the artificial highest case
+rank required by well-formedness even with upper-first order. These root rules
+do not substitute for recomputing case metadata on future locale tailorings.
+
+`ignore_punctuation` uses CLDR's root variable flags, which cover the space and
+punctuation groups in this pin (`maxVariable=punct`). Shifted variables and the
+primary-ignorable CEs following them do not contribute through tertiary; the
+next nonvariable primary restores ordinary handling. Numeric tokens count as
+nonvariable primaries, but removed punctuation still terminates source digit
+runs. No quaternary level is exposed by these sensitivity options. Source flags
+are per CE, not a test of the input character's General_Category or an unsafe
+upper-threshold check that would also erase reserved U+FFFE. Symbols, currency,
+trailing weights and implicit continuations remain significant. The CI shifted
+ordering audit checks only the implemented first three levels, allowing ties
+which the source file's fourth level may distinguish.
