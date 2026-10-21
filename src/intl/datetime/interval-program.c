@@ -102,6 +102,7 @@ QJSIntlStatus qjs_intl_date_interval_program_open(const QJSIntlAllocator *alloca
     status = qjs_intl_date_interval_compile(allocator, source, &result.pattern);
     if (status)
         return status;
+    qjs_intl_date_pattern_fix_calendar_year(&result.pattern);
     result.split = result.pattern.count;
     for (i = 0; i < result.pattern.count; i++) {
         unsigned int symbol = result.pattern.tokens[i].symbol, bit;
