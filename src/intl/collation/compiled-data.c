@@ -1,6 +1,7 @@
 /* Complete semantic validation precedes every borrowed runtime program view.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "compiled-data.h"
+#include "../common/locale-grammar.h"
 #include "../../cutils/cutils.h"
 #include "../../unicode/libunicode.h"
 #include <string.h>
@@ -323,6 +324,139 @@ static int groups(QJSIntlCompiledCollationData *data)
     return 1;
 }
 
+static int bytes_equal(QJSIntlBytes text, const char *literal)
+{
+    size_t length = strlen(literal);
+
+    return text.length == length && !memcmp(text.data, literal, length);
+}
+
+/* Check the fixed base-ID grammar/casing, not data-dependent aliases. Source
+   generation establishes canonical identities against the prepared registry. */
+static int binding_locale(QJSIntlBytes text)
+{
+    size_t start = 0;
+    int part = 0, script_seen = 0, region_seen = 0, variant_seen = 0;
+
+    if (!qjs_intl_unicode_locale_well_formed(text.data, text.length))
+        return 0;
+
+    while (start < text.length) {
+        size_t end = start, i;
+        int script, region;
+
+        while (end < text.length && text.data[end] != '-')
+            end++;
+        if (end - start == 1)
+            return 0; /* Extensions/private use do not belong in an inventory. */
+
+        script = part && !script_seen && !region_seen && !variant_seen && end - start == 4 &&
+            qjs_intl_unicode_subtag_well_formed(QJS_INTL_SCRIPT_SUBTAG, text.data + start, end - start);
+        region = part && !region_seen && !variant_seen &&
+            qjs_intl_unicode_subtag_well_formed(QJS_INTL_REGION_SUBTAG, text.data + start, end - start);
+        for (i = start; i < end; i++) {
+            int c = (unsigned char)text.data[i];
+            int uppercase = region || (script && i == start);
+
+            if ((uppercase && c >= 'a' && c <= 'z') || (!uppercase && c >= 'A' && c <= 'Z'))
+                return 0;
+        }
+
+        if (script)
+            script_seen = 1;
+        else if (region)
+            region_seen = 1;
+        else if (part)
+            variant_seen = 1;
+        part++;
+        start = end + 1;
+    }
+
+    return 1;
+}
+
+static int binding_view(const QJSIntlCompiledCollationData *data, uint32_t index,
+                        QJSIntlCollationBinding *out, int audit)
+{
+    const uint8_t *row = data->sections[QJS_INTL_COMPILED_BINDINGS].bytes + (size_t)index * 24;
+    const QJSIntlSection *labels = data->sections + QJS_INTL_COMPILED_LABELS;
+
+    out->sort_program = word(row, 4);
+    out->search_program = word(row, 5);
+    return label(labels, word(row, 0), word(row, 1), &out->locale, audit) &&
+        label(labels, word(row, 2), word(row, 3), &out->collation, audit);
+}
+
+static int public_program(const QJSIntlCompiledCollationData *data, uint32_t index)
+{
+    QJSIntlCompiledCollationProgram p;
+
+    if (index >= data->program_count || !program_view(data, index, &p, 0))
+        return 0;
+
+    return !p.alternate.length &&
+        !(p.collation.length >= 8 && !memcmp(p.collation.data, "private-", 8));
+}
+
+static int bindings(const QJSIntlCompiledCollationData *data, uint32_t *label_at)
+{
+    const QJSIntlSection *rows = data->sections + QJS_INTL_COMPILED_BINDINGS;
+    const QJSIntlSection *labels = data->sections + QJS_INTL_COMPILED_LABELS;
+    QJSIntlCollationBinding previous = {0};
+    uint32_t i;
+
+    for (i = 0; i < rows->count; i++) {
+        const uint8_t *row = rows->bytes + (size_t)i * 24;
+        QJSIntlCollationBinding value;
+        unsigned int j;
+        int locale_order;
+
+        for (j = 0; j < 2; j++) {
+            uint32_t start = word(row, j * 2), length = word(row, j * 2 + 1);
+
+            if (start != *label_at || length > labels->count - *label_at)
+                return 0;
+            *label_at += length;
+        }
+
+        if (!binding_view(data, i, &value, 1) || !binding_locale(value.locale))
+            return 0;
+
+        locale_order = i ? label_order(previous.locale, value.locale) : -1;
+        if (locale_order > 0 ||
+            (!locale_order && label_order(previous.collation, value.collation) >= 0))
+            return 0;
+
+        if (locale_order < 0 && value.collation.length)
+            return 0; /* Every locale begins with a complete null/default row. */
+
+        if (!value.collation.length) {
+            if (!public_program(data, value.sort_program) || !public_program(data, value.search_program))
+                return 0;
+        } else {
+            size_t k;
+
+            if (!qjs_intl_unicode_type_well_formed(value.collation.data, value.collation.length) ||
+                bytes_equal(value.collation, "standard") || bytes_equal(value.collation, "search") ||
+                bytes_equal(value.collation, "default") ||
+                (value.collation.length >= 8 && !memcmp(value.collation.data, "private-", 8)))
+                return 0;
+            for (k = 0; k < value.collation.length; k++) {
+                if (value.collation.data[k] >= 'A' && value.collation.data[k] <= 'Z')
+                    return 0;
+            }
+
+            if ((value.sort_program == UINT32_MAX && value.search_program == UINT32_MAX) ||
+                (value.sort_program != UINT32_MAX && !public_program(data, value.sort_program)) ||
+                (value.search_program != UINT32_MAX && !public_program(data, value.search_program)))
+                return 0;
+        }
+        previous = value;
+    }
+
+    return 1;
+}
+
 QJSIntlStatus qjs_intl_compiled_collation_open(const uint8_t *bytes, size_t length, const uint8_t *expected,
                                                const QJSIntlAllocator *allocator, QJSIntlCompiledCollationData *out)
 {
@@ -366,8 +500,7 @@ QJSIntlStatus qjs_intl_compiled_collation_open(const uint8_t *bytes, size_t leng
 
     if (at != length || data.sections[QJS_INTL_COMPILED_META].count != 1 ||
         data.sections[QJS_INTL_COMPILED_PROGRAMS].count != data.program_count ||
-        data.sections[QJS_INTL_COMPILED_BLOCKS].count != data.program_count ||
-        data.sections[QJS_INTL_COMPILED_BINDINGS].count || data.sections[QJS_INTL_COMPILED_BINDINGS].length)
+        data.sections[QJS_INTL_COMPILED_BLOCKS].count != data.program_count)
         return QJS_INTL_DATA_ERROR;
 
     {
@@ -437,12 +570,26 @@ QJSIntlStatus qjs_intl_compiled_collation_open(const uint8_t *bytes, size_t leng
         previous = program;
     }
 
-    if (label_at != data.sections[QJS_INTL_COMPILED_LABELS].count || block_at != data.sections[QJS_INTL_COMPILED_BLOCKS].length)
+    if (!bindings(&data, &label_at) || label_at != data.sections[QJS_INTL_COMPILED_LABELS].count ||
+        block_at != data.sections[QJS_INTL_COMPILED_BLOCKS].length)
         return QJS_INTL_DATA_ERROR;
 
     data.fingerprint = bytes + 32;
     data.ready = 1;
     *out = data;
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_compiled_collation_binding(const QJSIntlCompiledCollationData *data, uint32_t index,
+                                                  QJSIntlCollationBinding *out)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+
+    if (!data || !data->ready || !out || index >= data->sections[QJS_INTL_COMPILED_BINDINGS].count)
+        return QJS_INTL_INVALID_ARGUMENT;
+
+    binding_view(data, index, out, 0);
     return QJS_INTL_OK;
 }
 
@@ -476,7 +623,7 @@ QJSIntlStatus qjs_intl_compiled_collation_program(const QJSIntlCompiledCollation
 }
 
 QJSIntlStatus qjs_intl_compiled_collation_mapping(const QJSIntlCompiledCollationProgram *p, uint32_t index,
-                                                uint32_t *ce_start, uint32_t *ce_count)
+                                                  uint32_t *ce_start, uint32_t *ce_count)
 {
     const uint8_t *row;
 
