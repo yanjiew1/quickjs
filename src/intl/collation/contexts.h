@@ -15,7 +15,7 @@ typedef struct QJSIntlCollationContext {
 } QJSIntlCollationContext;
 
 /* Storage metadata, not a context matcher. The source_index identifies the
-   allkeys pseudo-contraction which a comparator must replace with this prefix
+   allkeys pseudo-contraction which an element iterator must replace with this prefix
    rule. 'before' describes already-consumed text and must not be emitted again;
    'mapping' holds only the suffix key/CEs. Both borrow unchanged pack bytes.
    Follow pack.h's disjoint-output contract. Missing section is UNSUPPORTED. */
