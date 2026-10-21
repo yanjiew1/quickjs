@@ -4,6 +4,7 @@
 #define QJS_INTL_COMPILER_IR_H
 #include "../../src/intl/common/types.h"
 #include "../../src/intl/native/wire.h"
+#include <string.h>
 
 #define QJS_INTL_IR_UNICODE_VERSION (18u << 16)
 #define QJS_INTL_IR_MAX_SIZE (64u * 1024 * 1024)
@@ -22,6 +23,20 @@ typedef struct QJSIntlIRScalars {
 static inline uint32_t qjs_intl_ir_scalar(const QJSIntlIRScalars *text, uint32_t index)
 {
     return qjs_intl_read_u32(text->bytes + (size_t)index * 4);
+}
+
+/* Counted scalar text versus a host ASCII literal. terminated includes the one
+   trailing scalar NUL used by setting values, never a C-string assumption. */
+static inline int qjs_intl_ir_ascii_equal(const QJSIntlIRScalars *text, const char *value, int terminated)
+{
+    size_t length = strlen(value), i;
+    if (text->count != length + (terminated != 0))
+        return 0;
+    for (i = 0; i < length; i++) {
+        if (qjs_intl_ir_scalar(text, (uint32_t)i) != (unsigned char)value[i])
+            return 0;
+    }
+    return !terminated || !qjs_intl_ir_scalar(text, (uint32_t)length);
 }
 
 enum {
