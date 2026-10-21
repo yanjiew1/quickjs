@@ -24,9 +24,9 @@ typedef struct QJSIntlCollationRankedElements {
    Failure leaves clearable storage; clear before reuse. Arguments are disjoint.
    numeric fixes the mode for the entire scan, independently of later policy. */
 QJSIntlStatus qjs_intl_collation_ranked_elements_init(QJSIntlCollationRankedElements *,
-                                                    const QJSIntlCompiledCollationProgram *,
-                                                    const uint16_t *, size_t, int numeric,
-                                                    const QJSIntlAllocator *);
+                                                      const QJSIntlCompiledCollationProgram *,
+                                                      const uint16_t *, size_t, int numeric,
+                                                      const QJSIntlAllocator *);
 void qjs_intl_collation_ranked_elements_clear(QJSIntlCollationRankedElements *);
 
 /* Emit one CE or one complete adjacent Nd run, without further allocation.
@@ -37,5 +37,5 @@ void qjs_intl_collation_ranked_elements_clear(QJSIntlCollationRankedElements *);
    Reordering, variable/shifted handling and sensitivity belong to comparison.
    After an unexpected data error, clear/abort the scan rather than retrying. */
 QJSIntlStatus qjs_intl_collation_ranked_elements_next(QJSIntlCollationRankedElements *,
-                                                    QJSIntlCollationRankedToken *, int *present);
+                                                      QJSIntlCollationRankedToken *, int *present);
 #endif
