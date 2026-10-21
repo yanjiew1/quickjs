@@ -39,18 +39,19 @@ def fixture(contexts=False):
     return bundle.pack(sections, bytes(32), 'minimal')
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--contexts', action='store_true')
-    parser.add_argument('--output', type=Path, required=True)
-    args = parser.parse_args()
-    binary = fixture(args.contexts)
-    # The normal profile emitter requires locale/string sections. This fixture
-    # intentionally omits those, so emit its validated root-only envelope here.
+def emit(binary, output):
+    # Authored packs omit locale/string sections, so use a small direct emitter.
     lines = ['#include <stddef.h>', '#include <stdint.h>',
              'const uint8_t qjs_intl_collation_fixture_bytes[] = {']
     for at in range(0, len(binary), 12):
         lines.append('    ' + ', '.join('0x%02x' % b for b in binary[at:at + 12]) + ',')
     lines.extend(('};', 'const size_t qjs_intl_collation_fixture_length = %d;' % len(binary), ''))
-    text = '\n'.join(lines)
-    atomic_write(args.output, text.encode('ascii'))
+    atomic_write(output, '\n'.join(lines).encode('ascii'))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--contexts', action='store_true')
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    emit(fixture(args.contexts), args.output)
