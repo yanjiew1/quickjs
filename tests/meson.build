@@ -3215,6 +3215,10 @@ standalone = {
     '../src/cutils/cutils.c',
     unicode_tables,
   ],
+  'test_intl_collation_weights_graph': [
+    'test_intl_collation_weights_graph.c',
+    '../tools/intl/collation-weights.c',
+  ],
   'test_intl_collation_data': [
     'test_intl_collation_data.c',
     '../src/intl/collation/root-data.c',

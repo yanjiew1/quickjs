@@ -109,6 +109,23 @@ bounded; starred expansion has per-program and artifact-wide work budgets,
 checked in a non-allocating preflight before normalization. A format change must
 update the Python writer, C reader, regression fixtures and this description.
 
+`collation-weights.c` provides the compiler's sparse symbolic ordering arena.
+Root IDs denote virtual ordinal coordinates without allocating root nodes.
+Tailored IDs remain stable while adjacent insertions accumulate in hashed root
+gaps. Freezing sorts only touched gaps, assigns final ranks, and records sparse
+prefix offsets for resolving every unchanged root. A root precedes insertions
+in its own gap, preserving the zero sentinel and common root aliases. Node
+provenance records the stronger parents; copied mappings can retain IDs even
+when another mapping is replaced.
+
+This generic arena does not decide relation strength, ignorable bands, logical
+reset extrema, case policy or implicit-primary coalescing. The semantic compiler
+must supply those rules. IDs and final ranks are different domains: bit 31
+marks a tailored ID, but an ordinary root's final rank may also cross that bit.
+Allocation failures preserve the ordering and permit retry. A bounded chain
+test matches the pinned stroke tailoring's 102,038 insertions without creating
+millions of per-program root nodes.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
