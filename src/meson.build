@@ -126,6 +126,7 @@ if intl_enabled
     'quickjs/builtins/intl/supported-values.c',
   )
   support_sources += files(
+    'intl/collation/contexts.c',
     'intl/collation/root-data.c',
     'intl/collation/weights.c',
     'intl/common/decimal.c',
