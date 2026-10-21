@@ -288,7 +288,9 @@ int main(int argc, char **argv)
         if (failed)
             fprintf(stderr, "invalid compiled collation archive (%d)\n", failed);
         else
-            printf("{\"programs\":%u,\"root_mappings\":%u}\n", compiled.program_count, compiled.root.keys.row_count);
+            printf("{\"programs\":%u,\"root_mappings\":%u,\"bindings\":%u}\n",
+                   compiled.program_count, compiled.root.keys.row_count,
+                   compiled.sections[QJS_INTL_COMPILED_BINDINGS].count);
         free(bytes);
         return failed ? 1 : 0;
     }
