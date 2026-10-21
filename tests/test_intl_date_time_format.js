@@ -120,6 +120,20 @@ for (const timeZoneName of ['short', 'long', 'shortOffset', 'longOffset', 'short
             .some(part => part.type === 'timeZoneName'), false);
 }
 
+// A real zone-bearing clock must also remain available when joined to a date.
+// This exercises both clock families without prescribing localized punctuation.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const formatMatcher of ['basic', 'best fit']) {
+        const formatter = new DTF('en', {...utc, year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric',
+            timeZoneName: 'shortGeneric', hourCycle, formatMatcher});
+        const parts = formatter.formatToParts(0);
+        for (const field of ['year', 'month', 'day', 'hour', 'minute', 'second', 'timeZoneName'])
+            assert(parts.some(part => part.type === field));
+        assert(parts.map(part => part.value).join(''), formatter.format(0));
+    }
+}
+
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
 for (const calendar of ['chinese', 'dangi']) {

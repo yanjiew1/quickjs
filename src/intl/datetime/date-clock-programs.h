@@ -18,8 +18,10 @@ typedef struct QJSIntlDateClockPrograms {
     size_t count;
 } QJSIntlDateClockPrograms;
 
-/* Combine unchanged whole no-hour date patterns with at most five representative
-   ordinary clock pairs: HM, HMS and HMS with one/two/three fractional digits.
+/* Combine unchanged whole no-hour date patterns with representative ordinary
+   clock pairs: HM, HMS and HMS with one/two/three fractional digits, retaining
+   each actually admitted timezone-name style independently. Missing clock/style
+   pairs are not synthesized, and only present pairs determine allocation size.
    A date must contain year, month or day; weekday-only append layouts are not
    handled here. A NULL date is absent; optional admitted flags belong to the
    ordinary owner.
