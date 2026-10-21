@@ -6,6 +6,7 @@ import calendar_name_tables
 import calendar_era_tables
 import compact_tables
 import collation_tables
+import collation_contexts
 import currency_tables
 import timezone_name_tables
 import timezone_presentation_tables
@@ -223,6 +224,7 @@ def validate(binary):
             raise ValueError('Intl list contexts lack base templates')
         contexts = decode_contexts(sections[bundle.LIST_CONTEXTS], strings, len(tags))
     numbering = numbering_tables.decode(sections, strings)
+    collation = collation_tables.decode(sections.get(bundle.COLLATION_ROOT))
     return {'envelope': result, 'strings': strings, 'locales': tags,
             'parents': parents, 'lists': lists, 'locale_metadata': locale_tables.decode(sections, strings),
             'preferences': preference_tables.decode(sections, strings), 'list_contexts': contexts,
@@ -251,7 +253,8 @@ def validate(binary):
                 sections.get(bundle.TIMEZONE_PRESENTATION), strings),
             'dayperiod_rules': dayperiod_tables.decode(sections.get(bundle.DAYPERIOD_RULES), strings),
             'calendar_eras': calendar_era_tables.decode(sections.get(bundle.CALENDAR_ERAS), strings),
-            'collation_root': collation_tables.decode(sections.get(bundle.COLLATION_ROOT)),
+            'collation_root': collation,
+            'collation_contexts': collation_contexts.decode(sections.get(bundle.COLLATION_CONTEXTS), collation),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
