@@ -113,9 +113,13 @@ extrema. Group boundaries use the same primary coordinates as executable CEs.
 The writer audits the complete artifact before publishing it atomically. Its
 counted sections, coordinate invariants and versioning are described in
 [`doc/intl-collation-root-format.md`](../../doc/intl-collation-root-format.md).
-`collation-root-input.c` opens a borrowed view, validates its domains with one
-temporary bitmap, and exposes the same CE-free key index as the shared matcher.
-It also checks source context starts with pinned Unicode NFC boundaries. Root
+`collation-root-input.c` owns the compiler envelope, source facts and token
+validation. `src/intl/collation/base.c` owns common logical metadata, key/CE/Han
+validation and queries for both compiler and runtime readers. The compiler
+projects decoded fields/spans into that borrowed view without changing QJCR.
+Its Han and token bitmaps are short-lived, sequential audits; neither is retained.
+The base exposes the same CE-free key index as the shared matcher and checks
+source context starts with pinned Unicode NFC boundaries. Root
 lookup decodes spans from one CE pool; implicit fallback uses the declared Han
 ranks or generic arithmetic and allocates nothing. The compiler's `--audit-root`
 command exercises this reader against the complete pinned artifact in CI.
