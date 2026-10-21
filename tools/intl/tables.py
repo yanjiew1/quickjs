@@ -7,6 +7,7 @@ import calendar_era_tables
 import compact_tables
 import collation_tables
 import collation_contexts
+import collation_bundle
 import currency_tables
 import timezone_name_tables
 import timezone_presentation_tables
@@ -255,6 +256,7 @@ def validate(binary):
             'calendar_eras': calendar_era_tables.decode(sections.get(bundle.CALENDAR_ERAS), strings),
             'collation_root': collation,
             'collation_contexts': collation_contexts.decode(sections.get(bundle.COLLATION_CONTEXTS), collation),
+            'compiled_collation': collation_bundle.decode(sections.get(bundle.COMPILED_COLLATION)),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
