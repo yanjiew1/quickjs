@@ -3,6 +3,13 @@
 #ifndef QJS_INTL_COLLATION_POLICY_H
 #define QJS_INTL_COLLATION_POLICY_H
 
+typedef enum QJSIntlCollationSensitivity {
+    QJS_INTL_COLLATION_VARIANT,
+    QJS_INTL_COLLATION_BASE,
+    QJS_INTL_COLLATION_ACCENT,
+    QJS_INTL_COLLATION_CASE
+} QJSIntlCollationSensitivity;
+
 typedef enum QJSIntlCollationCaseFirst {
     QJS_INTL_COLLATION_CASE_OFF,
     QJS_INTL_COLLATION_UPPER_FIRST,
