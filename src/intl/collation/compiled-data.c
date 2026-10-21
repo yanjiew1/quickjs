@@ -475,6 +475,25 @@ QJSIntlStatus qjs_intl_compiled_collation_program(const QJSIntlCompiledCollation
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_compiled_collation_mapping(const QJSIntlCompiledCollationProgram *p, uint32_t index,
+                                                uint32_t *ce_start, uint32_t *ce_count)
+{
+    const uint8_t *row;
+
+    if (ce_start)
+        *ce_start = 0;
+    if (ce_count)
+        *ce_count = 0;
+
+    if (!p || !p->ready || !ce_start || !ce_count || index >= p->keys.row_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+
+    row = p->keys.rows + (size_t)index * 16;
+    *ce_start = word(row, 2);
+    *ce_count = word(row, 3);
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_compiled_collation_element(const QJSIntlCompiledCollationProgram *p, uint32_t index,
                                                   QJSIntlCollationRankedElement *out)
 {
