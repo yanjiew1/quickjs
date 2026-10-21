@@ -37,6 +37,10 @@
 #include "string.h"
 #include "array.h"
 #include "regexp.h"
+#ifdef CONFIG_INTL
+#include "intl.h"
+#include "../../unicode/case-conversion.h"
+#endif
 
 /* String */
 
@@ -1400,6 +1404,63 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
+#ifdef CONFIG_INTL
+static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val,
+                                           int argc, JSValueConst *argv, int to_lower)
+{
+    static const QJSIntlBytes available[] = {{"az", 2}, {"lt", 2}, {"tr", 2}};
+    JSIntlLocaleList requested;
+    QJSIntlLocaleMatch match;
+    QJSIntlBytes first;
+    UnicodeCaseLocale locale = UNICODE_CASE_DEFAULT;
+    JSValue string, result = JS_EXCEPTION;
+    const char *tag;
+    const uint16_t *input;
+    size_t length;
+    DynBuf output;
+
+    /* Receiver conversion precedes locale access, even for an empty string.
+       Canonicalize the entire list, then match only its first requested tag. */
+    string = JS_ToStringCheckObject(ctx, this_val);
+    if (JS_IsException(string))
+        return string;
+    if (js_intl_canonicalize_locale_list(ctx, argc ? argv[0] : JS_UNDEFINED, &requested))
+        goto done;
+    tag = requested.count ? requested.items[0] : js_intl_default_locale(ctx);
+    if (!tag) {
+        js_intl_locale_list_clear(ctx->rt, &requested);
+        goto done;
+    }
+    first = (QJSIntlBytes){tag, strlen(tag)};
+    if (js_intl_error(ctx, qjs_intl_lookup_matching_locale(available, countof(available),
+                                                         &first, 1, &match), "case locale")) {
+        js_intl_locale_list_clear(ctx->rt, &requested);
+        goto done;
+    }
+    if (match.found)
+        locale = match.available_index == 1 ? UNICODE_CASE_LITHUANIAN : UNICODE_CASE_TURKIC;
+    js_intl_locale_list_clear(ctx->rt, &requested);
+    if (locale == UNICODE_CASE_DEFAULT || JS_VALUE_GET_STRING(string)->len == 0) {
+        result = js_string_toLowerCase(ctx, string, 0, NULL, to_lower);
+        goto done;
+    }
+    input = JS_ToCStringLenUTF16(ctx, &length, string);
+    if (!input)
+        goto done;
+    dbuf_init2(&output, ctx->rt, js_dbuf_realloc);
+    if (unicode_case_convert(&output, input, length, to_lower, locale))
+        JS_ThrowOutOfMemory(ctx);
+    else
+        result = JS_NewStringUTF16(ctx, (const uint16_t *)output.buf,
+                                  output.size / sizeof(uint16_t));
+    dbuf_free(&output);
+    JS_FreeCStringUTF16(ctx, input);
+ done:
+    JS_FreeValue(ctx, string);
+    return result;
+}
+#endif
+
 #ifdef CONFIG_ALL_UNICODE
 
 static JSValue JS_NewUTF32String(JSContext *ctx, const uint32_t *buf, int len)
@@ -1725,8 +1786,13 @@ const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_CFUNC_DEF("valueOf", 0, js_string_toString ),
     JS_CFUNC_MAGIC_DEF("toLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toUpperCase", 0, js_string_toLowerCase, 0 ),
+#ifdef CONFIG_INTL
+    JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_string_toLocaleLowerCase, 1 ),
+    JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_string_toLocaleLowerCase, 0 ),
+#else
     JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_string_toLowerCase, 0 ),
+#endif
     JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, js_create_array_iterator, JS_ITERATOR_KIND_VALUE | 4 ),
     /* ES6 Annex B 2.3.2 etc. */
     JS_CFUNC_MAGIC_DEF("anchor", 1, js_string_CreateHTML, magic_string_anchor ),
