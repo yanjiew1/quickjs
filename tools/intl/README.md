@@ -442,6 +442,16 @@ uses the original NFD text, with the field separator below even NUL and a
 separate end condition. Comparison now accepts strengths 1 through 5; service
 availability and JS options remain separate integration layers.
 
+`collation/collation.h` and `native.c` provide the plain service over the selected
+minimal/native profile. Opening validates compiled bytes and constructs exact
+locale/type slices; capability/default queries allocate nothing. Named-type
+support follows actual sort/search target IDs, not source labels or fallback.
+Public sensitivity, numeric, case-first and punctuation options produce one
+effective policy per handle. Source backwards-secondary/reordering remain with
+the selected program. Handles retain no service arrays or caller option text
+and can be compared after service close because embedded data stays immutable.
+JS coercion, locale matching and realm/GC ownership belong to their callers.
+
 The optional `test_intl_collation_compiled --archive image.qjcl --ordered file`
 audit selects the compiled root/standard program and checks neighboring strings
 in the authenticated full CLDR ordering file. `--ordered-shifted` additionally
