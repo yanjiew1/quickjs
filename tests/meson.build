@@ -2257,6 +2257,7 @@ if intl_enabled
         '../src/intl/collation/contexts.c',
         '../src/intl/collation/elements.c',
         '../src/intl/collation/match.c',
+        '../src/intl/collation/keys.c',
         '../src/intl/collation/logical.c',
         '../src/intl/collation/weights.c',
         '../src/unicode/blocks.c',
@@ -3397,6 +3398,7 @@ if intl_enabled
       '../src/intl/collation/compare.c',
       '../src/intl/collation/elements.c',
       '../src/intl/collation/match.c',
+      '../src/intl/collation/keys.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/root-data.c',
       '../src/intl/collation/weights.c',
@@ -3410,6 +3412,7 @@ if intl_enabled
       'test_intl_collation_elements.c',
       '../src/intl/collation/elements.c',
       '../src/intl/collation/match.c',
+      '../src/intl/collation/keys.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/root-data.c',
       '../src/intl/collation/weights.c',
@@ -3422,6 +3425,7 @@ if intl_enabled
     'test_intl_collation_overlay': files(
       'test_intl_collation_overlay.c',
       '../src/intl/collation/match.c',
+      '../src/intl/collation/keys.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/root-data.c',
       '../src/intl/native/pack.c',
@@ -3459,6 +3463,7 @@ if intl_enabled
       '../tools/intl/collation-relations.c',
       '../tools/intl/collation-weights.c',
       '../src/intl/collation/match.c',
+      '../src/intl/collation/keys.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/root-data.c',
       '../src/intl/native/pack.c',
@@ -4411,6 +4416,14 @@ if intl_enabled
     'intl-collation-fractional-source',
     python,
     args: files('test_intl_collation_fractional.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-collation-root-ordinals',
+    python,
+    args: files('test_intl_collation_ordinals.py'),
     suite: ['repo', 'generator', 'unit'],
     timeout: 30,
   )
