@@ -4313,6 +4313,22 @@ test(
 )
 
 test(
+  'intl-collation-programs',
+  python,
+  args: files('test_intl_collation_programs.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-collation-rules',
+  python,
+  args: files('test_intl_collation_rules.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-collation-tables',
   python,
   args: files('test_intl_collation_tables.py'),
