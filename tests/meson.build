@@ -3330,6 +3330,11 @@ standalone += {
   ) + unicode_tables + files(
     '../src/cutils/cutils.c',
   ),
+  'test_unicode_normalization_boundary': files(
+    'test_unicode_normalization_boundary.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+  ) + unicode_tables,
   'test_fuzz_regexp_timeout': files(
     'test_fuzz_regexp_timeout.c',
     '../src/regexp/compile.c',
