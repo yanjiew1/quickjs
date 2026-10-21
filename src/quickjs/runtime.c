@@ -572,6 +572,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     qjs_intl_list_close(rt->intl_list);
     qjs_intl_plural_close(rt->intl_plural);
     qjs_intl_number_close(rt->intl_number);
+    qjs_intl_collation_close(rt->intl_collation);
     qjs_intl_datetime_close(rt->intl_datetime);
     qjs_intl_relative_close(rt->intl_relative);
     qjs_intl_duration_close(rt->intl_duration);
@@ -750,6 +751,7 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->intl_intrinsics = JS_UNDEFINED;
     ctx->intl_locale_ctor = JS_UNDEFINED;
     ctx->intl_number_ctor = JS_UNDEFINED;
+    ctx->intl_collator_ctor = JS_UNDEFINED;
     ctx->intl_datetime_ctor = JS_UNDEFINED;
     ctx->intl_duration_ctor = JS_UNDEFINED;
     ctx->intl_fallback_symbol = JS_UNDEFINED;
@@ -852,6 +854,7 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
     JS_MarkValue(rt, ctx->intl_intrinsics, mark_func);
     JS_MarkValue(rt, ctx->intl_locale_ctor, mark_func);
     JS_MarkValue(rt, ctx->intl_number_ctor, mark_func);
+    JS_MarkValue(rt, ctx->intl_collator_ctor, mark_func);
     JS_MarkValue(rt, ctx->intl_datetime_ctor, mark_func);
     JS_MarkValue(rt, ctx->intl_duration_ctor, mark_func);
     JS_MarkValue(rt, ctx->intl_fallback_symbol, mark_func);
@@ -939,6 +942,7 @@ void JS_FreeContext(JSContext *ctx)
     JS_FreeValue(ctx, ctx->intl_intrinsics);
     JS_FreeValue(ctx, ctx->intl_locale_ctor);
     JS_FreeValue(ctx, ctx->intl_number_ctor);
+    JS_FreeValue(ctx, ctx->intl_collator_ctor);
     JS_FreeValue(ctx, ctx->intl_datetime_ctor);
     JS_FreeValue(ctx, ctx->intl_duration_ctor);
     JS_FreeValue(ctx, ctx->intl_fallback_symbol);
