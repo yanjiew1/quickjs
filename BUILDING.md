@@ -100,7 +100,9 @@ The delivered formatting APIs are `Intl.ListFormat`, `Intl.PluralRules`, `Intl.N
 `Intl.RelativeTimeFormat`, `Intl.DurationFormat` and `Intl.DisplayNames`, including
 their standard methods. Number and BigInt locale formatting uses the intrinsic
 NumberFormat; Temporal.Duration locale formatting uses the intrinsic DurationFormat when
-Temporal is enabled. DateTimeFormat, its range methods and Date/Temporal locale
+Temporal is enabled. String locale case conversion validates locale requests and
+implements Unicode's Turkish, Azeri and Lithuanian context-sensitive rules.
+DateTimeFormat, its range methods and Date/Temporal locale
 bridges are implemented, with acceptance testing still in progress. Collator and
 Segmenter are not yet implemented. Setup warns about this status; these options do not imply
 complete Intl conformance.
