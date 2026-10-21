@@ -51,6 +51,7 @@ extern const uint32_t unicode_decomp_table1[715];
 extern const uint16_t unicode_decomp_table2[715];
 extern const uint8_t unicode_decomp_data[9598];
 extern const uint16_t unicode_comp_table[965];
+extern const uint32_t unicode_nfc_backward_zero_cc[33];
 typedef enum {
     UNICODE_GC_Cn,
     UNICODE_GC_Lu,

@@ -76,10 +76,17 @@ implementation, and requires every scalar inside starred ranges to be NFD-inert
 before normalization. Compatibility decompositions do not disqualify a scalar;
 canonical decompositions, Hangul syllables and nonzero combining classes do.
 Starred range order remains significant and is not sorted by the serializer.
+For a nonempty context prefix, both original prefix and mapped-string starts
+must have an NFC boundary before them. The shared Unicode query follows the
+canonical first scalar recursively, including newer backward-composing
+composites, and uses a generated sorted CCC0 composition-second list. Unicode
+18 adds 132 table bytes with one C owner. A source CCC/NFC_Quick_Check oracle
+checks every code point in CI; no-prefix relations and extensions retain their
+independent lookup semantics.
 
 This is the compiler input/normalization stage, not completed semantic weight
-allocation. It does not execute settings, prove prefix normalization boundaries,
-or emit executable locale tailorings. Python retains ownership of XML, syntax,
+allocation. It does not execute settings or emit executable locale tailorings.
+Python retains ownership of XML, syntax,
 parents, type aliases and import expansion; it never substitutes its host Unicode
 version for the C algorithms. Normal builds still consume prepared runtime packs.
 The tool runs on the build machine in cross builds; native local sanitizer builds
