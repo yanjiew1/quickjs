@@ -112,6 +112,12 @@ int lre_is_letter(uint32_t c);
 int lre_is_mark(uint32_t c);
 int lre_is_decimal_digit(uint32_t c);
 int lre_is_symbol_or_separator(uint32_t c);
+/* Assigned means General_Category != Cn, including Cs/Co; invalid values false. */
+int lre_is_assigned(uint32_t c);
+int lre_is_unified_ideograph(uint32_t c);
+/* Return a UNICODE_BLOCK_* ID from libunicode-table.h; No_Block is zero.
+   IDs belong to this generated Unicode release and are private interfaces. */
+int unicode_get_block(uint32_t c);
 int unicode_prop(CharRange *cr, const char *prop_name);
 /* Strict ECMAScript property names, independent of private UCD helpers. */
 int lre_unicode_property_allowed(const char *name);
