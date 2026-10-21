@@ -147,6 +147,22 @@ Resolved targets are still source identities here; archive publication maps
 them to checked program IDs. This collector alone does not
 advertise Collator capability or override the specified Intl.Locale exceptions.
 
+`collation_prepare.py` stages root input and import-expanded IR for exactly the
+profile's sort/search targets, invokes the host compiler and atomically publishes
+the bound image after C readback. Standalone private, alternate and unused
+programs are omitted; their imported rules remain inside selected programs.
+The shared logical root is retained once. Staging uses the destination's parent
+directory and is removed on success or failure. Whole-catalog IR remains the
+default for diagnostic audits; `collation_ir.py --profile` selects the same
+target closure without compiling it.
+
+```sh
+python3 tools/intl/collation_prepare.py \
+  --sources build/intl-cache/cldr-49-beta4 --profile minimal \
+  --compiler build/intl-collation-compile \
+  --output build/collation-minimal.qjcl
+```
+
 `collation_ir.py` expands the ordered program catalog into a counted build-time
 artifact. `intl-collation-compile --audit-ir input.qjci` reads it using explicit
 little-endian loads, runs text operands through the engine's pinned Unicode NFD
@@ -425,6 +441,14 @@ weak payload instead of relying on equality assertions. The identical level
 uses the original NFD text, with the field separator below even NUL and a
 separate end condition. Comparison now accepts strengths 1 through 5; service
 availability and JS options remain separate integration layers.
+
+The optional `test_intl_collation_compiled --archive image.qjcl --ordered file`
+audit selects the compiled root/standard program and checks neighboring strings
+in the authenticated full CLDR ordering file. `--ordered-shifted` additionally
+enables shifted handling; both use quaternary strength. Raw and ranked audits
+share only the bounded source-file parser, not their weight readers/comparators.
+CI runs the complete non-ignorable and shifted corpora after compilation; quick
+repository tests retain their small authored fixtures.
 
 ```sh
 python3 tools/intl/collation_archive.py \
