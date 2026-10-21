@@ -24,7 +24,9 @@ jobs:
             -Dintl=native -Dtemporal=true -Db_sanitize=address,undefined
           meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" qjs run-test262
       - name: Run date and Temporal locale API cases
+        shell: bash
         run: |
+          set -o pipefail
           python3 tools/build/test262.py bootstrap
           timeout 900s build/run-test262 -q -t -m \
             -T "$(getconf _NPROCESSORS_ONLN)" \
