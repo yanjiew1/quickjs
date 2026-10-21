@@ -164,6 +164,26 @@ static void check_blocks(UnicodeTableOutput *output)
     }
 }
 
+static void check_nfc_backward_table(void)
+{
+    const ComposeEntry entries[] = {
+        {{0x61, 0x9be}, 0}, {{0x62, 0x11127}, 0}, {{0x63, 0x9be}, 0},
+        {{0x64, 0x301}, 0}, {{0x301, 0x9d7}, 0},
+    };
+    UnicodeTableOutput output = {tmpfile(), tmpfile()};
+    char declaration[256];
+    assert(output.source && output.header);
+    unicode_db[0x301].combining_class = 230;
+    build_nfc_backward_table(&output, entries, countof(entries));
+    assert(!fflush(output.source) && !fflush(output.header));
+    assert(read_table_word(output.source, "unicode_nfc_backward_zero_cc", 0) == 0x9be);
+    assert(read_table_word(output.source, "unicode_nfc_backward_zero_cc", 1) == 0x11127);
+    rewind(output.header);
+    assert(fgets(declaration, sizeof(declaration), output.header));
+    assert(strstr(declaration, "uint32_t unicode_nfc_backward_zero_cc[2]"));
+    assert(!fclose(output.source) && !fclose(output.header));
+}
+
 int main(int argc, char **argv)
 {
     int decomposition = 0x4e3d;
@@ -197,6 +217,7 @@ int main(int argc, char **argv)
     check_declarations(output.header);
     check_break_properties(&output);
     check_blocks(&output);
+    check_nfc_backward_table();
     assert(fclose(output.header) == 0);
     assert(fclose(file) == 0);
     free(unicode_db);
