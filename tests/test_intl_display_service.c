@@ -94,6 +94,62 @@ static void format_oom(const QJSIntlAllocator *allocator, Allocation *state,
     state->fail_at = 0;
 }
 
+static void test_currency_inventory(const QJSIntlAllocator *allocator,
+                                    QJSIntlDisplayService *service, size_t english,
+                                    const QJSIntlBytes *available, size_t count)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlDisplayFormatter *en = formatter(service, english, QJS_INTL_DISPLAY_CURRENCY,
+                                             QJS_INTL_NAME_LONG, 4096), *cv = NULL;
+    QJSIntlBytes current, previous = {0};
+    QJSIntlStatus status;
+    uint32_t cursor = 0;
+    size_t i, listed = 0, before;
+    int usd = 0, historic = 0, xad = 0;
+    for (i = 0; i < count; i++)
+        if (equal(available[i], "cv"))
+            cv = formatter(service, i, QJS_INTL_DISPLAY_CURRENCY, QJS_INTL_NAME_LONG, 4096);
+    for (;;) {
+        QJSIntlNameText result;
+        before = state->calls;
+        state->fail_at = before + 1;
+        status = qjs_intl_display_currency_next(service, &cursor, &current);
+        assert(state->calls == before);
+        state->fail_at = 0;
+        if (status == QJS_INTL_UNSUPPORTED)
+            break;
+        assert(!status && current.length == 3);
+        assert(!listed || memcmp(previous.data, current.data, 3) < 0);
+        previous = current;
+        listed++;
+        usd |= equal(current, "USD");
+        historic |= equal(current, "ADP");
+        xad |= equal(current, "XAD");
+        assert(!equal(current, "QQQ"));
+        assert(!qjs_intl_display_format(en, current, &result));
+        if (!result.found) {
+            /* The pinned data has XAD only in Chuvash. Global capability
+               does not require an English translation of that genuine name. */
+            assert(cv && equal(current, "XAD"));
+            qjs_intl_name_text_clear(allocator, &result);
+            assert(!qjs_intl_display_format(cv, current, &result));
+        }
+        assert(result.found);
+        qjs_intl_name_text_clear(allocator, &result);
+    }
+    assert(!current.data && usd && historic && listed > 250 && xad == !!cv);
+    before = cursor;
+    assert(qjs_intl_display_currency_next(service, &cursor, &current) == QJS_INTL_UNSUPPORTED);
+    assert(!current.data && cursor == before);
+    cursor = UINT32_MAX;
+    assert(qjs_intl_display_currency_next(service, &cursor, &current) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!current.data && cursor == UINT32_MAX);
+    assert(qjs_intl_display_currency_next(NULL, &cursor, &current) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!current.data);
+    qjs_intl_display_formatter_close(en);
+    qjs_intl_display_formatter_close(cv);
+}
+
 int main(void)
 {
     static const char *const codes[] = {"en", "US", "Latn", "USD", "gregory", "year"};
@@ -154,6 +210,7 @@ int main(void)
         source++;
     }
     assert(source == count && english != SIZE_MAX);
+    test_currency_inventory(&allocator, service, english, available, count);
     baseline = state.live;
     for (i = 0; i < QJS_INTL_DISPLAY_TYPE_COUNT; i++) {
         options.type = i;
