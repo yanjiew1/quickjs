@@ -3213,6 +3213,24 @@ standalone += {
   ) + unicode_tables + files(
     '../src/cutils/cutils.c',
   ),
+  'test_unicode_sentence': files(
+    'test_unicode_sentence.c',
+    'unicode_boundary_test.c',
+    '../src/unicode/sentence.c',
+    '../src/unicode/break-properties.c',
+  ) + unicode_tables,
+  'test_unicode_word': files(
+    'test_unicode_word.c',
+    'unicode_boundary_test.c',
+    '../src/unicode/word.c',
+    '../src/unicode/break-properties.c',
+  ) + unicode_tables,
+  'test_unicode_grapheme': files(
+    'test_unicode_grapheme.c',
+    'unicode_boundary_test.c',
+    '../src/unicode/grapheme.c',
+    '../src/unicode/break-properties.c',
+  ) + unicode_tables,
   'test_unicode_break_properties': files(
     'test_unicode_break_properties.c',
     '../src/unicode/break-properties.c',
