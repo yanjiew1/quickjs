@@ -87,6 +87,8 @@ jobs:
       run: |
         timeout 60s python3 tools/intl/collation_fractional.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+        timeout 60s python3 tools/intl/collation_ordinals.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit compiler input with the pinned Unicode implementation
       run: |
         timeout 90s python3 tools/intl/collation_ir.py \
