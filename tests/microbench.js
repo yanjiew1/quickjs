@@ -1459,6 +1459,33 @@ function intl_display_currency(n)
     return n * 100;
 }
 
+// Contrast common short normalization with a disordered nonstarter run.
+// Cache source strings per case; fresh JavaScript processes reset the cache.
+function string_normalize_short(n)
+{
+    var source = string_normalize_short.source || (string_normalize_short.source = "cafe\u0301");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = source.normalize("NFC");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function string_normalize_long(n)
+{
+    var source = string_normalize_long.source ||
+        (string_normalize_long.source = "\u0301\u0300\u0323".repeat(128));
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = source.normalize("NFD");
+        global_res = result;
+    }
+    return n * 100;
+}
+
 /* Fixed UTC input keeps date workloads independent of host zone and clock.
    Formatting cases prepare once on their first call, then reuse that state
    across repeated timing trials. A fresh process resets each case's cache;
@@ -2227,6 +2254,11 @@ function main(argc, argv, g)
     var tests = [];
     var i, j, n, f, name, found;
     var ref_file, new_ref_file = "microbench-new.txt";
+
+    if (typeof String.prototype.normalize === "function") {
+        test_list.push(string_normalize_short);
+        test_list.push(string_normalize_long);
+    }
 
     if (typeof BigInt === "function") {
         /* BigInt test */
