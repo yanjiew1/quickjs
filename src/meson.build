@@ -81,6 +81,7 @@ support_sources = files(
   'unicode/case-conversion.c',
   'unicode/category.c',
   'unicode/break-properties.c',
+  'unicode/grapheme.c',
   'cutils/cutils.c',
   'quickjs-libc/event-loop.c',
   'quickjs-libc/host.c',
