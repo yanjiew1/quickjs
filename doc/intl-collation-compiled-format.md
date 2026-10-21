@@ -10,8 +10,10 @@ serialized.
 The C compiler emits a standalone archive without resolved locale/type bindings.
 The publication wrapper can attach a prepared profile's resolved bindings and
 semantically read back the final image. This remains a data integration stage,
-not advertised native Collator support; prepared QJIN packs remain normal build
-inputs. Version 2 defines populated bindings; version 1 is not accepted.
+not advertised native Collator support. Prepared QJIN packs embed the complete
+profile archive in [section 38](intl-data-sections.md#38--compiled-collation-programs-and-resolved-bindings)
+and remain normal build inputs. Version 2 defines populated bindings; version 1
+is not accepted.
 
 ## Envelope
 
