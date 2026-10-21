@@ -114,13 +114,7 @@ def generate(sources, profile):
     lists = list_patterns.collect(inputs_read, graph)
     # Only formatter locale rows are reduced for minimal. Global identity,
     # preferences and timezone metadata retain their full source coverage.
-    if profile == 'native':
-        tags = graph.tags
-    else:
-        # Retain the explicit US identifier as well as generic English. Sparse
-        # authored source fixtures need not contain every production seed.
-        seeds = (locale for locale in ('en', 'en-US') if locale in graph.tags)
-        tags = tuple(sorted({tag for locale in seeds for tag in graph.chain(locale)}))
+    tags = availability.profile_locales(graph, profile)
     selected_tags = set(tags)
     symbol_data['rows'] = tuple(row for row in symbol_data['rows'] if row[0] in selected_tags)
     pattern_data['rows'] = tuple(row for row in pattern_data['rows'] if row[0] in selected_tags)
