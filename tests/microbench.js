@@ -1460,7 +1460,9 @@ function intl_display_currency(n)
 }
 
 /* Fixed UTC input keeps date workloads independent of host zone and clock.
-   Formatting cases prepare a reusable formatter outside the inner loop. */
+   Formatting cases prepare once on their first call, then reuse that state
+   across repeated timing trials. A fresh process resets each case's cache;
+   constructor and Date locale workloads intentionally retain construction. */
 function intl_date_construct(n)
 {
     var options = { timeZone: "UTC", dateStyle: "medium", timeStyle: "medium" };
@@ -1475,9 +1477,13 @@ function intl_date_construct(n)
 
 function intl_date_format(n)
 {
-    var format = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
-    }).format;
+    var format = intl_date_format.format;
+    if (!format) {
+        format = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+        }).format;
+        intl_date_format.format = format;
+    }
     var base = Date.UTC(2024, 0, 1), i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
@@ -1489,9 +1495,13 @@ function intl_date_format(n)
 
 function intl_date_parts(n)
 {
-    var formatter = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
-    });
+    var formatter = intl_date_parts.formatter;
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+        });
+        intl_date_parts.formatter = formatter;
+    }
     var base = Date.UTC(2024, 0, 1), i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
@@ -1503,9 +1513,13 @@ function intl_date_parts(n)
 
 function intl_date_range_format(n)
 {
-    var formatter = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
-    });
+    var formatter = intl_date_range_format.formatter;
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
+        });
+        intl_date_range_format.formatter = formatter;
+    }
     var base = Date.UTC(2024, 0, 1), day = 86400000, i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
@@ -1517,9 +1531,13 @@ function intl_date_range_format(n)
 
 function intl_date_range_parts(n)
 {
-    var formatter = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
-    });
+    var formatter = intl_date_range_parts.formatter;
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", year: "numeric", month: "short", day: "numeric"
+        });
+        intl_date_range_parts.formatter = formatter;
+    }
     var base = Date.UTC(2024, 0, 1), day = 86400000, i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
@@ -1531,9 +1549,13 @@ function intl_date_range_parts(n)
 
 function intl_date_zone(n)
 {
-    var format = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", hour: "numeric", minute: "2-digit", timeZoneName: "longOffset"
-    }).format;
+    var format = intl_date_zone.format;
+    if (!format) {
+        format = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", hour: "numeric", minute: "2-digit", timeZoneName: "longOffset"
+        }).format;
+        intl_date_zone.format = format;
+    }
     var base = Date.UTC(2024, 0, 1), i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
@@ -1558,10 +1580,19 @@ function intl_date_locale(n)
 
 function intl_date_temporal(n)
 {
-    var format = new Intl.DateTimeFormat("en", {
-        timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
-    }).format;
-    var value = new Temporal.PlainDateTime(2024, 1, 1, 12, 34, 56), i, j, result;
+    var format = intl_date_temporal.format;
+    if (!format) {
+        format = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", dateStyle: "medium", timeStyle: "medium"
+        }).format;
+        intl_date_temporal.format = format;
+    }
+    var value = intl_date_temporal.value;
+    if (!value) {
+        value = new Temporal.PlainDateTime(2024, 1, 1, 12, 34, 56);
+        intl_date_temporal.value = value;
+    }
+    var i, j, result;
     for (j = 0; j < n; j++) {
         for (i = 0; i < 100; i++)
             result = format(value);
