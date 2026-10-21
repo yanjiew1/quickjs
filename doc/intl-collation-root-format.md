@@ -118,10 +118,14 @@ from assigning protected coordinates to the wrong group.
 
 `qjs_intl_root_input_open()` borrows immutable bytes and copies a CE-independent
 key-index view. It checks every pool once and retains only CE spans per mapping,
-with no expanded copy of shared vectors. Temporary allocation is one bounded
-bitmap reused for the exact Han permutation and unique token names; it is
-released before success or failure. Allocation failure remains distinguishable
-from malformed input. Lookup and implicit fallback allocate nothing.
+with no expanded copy of shared vectors. Common metadata, key/CE/Han validation
+and queries belong to `src/intl/collation/base.{h,c}`; the QJCR adapter projects
+its decoded fields/spans into that owner. Compiler reset facts, weak facts,
+source-marker constraints and token vocabulary remain in the host reader.
+The base's temporary Han-permutation bitmap is released before the host audits
+token uniqueness with its own bitmap. Neither allocation is retained, including
+on failure. Allocation failure remains distinguishable from malformed input.
+Lookup and implicit fallback allocate nothing; the wire layout is unchanged.
 
 The reader checks both original context starts with pinned Unicode NFC boundary
 properties. These checks belong in C, independently of Python's structural audit.
