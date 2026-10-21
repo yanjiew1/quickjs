@@ -3213,6 +3213,10 @@ standalone += {
   ) + unicode_tables + files(
     '../src/cutils/cutils.c',
   ),
+  'test_unicode_break_properties': files(
+    'test_unicode_break_properties.c',
+    '../src/unicode/break-properties.c',
+  ) + unicode_tables,
   'test_unicode_oom': files(
     'test_unicode_oom.c',
     '../src/regexp/compile.c',
