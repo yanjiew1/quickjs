@@ -106,3 +106,43 @@ QJSIntlStatus qjs_intl_collation_context_at(const QJSIntlCollationContexts *view
     context_at(view, index, out);
     return QJS_INTL_OK;
 }
+
+QJSIntlStatus qjs_intl_collation_contexts_keys(const QJSIntlCollationContexts *view,
+                                               QJSIntlCollationKeyIndex *out)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!view || !out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (!view->section.bytes || !view->root.section.bytes)
+        return QJS_INTL_UNSUPPORTED;
+    *out = (QJSIntlCollationKeyIndex){view->root.mappings, view->root.keys,
+        view->section.bytes + 8, view->root.section.count, view->root.key_count, view->section.count};
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_collation_contexts_mapping(const QJSIntlCollationContexts *view, uint32_t source,
+                                                  QJSIntlCollationEntry *out)
+{
+    uint32_t low = 0, high;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!view || !view->section.bytes || !out || source >= view->root.section.count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    high = view->section.count;
+    while (low < high) {
+        uint32_t middle = low + (high - low) / 2;
+        uint32_t id = word(view->section.bytes + 8 + (size_t)middle * 12, 0);
+        if (id < source)
+            low = middle + 1;
+        else if (id > source)
+            high = middle;
+        else {
+            QJSIntlCollationContext context;
+            context_at(view, middle, &context);
+            *out = context.mapping;
+            return QJS_INTL_OK;
+        }
+    }
+    return qjs_intl_collation_root_entry_at(&view->root, source, out);
+}
