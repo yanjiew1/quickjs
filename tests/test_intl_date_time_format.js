@@ -166,12 +166,56 @@ for (const hourCycle of ['h12', 'h23']) {
     }
 }
 
+// Era belongs to the date operand, including a weekday-bearing date joined
+// with a clock. Request widths honestly and retain plain Temporal filtering.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const formatMatcher of ['basic', 'best fit']) {
+        for (const era of ['short', 'long', 'narrow']) {
+            const formatter = new DTF('en', {...utc, weekday: 'short', era,
+                year: 'numeric', month: 'numeric', day: 'numeric',
+                hour: 'numeric', minute: 'numeric', second: 'numeric',
+                timeZoneName: 'short', hourCycle, formatMatcher});
+            assert(formatter.resolvedOptions().era, era);
+            const parts = formatter.formatToParts(0);
+            assert(parts.some(part => part.type === 'era'));
+            assert(parts.some(part => part.type === 'weekday'));
+            assert(parts.some(part => part.type === 'timeZoneName'));
+            assert(parts.map(part => part.value).join(''), formatter.format(0));
+            const before = new Date(0), after = new Date(0);
+            before.setUTCFullYear(0);
+            after.setUTCFullYear(1);
+            const eraPart = value => formatter.formatToParts(value).find(part => part.type === 'era').value;
+            assert(eraPart(before) !== eraPart(after));
+            if (typeof Temporal !== 'undefined') {
+                for (const value of [new Temporal.PlainDate(2024, 1, 2),
+                                     new Temporal.PlainDateTime(2024, 1, 2, 12, 34, 56)]) {
+                    const plainParts = formatter.formatToParts(value);
+                    assert(plainParts.some(part => part.type === 'era'));
+                    assert(plainParts.some(part => part.type === 'timeZoneName'), false);
+                }
+            }
+        }
+    }
+}
+
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
 for (const calendar of ['chinese', 'dangi']) {
     const lunisolar = new DTF('en', {...utc, calendar});
-    if (lunisolar.resolvedOptions().calendar !== calendar)
-        continue; // An ISO-only arithmetic build cannot select these calendars.
+    if (lunisolar.resolvedOptions().calendar !== calendar) {
+        // An ISO-only arithmetic build negotiates the English Gregorian
+        // default, whose requested era must still be formatted normally.
+        const fallback = new DTF('en', {...utc, calendar, era: 'short',
+            year: 'numeric', month: 'numeric', day: 'numeric'});
+        assert(fallback.resolvedOptions().calendar, 'gregory');
+        assert(fallback.formatToParts(0).some(part => part.type === 'era'), true);
+        continue;
+    }
+    // These calendars have no canonical eras. A requested era cannot invent a
+    // name or make an otherwise supported date formatter unavailable.
+    const noEra = new DTF('en', {...utc, calendar, era: 'short',
+        year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(0);
+    assert(noEra.some(part => part.type === 'era'), false);
     const parts = lunisolar.formatToParts(Date.UTC(2000, 0, 1));
     assert(parts.find(part => part.type === 'relatedYear').value, '1999');
     assert(parts.find(part => part.type === 'month').value, '11');
