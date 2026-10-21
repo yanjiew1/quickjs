@@ -728,3 +728,23 @@ upper-threshold check that would also erase reserved U+FFFE. Symbols, currency,
 trailing weights and implicit continuations remain significant. The CI shifted
 ordering audit checks only the implemented first three levels, allowing ties
 which the source file's fourth level may distinguish.
+
+### Tailoring source syntax (no executable section yet)
+
+`tools/intl/collation_rules.py` collects the pinned release's ordered rule
+programs before semantic compilation. Source-located nodes retain reset
+positions, relation strengths, prefix and extension strings, starred scalar
+ranges, settings, imports, suppression and optimization commands. Tool escapes
+are decoded before rule syntax; decoded syntax and whitespace still require
+apostrophe quoting to be literals. Unquoted whitespace ends a rule string.
+UnicodeSet commands accept the pinned scalar/range/pattern-escape subset and
+reject unsupported operators instead of discarding them.
+
+Programs retain locale, type, alternate, draft and reference metadata. An empty
+root standard program is present data, distinct from missing or alternate
+programs. Repeated operations/imports stay ordered. Source positions identify
+the XML collation and original rule-text line/column, not an invented absolute
+XML line. Import alias resolution, collation-specific inheritance, recursive
+import expansion, NFD-inert star validation, canonical closure and CE allocation
+belong to later semantic compilation. This collector creates no binary section
+and advertises no executable locale collation capability.
