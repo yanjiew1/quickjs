@@ -951,6 +951,19 @@ int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
     return 0;
 }
 
+/* NFD has no Quick_Check=Maybe values. Canonical decomposition, including
+   algorithmic Hangul, is the only reason a single code point is not NFD.
+   Whole strings must additionally be in canonical combining-class order. */
+int unicode_nfd_quick_check(uint32_t c)
+{
+    uint32_t decomposition[UNICODE_DECOMP_LEN_MAX];
+    if (c < 0x80)
+        return TRUE;
+    if (c > 0x10ffff || (c >= 0xac00 && c < 0xd7a4))
+        return FALSE;
+    return unicode_decomp_char(decomposition, c, FALSE) == 0;
+}
+
 /* return 0 if no pair found */
 #ifndef USE_TEST
 static
