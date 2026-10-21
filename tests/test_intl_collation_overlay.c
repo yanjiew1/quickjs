@@ -1,6 +1,7 @@
 /* Composite lookup fixtures: provider identity must not change matching rules.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/collation/match.h"
+#include "../src/intl/collation/contexts.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,10 +159,12 @@ static void check(const QJSIntlCollationContexts *data, const Source *source,
     QJSIntlAllocator allocator = {NULL, allocate, resize, release};
     QJSIntlCollationOverlay view = overlay(source);
     QJSIntlCollationMatch match;
+    QJSIntlCollationKeyIndex keys;
     QJSIntlCollationMatchResult result;
     int present;
     size_t i;
-    assert(!qjs_intl_collation_match_init_overlay(&match, data, text, length, &view, &allocator));
+    assert(!qjs_intl_collation_contexts_keys(data, &keys));
+    assert(!qjs_intl_collation_match_init_overlay(&match, &keys, text, length, &view, &allocator));
     memset(&view, 0, sizeof(view)); /* Callbacks are copied, not borrowed. */
     for (i = 0; i < count; i++) {
         uint32_t value;
@@ -173,8 +176,10 @@ static void check(const QJSIntlCollationContexts *data, const Source *source,
         } else {
             QJSIntlCollationElement ce;
             assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT);
-            assert(result.entry.element_count == 1);
-            assert(!qjs_intl_collation_element_at(&result.entry, 0, &ce));
+            QJSIntlCollationEntry entry;
+            assert(!qjs_intl_collation_contexts_mapping(data, result.mapping_id, &entry));
+            assert(entry.element_count == 1);
+            assert(!qjs_intl_collation_element_at(&entry, 0, &ce));
             value = ce.primary ? ce.primary : SECONDARY(ce.secondary);
         }
         assert(value == expected[i]);
@@ -259,11 +264,74 @@ static void suppression(const QJSIntlCollationContexts *data)
     CHECK(({'b','l',0xb7}), ({0x3500,OVERLAY(1)}));
 }
 
+static void put32(uint8_t *out, uint32_t value)
+{
+    unsigned int i;
+    for (i = 0; i < 4; i++)
+        out[i] = value >> (8 * i);
+}
+
+static void key_index_splits(void)
+{
+    static const char *const texts[] = {
+        "a", "abc", "abc", "abc", "abcd", "b", "c", "d", "x", "xa", "xab", "ya"
+    };
+    static const struct {
+        uint16_t text[4];
+        uint32_t length, ids[2], suffixes[2], count;
+    } cases[] = {
+        {{'a','b','c'}, 3, {1}, {3}, 1},
+        {{'a','b','c','d'}, 4, {4}, {4}, 1},
+        {{'x','a','b','c'}, 4, {10,3}, {3,1}, 2},
+        {{'y','a','b','c'}, 4, {11,2}, {2,2}, 2}
+    };
+    uint8_t rows[12 * 16], keys[25 * 4], contexts[2 * 12];
+    QJSIntlCollationKeyIndex index = {rows, keys, contexts, 12, 25, 2};
+    QJSIntlAllocator allocator = {NULL, allocate, resize, release};
+    uint32_t i, at = 0;
+    size_t c;
+    for (i = 0; i < 12; i++) {
+        uint32_t length = strlen(texts[i]), j;
+        put32(rows + i * 16, at);
+        put32(rows + i * 16 + 4, length);
+        /* Opaque payload fields belong to an absent test emitter. The matcher
+           must never form CE pointers or interpret their values. */
+        put32(rows + i * 16 + 8, UINT32_MAX);
+        put32(rows + i * 16 + 12, UINT32_MAX);
+        for (j = 0; j < length; j++)
+            put32(keys + at++ * 4, texts[i][j]);
+    }
+    assert(at == 25);
+    for (i = 0; i < 2; i++) {
+        put32(contexts + i * 12, i + 2);
+        put32(contexts + i * 12 + 4, i + 1);
+        put32(contexts + i * 12 + 8, UINT32_MAX); /* Reader-specific, not CE skip here. */
+    }
+    /* The three abc terminals have prefix splits 0/1/2. Stepping to abcd must
+       skip ALL terminals; selecting context must use its exact prefix split. */
+    for (c = 0; c < sizeof(cases) / sizeof(*cases); c++) {
+        QJSIntlCollationMatch match;
+        QJSIntlCollationMatchResult result;
+        int present;
+        assert(!qjs_intl_collation_match_init(&match, &index, cases[c].text,
+                                             cases[c].length, &allocator));
+        for (i = 0; i < cases[c].count; i++) {
+            assert(!qjs_intl_collation_match_next(&match, &result, NULL, &present) && present);
+            assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT);
+            assert(result.mapping_id == cases[c].ids[i]);
+            assert(result.suffix_length == cases[c].suffixes[i]);
+        }
+        assert(!qjs_intl_collation_match_next(&match, &result, NULL, &present) && !present);
+        qjs_intl_collation_match_clear(&match);
+    }
+}
+
 int main(void)
 {
     QJSIntlPack pack;
     QJSIntlCollationContexts data;
     QJSIntlCollationMatch match;
+    QJSIntlCollationKeyIndex keys;
     QJSIntlCollationOverlay invalid = {0};
     QJSIntlAllocator allocator = {NULL, allocate, resize, release};
     assert(!qjs_intl_pack_open(qjs_intl_collation_fixture_bytes,
@@ -273,7 +341,9 @@ int main(void)
     prefixes(&data);
     discontiguous(&data);
     suppression(&data);
-    assert(qjs_intl_collation_match_init_overlay(&match, &data, NULL, 0, &invalid, &allocator) ==
+    key_index_splits();
+    assert(!qjs_intl_collation_contexts_keys(&data, &keys));
+    assert(qjs_intl_collation_match_init_overlay(&match, &keys, NULL, 0, &invalid, &allocator) ==
            QJS_INTL_INVALID_ARGUMENT);
     qjs_intl_collation_match_clear(&match);
     return 0;

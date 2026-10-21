@@ -80,11 +80,25 @@ Han references remain symbolic rather than adopting ICU's implicit byte
 encoding. Declared ideograph ranges retain their order, and the radical-stroke
 section is expanded and checked for exact membership with no duplicates. The
 latter supports CLDR's `unihan` root-order assumptions. FDD0 synthetic records
-(including incomplete numeric anchors) remain separate from executable mappings.
+(including numeric reservations) remain separate from executable mappings.
 Footer `last regular` is retained as a source fact; TR35's logical reset instead
-uses the artificial first-Hani boundary. Python does not normalize with its host
-Unicode version. Runtime ordinal encoding and ranked root integration follow
-this source stage.
+uses the artificial first-Hani boundary. Original root keys are retained;
+lookup input and tailoring keys normalize to NFD with pinned C Unicode. Do not
+synthesize new normalized-root contractions: even baseline-equivalent ones could
+hide subsequent tailoring of component characters.
+
+`collation_ordinals.py` assigns sorted explicit primary coordinates and reserves
+virtual Han and generic implicit domains. Han uses the authenticated radical
+order; generic positions are arithmetic across all code points, including
+ill-formed UTF-16 fallback units. The generic interval is strictly after the
+source E4 unassigned-group boundary and before the fixed E5 trailing boundary.
+E0/E4 remain named source marker facts, separate from current-map reset extrema.
+No million-entry generic table is created.
+Secondary/ordinary-tertiary coordinates preserve common aliases 32/2 and source
+ignorable boundaries. Independent case bits do not enter ordinary T ordering.
+Every executable CE is checked against WF1/WF2; FDD0 synthetic reservations stay
+outside that check. U+FFFE remains fixed and nonvariable, even below variable
+top. Runtime ordinal encoding and ranked root integration follow this catalog.
 
 ### Host collation compiler input
 
@@ -162,11 +176,13 @@ Ordinary `P << 16` and implicit `(head << 16) | tail` keys map arithmetically to
 7,471,103 virtual nonzero root coordinates, with zero remaining ignorable. The
 domain includes unused anchors but preserves real root order; it needs no
 per-codepoint table. Exhaustive ordinal adjacency tests and both prepared
-profiles' actual NFD/lookup streams validate this bridge. Current production
-comparison still uses raw root weights; compiler/ranked comparison integration
-is subsequent work.
+profiles' actual NFD/lookup streams validate this bridge. The diagnostic comparator
+uses raw root weights; semantic compilation uses the direct FractionalUCA catalog.
+Ranked comparison integration is subsequent work.
 
 `collation-relations.c` executes one ordered relation over those stable IDs.
+It copies the root catalog's maxima, common aliases and protected boundaries;
+case input is explicit metadata, independent of raw or allocated tertiary IDs.
 It copies the reset cursor, modifies the last CE strong enough for a non-equality
 relation, drops following weaker CEs, and resets lower levels to shared common
 aliases. Separate ordinary/ignorable weak-weight bands preserve UCA WF2, even
@@ -190,7 +206,15 @@ length, saves full contiguous checkpoints, and permits discontiguous extension
 only from a real full mapping. This lets compilation use the same canonical
 blocking and preceding-context behavior as execution. It returns a mapping,
 unmatched scalar or optional numeric run; CE decoding, implicit weights and
-comparison policy remain in consumers. Optional overlay queries merge with root
+comparison policy remain in consumers. Its CE-free `keys.c` view reads only key
+spans and prefix splits from borrowed mapping/context rows. The matcher returns
+a stable mapping ID and matched suffix length; raw or logical readers own all
+payload interpretation. Equal combined keys can retain different prefix splits,
+such as plain `abc`, `a|bc` and `ab|c`. Terminal selection uses the requested
+split, and stepping deeper skips the complete terminal run. Raw prefix CE skip
+information stays in the diagnostic raw reader, rather than the shared matcher.
+
+Optional overlay queries merge with root
 cursors before choosing a terminal: longest prefix first, then longest suffix,
 with overlay replacement only for an identical key. A shorter tailored mapping
 does not hide an inherited contraction. Suppression filters inherited contexts
