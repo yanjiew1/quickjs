@@ -25,7 +25,7 @@ set -e
 version="18.0.0"
 url="https://www.unicode.org/Public"
 
-files="CaseFolding.txt DerivedNormalizationProps.txt PropList.txt \
+files="Blocks.txt CaseFolding.txt DerivedNormalizationProps.txt PropList.txt \
 SpecialCasing.txt CompositionExclusions.txt ScriptExtensions.txt \
 UnicodeData.txt DerivedCoreProperties.txt NormalizationTest.txt Scripts.txt \
 PropertyValueAliases.txt"
