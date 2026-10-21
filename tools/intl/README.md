@@ -190,7 +190,15 @@ length, saves full contiguous checkpoints, and permits discontiguous extension
 only from a real full mapping. This lets compilation use the same canonical
 blocking and preceding-context behavior as execution. It returns a mapping,
 unmatched scalar or optional numeric run; CE decoding, implicit weights and
-comparison policy remain in consumers. Optional overlay queries merge with root
+comparison policy remain in consumers. Its CE-free `keys.c` view reads only key
+spans and prefix splits from borrowed mapping/context rows. The matcher returns
+a stable mapping ID and matched suffix length; raw or logical readers own all
+payload interpretation. Equal combined keys can retain different prefix splits,
+such as plain `abc`, `a|bc` and `ab|c`. Terminal selection uses the requested
+split, and stepping deeper skips the complete terminal run. Raw prefix CE skip
+information stays in the diagnostic raw reader, rather than the shared matcher.
+
+Optional overlay queries merge with root
 cursors before choosing a terminal: longest prefix first, then longest suffix,
 with overlay replacement only for an identical key. A shorter tailored mapping
 does not hide an inherited contraction. Suppression filters inherited contexts
