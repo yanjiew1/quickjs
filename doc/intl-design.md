@@ -880,11 +880,21 @@ or revive masked sources. No-hour groups copy one source without a 12-hour
 program. Copied programs survive releasing both input owners; diagnostic source
 indexes require the original pool for any later provenance lookup.
 
-`datetime/style-program.[ch]` compiles exact selected styles separately from
+Native semantic preparation includes a compatibility workaround for CLDR
+calendar-date patterns that mistakenly use week-year `Y`: when a pattern has
+an unquoted month (`M` or `L`) and no week fields (`w` or `W`), interpret `Y` as
+calendar-year `y`, preserving its width and the pattern's punctuation. Weekday
+fields and quoted letters do not change this condition. This project policy
+is not required by ECMA-402 or LDML. The lexical compiler, raw pack strings and
+source provenance remain unchanged. Apply it before pattern/skeleton projection
+and before splitting a complete interval into endpoints; calendar arithmetic
+continues to use the requested calendar.
+
+`datetime/style-program.[ch]` compiles selected styles separately from
 available-pattern matching. Pattern and independent skeleton provenance retain
 raw numbering overrides; numeric rendering still uses the resolved ECMA
-NumberingSystem. Date/time family mixing and unsupported semantic fields such
-as week-year Y remain unsupported exact sources. Single-date
+NumberingSystem. Date/time family mixing and semantic fields outside the
+supported projection/workaround remain unsupported sources. Single-date
 composition accepts a selected date and a complete, compatible time pair. With
 both, the connector uses the requested date style width: usable atTime first,
 then standard; missing/blocked/empty forms do not revive masked parents or try
@@ -893,9 +903,9 @@ owned token programs, retain source facts, and verify the final component union,
 year kinds and auxiliary period semantics. This supplies no ranges, missing
 hour-family synthesis, renderer admission or public formatter capability.
 
-`datetime/style-date.[ch]` is native DATE preparation above that exact source
-compiler. Preserve the original selected style and independent skeleton. Only a
-single width-one Y with otherwise supported date-only fields may explicitly
+`datetime/style-date.[ch]` is native DATE preparation above that source
+compiler. Preserve the original selected style and independent skeleton. A
+remaining width-one Y with otherwise supported date-only fields may explicitly
 request a calendar-year alternative. Choose a real visible whole y-only available
 pattern in the supplied source catalog, retaining its punctuation and field order.
 Prefer exact component widths; otherwise permit only SHORT-to-LONG month/weekday
