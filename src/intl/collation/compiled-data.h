@@ -62,6 +62,8 @@ QJSIntlStatus qjs_intl_compiled_collation_program(const QJSIntlCompiledCollation
                                                   QJSIntlCompiledCollationProgram *);
 QJSIntlStatus qjs_intl_compiled_collation_element(const QJSIntlCompiledCollationProgram *, uint32_t index,
                                                   QJSIntlCollationRankedElement *);
+QJSIntlStatus qjs_intl_compiled_collation_mapping(const QJSIntlCompiledCollationProgram *, uint32_t index,
+                                                uint32_t *ce_start, uint32_t *ce_count);
 QJSIntlStatus qjs_intl_compiled_collation_root_element(const QJSIntlCompiledCollationProgram *, uint32_t index,
                                                        QJSIntlCollationRankedElement *);
 QJSIntlStatus qjs_intl_compiled_collation_implicit(const QJSIntlCompiledCollationProgram *, uint32_t code,
