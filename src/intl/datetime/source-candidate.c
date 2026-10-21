@@ -79,6 +79,7 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
         status = qjs_intl_date_pattern_compile(allocator, record.source.text, &record.pattern);
         if (status)
             goto fail;
+        qjs_intl_date_pattern_fix_calendar_year(&record.pattern);
         status = qjs_intl_date_pattern_info(&record.pattern, &record.info);
         if (status || !useful(&record.info)) {
             qjs_intl_date_pattern_clear(allocator, &record.pattern);
