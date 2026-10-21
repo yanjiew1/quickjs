@@ -20,6 +20,9 @@ enum {
 
 typedef struct QJSIntlDateOrdinaryProgram {
     QJSIntlDateSinglePrograms single;
+    /* Original clock widths before adaptation: normal, then twelve-hour.
+       Zero denotes no retained clock source. Derived programs inherit these. */
+    unsigned char source_hour_width[2];
     /* Evidence is retained per normal/twelve-hour source family. */
     unsigned char source_month_kinds[2];
     unsigned char source_period_widths[2];
