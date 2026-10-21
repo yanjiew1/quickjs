@@ -1,8 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-root-input.h"
 #include "../../src/intl/native/wire.h"
-#include "../../src/cutils/cutils.h"
-#include "../../src/unicode/libunicode.h"
 #include <string.h>
 
 #define ROOT_MAX_SIZE (64u * 1024 * 1024)
@@ -15,11 +13,6 @@
 static uint32_t word(const uint8_t *p, size_t index)
 {
     return qjs_intl_read_u32(p + index * 4);
-}
-
-static int scalar(uint32_t code)
-{
-    return code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
 }
 
 static int metadata(QJSIntlRootInput *view)
@@ -48,139 +41,11 @@ static int metadata(QJSIntlRootInput *view)
     m->numeric = word(p, 15);
     m->field_separator = word(p, 16);
     m->last_regular = word(p, 17);
-    return r->secondary_common && r->secondary_common < r->secondary_boundary &&
-        r->secondary_boundary <= r->secondary_max &&
-        r->tertiary_common && r->tertiary_common < r->tertiary_boundary &&
-        r->tertiary_boundary <= r->tertiary_max &&
-        m->han_count && m->han_count <= 0x110000 && m->generic_count == 0x110000 &&
-        m->field_separator && m->field_separator < m->variable_top &&
-        m->variable_top < m->numeric && m->numeric < m->han_base &&
-        (uint64_t)m->han_base + m->han_count < m->implicit_first_marker &&
+    /* Common coordinate/CE/Han invariants belong to the base reader. These
+       constraints describe compiler-only source markers and reset seeds. */
+    return (uint64_t)m->han_base + m->han_count < m->implicit_first_marker &&
         m->implicit_first_marker < m->implicit_last_marker &&
-        m->implicit_last_marker == m->generic_base &&
-        (uint64_t)m->generic_base + m->generic_count + 1 == m->generic_limit &&
-        m->generic_limit <= r->primary_max && m->last_regular == m->han_base;
-}
-
-static void element(const uint8_t *p, QJSIntlCollationCoordinate *out)
-{
-    unsigned int i;
-    uint32_t flags = word(p, 5);
-    for (i = 0; i < 4; i++)
-        out->weights[i] = word(p, i);
-    out->root_primary = word(p, 4);
-    out->case_value = flags & 3;
-    out->variable = !!(flags & 4);
-    out->implicit = !!(flags & 8);
-}
-
-static int valid_element(const uint8_t *bytes, const QJSIntlRootInputMetadata *m)
-{
-    const QJSIntlCollationRootLimits *r = &m->limits;
-    uint32_t p = word(bytes, 0), s = word(bytes, 1), t = word(bytes, 2);
-    uint32_t flags = word(bytes, 5), case_value = flags & 3;
-    int implicit = (m->han_base < p && (uint64_t)p <= (uint64_t)m->han_base + m->han_count) ||
-        (m->generic_base < p && p < m->generic_limit);
-    if (p > r->primary_max || s > r->secondary_max || t > r->tertiary_max ||
-        word(bytes, 3) || word(bytes, 4) != p || flags & ~15u || case_value == 3 ||
-        p == m->numeric || !!(flags & 8) != implicit ||
-        !!(flags & 4) != (m->field_separator < p && p <= m->variable_top))
-        return 0;
-    if (p)
-        return s && s < r->secondary_boundary && t && t < r->tertiary_boundary;
-    if (s)
-        return s > r->secondary_boundary && t && t < r->tertiary_boundary;
-    if (t)
-        return t > r->tertiary_boundary && case_value == QJS_INTL_COLLATION_UPPER;
-    return case_value == QJS_INTL_COLLATION_LOWER;
-}
-
-static int mappings(const QJSIntlRootInput *view)
-{
-    const QJSIntlCollationKeyIndex *keys = &view->keys;
-    uint32_t i, end = 0, context = 0, previous_prefix = 0, previous_count = 0;
-    const uint8_t *previous = NULL;
-    for (i = 0; i < keys->key_count; i++) {
-        if (!scalar(word(keys->keys, i)))
-            return 0;
-    }
-    for (i = 0; i < keys->context_count; i++) {
-        const uint8_t *row = keys->contexts + (size_t)i * 12;
-        uint32_t id = word(row, 0), prefix = word(row, 1);
-        if (id >= keys->row_count || (i && id <= word(row - 12, 0)) || !prefix ||
-            prefix >= word(keys->rows + (size_t)id * 16, 1) || word(row, 2))
-            return 0;
-    }
-    for (i = 0; i < keys->row_count; i++) {
-        const uint8_t *row = keys->rows + (size_t)i * 16, *key;
-        uint32_t start = word(row, 0), count = word(row, 1), prefix = 0;
-        uint32_t ce_start = word(row, 2), ce_count = word(row, 3), j;
-        uint32_t pool_count = view->sections[QJS_INTL_ROOT_CES].count;
-        if (start != end || !count || count > keys->key_count - end || !ce_count ||
-            ce_start > pool_count || ce_count > pool_count - ce_start)
-            return 0;
-        key = keys->keys + (size_t)start * 4;
-        end += count;
-        if (context < keys->context_count && word(keys->contexts + (size_t)context * 12, 0) == i) {
-            prefix = word(keys->contexts + (size_t)context++ * 12, 1);
-            /* Source keys remain original. Check both starts with the same
-               pinned boundary predicate used for new tailoring contexts. */
-            if (!unicode_nfc_boundary_before(word(key, 0)) ||
-                !unicode_nfc_boundary_before(word(key, prefix)))
-                return 0;
-        }
-        if (word(key, prefix) == 0xfdd0)
-            return 0;
-        if (previous) {
-            uint32_t limit = previous_count < count ? previous_count : count;
-            int order = 0;
-            for (j = 0; j < limit; j++) {
-                uint32_t a = word(previous, j), b = word(key, j);
-                if (a != b) {
-                    order = a < b ? -1 : 1;
-                    break;
-                }
-            }
-            if (!order)
-                order = previous_count < count ? -1 : previous_count > count ? 1 :
-                    previous_prefix < prefix ? -1 : previous_prefix > prefix ? 1 : 0;
-            if (order >= 0)
-                return 0;
-        }
-        previous = key;
-        previous_count = count;
-        previous_prefix = prefix;
-    }
-    return keys->row_count && end == keys->key_count;
-}
-
-static int han(const QJSIntlRootInput *view, uint8_t *seen)
-{
-    const QJSIntlRootInputSection *ranges = &view->sections[QJS_INTL_ROOT_HAN_RANGES];
-    const QJSIntlRootInputSection *ranks = &view->sections[QJS_INTL_ROOT_HAN_RANKS];
-    uint32_t i, end = 0, previous = 0;
-    memset(seen, 0, (view->metadata.han_count + 7u) / 8u);
-    for (i = 0; i < ranges->count; i++) {
-        const uint8_t *row = ranges->bytes + (size_t)i * 12;
-        uint32_t first = word(row, 0), last = word(row, 1), start = word(row, 2), count;
-        if (first > last || !scalar(first) || !scalar(last) ||
-            (first <= 0xdfff && last >= 0xd800) || (i && first <= previous) || start != end)
-            return 0;
-        count = last - first + 1;
-        if (count > ranks->count - end)
-            return 0;
-        end += count;
-        previous = last;
-    }
-    if (end != ranks->count || end != view->metadata.han_count)
-        return 0;
-    for (i = 0; i < ranks->count; i++) {
-        uint32_t rank = word(ranks->bytes, i);
-        if (!rank || rank > end || seen[(rank - 1) / 8] & (1u << ((rank - 1) % 8)))
-            return 0;
-        seen[(rank - 1) / 8] |= 1u << ((rank - 1) % 8);
-    }
-    return 1;
+        m->implicit_last_marker == m->generic_base && m->last_regular == m->han_base;
 }
 
 static int compare_ce(const uint8_t *a, const uint8_t *b)
@@ -205,7 +70,7 @@ static int facts(const QJSIntlRootInput *view)
         unsigned int kind = i / 2, role = i == 9 ? 3 : kind == 0 || kind == 1 || kind == 5 ? 2 : 1;
         uint32_t p = word(ce, 0), s = word(ce, 1), t = word(ce, 2);
         int valid;
-        if (word(row, 0) != i + 1 || word(row, 1) != role || !valid_element(ce, m))
+        if (word(row, 0) != i + 1 || word(row, 1) != role || !qjs_intl_collation_base_check_element(&view->base.metadata, ce))
             return 0;
         switch (kind) {
         case 0: valid = !p && !s && !t; break;
@@ -320,13 +185,35 @@ static int groups(const QJSIntlRootInput *view, uint8_t *seen)
         m->numeric < word(rows->bytes + (size_t)(digit + 1) * 16, 0);
 }
 
+static QJSIntlSection base_span(const QJSIntlRootInputSection *s)
+{
+    return (QJSIntlSection){s->bytes, s->length, s->count};
+}
+
+static QJSIntlCollationBaseSource base_source(const QJSIntlRootInput *view)
+{
+    const QJSIntlRootInputMetadata *m = &view->metadata;
+    const QJSIntlRootInputSection *s = view->sections;
+    QJSIntlCollationBaseSource source = {0};
+    source.metadata = (QJSIntlCollationBaseMetadata){m->limits, m->han_base, m->han_count,
+        m->generic_base, m->generic_count, m->generic_limit, m->variable_top, m->numeric, m->field_separator};
+    source.mappings = base_span(s + QJS_INTL_ROOT_MAPPINGS);
+    source.keys = base_span(s + QJS_INTL_ROOT_KEYS);
+    source.contexts = base_span(s + QJS_INTL_ROOT_CONTEXTS);
+    source.elements = base_span(s + QJS_INTL_ROOT_CES);
+    source.han_ranges = base_span(s + QJS_INTL_ROOT_HAN_RANGES);
+    source.han_ranks = base_span(s + QJS_INTL_ROOT_HAN_RANKS);
+    return source;
+}
+
 QJSIntlStatus qjs_intl_root_input_open(const uint8_t *bytes, size_t length,
                                       const QJSIntlAllocator *allocator, QJSIntlRootInput *out)
 {
     QJSIntlRootInput view = {0};
     uint32_t i, at = ROOT_HEADER_SIZE + ROOT_DIRECTORY_SIZE;
     uint8_t *scratch;
-    size_t scratch_size;
+    QJSIntlCollationBaseSource source;
+    QJSIntlStatus status;
     int valid;
     /* Metadata and token byte pools have their own count semantics. */
     static const unsigned int strides[] = {0, 16, 4, 12, 24, 12, 4, 32, 16, 16, 8, 0};
@@ -350,21 +237,16 @@ QJSIntlStatus qjs_intl_root_input_open(const uint8_t *bytes, size_t length,
     if (at != length || !metadata(&view) || view.sections[QJS_INTL_ROOT_RESETS].count != 14 ||
         view.sections[QJS_INTL_ROOT_WEAK_LIMITS].count != 4)
         return QJS_INTL_DATA_ERROR;
-    view.keys = (QJSIntlCollationKeyIndex){view.sections[QJS_INTL_ROOT_MAPPINGS].bytes,
-        view.sections[QJS_INTL_ROOT_KEYS].bytes, view.sections[QJS_INTL_ROOT_CONTEXTS].bytes,
-        view.sections[QJS_INTL_ROOT_MAPPINGS].count, view.sections[QJS_INTL_ROOT_KEYS].count,
-        view.sections[QJS_INTL_ROOT_CONTEXTS].count};
-    /* Reuse one bounded bitmap for exact Han permutation and token uniqueness.
-       Unlike CE expansion per mapping, this scratch is independent of sharing. */
-    scratch_size = (view.metadata.han_count + 7u) / 8u;
-    if (scratch_size < (TOKEN_COUNT + 7u) / 8u)
-        scratch_size = (TOKEN_COUNT + 7u) / 8u;
-    scratch = allocator->malloc(allocator->opaque, scratch_size);
+    source = base_source(&view);
+    status = qjs_intl_collation_base_open(&source, allocator, &view.base);
+    if (status)
+        return status;
+    view.keys = view.base.keys;
+    /* Compiler token uniqueness is independent of the shared Han bitmap. */
+    scratch = allocator->malloc(allocator->opaque, (TOKEN_COUNT + 7u) / 8u);
     if (!scratch)
         return QJS_INTL_NO_MEMORY;
-    valid = mappings(&view) && han(&view, scratch) && facts(&view) && groups(&view, scratch);
-    for (i = 0; valid && i < view.sections[QJS_INTL_ROOT_CES].count; i++)
-        valid = valid_element(view.sections[QJS_INTL_ROOT_CES].bytes + (size_t)i * 24, &view.metadata);
+    valid = facts(&view) && groups(&view, scratch);
     allocator->free(allocator->opaque, scratch);
     if (!valid)
         return QJS_INTL_DATA_ERROR;
@@ -376,28 +258,13 @@ QJSIntlStatus qjs_intl_root_input_open(const uint8_t *bytes, size_t length,
 QJSIntlStatus qjs_intl_root_input_mapping(const QJSIntlRootInput *view, uint32_t id,
                                          uint32_t *start, uint32_t *count)
 {
-    const uint8_t *row;
-    if (start)
-        *start = 0;
-    if (count)
-        *count = 0;
-    if (!view || !view->fingerprint || !start || !count || id >= view->keys.row_count)
-        return QJS_INTL_INVALID_ARGUMENT;
-    row = view->keys.rows + (size_t)id * 16;
-    *start = word(row, 2);
-    *count = word(row, 3);
-    return QJS_INTL_OK;
+    return qjs_intl_collation_base_mapping(view && view->fingerprint ? &view->base : NULL, id, start, count);
 }
 
 QJSIntlStatus qjs_intl_root_input_element_at(const QJSIntlRootInput *view, uint32_t index,
                                             QJSIntlCollationCoordinate *out)
 {
-    if (out)
-        memset(out, 0, sizeof(*out));
-    if (!view || !view->fingerprint || !out || index >= view->sections[QJS_INTL_ROOT_CES].count)
-        return QJS_INTL_INVALID_ARGUMENT;
-    element(view->sections[QJS_INTL_ROOT_CES].bytes + (size_t)index * 24, out);
-    return QJS_INTL_OK;
+    return qjs_intl_collation_base_element(view && view->fingerprint ? &view->base : NULL, index, out);
 }
 
 QJSIntlStatus qjs_intl_root_input_group(const QJSIntlRootInput *view, QJSIntlBytes token,
@@ -438,35 +305,12 @@ QJSIntlStatus qjs_intl_root_input_reset(const QJSIntlRootInput *view, QJSIntlRoo
         return QJS_INTL_INVALID_ARGUMENT;
     row = view->sections[QJS_INTL_ROOT_RESETS].bytes + (size_t)(kind - 1) * 32;
     *role = word(row, 1);
-    element(row + 8, out);
+    qjs_intl_collation_base_read_element(row + 8, out);
     return QJS_INTL_OK;
 }
 
 QJSIntlStatus qjs_intl_root_input_implicit(const QJSIntlRootInput *view, uint32_t code,
                                           QJSIntlCollationCoordinate *out)
 {
-    uint32_t lo = 0, hi, primary;
-    if (out)
-        memset(out, 0, sizeof(*out));
-    if (!view || !view->fingerprint || !out || code > 0x10ffff)
-        return QJS_INTL_INVALID_ARGUMENT;
-    hi = view->sections[QJS_INTL_ROOT_HAN_RANGES].count;
-    primary = view->metadata.generic_base + code + 1;
-    while (lo < hi) {
-        uint32_t mid = lo + (hi - lo) / 2;
-        const uint8_t *row = view->sections[QJS_INTL_ROOT_HAN_RANGES].bytes + (size_t)mid * 12;
-        uint32_t first = word(row, 0), last = word(row, 1);
-        if (code < first)
-            hi = mid;
-        else if (code > last)
-            lo = mid + 1;
-        else {
-            primary = view->metadata.han_base + word(view->sections[QJS_INTL_ROOT_HAN_RANKS].bytes,
-                                                    word(row, 2) + code - first);
-            break;
-        }
-    }
-    *out = (QJSIntlCollationCoordinate){{primary, view->metadata.limits.secondary_common,
-        view->metadata.limits.tertiary_common, 0}, primary, QJS_INTL_COLLATION_LOWER, 0, 1};
-    return QJS_INTL_OK;
+    return qjs_intl_collation_base_implicit(view && view->fingerprint ? &view->base : NULL, code, out);
 }
