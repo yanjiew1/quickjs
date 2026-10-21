@@ -156,6 +156,7 @@ if intl_enabled
     'intl/collation/elements.c',
     'intl/collation/match.c',
     'intl/collation/keys.c',
+    'intl/collation/trie.c',
     'intl/collation/logical.c',
     'intl/collation/root-data.c',
     'intl/collation/weights.c',
