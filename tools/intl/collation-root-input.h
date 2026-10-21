@@ -13,6 +13,31 @@ enum {
     QJS_INTL_ROOT_SECTION_COUNT
 };
 
+/* Typed source positions in the QJCR record order; parsing one does not imply
+   that the semantic executor supports that reset form. */
+typedef enum QJSIntlRootReset {
+    QJS_INTL_ROOT_FIRST_TERTIARY_IGNORABLE = 1,
+    QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE,
+    QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE,
+    QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE,
+    QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE,
+    QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE,
+    QJS_INTL_ROOT_FIRST_VARIABLE,
+    QJS_INTL_ROOT_LAST_VARIABLE,
+    QJS_INTL_ROOT_FIRST_REGULAR,
+    QJS_INTL_ROOT_LAST_REGULAR,
+    QJS_INTL_ROOT_FIRST_IMPLICIT,
+    QJS_INTL_ROOT_LAST_IMPLICIT,
+    QJS_INTL_ROOT_FIRST_TRAILING,
+    QJS_INTL_ROOT_LAST_TRAILING
+} QJSIntlRootReset;
+
+enum {
+    QJS_INTL_ROOT_SOURCE_CE = 1,
+    QJS_INTL_ROOT_ARTIFICIAL_BOUNDARY,
+    QJS_INTL_ROOT_DERIVED_INITIAL
+};
+
 typedef struct QJSIntlRootInputSection {
     const uint8_t *bytes;
     uint32_t length, count;
@@ -46,6 +71,10 @@ QJSIntlStatus qjs_intl_root_input_mapping(const QJSIntlRootInput *, uint32_t map
                                          uint32_t *ce_start, uint32_t *ce_count);
 QJSIntlStatus qjs_intl_root_input_element_at(const QJSIntlRootInput *, uint32_t,
                                             QJSIntlCollationCoordinate *);
+/* Read an initial source position, not a derived current logical position.
+   Role and CE outputs reset on failure. This query allocates nothing. */
+QJSIntlStatus qjs_intl_root_input_reset(const QJSIntlRootInput *, QJSIntlRootReset,
+                                        unsigned int *role, QJSIntlCollationCoordinate *);
 /* Original source keys are scalars; deterministic fallback also accepts isolated
    UTF-16 surrogate units. Declared Han uses radical order; other codes use the
    arithmetic generic interval. */
