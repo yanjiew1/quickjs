@@ -100,6 +100,30 @@ Every executable CE is checked against WF1/WF2; FDD0 synthetic reservations stay
 outside that check. U+FFFE remains fixed and nonvariable, even below variable
 top. Runtime ordinal encoding and ranked root integration follow this catalog.
 
+### Host logical root input
+
+`collation_root_input.py` writes the private QJCR artifact for the host compiler.
+It pairs original source keys with logical CEs, preserving independent case,
+variable classification and root origin. Shared CE sequences are interned;
+source keys retain their prefix splits. Han ranges carry radical-order rank
+lookups, while generic implicit positions remain arithmetic. Ordered source
+reset facts and partial weak limits are distinct from derived current-tailoring
+extrema. Group boundaries use the same primary coordinates as executable CEs.
+
+The writer audits the complete artifact before publishing it atomically. Its
+counted sections, coordinate invariants and versioning are described in
+[`doc/intl-collation-root-format.md`](../../doc/intl-collation-root-format.md).
+`collation-root-input.c` opens a borrowed view, validates its domains with one
+temporary bitmap, and exposes the same CE-free key index as the shared matcher.
+It also checks source context starts with pinned Unicode NFC boundaries. Root
+lookup decodes spans from one CE pool; implicit fallback uses the declared Han
+ranks or generic arithmetic and allocates nothing. The compiler's `--audit-root`
+command exercises this reader against the complete pinned artifact in CI.
+
+QJCR is a build-time input, separate from ordered QJCI programs and any frozen
+runtime pack. This step does not execute tailoring rules or enable native
+locale Collator support.
+
 ### Host collation compiler input
 
 `collation_ir.py` expands the ordered program catalog into a counted build-time
