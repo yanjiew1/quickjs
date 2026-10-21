@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/collation/elements.h"
 #include "../src/intl/collation/compare.h"
+#include "../src/intl/collation/logical.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +79,16 @@ static void check_elements(const QJSIntlCollationContexts *data,
         actual[count++] = element;
     }
     qjs_intl_collation_elements_clear(&it);
+    /* A stored implicit pair is one logical primary, even when its tail looks
+       like another head. Exercise this invariant after real NFD lookup too. */
+    for (i = 0; i < count;) {
+        QJSIntlCollationLogical logical;
+        unsigned int consumed;
+        assert(!qjs_intl_collation_logical_root(actual + i, i + 1 < count ? actual + i + 1 : NULL,
+                                               &logical, &consumed));
+        assert(consumed == 1 || consumed == 2);
+        i += consumed;
+    }
     for (level = 0; level < 3; level++) {
         size_t left = 0, right = 0;
         for (;;) {
