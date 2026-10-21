@@ -68,7 +68,8 @@ Many complex sections use the selected locale count even though their internal
 tables contain many more records. Section 33 counts zone descriptors; section
 34 counts explicit rule-list origins; section 35 counts explicit era mappings;
 section 36 counts root collation mappings independently of locale count;
-section 37 counts their preceding-context metadata records.
+section 37 counts their preceding-context metadata records; section 38 counts
+compiled executable collation programs, not locale bindings or root mappings.
 The section reference defines each case.
 
 The generation identity is not an authentication signature and is not checked
