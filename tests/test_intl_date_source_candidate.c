@@ -7,6 +7,8 @@
 
 extern const uint8_t candidate_bad_quote_bytes[], candidate_bad_field_bytes[];
 extern const size_t candidate_bad_quote_length, candidate_bad_field_length;
+extern const uint8_t candidate_calendar_year_bytes[], candidate_week_year_bytes[];
+extern const size_t candidate_calendar_year_length, candidate_week_year_length;
 
 typedef struct Allocation {
     size_t calls, fail_at, live;
@@ -213,6 +215,23 @@ int main(void)
         check_empty(&list);
         assert(!state.live);
         qjs_intl_date_available_sources_clear(&sources);
+    }
+    for (i = 0; i < 2; i++) {
+        sources_open(i ? candidate_week_year_bytes : candidate_calendar_year_bytes,
+                     i ? candidate_week_year_length : candidate_calendar_year_length, &source_allocator,
+                     "root", "gregorian", QJS_INTL_DATE_AVAILABLE_PATTERN, &sources);
+        assert(!qjs_intl_date_source_candidates_open(&sources, bytes(""), &allocator, &list));
+        record = find(&list, "zzzz");
+        if (i) {
+            assert(!record);
+        } else {
+            assert(record && equal(record->source.text, "Y/M/d"));
+            assert(record->info.year_kinds == QJS_INTL_DATE_YEAR_CALENDAR);
+            assert(record->pattern.tokens[0].symbol == 'y');
+        }
+        qjs_intl_date_source_candidates_clear(&list);
+        qjs_intl_date_available_sources_clear(&sources);
+        assert(!state.live && !source_state.live);
     }
     unaligned = malloc(qjs_intl_native_length + 1);
     assert(unaligned);
