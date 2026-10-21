@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../tools/intl/collation-map.h"
 #include "../src/intl/collation/match.h"
+#include "../src/intl/collation/contexts.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -292,11 +293,13 @@ static void scan(const QJSIntlCollationContexts *data, QJSIntlCollationMap *map,
     static const uint16_t input[] = {'a', 'b', 'c'};
     QJSIntlCollationOverlay view;
     QJSIntlCollationMatch match;
+    QJSIntlCollationKeyIndex keys;
     QJSIntlCollationMatchResult result;
     size_t i;
     int present;
     assert(!qjs_intl_collation_map_overlay(map, &view));
-    assert(!qjs_intl_collation_match_init_overlay(&match, data, input, 3, &view, &map->allocator));
+    assert(!qjs_intl_collation_contexts_keys(data, &keys));
+    assert(!qjs_intl_collation_match_init_overlay(&match, &keys, input, 3, &view, &map->allocator));
     for (i = 0; i < count; i++) {
         uint32_t value;
         assert(!qjs_intl_collation_match_next(&match, &result, NULL, &present) && present);
@@ -305,7 +308,9 @@ static void scan(const QJSIntlCollationContexts *data, QJSIntlCollationMap *map,
         } else {
             QJSIntlCollationElement ce;
             assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT);
-            assert(!qjs_intl_collation_element_at(&result.entry, 0, &ce));
+            QJSIntlCollationEntry entry;
+            assert(!qjs_intl_collation_contexts_mapping(data, result.mapping_id, &entry));
+            assert(!qjs_intl_collation_element_at(&entry, 0, &ce));
             value = ce.primary;
         }
         assert(value == expected[i]);
