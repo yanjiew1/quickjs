@@ -1,16 +1,17 @@
 # Compiled collation archive (QJCL)
 
-QJCL version 1 is the runtime-oriented output of the host C collation compiler.
+QJCL version 2 is the runtime-oriented output of the host C collation compiler.
 It contains one shared logical FractionalUCA root and sparse per-program ranked
 overlays. It does **not** embed [QJCR compiler input](intl-collation-root-format.md):
 reset source facts, wildcard weak-limit facts and script-token parsing tables
 are absent. C structs, pointers, allocator state and compiler history are never
 serialized.
 
-The current compiler emits a standalone archive without resolved locale/type
-bindings. This is a data integration stage, not advertised native Collator
-support. Prepared QJIN packs remain normal build inputs. A later selection step
-will attach bindings before the runtime service uses this section.
+The C compiler emits a standalone archive without resolved locale/type bindings.
+The publication wrapper can attach a prepared profile's resolved bindings and
+semantically read back the final image. This remains a data integration stage,
+not advertised native Collator support; prepared QJIN packs remain normal build
+inputs. Version 2 defines populated bindings; version 1 is not accepted.
 
 ## Envelope
 
@@ -20,7 +21,7 @@ unaligned bytes. The archive is limited to 256 MiB. Its 64-byte header is:
 | Offset | Field |
 | --- | --- |
 | 0 | Four bytes `QJCL` |
-| 4 | Format version, 1 |
+| 4 | Format version, 2 |
 | 8, 12 | Unicode and UCA versions, both `18 << 16` |
 | 16 | Total archive byte length |
 | 20 | Directory count, 12 |
@@ -49,7 +50,7 @@ authentication. The enclosing QJIN generation identity will cover final bytes.
 | 9 | 32 bytes | Program identity and block spans |
 | 10 | Bytes | Counted label pool, zero-padded to four bytes |
 | 11 | Variable | Contiguous program blocks |
-| 12 | Reserved selection pool | Empty in standalone compiler output |
+| 12 | 24 bytes | Locale/type bindings; empty in standalone compiler output |
 
 Metadata word order is P/S/T root maxima; common S/T; protected S/T boundaries;
 Han base/count; generic base/count/exclusive limit; default variable top;
@@ -81,7 +82,8 @@ strictly by counted UTF-8 bytes. Locale/type are nonempty; alternate may be empt
 No C string terminators are implied. Labels contain no control characters.
 
 Standalone compiler output appends the three labels in row order without
-interning. Kind 10's count excludes its at-most-three zero padding bytes. Program
+interning. Bound output appends binding labels after the program labels.
+Kind 10's count excludes its at-most-three zero padding bytes. Program
 blocks partition kind 11 exactly, and kind 9 and kind 11 counts equal the header
 program count. Source identities can include private/import-only types and
 diagnostic alternates; their presence does not establish public availability.
@@ -148,6 +150,34 @@ Every mapping path must reach its exact terminal ID, and every node must belong
 to a mapping path. An empty overlay still contains node 0. These invariants make
 matcher callbacks non-failing after one complete validation pass.
 
+## Locale/type bindings
+
+Each kind-12 row has six words: locale label offset/length, public `co` label
+offset/length, sort program ID and search program ID. IDs index kind 9;
+UINT32_MAX means unsupported for that usage. Labels use kind 10, in binding-row
+order after all program labels; each label span begins exactly where the
+previous span ends. No independent string interning or C terminators are used.
+
+Rows sort strictly by `(locale, co)`. Every locale starts with an empty-co row
+and two valid usage targets: the semantic null/default. Further rows have
+nonempty canonical public type labels and at least one valid usage target.
+The initial producer exposes named types for sort only. A type may target the
+same program as the default and must remain explicit for option resolution.
+`default`, `standard`, `search` and private types are not public type labels.
+Targets must be normal programs with no alternate or private source type.
+
+Binding locales are canonical-cased base language IDs, without extensions or
+private use; internal `root` never appears here. The generator owns alias and
+collation-component inheritance resolution. Required synthetic locale mappings
+are applied before source lookup. The reader checks fixed grammar/casing,
+ordered defaults, label partitions and eligible target bounds, not aliases or
+whether a public name is semantically supported by a particular tailoring.
+
+The source fingerprint must match when attaching these records. Bindings do
+not alter root/program bytes and do not imply the comparator has been enabled.
+Locale matching and ResolveLocale consume them through the future service
+interface; the low-level binding getter performs no locale fallback.
+
 ## Production and publication
 
 The C archive owner stages programs independently of snapshot/compiler lifetime.
@@ -176,4 +206,5 @@ Each program copies its root and group descriptors, so the parent archive
 descriptor need not remain alive. The immutable archive bytes must outlive every
 borrowed view. Once a matcher borrows a program's trie descriptor, that program
 must stay at a stable address. A successful data audit does not advertise public
-locale/type availability; resolved bindings remain a separate integration step.
+locale/type availability; executable service publication remains a separate
+integration step.
