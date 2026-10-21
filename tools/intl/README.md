@@ -442,6 +442,16 @@ uses the original NFD text, with the field separator below even NUL and a
 separate end condition. Comparison now accepts strengths 1 through 5; service
 availability and JS options remain separate integration layers.
 
+`collation/collation.h` and `native.c` provide the plain service over the selected
+minimal/native profile. Opening validates compiled bytes and constructs exact
+locale/type slices; capability/default queries allocate nothing. Named-type
+support follows actual sort/search target IDs, not source labels or fallback.
+Public sensitivity, numeric, case-first and punctuation options produce one
+effective policy per handle. Source backwards-secondary/reordering remain with
+the selected program. Handles retain no service arrays or caller option text
+and can be compared after service close because embedded data stays immutable.
+JS coercion, locale matching and realm/GC ownership belong to their callers.
+
 The optional `test_intl_collation_compiled --archive image.qjcl --ordered file`
 audit selects the compiled root/standard program and checks neighboring strings
 in the authenticated full CLDR ordering file. `--ordered-shifted` additionally
@@ -1723,8 +1733,13 @@ the contents; source acquisition and prepared-pack manifests provide hashes.
 ## Prepare typed records
 
 ```sh
+meson compile -C build intl-collation-compile
+python3 tools/intl/collation_prepare.py \
+  --sources /path/to/intl-cache/cldr-49-beta4 --profile native \
+  --compiler build/intl-collation-compile --output /path/to/native.qjcl
 python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
-  --profile native --output /path/to/native.bin --manifest /path/to/native.json
+  --profile native --compiled-collation /path/to/native.qjcl \
+  --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
@@ -1737,6 +1752,14 @@ The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
 Its `complete_services` remains empty until full service behavior is delivered.
 Normal engine builds do not invoke these collectors or parse source XML.
+
+Section 38 embeds the complete bound QJCL archive without rewriting it. Generation
+requires exact source-manifest identity, resolved bindings and pruned targets
+for the requested profile. The outer recipe hashes the nested bytes and records
+its consumed collation inputs; its generation digest is distinct from the inner
+CLDR fingerprint. Framing checks do not replace the C reader's semantic checks
+or establish public Collator availability. Unrelated authored generation fixtures
+may omit this section; production CLI generation requires it.
 
 Prepared files are in `data/intl/{minimal,native}.bin` with matching manifests
 and the CLDR license. The repository suite checks their hashes and typed tables
