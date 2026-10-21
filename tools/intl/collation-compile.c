@@ -3,12 +3,19 @@
 #include "collation-root-input.h"
 #include "collation-ir.h"
 #include "collation-program.h"
+#include "collation-snapshot.h"
+#include "collation-trie.h"
+#include "collation-archive.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 #define IR_MAX_SIZE QJS_INTL_IR_MAX_SIZE
 #define IR_UNICODE_VERSION (((uint32_t)LIBUNICODE_UNICODE_VERSION_MAJOR << 16) | \
@@ -23,23 +30,37 @@ typedef struct Audit {
 
 typedef struct Executed {
     uint64_t programs, instructions, mappings;
+    QJSIntlCollationArchive *archive;
 } Executed;
 
 static QJSIntlStatus execute_end(void *opaque, const QJSIntlIRProgram *identity,
                                   QJSIntlCollationProgram *program)
 {
     Executed *result = opaque;
-    unsigned int i;
-    /* Validate final rankability while the callback still owns a borrowed
-       program. Packing/copying the live map remains a separate output layer. */
-    for (i = 0; i < 4; i++) {
-        QJSIntlStatus status = qjs_intl_weight_freeze(program->builder.relations.axes + i);
-        if (status)
-            return status;
+    QJSIntlCollationSnapshot snapshot;
+    QJSIntlCompiledTrie trie;
+    QJSIntlCollationTrie view;
+    QJSIntlStatus status;
+    /* Exercise the immutable output model while borrowing the active program.
+       Wire encoding and runtime publication remain separate output layers. */
+    status = qjs_intl_collation_snapshot_create(program, identity, &snapshot);
+    if (status)
+        return status;
+    status = qjs_intl_compiled_trie_create(&snapshot, &trie);
+    if (!status)
+        status = qjs_intl_collation_trie_open(&trie.nodes, &trie.edges, &trie.suppressed,
+                                              &snapshot.keys, &snapshot.allocator, &view);
+    if (!status && result->archive)
+        status = qjs_intl_collation_archive_add(result->archive, &snapshot, &trie);
+    qjs_intl_compiled_trie_clear(&trie);
+    if (status) {
+        qjs_intl_collation_snapshot_clear(&snapshot);
+        return status;
     }
     result->programs++;
     result->instructions += identity->instruction_count;
-    result->mappings += program->builder.map.live_count;
+    result->mappings += snapshot.keys.row_count;
+    qjs_intl_collation_snapshot_clear(&snapshot);
     return QJS_INTL_OK;
 }
 
@@ -222,12 +243,16 @@ int main(int argc, char **argv)
     QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
     Audit audit = {.preflight = 1};
     Executed executed = {0};
-    int failed, root_mode, pair_mode, execute_mode;
-    execute_mode = argc == 4 && !strcmp(argv[1], "--execute-pair");
+    QJSIntlCollationArchive archive = {0};
+    QJSIntlCompiledCollation image = {0};
+    int failed, root_mode, pair_mode, execute_mode, compile_mode;
+    compile_mode = argc == 4 && !strcmp(argv[1], "--compile-pair");
+    execute_mode = compile_mode || (argc == 4 && !strcmp(argv[1], "--execute-pair"));
     pair_mode = execute_mode || (argc == 4 && !strcmp(argv[1], "--audit-pair"));
     if (!pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
         fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr | "
-                "--audit-pair root.qjcr input.qjci | --execute-pair root.qjcr input.qjci\n", argv[0]);
+                "--audit-pair root.qjcr input.qjci | --execute-pair root.qjcr input.qjci | "
+                "--compile-pair root.qjcr input.qjci > output.qjcl\n", argv[0]);
         return 2;
     }
     root_mode = !strcmp(argv[1], "--audit-root");
@@ -256,6 +281,10 @@ int main(int argc, char **argv)
     /* Pair identities and preflight the whole artifact before allocating any
        normalization or future per-program execution state. */
     failed = qjs_intl_ir_open(bytes, size, root.fingerprint, &view, &error);
+    if (!failed && compile_mode) {
+        failed = qjs_intl_collation_archive_init(&archive, &root, &allocator);
+        executed.archive = &archive;
+    }
     if (!failed && execute_mode)
         failed = qjs_intl_collation_program_execute(&root, &view, &allocator, execute_end, &executed, &error);
     if (!failed && !execute_mode)
@@ -264,11 +293,22 @@ int main(int argc, char **argv)
         audit = (Audit){0};
         failed = qjs_intl_ir_visit(&view, &visitor, &audit, &error);
     }
+    if (!failed && compile_mode)
+        failed = qjs_intl_collation_archive_finish(&archive, &image);
     if (failed) {
         if (error.source.bytes)
             fprintf(stderr, "%.*s:%u:%u: ", (int)error.source.length, (const char *)error.source.bytes,
                     error.line, error.column);
         fprintf(stderr, "invalid tailoring input or unsupported execution constraint (%d)\n", failed);
+    } else if (compile_mode) {
+        /* No partial program bytes reach stdout. The acquiring Python driver
+           captures the complete image and atomically replaces its output file. */
+#ifdef _WIN32
+        if (_setmode(_fileno(stdout), _O_BINARY) == -1)
+            failed = 1;
+#endif
+        if (!failed && (fwrite(image.bytes, 1, image.length, stdout) != image.length || fflush(stdout)))
+            failed = 1;
     } else if (execute_mode) {
         printf("{\"programs\":%" PRIu64 ",\"instructions\":%" PRIu64 ",\"mappings\":%" PRIu64 "}\n",
                executed.programs, executed.instructions, executed.mappings);
@@ -277,6 +317,9 @@ int main(int argc, char **argv)
                ",\"normalized_texts\":%" PRIu64 ",\"starred_scalars\":%" PRIu64 "}\n",
                audit.programs, audit.instructions, audit.texts, audit.starred);
     }
+    /* Staged owners may borrow root/input bytes until their cleanup. */
+    qjs_intl_collation_archive_clear(&archive);
+    qjs_intl_compiled_collation_clear(&image);
     free(bytes);
     free(root_bytes);
     return failed ? 1 : 0;

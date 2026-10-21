@@ -53,4 +53,9 @@ QJSIntlStatus qjs_intl_weight_compare(const QJSIntlWeightGraph *, uint32_t left,
    frozen graph; outputs are reset on failure. Root zero always remains zero. */
 QJSIntlStatus qjs_intl_weight_freeze(QJSIntlWeightGraph *);
 QJSIntlStatus qjs_intl_weight_resolve(const QJSIntlWeightGraph *, uint32_t id, uint32_t *rank);
+/* Copy one sorted sparse offset from a frozen graph (index < gap_count).
+   Root r includes cumulative additions only from gaps STRICTLY below r.
+   Scalars reset on failure; no internal allocation/pointer escapes. */
+QJSIntlStatus qjs_intl_weight_offset_at(const QJSIntlWeightGraph *, uint32_t index,
+                                       uint32_t *root_gap, uint32_t *cumulative_added);
 #endif
