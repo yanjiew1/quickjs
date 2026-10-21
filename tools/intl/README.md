@@ -406,6 +406,17 @@ nothing. The iterator copies program views and initializes directly at its
 final address because its matcher borrows its embedded trie; a live iterator
 cannot be copied or moved. Comparison policy is a separate consumer.
 
+`ranked-compare.c` compares primary tokens incrementally, retaining weak-level
+records only while primaries tie. Source provenance selects a group before its
+saved permutation is applied; typed group/rank keys preserve the full uint32
+range. Numeric tokens use the reserved translated primary and common weak
+weights, keeping script and leading zeros out of ordinary comparisons. Separate
+secondary, case and tertiary passes preserve level priority and distinguish
+per-CE case-first tuples from a whole case level. Pure primary scans and wholly
+zero CEs need no weak buffer. This initial slice explicitly rejects shifted,
+backward-secondary and quaternary/identical policies until their consumers are
+implemented; it does not publish native Collator service capability.
+
 ```sh
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
