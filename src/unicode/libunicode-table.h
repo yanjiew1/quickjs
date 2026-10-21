@@ -95,6 +95,7 @@ typedef enum {
 
 extern const char unicode_gc_name_table[];
 extern const uint8_t unicode_gc_table[4176];
+extern const uint32_t unicode_gc_index[100];
 typedef enum {
     UNICODE_SCRIPT_Unknown,
     UNICODE_SCRIPT_Adlam,
