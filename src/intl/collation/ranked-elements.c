@@ -13,9 +13,9 @@ void qjs_intl_collation_ranked_elements_clear(QJSIntlCollationRankedElements *it
 }
 
 QJSIntlStatus qjs_intl_collation_ranked_elements_init(QJSIntlCollationRankedElements *it,
-                                                    const QJSIntlCompiledCollationProgram *program,
-                                                    const uint16_t *input, size_t length, int numeric,
-                                                    const QJSIntlAllocator *allocator)
+                                                      const QJSIntlCompiledCollationProgram *program,
+                                                      const uint16_t *input, size_t length, int numeric,
+                                                      const QJSIntlAllocator *allocator)
 {
     QJSIntlCollationOverlay overlay;
     QJSIntlStatus status;
@@ -43,7 +43,7 @@ QJSIntlStatus qjs_intl_collation_ranked_elements_init(QJSIntlCollationRankedElem
 }
 
 QJSIntlStatus qjs_intl_collation_ranked_elements_next(QJSIntlCollationRankedElements *it,
-                                                    QJSIntlCollationRankedToken *out, int *present)
+                                                      QJSIntlCollationRankedToken *out, int *present)
 {
     QJSIntlStatus status;
 
