@@ -251,6 +251,7 @@ jobs:
           test_unicode_word \
           test_unicode_sentence \
           unicode_gen_test \
+          test_unicode_normalization_boundary \
           test_unicode
     - name: Check compiled boundary properties against every Unicode code point
       run: |
@@ -274,6 +275,9 @@ jobs:
     - name: Check Unicode normalization conformance
       run: |
         build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
+    - name: Check NFC prefix boundaries against source properties
+      run: |
+        build-unicode/tests/test_unicode_normalization_boundary "$RUNNER_TEMP/unicode"
     - name: Check indexed category predicates against full Unicode ranges
       run: |
         build-unicode/tests/test_unicode --all-categories
