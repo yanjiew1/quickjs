@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import acquire
 import bundle
+import collation_contexts
 import collation_root
 import generate
 import locale_metadata
@@ -52,6 +53,7 @@ class VerifiedFixture(Sources):
 0061 ; [.1000.0020.0002]
 0061 0301 ; [.1000.0020.0002][.0000.0024.0002]
 ''',
+            collation_contexts.SOURCE: b'[UCA version = 18.0.0]\n0061 | 0301; [, FB B6, 05]\n',
             'common/dtd/ldmlSupplemental.dtd': PARENT_DTD,
             'common/supplemental/supplementalData.xml': b'<supplementalData/>',
             'common/supplemental/supplementalMetadata.xml': b'<supplementalData/>',
@@ -285,6 +287,7 @@ class TableTests(unittest.TestCase):
             view = tables.validate(binary)
             self.assertEqual(view['collation_root']['version'], collation_root.VERSION)
             self.assertGreater(len(view['collation_root']['rows']), 0)
+            self.assertEqual(len(view['collation_contexts']), 4)
             self.assertEqual(manifest['sha256'], acquire.digest(binary))
             self.assertEqual(manifest['bytes'], len(binary))
             self.assertEqual(manifest['generation'], acquire.digest(acquire.json_bytes(manifest['inputs'])))
@@ -583,6 +586,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['collation_root'], minimal_view['collation_root'])
         self.assertEqual(full_view['collation_root'], collation_root.collect(VerifiedFixture()))
         self.assertIn(collation_root.SOURCE, manifest['inputs']['sources'])
+        self.assertIn(collation_contexts.SOURCE, manifest['inputs']['sources'])
+        self.assertEqual(full_view['collation_contexts'], minimal_view['collation_contexts'])
+        self.assertEqual(full_view['collation_contexts'], ((2, 1, 1),))
         self.assertEqual(full_view['dayperiod_rules'], dayperiod_rules.collect(DayPeriodSources()))
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
