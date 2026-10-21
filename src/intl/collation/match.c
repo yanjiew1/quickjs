@@ -53,18 +53,18 @@ void qjs_intl_collation_match_clear(QJSIntlCollationMatch *it)
 }
 
 QJSIntlStatus qjs_intl_collation_match_init(QJSIntlCollationMatch *it,
-                                           const QJSIntlCollationContexts *data,
-                                           const uint16_t *input, size_t length,
-                                           const QJSIntlAllocator *allocator)
+                                            const QJSIntlCollationKeyIndex *data,
+                                            const uint16_t *input, size_t length,
+                                            const QJSIntlAllocator *allocator)
 {
     return qjs_intl_collation_match_init_overlay(it, data, input, length, NULL, allocator);
 }
 
 QJSIntlStatus qjs_intl_collation_match_init_overlay(QJSIntlCollationMatch *it,
-                                                   const QJSIntlCollationContexts *data,
-                                                   const uint16_t *input, size_t length,
-                                                   const QJSIntlCollationOverlay *overlay,
-                                                   const QJSIntlAllocator *allocator)
+                                                    const QJSIntlCollationKeyIndex *data,
+                                                    const uint16_t *input, size_t length,
+                                                    const QJSIntlCollationOverlay *overlay,
+                                                    const QJSIntlAllocator *allocator)
 {
     NormalizationAllocator adapter;
     QJSIntlStatus status;
@@ -83,8 +83,9 @@ QJSIntlStatus qjs_intl_collation_match_init_overlay(QJSIntlCollationMatch *it,
                     !overlay->terminal || !overlay->has_children ||
                     !overlay->root_context_suppressed))
         return QJS_INTL_INVALID_ARGUMENT;
-    if (!data->section.bytes)
-        return QJS_INTL_UNSUPPORTED;
+    if ((data->row_count && (!data->rows || !data->keys)) ||
+        (data->context_count && !data->contexts))
+        return QJS_INTL_INVALID_ARGUMENT;
     it->allocator = *allocator;
     it->data = *data;
     if (overlay) {
@@ -181,25 +182,30 @@ typedef struct RootCursor {
 } RootCursor;
 
 static void entry_at(const QJSIntlCollationMatch *it, uint32_t index,
-                     QJSIntlCollationEntry *entry)
+                     QJSIntlCollationKeySpan *entry)
 {
-    qjs_intl_collation_root_entry_at(&it->data.root, index, entry);
+    qjs_intl_collation_keys_at(&it->data, index, entry);
 }
 
-static uint32_t key_at(const QJSIntlCollationEntry *entry, uint32_t depth)
+static uint32_t key_at(const QJSIntlCollationKeySpan *entry, uint32_t depth)
 {
     return qjs_intl_read_u32(entry->keys + (size_t)depth * 4);
 }
 
 static int root_step(const QJSIntlCollationMatch *it, RootCursor *cursor, uint32_t code)
 {
-    QJSIntlCollationEntry entry;
+    QJSIntlCollationKeySpan entry;
     uint32_t lo, hi, first;
     if (cursor->first == cursor->end)
         return 0;
-    entry_at(it, cursor->first, &entry);
-    if (entry.key_count == cursor->depth)
+    /* Logical keys may share their concatenated scalars but differ in prefix
+       split. Skip every terminal before indexing the next scalar of children. */
+    while (cursor->first < cursor->end) {
+        entry_at(it, cursor->first, &entry);
+        if (entry.count != cursor->depth)
+            break;
         cursor->first++;
+    }
     lo = cursor->first;
     hi = cursor->end;
     while (lo < hi) {
@@ -226,40 +232,21 @@ static int root_step(const QJSIntlCollationMatch *it, RootCursor *cursor, uint32
     return first != lo;
 }
 
-static int source_context(const QJSIntlCollationMatch *it, uint32_t source,
-                          QJSIntlCollationContext *context)
+static int root_full(const QJSIntlCollationMatch *it, const RootCursor *cursor,
+                     uint32_t prefix, uint32_t *mapping)
 {
-    uint32_t lo = 0, hi = it->data.section.count;
-    while (lo < hi) {
-        uint32_t mid = lo + (hi - lo) / 2;
-        qjs_intl_collation_context_at(&it->data, mid, context);
-        if (context->source_index < source)
-            lo = mid + 1;
-        else if (context->source_index > source)
-            hi = mid;
-        else
+    uint32_t i;
+    for (i = cursor->first; i < cursor->end; i++) {
+        QJSIntlCollationKeySpan entry;
+        entry_at(it, i, &entry);
+        if (entry.count != cursor->depth)
+            break;
+        if (qjs_intl_collation_keys_prefix(&it->data, i) == prefix) {
+            *mapping = i;
             return 1;
+        }
     }
     return 0;
-}
-
-static int root_full(const QJSIntlCollationMatch *it, const RootCursor *cursor,
-                       uint32_t prefix, QJSIntlCollationEntry *entry)
-{
-    QJSIntlCollationContext context;
-    int contextual;
-    if (cursor->first == cursor->end)
-        return 0;
-    entry_at(it, cursor->first, entry);
-    if (entry->key_count != cursor->depth)
-        return 0;
-    contextual = source_context(it, cursor->first, &context);
-    if (!prefix)
-        return !contextual;
-    if (!contextual || context.before.key_count != prefix)
-        return 0;
-    *entry = context.mapping;
-    return 1;
 }
 
 typedef struct MatchCursor {
@@ -280,13 +267,13 @@ static int cursor_step(const QJSIntlCollationMatch *it, MatchCursor *cursor, uin
 static int cursor_full(const QJSIntlCollationMatch *it, const MatchCursor *cursor,
                        uint32_t prefix, QJSIntlCollationMatchResult *result)
 {
-    QJSIntlCollationEntry entry;
-    uint32_t sequence;
+    uint32_t sequence, mapping;
     int found = 0;
-    if (root_full(it, &cursor->root, prefix, &entry) &&
-        (!cursor->suppressed || (!prefix && entry.key_count == 1))) {
+    if (root_full(it, &cursor->root, prefix, &mapping) &&
+        (!cursor->suppressed || (!prefix && cursor->depth == 1))) {
         *result = (QJSIntlCollationMatchResult){.kind = QJS_INTL_COLLATION_MATCH_ROOT,
-                                              .entry = entry};
+                                              .mapping_id = mapping,
+                                              .suffix_length = cursor->depth};
         found = 1;
     }
     /* Both providers are at the same prefix/suffix key. Override only this
@@ -295,7 +282,8 @@ static int cursor_full(const QJSIntlCollationMatch *it, const MatchCursor *curso
         (sequence = it->overlay.terminal(it->overlay.opaque, cursor->node)) !=
         QJS_INTL_COLLATION_NODE_NONE) {
         *result = (QJSIntlCollationMatchResult){.kind = QJS_INTL_COLLATION_MATCH_OVERLAY,
-                                              .sequence = sequence};
+                                              .sequence = sequence,
+                                              .suffix_length = cursor->depth};
         found = 1;
     }
     return found;
@@ -309,9 +297,9 @@ static int cursor_continues(const QJSIntlCollationMatch *it, const MatchCursor *
     /* An overlay checkpoint need not have a matching root terminal. The sole
        remaining root row can therefore still be a longer descendant. */
     if (count == 1 && it->has_overlay) {
-        QJSIntlCollationEntry entry;
+        QJSIntlCollationKeySpan entry;
         entry_at(it, cursor->root.first, &entry);
-        if (entry.key_count > cursor->root.depth)
+        if (entry.count > cursor->root.depth)
             return 1;
     }
     return cursor->node != QJS_INTL_COLLATION_NODE_NONE &&
@@ -347,20 +335,20 @@ static int initial_match(QJSIntlCollationMatch *it, uint32_t start,
         it->overlay.root_context_suppressed(it->overlay.opaque, first);
     for (;;) {
         uint32_t prefix = 0, i;
-        MatchCursor cursor = {{0, it->data.root.section.count, 0},
+        MatchCursor cursor = {{0, it->data.row_count, 0},
                               QJS_INTL_COLLATION_NODE_NONE, 0, suppressed};
         /* Prefixes inspect original, contiguous NFD text, including text which
            previously participated in an overlapping contraction. */
-        for (i = 0; !suppressed && i < it->data.section.count; i++) {
-            QJSIntlCollationContext context;
-            uint32_t count, j;
-            qjs_intl_collation_context_at(&it->data, i, &context);
-            count = context.before.key_count;
+        for (i = 0; !suppressed && i < it->data.context_count; i++) {
+            QJSIntlCollationKeySpan key;
+            uint32_t row, count, j;
+            qjs_intl_collation_keys_context(&it->data, i, &row, &count);
+            entry_at(it, row, &key);
             if (count <= prefix || count >= limit || count > start ||
-                key_at(&context.mapping, 0) != first)
+                key_at(&key, count) != first)
                 continue;
             for (j = 0; j < count; j++)
-                if (key_at(&context.before, j) != (it->text[start - count + j] & SCALAR_MASK))
+                if (key_at(&key, j) != (it->text[start - count + j] & SCALAR_MASK))
                     break;
             if (j == count)
                 prefix = count;
@@ -429,8 +417,8 @@ static void prepare(QJSIntlCollationMatch *it, uint32_t start,
 /* Match one source mapping, not one CE. Expansion decoding and implicit-weight
    construction belong to the consumer and cannot affect input consumption. */
 QJSIntlStatus qjs_intl_collation_match_next(QJSIntlCollationMatch *it,
-                                           QJSIntlCollationMatchResult *result,
-                                           QJSIntlCollationNumber *number, int *present)
+                                            QJSIntlCollationMatchResult *result,
+                                            QJSIntlCollationNumber *number, int *present)
 {
     uint32_t at;
     if (result)
