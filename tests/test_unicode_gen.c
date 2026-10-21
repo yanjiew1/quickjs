@@ -62,6 +62,66 @@ static void check_declarations(FILE *file)
     assert(conversion && folding && decomposition);
 }
 
+static int parse_break_fixture(unsigned int kind, const char *text)
+{
+    FILE *file = tmpfile();
+    assert(file);
+    assert(fputs(text, file) >= 0);
+    assert(fflush(file) == 0);
+    rewind(file);
+    return parse_break_properties_stream(file, "authored break fixture", kind);
+}
+
+static void check_break_properties(UnicodeTableOutput *output)
+{
+    memset(unicode_db, 0, (CHARCODE_MAX + 1) * sizeof(*unicode_db));
+    assert(!parse_break_fixture(BREAK_GCB,
+        "# @missing: 0000..10FFFF; Other\n"
+        "0000..0001 ; Control\n0002 ; Extend\n10000..10001 ; Regional_Indicator\n"));
+    assert(!parse_break_fixture(BREAK_INCB,
+        "# @missing: 0000..10FFFF; InCB; None\n"
+        "0002 ; InCB; Linker\n10001 ; InCB; Consonant\n"));
+    assert(!parse_break_fixture(BREAK_EP,
+        "10000..10001 ; Extended_Pictographic# including reserved characters\n"));
+    assert(unicode_db[0].break_properties == UNICODE_GCB_Control);
+    assert(unicode_db[2].break_properties ==
+        (UNICODE_GCB_Extend | (UNICODE_INCB_Linker << UNICODE_BREAK_INCB_SHIFT)));
+    assert(unicode_db[0x10001].break_properties == (UNICODE_GCB_Regional_Indicator |
+        (UNICODE_INCB_Consonant << UNICODE_BREAK_INCB_SHIFT) | UNICODE_BREAK_EP));
+    assert(!unicode_db[3].break_properties && !unicode_db[CHARCODE_MAX].break_properties);
+    /* The earlier checks read these update streams. Position them explicitly
+       before emitting more tables; read-to-write switching requires a seek. */
+    assert(fseek(output->source, 0, SEEK_END) == 0);
+    assert(fseek(output->header, 0, SEEK_END) == 0);
+    build_break_tables(output);
+    assert(fflush(output->source) == 0);
+    assert(read_table_word(output->source, "unicode_break_starts", 0) == 0);
+    assert(read_table_word(output->source, "unicode_break_starts", 3) == 0x10000);
+    assert(read_table_word(output->source, "unicode_break_values", 1) ==
+        (UNICODE_GCB_Extend | (UNICODE_INCB_Linker << UNICODE_BREAK_INCB_SHIFT)));
+    /* A bucket with no transition inherits the preceding value. The terminal
+       index is valid too, so the reader can bound its final bucket search. */
+    assert(read_table_word(output->source, "unicode_break_index", 63) == 2);
+    assert(read_table_word(output->source, "unicode_break_index", 64) == 3);
+    assert(read_table_word(output->source, "unicode_break_index", 1088) == 5);
+
+    assert(parse_break_fixture(BREAK_GCB,
+        "# @missing: 0000..10FFFF; Other\n0001..0002 ; Extend\n") < 0);
+    assert(parse_break_fixture(BREAK_WB,
+        "# @missing: 0000..10FFFF; Other\n0041 ; Unknown\n") < 0);
+    assert(parse_break_fixture(BREAK_SB,
+        "# @missing: 0000..10FFFF; Upper\n") < 0);
+    assert(parse_break_fixture(BREAK_WB, "0041 ; ALetter\n") < 0);
+    assert(parse_break_fixture(BREAK_WB,
+        "# @missing: 0000..10FFFF; Other\n110000 ; ALetter\n") < 0);
+    assert(parse_break_fixture(BREAK_WB,
+        "# @missing: 0000..10FFFF; Other\n0042..0041 ; ALetter\n") < 0);
+    assert(parse_break_fixture(BREAK_WB,
+        "# @missing: 0000..10FFFF; Other\n0041 ; ALetter; unexpected\n") < 0);
+    assert(parse_break_fixture(BREAK_INCB,
+        "# @missing: 0000..10FFFF; InCB; None\n0041 ; InCB\n") < 0);
+}
+
 int main(int argc, char **argv)
 {
     int decomposition = 0x4e3d;
@@ -93,6 +153,7 @@ int main(int argc, char **argv)
     assert((packed >> 14) == 0x2f800 && ((packed >> 7) & 127) == 1);
     assert(packed & 1);
     check_declarations(output.header);
+    check_break_properties(&output);
     assert(fclose(output.header) == 0);
     assert(fclose(file) == 0);
     free(unicode_db);
