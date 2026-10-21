@@ -9,8 +9,8 @@ static int date_field(size_t field)
            field == QJS_INTL_DATETIME_DAY;
 }
 
-/* This is an explicit request for calendar-year presentation, not a metadata
-   projection of Y. The exact source compiler continues to reject week-years. */
+/* Remaining Y sources can request a real calendar-year alternative. The
+   month/no-week CLDR data workaround already ran in selected-style compilation. */
 static QJSIntlStatus target(const QJSIntlDatePattern *raw,
                             QJSIntlDateTimeComponents *components, unsigned int *symbols)
 {
@@ -94,6 +94,9 @@ static QJSIntlStatus expansion(const QJSIntlDateSourceCandidate *source,
     QJSIntlDatePatternInfo info;
     QJSIntlStatus status = qjs_intl_date_pattern_compile(allocator, source->source.code, &key);
     size_t field, i;
+
+    if (!status)
+        qjs_intl_date_pattern_fix_calendar_year(&key);
     if (!status)
         status = qjs_intl_date_pattern_info(&key, &info);
     if (!status) {
