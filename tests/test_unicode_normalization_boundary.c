@@ -1,4 +1,4 @@
-/* NFC prefix boundaries, including recursive backward-composing composites.
+/* NFC prefix boundaries and per-codepoint NFD quick checks.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/cutils/cutils.h"
 #include "../src/unicode/libunicode.h"
@@ -21,6 +21,19 @@ static void test_boundaries(void)
         assert(!unicode_nfc_boundary_before(no[i]));
 }
 
+static void test_nfd_quick_check(void)
+{
+    const uint32_t yes[] = {0, 'a', 0x80, 0xa0, 0x301, 0x327, 0x1100, 0x1161,
+                            0x11a8, 0xfb00, 0x20000, 0x10ffff, 0xd800, 0xdfff};
+    const uint32_t no[] = {0xc0, 0xc5, 0x212b, 0x344, 0xac00, 0xd7a3, 0xf900,
+                           0x1d15e, 0x110000, UINT32_MAX};
+    size_t i;
+    for (i = 0; i < countof(yes); i++)
+        assert(unicode_nfd_quick_check(yes[i]));
+    for (i = 0; i < countof(no); i++)
+        assert(!unicode_nfd_quick_check(no[i]));
+}
+
 static FILE *open_source(const char *directory, const char *name)
 {
     char path[4096];
@@ -32,15 +45,15 @@ static FILE *open_source(const char *directory, const char *name)
     return file;
 }
 
-/* This optional CI oracle reads source CCC/decomposition and NFC_Quick_Check,
+/* This optional CI oracle reads source CCC/decomposition and NFC/NFD_Quick_Check,
    independently of the compressed tables and composition-pair generator. */
 static void test_source(const char *directory)
 {
-    uint8_t *ccc = calloc(0x110000, 1), *qc = calloc(0x110000, 1);
+    uint8_t *ccc = calloc(0x110000, 1), *qc = calloc(0x110000, 1), *nfd_no = calloc(0x110000, 1);
     uint32_t *first = calloc(0x110000, sizeof(*first)), code, records = 0, maybes = 0;
     FILE *file = open_source(directory, "UnicodeData.txt");
     char line[8192];
-    assert(ccc && qc && first);
+    assert(ccc && qc && first && nfd_no);
     while (fgets(line, sizeof(line), file)) {
         char *fields[15], *at = line, *separator;
         unsigned int i;
@@ -75,32 +88,43 @@ static void test_source(const char *directory)
     while (fgets(line, sizeof(line), file)) {
         char *separator, *at;
         unsigned int start, end;
+        int nfd;
         if (*line == '#' || !(separator = strchr(line, ';')))
             continue;
         *separator = 0;
         at = separator + 1;
         while (*at == ' ' || *at == '\t')
             at++;
-        if (strncmp(at, "NFC_QC", 6) || (at[6] != ';' && at[6] != ' ' && at[6] != '\t'))
+        nfd = !strncmp(at, "NFD_QC", 6);
+        if ((!nfd && strncmp(at, "NFC_QC", 6)) || (at[6] != ';' && at[6] != ' ' && at[6] != '\t'))
             continue;
         at = strchr(at, ';');
         assert(at);
         do { at++; } while (*at == ' ' || *at == '\t');
         assert(*at == 'N' || *at == 'M');
+        assert(!nfd || *at == 'N');
         if (sscanf(line, "%x..%x", &start, &end) != 2) {
             assert(sscanf(line, "%x", &start) == 1);
             end = start;
         }
         assert(start <= end && end <= 0x10ffff);
         for (code = start; code <= end; code++) {
-            qc[code] = *at == 'M' ? 1 : 2;
-            maybes += *at == 'M';
+            if (nfd) {
+                nfd_no[code] = 1;
+            } else {
+                qc[code] = *at == 'M' ? 1 : 2;
+                maybes += *at == 'M';
+            }
         }
     }
     assert(maybes && !ferror(file) && !fclose(file));
     for (code = 0; code <= 0x10ffff; code++) {
         uint32_t lead = code;
         int expected;
+        if (unicode_nfd_quick_check(code) != !nfd_no[code]) {
+            fprintf(stderr, "NFD quick-check mismatch at U+%04x\n", code);
+            abort();
+        }
         if (code >= 0xd800 && code <= 0xdfff) {
             expected = 0;
         } else {
@@ -122,15 +146,17 @@ static void test_source(const char *directory)
         }
     }
     free(first);
+    free(nfd_no);
     free(qc);
     free(ccc);
-    puts("NFC boundary oracle: all Unicode18 code points passed");
+    puts("NFC boundary / NFD quick-check oracle: all Unicode18 code points passed");
 }
 
 int main(int argc, char **argv)
 {
     assert(argc == 1 || argc == 2);
     test_boundaries();
+    test_nfd_quick_check();
     if (argc == 2)
         test_source(argv[1]);
     return 0;
