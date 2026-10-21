@@ -47,21 +47,23 @@ static QJSIntlAllocator allocator(Allocation *state)
     return (QJSIntlAllocator){state, allocate, resize, release};
 }
 
-static QJSIntlCollationLogical logical(uint32_t p, uint16_t s, uint16_t t)
-{
-    return (QJSIntlCollationLogical){p, s, t, 0, 0};
-}
+/* Wide fixture bands deliberately differ from the compact Fractional catalog;
+   relation execution must take both layouts from its copied root descriptor. */
+static const QJSIntlRelationRoots wide_roots = {1000, 0x1ffff, 0x1ffff, 32, 2, 0x10000, 0x10000};
 
 static QJSIntlRelationElement root(uint32_t p, uint16_t s, uint16_t t)
 {
-    QJSIntlCollationLogical ce = logical(p, s, t);
-    QJSIntlRelationElement result;
-    assert(!qjs_intl_relation_root(&ce, &result));
+    QJSIntlRelationElement result = {0};
+    result.weights[0] = result.root_primary = p;
+    result.weights[1] = s ? s + (p ? 0 : wide_roots.secondary_boundary) : 0;
+    result.weights[2] = t ? t + (p || s ? 0 : wide_roots.tertiary_boundary) : 0;
+    result.case_value = t == 8 || (!p && !s && t) ?
+        QJS_INTL_RELATION_UPPER : QJS_INTL_RELATION_LOWER;
     return result;
 }
 
 static QJSIntlRelationMapping apply(QJSIntlRelations *owner, unsigned int strength, int before,
-                                    const QJSIntlCollationLogical *cases, size_t case_count,
+                                    const QJSIntlRelationCase *cases, size_t case_count,
                                     const QJSIntlRelationElement *extension, size_t extension_count)
 {
     QJSIntlRelationMapping result = {0};
@@ -90,10 +92,10 @@ static void test_repeated_resets_and_expansions(void)
     QJSIntlAllocator a = allocator(&state);
     QJSIntlRelations owner;
     QJSIntlRelationElement reset[] = {root(100, 32, 2), root(200, 32, 8), root(0, 40, 2)};
-    QJSIntlCollationLogical lower = logical(1, 32, 2);
+    QJSIntlRelationCase lower = {1, QJS_INTL_RELATION_LOWER};
     QJSIntlRelationMapping x, y, z, kept, equal;
     uint32_t first;
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     /* &ae<g: change the last primary and discard weaker trailing CEs. */
     assert(!qjs_intl_relations_reset(&owner, reset, 3));
     x = apply(&owner, 1, 0, &lower, 1, NULL, 0);
@@ -136,7 +138,7 @@ static void test_bands_before_and_parents(void)
     QJSIntlRelationMapping before[3], secondary, tertiary, primary, quaternary, bad = {0};
     QJSIntlWeightParents parents;
     unsigned int i;
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     for (i = 0; i < 3; i++) {
         assert(!qjs_intl_relations_reset(&owner, &ordinary, 1));
         before[i] = apply(&owner, i + 1, 1, NULL, 0, NULL, 0);
@@ -182,9 +184,10 @@ static void test_case_and_equality(void)
     QJSIntlAllocator a = allocator(&state);
     QJSIntlRelations owner;
     QJSIntlRelationElement reset[] = {root(100, 32, 2), root(200, 32, 8), root(0, 40, 8)};
-    QJSIntlCollationLogical cases[] = {logical(1, 32, 8), logical(0, 40, 8), logical(2, 32, 2)};
+    QJSIntlRelationCase cases[] = {{1, QJS_INTL_RELATION_UPPER}, {0, QJS_INTL_RELATION_UPPER},
+                                   {1, QJS_INTL_RELATION_LOWER}};
     QJSIntlRelationMapping result;
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     /* &a=A keeps ordinary T=2 but independently becomes uppercase. */
     assert(!qjs_intl_relations_reset(&owner, reset, 1));
     result = apply(&owner, 0, 0, cases, 1, NULL, 0);
@@ -217,11 +220,11 @@ static void test_case_and_equality(void)
     qjs_intl_relation_mapping_clear(&a, &result);
     /* Homogeneous upper/lower expansions do not acquire a mixed case. */
     assert(!qjs_intl_relations_reset(&owner, reset, 1));
-    cases[2].tertiary = 8;
+    cases[2].case_value = QJS_INTL_RELATION_UPPER;
     result = apply(&owner, 0, 0, cases, 3, NULL, 0);
     assert(result.elements[0].case_value == QJS_INTL_RELATION_UPPER);
     qjs_intl_relation_mapping_clear(&a, &result);
-    cases[0].tertiary = cases[2].tertiary = 2;
+    cases[0].case_value = cases[2].case_value = QJS_INTL_RELATION_LOWER;
     result = apply(&owner, 0, 0, cases, 3, NULL, 0);
     assert(result.elements[0].case_value == QJS_INTL_RELATION_LOWER);
     qjs_intl_relation_mapping_clear(&a, &result);
@@ -234,19 +237,17 @@ static void test_root_provenance_and_empty_reset(void)
     Allocation state = {0};
     QJSIntlAllocator a = allocator(&state);
     QJSIntlRelations owner;
-    QJSIntlCollationLogical source = logical(QJS_INTL_COLLATION_PRIMARY_ROOT_MAX - 1, 32, 2);
-    QJSIntlRelationElement ce;
+    QJSIntlRelationElement ce = root(wide_roots.primary_max - 1, 32, 2);
     QJSIntlRelationMapping result, bad = {0};
-    source.implicit = 1;
-    assert(!qjs_intl_relation_root(&source, &ce));
-    assert(ce.root_primary == source.primary && ce.implicit && !ce.variable);
-    assert(!qjs_intl_relations_init(&owner, &a));
+    ce.implicit = 1;
+    assert(ce.root_primary == wide_roots.primary_max - 1 && ce.implicit && !ce.variable);
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     assert(qjs_intl_relations_apply(&owner, 1, 0, NULL, 0, NULL, 0, &bad) ==
            QJS_INTL_INVALID_ARGUMENT);
     assert(!bad.count && !bad.elements);
     assert(!qjs_intl_relations_reset(&owner, &ce, 1));
     result = apply(&owner, 1, 0, NULL, 0, NULL, 0);
-    assert(result.elements[0].root_primary == source.primary && result.elements[0].implicit);
+    assert(result.elements[0].root_primary == ce.root_primary && result.elements[0].implicit);
     qjs_intl_relation_mapping_clear(&a, &result);
     assert(!qjs_intl_relations_reset(&owner, NULL, 0));
     assert(owner.cursor.count == 1 && !owner.cursor.elements[0].weights[0]);
@@ -269,7 +270,7 @@ static void test_interleaved_weak_parents(void)
     QJSIntlRelationMapping s[2], t[2], copied;
     QJSIntlWeightParents parents;
     unsigned int i;
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     for (i = 0; i < 2; i++) {
         assert(!qjs_intl_relations_reset(&owner, roots + i, 1));
         s[i] = apply(&owner, 2, 0, NULL, 0, NULL, 0);
@@ -302,6 +303,60 @@ static void test_interleaved_weak_parents(void)
     assert(!state.live);
 }
 
+static void test_catalog_owned_coordinates(void)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlRelationRoots roots = {500, 90, 70, 7, 4, 30, 60};
+    QJSIntlRelations owner;
+    QJSIntlRelationElement ordinary = {.weights = {100,7,4,0}}, zero = {0};
+    QJSIntlRelationCase upper = {1, QJS_INTL_RELATION_UPPER}, invalid = {2, 0};
+    QJSIntlRelationMapping s, t, p, before, equal, bad = {0};
+    assert(!qjs_intl_relations_init(&owner, &a, &roots));
+    memset(&roots, 0, sizeof(roots)); /* The descriptor is copied, not borrowed. */
+    assert(!qjs_intl_relations_reset(&owner, &ordinary, 1));
+    equal = apply(&owner, 0, 0, &upper, 1, NULL, 0);
+    assert(equal.elements[0].weights[2] == 4);
+    assert(equal.elements[0].case_value == QJS_INTL_RELATION_UPPER);
+    assert(qjs_intl_relations_apply(&owner, 1, 0, &invalid, 1, NULL, 0, &bad) ==
+           QJS_INTL_INVALID_ARGUMENT && !bad.count);
+    invalid.primary = 1;
+    invalid.case_value = 3;
+    assert(qjs_intl_relations_apply(&owner, 1, 0, &invalid, 1, NULL, 0, &bad) ==
+           QJS_INTL_INVALID_ARGUMENT && !bad.count);
+    before = apply(&owner, 2, 1, NULL, 0, NULL, 0);
+    assert(!qjs_intl_relations_reset(&owner, &zero, 1));
+    s = apply(&owner, 2, 0, NULL, 0, NULL, 0);
+    assert(s.elements[0].weights[2] == 4);
+    assert(!qjs_intl_relations_reset(&owner, &zero, 1));
+    t = apply(&owner, 3, 0, NULL, 0, NULL, 0);
+    p = apply(&owner, 1, 0, NULL, 0, NULL, 0);
+    assert(p.elements[0].weights[1] == 7 && p.elements[0].weights[2] == 4);
+    freeze(&owner);
+    assert(rank(&owner, 1, before.elements[0].weights[1]) > 0);
+    assert(rank(&owner, 1, before.elements[0].weights[1]) < rank(&owner, 1, 7));
+    assert(rank(&owner, 1, s.elements[0].weights[1]) > rank(&owner, 1, 30));
+    assert(rank(&owner, 1, s.elements[0].weights[1]) < rank(&owner, 1, 31));
+    assert(rank(&owner, 2, t.elements[0].weights[2]) > rank(&owner, 2, 60));
+    assert(rank(&owner, 2, t.elements[0].weights[2]) < rank(&owner, 2, 61));
+    qjs_intl_relation_mapping_clear(&a, &s);
+    qjs_intl_relation_mapping_clear(&a, &t);
+    qjs_intl_relation_mapping_clear(&a, &p);
+    qjs_intl_relation_mapping_clear(&a, &before);
+    qjs_intl_relation_mapping_clear(&a, &equal);
+    qjs_intl_relations_clear(&owner);
+    roots = (QJSIntlRelationRoots){500,90,70,7,4,7,60};
+    assert(qjs_intl_relations_init(&owner, &a, &roots) == QJS_INTL_INVALID_ARGUMENT);
+    qjs_intl_relations_clear(&owner);
+    roots.secondary_boundary = 91;
+    assert(qjs_intl_relations_init(&owner, &a, &roots) == QJS_INTL_INVALID_ARGUMENT);
+    qjs_intl_relations_clear(&owner);
+    roots = (QJSIntlRelationRoots){UINT32_C(0x80000000),90,70,7,4,30,60};
+    assert(qjs_intl_relations_init(&owner, &a, &roots) == QJS_INTL_INVALID_ARGUMENT);
+    qjs_intl_relations_clear(&owner);
+    assert(!state.live);
+}
+
 static size_t allocation_case(size_t fail_at)
 {
     Allocation state = {0};
@@ -311,7 +366,7 @@ static size_t allocation_case(size_t fail_at)
     QJSIntlRelationMapping result = {0};
     QJSIntlStatus status;
     size_t calls;
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     assert(!qjs_intl_relations_reset(&owner, &reset, 1));
     saved = owner.cursor.elements[0];
     state.calls = 0;
@@ -335,7 +390,7 @@ static size_t allocation_case(size_t fail_at)
     state.calls = 0;
     state.fail_at = 1;
     qjs_intl_relations_clear(&owner);
-    assert(!qjs_intl_relations_init(&owner, &a));
+    assert(!qjs_intl_relations_init(&owner, &a, &wide_roots));
     state.fail_at = 0;
     assert(!qjs_intl_relations_reset(&owner, &reset, 1));
     state.fail_at = state.calls + 1;
@@ -358,6 +413,7 @@ int main(void)
     test_case_and_equality();
     test_root_provenance_and_empty_reset();
     test_interleaved_weak_parents();
+    test_catalog_owned_coordinates();
     calls = allocation_case(0);
     for (failure = 1; failure <= calls; failure++)
         allocation_case(failure);

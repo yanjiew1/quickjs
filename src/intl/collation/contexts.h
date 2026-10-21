@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_COLLATION_CONTEXTS_H
 #define QJS_INTL_COLLATION_CONTEXTS_H
 #include "root-data.h"
+#include "keys.h"
 
 typedef struct QJSIntlCollationContexts {
     QJSIntlCollationRoot root;
@@ -22,4 +23,11 @@ typedef struct QJSIntlCollationContext {
 QJSIntlStatus qjs_intl_collation_contexts_open(const QJSIntlPack *, QJSIntlCollationContexts *);
 QJSIntlStatus qjs_intl_collation_context_at(const QJSIntlCollationContexts *, uint32_t,
                                            QJSIntlCollationContext *);
+/* Copy a CE-free borrowed key view from validated raw storage. */
+QJSIntlStatus qjs_intl_collation_contexts_keys(const QJSIntlCollationContexts *,
+                                               QJSIntlCollationKeyIndex *);
+/* Decode one selected source row, applying its raw prefix CE skip if present.
+   The matcher already chose its prefix; it must not be emitted a second time. */
+QJSIntlStatus qjs_intl_collation_contexts_mapping(const QJSIntlCollationContexts *, uint32_t,
+                                                  QJSIntlCollationEntry *);
 #endif
