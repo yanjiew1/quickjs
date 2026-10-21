@@ -273,7 +273,7 @@ static void adjusted_date_style(const QJSIntlAllocator *allocator,
 }
 
 static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service,
-                      size_t locale, int zone_append)
+                      size_t locale, int append_mode)
 {
     Allocation *state = allocator->opaque;
     QJSIntlDateTimeOptions options = {0};
@@ -281,13 +281,20 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     QJSTimeZoneIdentifier zone;
     size_t baseline = state->live, calls, i;
     options.maximum_output_length = 1000;
-    if (zone_append) {
+    if (append_mode) {
         options.hour_cycle = QJS_INTL_DATE_H23;
         options.components.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
         options.components.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
         options.components.values[QJS_INTL_DATETIME_SECOND] = QJS_INTL_DATETIME_NUMERIC;
         options.components.values[QJS_INTL_DATETIME_ZONE] = QJS_INTL_DATETIME_ZONE_SHORT;
         options.forced_zone = 1;
+        if (append_mode == 2) {
+            options.components.values[QJS_INTL_DATETIME_WEEKDAY] = QJS_INTL_DATETIME_LONG;
+            options.components.values[QJS_INTL_DATETIME_ERA] = QJS_INTL_DATETIME_SHORT;
+            options.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+            options.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+            options.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+        }
     } else {
         options.date_style = options.time_style = QJS_INTL_DATE_STYLE_FULL + 1;
     }
@@ -297,10 +304,10 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     calls = state->calls;
     qjs_intl_datetime_formatter_close(formatter);
     assert(state->live == baseline);
-    /* The style path exhausts the common constructor. Zone synthesis adds
+    /* The style path exhausts the common constructor. Era/zone synthesis adds
        late selected-record joins; cover their tail without repeating the
-       entire program-building sweep for a second option configuration. */
-    for (i = zone_append && calls > 32 ? calls - 31 : 1; i <= calls; i++) {
+       entire program-building sweep for each option configuration. */
+    for (i = append_mode && calls > 32 ? calls - 31 : 1; i <= calls; i++) {
         state->calls = 0;
         state->fail_at = i;
         formatter = (void *)1;
@@ -578,6 +585,7 @@ int main(int argc, char **argv)
     }
     failures(&allocator, service, en, 0);
     failures(&allocator, service, en, 1);
+    failures(&allocator, service, en, 2);
     options.maximum_output_length = 1000;
     options.date_style = QJS_INTL_DATE_STYLE_FULL + 1;
     formatter = open_formatter(service, en, &options);
