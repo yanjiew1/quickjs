@@ -311,3 +311,12 @@ if get_option('temporal') or intl_enabled
     support_sources += files('timezone/timezone-minimal.c')
   endif
 endif
+
+if get_option('intl') == 'minimal'
+  engine_sources += files(
+    'quickjs/builtins/intl/segmenter.c',
+  )
+  support_sources += files(
+    'intl/segment/minimal.c',
+  )
+endif

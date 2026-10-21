@@ -716,6 +716,31 @@ while unrelated services proceed. Move dependency-free completed work forward
 when another service is blocked. Stages describe dependencies, not a demand to
 combine all their changes into one commit or defer an independent ready service.
 
+### Initial Segmenter profile
+
+The `minimal` build exposes `Intl.Segmenter` with service-specific `en`/`en-US`
+availability. Its plain C contract lives in `src/intl/segment/segment.h`; the
+Unicode-default backend delegates grapheme, word and sentence boundaries to the
+shared Unicode 18 algorithms. It does not claim to execute CLDR break rules or
+dictionary tailoring. Minimal word-like status means the segment contains a
+Unicode Letter or Decimal_Number. Native exposure waits for those additional
+rules and language-specific data, rather than advertising incomplete coverage.
+
+Boundaries and segment data refer to the original UTF-16 input, including NUL,
+lone surrogates and indices inside pairs. `containing()` walks known boundaries
+from zero; the shared Unicode forward APIs cannot start at arbitrary code-unit
+indices. Each iterator has its own cursor. Bindings retain one shared immutable
+input conversion and separate Segmenter references, so dropping a Segments
+wrapper does not invalidate an iterator. No eager boundary array is required.
+
+Repository tests cover protocols, realms, coercion, GC and allocation failures.
+The minimal Test262 overlay enables the whole Segmenter directory, except two
+explicitly documented cases that assume locales outside this profile. Native
+acceptance will retain those cases and add CLDR/dictionary coverage. The profile
+distinction is observable: Unicode 18 GB9c joins a leading Indic linker with its
+consonant, whereas the pinned CLDR beta root still has the older consonant-led
+rule. Tests preserve that distinction instead of treating the profiles as equal.
+
 DateTimeFormat preparation starts with `tools/intl/date_pattern_syntax.py`, a
 host-side TR35 date-pattern tokenizer. It preserves field symbols/run lengths
 and decodes quoted literals independently of format selection or calendar
