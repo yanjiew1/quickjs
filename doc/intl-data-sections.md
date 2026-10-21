@@ -734,7 +734,7 @@ trailing weights and implicit continuations remain significant. The CI shifted
 ordering audit checks only the implemented first three levels, allowing ties
 which the source file's fourth level may distinguish.
 
-### Tailoring source syntax (no executable section yet)
+### Tailoring source syntax
 
 `tools/intl/collation_rules.py` collects the pinned release's ordered rule
 programs before semantic compilation. Source-located nodes retain reset
@@ -770,3 +770,30 @@ counts all visited nodes, including imports into empty programs; a branching
 empty import graph must not bypass the work budget. Original node provenance
 survives expansion. Private programs may be imported but are excluded from complete-profile
 selection and establish no public service inventory; private defaults reject. The root standard program must exist and be empty.
+
+## 38 — Compiled collation programs and resolved bindings
+
+The payload is one complete [QJCL version 2 archive](intl-collation-compiled-format.md),
+without an additional wrapper or offset rewriting. Its string pool stays inside
+QJCL rather than being duplicated in QJIN.
+Offsets inside QJCL remain relative to its own first byte. **N counts executable
+programs**, equal to the inner header's program count. Resolved bindings must be
+nonempty; their row count is independent of N. Both prepared profiles contain
+exactly the sort/search targets referenced by their bindings. Ordered imports
+are expanded inside those programs, not retained as unused standalone records.
+
+`tools/intl/collation_bundle.py` checks framing, counts and exact source/profile
+identity against the same resolved catalog used for preparation. The generator
+includes collation source reads and the complete payload hash in the outer
+recipe. The inner fingerprint is the acquired CLDR source-manifest digest;
+it is not QJIN's generation digest. Opening the generic QJIN envelope does not
+authenticate either digest or validate collation semantics. The C Collator
+owner must open the nested archive with `qjs_intl_compiled_collation_open`
+before publishing any service capability.
+
+Production generation requires `--compiled-collation`; normal engine builds
+consume prepared QJIN bytes offline. Unrelated authored fixtures may omit this
+optional section. Sections 36/37 retain their independent raw diagnostic root
+for existing source-oracle tests; executable comparisons use section 38. This
+temporary root-data duplication is explicit and does not imply two runtime
+collation algorithms or source fallback between the representations.
