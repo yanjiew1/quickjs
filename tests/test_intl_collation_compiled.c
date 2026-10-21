@@ -879,6 +879,7 @@ static void test_ranked_case_levels(const QJSIntlRootInput *root)
     QJSIntlCompiledCollationProgram p;
     QJSIntlCollationPolicy policy;
     const uint32_t lower = 'a', t_only = 't', s_only = 's', upper_alias = 'c';
+    const uint32_t separator = 0xfffe, separator_alias = 'x';
     const uint32_t accent[] = {'a', 0x301}, variant[] = {'a', 0x2bc};
     const uint16_t accented[] = {'a', 0x301}, plain = 'a';
     const uint16_t variant_upper[] = {'a', 0x2bc, 'A'}, plain_pair[] = {'a', 'a'};
@@ -893,6 +894,8 @@ static void test_ranked_case_levels(const QJSIntlRootInput *root)
     assert(!qjs_intl_collation_builder_logical(&builder.builder, QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE, 0));
     assert(!qjs_intl_collation_builder_relate(&builder.builder, 2, NULL, 0, &s_only, 1, NULL, 0));
     assert(!qjs_intl_collation_builder_relate(&builder.builder, 0, NULL, 0, &upper_alias, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, &separator, 1, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 2, NULL, 0, &separator_alias, 1, NULL, 0));
     assert(!qjs_intl_collation_archive_init(&f.archive, root, &a));
     assert(!retain(&f, &identity, &builder));
     clear_program(&builder);
@@ -919,6 +922,38 @@ static void test_ranked_case_levels(const QJSIntlRootInput *root)
        root text had uppercase metadata (TR35 Tailored Strings, step 5). */
     check_ascii_order(&f, &p, &policy, "s", "c", 0);
 
+    policy.case_level = 0;
+    check_ascii_order(&f, &p, &policy, "ab", "ba", -1);
+    policy.backwards_secondary = 1;
+    check_ascii_order(&f, &p, &policy, "ab", "ba", 1);
+    {
+        const uint16_t left[] = {'a', 'b', 0xfffe, 'b', 'a'};
+        const uint16_t right[] = {'b', 'a', 0xfffe, 'a', 'b'};
+        const uint16_t prefix[] = {'s', 'a', 0xfffe}, suffix[] = {'a', 0xfffe, 's'};
+        const uint16_t alias[] = {'a', 'x', 'a'}, literal[] = {'a', 0xfffe, 'a'};
+        const uint16_t empty_segments[] = {0xfffe, 0xfffe}, with_zero[] = {0, 0xfffe, 0xfffe};
+
+        /* Global reversal chooses the wrong segment; concatenating reversed
+           segments loses a segment-prefix length difference. */
+        check_order(&f, &p, &policy, left, 5, right, 5, 1);
+        check_order(&f, &p, &policy, prefix, 3, suffix, 3, 1);
+        check_order(&f, &p, &policy, empty_segments, 2, with_zero, 3, 0);
+        check_order(&f, &p, &policy, alias, 3, literal, 3, 1);
+    }
+
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_IDENTICAL;
+    policy.numeric = 1;
+    check_ascii_order(&f, &p, &policy, "02", "2", -1);
+    {
+        const uint16_t first[] = {0xfffe, 0}, second[] = {0, 0xfffe};
+        const uint16_t zero = 0, composed = 0xe5, decomposed[] = {'a', 0x30a};
+
+        /* Both strings have the same separator CE. The last tie-breaker must
+           put FFFE below NUL rather than use ordinary code point order. */
+        check_order(&f, &p, &policy, first, 2, second, 2, -1);
+        check_order(&f, &p, &policy, &zero, 1, NULL, 0, 1);
+        check_order(&f, &p, &policy, &composed, 1, decomposed, 2, 0);
+    }
     clear_sources(&f);
     qjs_intl_compiled_collation_clear(&f.image);
     assert(!f.live);
@@ -1039,12 +1074,12 @@ static void test_ranked_comparison(Fixture *f)
         assert(f->calls - calls == init_calls);
     }
 
-    /* Unsupported stages are explicit, never silently approximated. */
+    /* Invalid policy values fail before scanning or publishing an order. */
     {
         int order = 99;
 
-        policy.backwards_secondary = 1;
-        assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_UNSUPPORTED && !order);
+        policy.strength = (QJSIntlCollationStrength)0;
+        assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
         policy = fr.policy;
         policy.case_first = (QJSIntlCollationCaseFirst)99;
         order = 99;
