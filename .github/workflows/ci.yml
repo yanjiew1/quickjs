@@ -214,6 +214,7 @@ jobs:
           timeout --kill-after=30s 600s python3 tools/intl/generate.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
             --profile "$profile" \
+            --compiled-collation "$RUNNER_TEMP/collation-$profile.qjcl" \
             --output "$RUNNER_TEMP/intl-$profile.bin" \
             --manifest "$RUNNER_TEMP/intl-$profile.json"
           cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-$profile.bin"
