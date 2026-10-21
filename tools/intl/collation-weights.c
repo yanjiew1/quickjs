@@ -189,6 +189,49 @@ QJSIntlStatus qjs_intl_weight_parents(const QJSIntlWeightGraph *graph, uint32_t 
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_weight_compare(const QJSIntlWeightGraph *graph, uint32_t left,
+                                      uint32_t right, int *order)
+{
+    uint32_t a, b, id, i;
+    if (order)
+        *order = 0;
+    if (!graph || !graph->allocator.malloc || !order ||
+        !valid_id(graph, left) || !valid_id(graph, right))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (left == right)
+        return QJS_INTL_OK;
+    if (graph->frozen) {
+        qjs_intl_weight_resolve(graph, left, &a);
+        qjs_intl_weight_resolve(graph, right, &b);
+        *order = a < b ? -1 : 1;
+        return QJS_INTL_OK;
+    }
+    a = left & TAILORED ? graph->nodes[left & ~TAILORED].root : left;
+    b = right & TAILORED ? graph->nodes[right & ~TAILORED].root : right;
+    if (a != b)
+        *order = a < b ? -1 : 1;
+    else if (!(left & TAILORED))
+        *order = -1; /* The root precedes every insertion in its own gap. */
+    else if (!(right & TAILORED))
+        *order = 1;
+    else {
+        /* Numeric IDs record allocation order, not adjacency. Walking this
+           one gap leaves all stable identities and future insertion intact. */
+        id = graph->nodes[left & ~TAILORED].next;
+        for (i = 0; i < graph->node_count; i++) {
+            if (id == NONE || id == right) {
+                *order = id == right ? -1 : 1;
+                return QJS_INTL_OK;
+            }
+            if (!(id & TAILORED) || !valid_id(graph, id))
+                return QJS_INTL_DATA_ERROR;
+            id = graph->nodes[id & ~TAILORED].next;
+        }
+        return QJS_INTL_DATA_ERROR;
+    }
+    return QJS_INTL_OK;
+}
+
 static int offset_order(const void *left, const void *right)
 {
     uint32_t a = ((const Offset *)left)->root, b = ((const Offset *)right)->root;
