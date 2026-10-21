@@ -3868,6 +3868,33 @@ static int ce_cmp(const void *p1, const void *p2)
     return 0;
 }
 
+static int codepoint_cmp(const void *left, const void *right)
+{
+    uint32_t a = *(const uint32_t *)left, b = *(const uint32_t *)right;
+    return a < b ? -1 : a != b;
+}
+
+static void build_nfc_backward_table(UnicodeTableOutput *out,
+                                      const ComposeEntry *entries, int length)
+{
+    uint32_t points[COMPOSE_LEN_MAX];
+    int i, count = 0, unique = 0;
+    for (i = 0; i < length; i++) {
+        /* Canonical composition requires a starter. The existing raw pair
+           table can also contain excluded nonstarter decompositions, which
+           normalization never composes. They do not define boundaries. */
+        if (!unicode_db[entries[i].c[0]].combining_class &&
+            !unicode_db[entries[i].c[1]].combining_class)
+            points[count++] = entries[i].c[1];
+    }
+    qsort(points, count, sizeof(*points), codepoint_cmp);
+    for (i = 0; i < count; i++) {
+        if (!unique || points[i] != points[unique - 1])
+            points[unique++] = points[i];
+    }
+    dump_fixed_array(out, "unicode_nfc_backward_zero_cc", points, unique, 32, FALSE);
+}
+
 
 static int get_decomp_pos(const DecompEntry *tab_de, int c)
 {
@@ -3940,6 +3967,7 @@ void build_compose_table(UnicodeTableOutput *out, const DecompEntry *tab_de)
     }
     fprintf(f, "\n};\n\n");
 
+    build_nfc_backward_table(out, tab_ce, tab_ce_len);
     free(tab_ce);
 }
 
