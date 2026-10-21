@@ -1,5 +1,11 @@
 # Native Intl data tools
 
+Architecture uses **functional modules** and **shared modules** for code ownership
+and dependencies. A module can expose initialized runtime state named a
+`*Service`, plus resolved operation handles; stateless modules need no service
+object. Backend/provider means the selected implementation. See the
+[architecture terminology](../../doc/intl-design.md#architecture-and-ownership).
+
 These Python 3.6 or newer host tools prepare immutable source data for native
 Intl generation. Normal builds use prepared binary data and do not download
 or parse XML.
@@ -141,7 +147,7 @@ the same program as the locale default. Search initially exposes only the null
 default, independently of named sort targets.
 
 Profile projection is shared with prepared data generation, but internal root
-never becomes a public service locale. Synthetic language-region identities
+never becomes a public formatter locale. Synthetic language-region identities
 retain their deliberate source mapping before collation-specific inheritance.
 Resolved targets are still source identities here; archive publication maps
 them to checked program IDs. This collector alone does not
@@ -399,7 +405,7 @@ The Python publication wrapper checks framing/source identity before atomically
 replacing its output; it never normalizes or executes rules. With `--sources`
 and `--profile`, it attaches resolved locale/type targets, validates them against
 the compiled program identities and performs C semantic readback before replacing
-the destination. Runtime service publication remains a subsequent layer.
+the destination. Public Intl API registration remains a separate layer.
 
 The runtime owner `src/intl/collation/compiled-data.c` audits all shared and
 per-program semantics before exposing borrowed views. Compile mode reads back
@@ -439,11 +445,11 @@ counts. Backward secondary reverses interiors of separator-delimited segments
 while visiting segments in forward order. Separator aliases retain their own
 weak payload instead of relying on equality assertions. The identical level
 uses the original NFD text, with the field separator below even NUL and a
-separate end condition. Comparison now accepts strengths 1 through 5; service
-availability and JS options remain separate integration layers.
+separate end condition. Comparison now accepts strengths 1 through 5; module
+capability and JS options remain separate integration layers.
 
-`collation/collation.h` and `native.c` provide the plain service over the selected
-minimal/native profile. Opening validates compiled bytes and constructs exact
+`collation/collation.h` and `native.c` provide the module's runtime service over
+the selected minimal/native profile. Opening validates compiled bytes and constructs exact
 locale/type slices; capability/default queries allocate nothing. Named-type
 support follows actual sort/search target IDs, not source labels or fallback.
 Public sensitivity, numeric, case-first and punctuation options produce one
@@ -561,7 +567,7 @@ including empty maps. The `nonlikelyScript` rule applies to every matching
 language/script pair, rather than just its migration examples. Explicit parent
 exceptions take precedence. Parent chains must terminate at root without cycles.
 
-Graph nodes and source XML filenames are not advertised service availability.
+Graph nodes and source XML filenames are not advertised module capabilities.
 Each collector still establishes its own complete records and capabilities.
 `tests/test_intl_parents.py` checks authored graphs, including exceptions,
 component independence and rules outside the listed migration examples.
@@ -840,7 +846,8 @@ uses checked temporary storage and sorting for long keys. Accessors allocate
 nothing and apply no implicit locale fallback. Real-profile and authored C
 tests cover astral digits, unaligned storage, optional states, allocation
 failure/retry, long keys, malformed fields and section shapes. These queries
-are metadata infrastructure; future number services select actual capabilities.
+are metadata infrastructure; the number-formatting module selects actual
+capabilities.
 
 `number_symbols.py` collects the 13 common numeric symbols and two optional
 currency separators for every numeric system and source locale. It checks
@@ -1769,7 +1776,7 @@ only the sections documented above, not yet the complete Intl data inventory.
 
 `embed.py` validates a prepared pack and emits one immutable C array in the
 build directory. The shared C reader validates UTF-8/string ordering, shared
-record extents, references and the parent graph. Each service data owner then
+record extents, references and the parent graph. Each owning module then
 validates its own sections before exposing borrowed records. Temporary
 validation memory is freed before return, including on errors. Separate C
 repository tests consume both real prepared profiles, so
@@ -1825,7 +1832,7 @@ which the DTD itself does not provide. Preserve preferred/deprecated metadata
 and detect cycles or missing preferred targets within the appropriate key.
 Indirect schema names such as `REORDER_CODE` stay distinct from literal types.
 IANA-name and region labels on timezone types are retained as metadata; actual
-zone rules and primary-identifier policy remain with the timezone service.
+zone rules and primary-identifier policy remain with the timezone module.
 Unsupported root-level additions fail explicitly rather than disappearing.
 Legacy alias spellings remain data; they do not widen runtime locale syntax.
 Registry membership does not establish installed service capabilities.
@@ -1836,7 +1843,7 @@ extension keys and extension types are an atomic group of sections (3–6).
 Python checks their schemas, references, ordering and preferred-name chains.
 The shared C table reader handles only strings/locales in sections 1 and 2.
 `list/data` owns sections 10 and 12, validating templates and their exact
-contextual admission rules before list consumers use them. Other services do
+contextual admission rules before list consumers use them. Other modules do
 not validate or depend on list sections when opening the shared data view.
 The locale owner uses
 `qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
