@@ -307,6 +307,68 @@ all ordering axes. It reports successful programs, instructions and current
 mapping counts. This is a semantic compiler diagnostic, not runtime Collator
 publication. Normal builds still use the existing prepared runtime pack.
 
+`collation-snapshot.c` freezes one successful program into independent host-owned
+arrays. It copies counted identity labels, sorts live mapping rows by combined
+key and prefix split, resolves all four CE ranks, and preserves empty CE outputs.
+Its key/context rows use the existing endian-safe key-index layout; other arrays
+are host data, not a serialized C struct ABI. Compiler history and trie capacity
+do not enter the snapshot. Only immutable root bytes and allocator state remain
+borrowed; the builder and input program can be cleared immediately afterward.
+
+Suppressed root-context scalars have a separate sorted set, including scalars
+without live mappings. Each axis also retains sorted sparse root-gap offsets:
+root ordinal `r` adds insertions from gaps **strictly below** `r`, preserving zero
+and the order before insertions in its own gap. These tables translate unchanged
+and implicit root CEs into each program's distinct final-rank domain. Full uint32
+ranks must not be narrowed into the older raw-root 16-bit element format. Case,
+root-primary provenance, scalar policy and group permutation remain separate;
+the copied variable flag is only the root default, not effective maxVariable.
+Snapshot creation is staged and leaves empty output on failure; partial axis
+freezing requires aborting that compilation rather than resuming rules.
+
+`collation-trie.c` builds an immutable overlay from snapshot keys, independently
+of compiler hash nodes and history. It sorts virtual paths made from the first
+mapped scalar, reversed prefix, a private separator and the complete suffix.
+An adjacent longest-common-prefix walk then creates nodes without repeated
+sibling searches, including for large Han tailorings. The separator becomes a
+suffix-root link rather than a Unicode edge. Sorted child spans permit binary
+search in the runtime overlay callbacks.
+
+The runtime `src/intl/collation/trie.c` reader owns the following LE layout:
+
+| Array | Record |
+| --- | --- |
+| Nodes | 16 bytes: edge start/count, suffix-root ID, terminal mapping ID |
+| Edges | 8 bytes: Unicode scalar, child node ID |
+| Suppression | Sorted unique Unicode scalar words, independent of terminals |
+
+Node 0 groups by first mapped scalar. Prefix edges run backward; each suffix
+link starts a forward suffix trie including the mapped first scalar. Missing
+IDs use `UINT32_MAX`; links always target later nodes. Opening checks complete
+edge partitions, scalar order, single ownership/reachability and prefix/suffix
+phases, then verifies a unique terminal for each independently validated mapping
+key/split. Every node must belong to one of those paths. Temporary validation
+storage is released before publication, and malformed input differs from OOM.
+These are nested array layouts; the enclosing runtime archive remains a separate
+format. Matcher queries require the unchanged opened view and allocate nothing.
+
+`collation-archive.c` stages those outputs and emits the explicit LE
+[QJCL runtime archive](../../doc/intl-collation-compiled-format.md). One shared
+root omits compiler reset/weak/token tables; per-program blocks copy ranked CEs,
+keys, suppression, policy, sparse shifts and the compact trie. The compiler
+retains no snapshot pointers after append, and failed staging cannot finish.
+`--compile-pair root.qjcr input.qjci` emits a complete binary image on stdout.
+The Python publication wrapper checks framing/source identity before atomically
+replacing its output; it never normalizes or executes rules. Public locale/type
+bindings and runtime service publication remain subsequent integration layers.
+
+```sh
+python3 tools/intl/collation_archive.py \
+  --compiler build/intl-collation-compile \
+  --root-input build/root.qjcr --program-input build/programs.qjci \
+  --output build/collation-runtime.qjcl
+```
+
 The shared `src/intl/collation/match.c` owner keeps normalized input immutable
 and tracks consumption separately. It selects prefix context before suffix
 length, saves full contiguous checkpoints, and permits discontiguous extension
