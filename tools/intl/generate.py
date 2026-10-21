@@ -11,6 +11,8 @@ import calendar_names
 import calendar_name_tables
 import calendar_eras
 import calendar_era_tables
+import collation_root
+import collation_tables
 import compact_patterns
 import compact_tables
 import currencies
@@ -105,6 +107,7 @@ def generate(sources, profile):
         timezone_presentation.collect(inputs_read, locale_data))
     dayperiod_data = dayperiod_rules.collect(inputs_read)
     calendar_era_data = calendar_eras.collect(inputs_read)
+    collation_data = collation_root.collect(inputs_read)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     # Only formatter locale rows are reduced for minimal. Global identity,
@@ -203,6 +206,8 @@ def generate(sources, profile):
     sections[bundle.TIMEZONE_PRESENTATION] = timezone_presentation_tables.encode(timezone_presentation_data, string_ids)
     sections[bundle.DAYPERIOD_RULES] = dayperiod_tables.encode(dayperiod_data, string_ids)
     sections[bundle.CALENDAR_ERAS] = calendar_era_tables.encode(calendar_era_data, string_ids)
+    # Root UCA mappings are global scalar data, not locale-row projection.
+    sections[bundle.COLLATION_ROOT] = collation_tables.encode(collation_data)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -223,7 +228,7 @@ def generate(sources, profile):
                          'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'available date patterns, append templates, interval and localized timezone source layers, '
                          'supplemental metazone presentation, day-period clock facts and explicit era name keys, '
-                         'layered display names and plural rules; '
+                         'root UCA mappings, layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
     return binary, manifest
