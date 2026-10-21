@@ -174,6 +174,134 @@ static void test_case_extensions_and_normalization(const QJSIntlRootInput *data)
     assert(!state.live);
 }
 
+static void test_logical_positions_retain_rule_history(const QJSIntlRootInput *data)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlCollationBuilder builder;
+    const uint32_t a_code = 'a', x = 'x', y = 'y', z = 'z', prefix = 'p';
+    QJSIntlRelationElement old_x, y_ce, z_ce;
+    assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE, 0));
+    relate(&builder, 2, NULL, 0, &y, 1, NULL, 0);
+    relate(&builder, 2, NULL, 0, &x, 1, NULL, 0);
+    old_x = one(&builder, x);
+    y_ce = one(&builder, y);
+    assert(!qjs_intl_collation_builder_reset(&builder, &a_code, 1, 0));
+    relate(&builder, 0, NULL, 0, &x, 1, NULL, 0);
+    assert(one(&builder, x).weights[0] == one(&builder, a_code).weights[0]);
+    /* &[last PI]<<y<<x &a=x &[before 2][last PI]<<z: the established
+       x position persists. A live-only scan would incorrectly put z before y. */
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE, 2));
+    relate(&builder, 2, NULL, 0, &z, 1, NULL, 0);
+    z_ce = one(&builder, z);
+    assert(!qjs_intl_weight_freeze(&builder.relations.axes[1]));
+    assert(rank(&builder, 1, y_ce.weights[1]) < rank(&builder, 1, z_ce.weights[1]));
+    assert(rank(&builder, 1, z_ce.weights[1]) < rank(&builder, 1, old_x.weights[1]));
+    qjs_intl_collation_builder_clear(&builder);
+    assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE, 0));
+    relate(&builder, 2, &prefix, 1, &x, 1, NULL, 0);
+    old_x = builder.relations.cursor.elements[0];
+    assert(!qjs_intl_collation_map_suppress(&builder.map, x));
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE, 2));
+    relate(&builder, 2, NULL, 0, &z, 1, NULL, 0);
+    z_ce = one(&builder, z);
+    assert(!qjs_intl_weight_freeze(&builder.relations.axes[1]));
+    assert(rank(&builder, 1, z_ce.weights[1]) < rank(&builder, 1, old_x.weights[1]));
+    qjs_intl_collation_builder_clear(&builder);
+    assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE, 2));
+    assert(builder.relations.cursor.count == 1);
+    relate(&builder, 2, NULL, 0, &x, 1, NULL, 0);
+    old_x = one(&builder, x);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE, 0));
+    assert(builder.relations.cursor.elements[0].weights[1] == old_x.weights[1]);
+    qjs_intl_collation_builder_clear(&builder);
+    assert(!state.live);
+}
+
+static void test_logical_seeds_and_ignorable_classes(const QJSIntlRootInput *data)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlCollationBuilder builder;
+    QJSIntlRelationElement x_ce, y_ce, z_ce, w_ce, t_ce, q_ce, r_ce;
+    const uint32_t x = 'x', y = 'y', z = 'z', w = 'w', t = 't', q = 'q', r = 'r';
+    uint32_t seed;
+    assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE, 0));
+    seed = builder.relations.cursor.elements[0].weights[2];
+    relate(&builder, 3, NULL, 0, &x, 1, NULL, 0);
+    x_ce = one(&builder, x);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE, 0));
+    relate(&builder, 3, NULL, 0, &y, 1, NULL, 0);
+    y_ce = one(&builder, y);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE, 3));
+    relate(&builder, 3, NULL, 0, &z, 1, NULL, 0);
+    z_ce = one(&builder, z);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE, 0));
+    relate(&builder, 3, NULL, 0, &w, 1, NULL, 0);
+    w_ce = one(&builder, w);
+    /* A new T-only position from zero enters before the constructed SI seed. */
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE, 0));
+    relate(&builder, 3, NULL, 0, &t, 1, NULL, 0);
+    t_ce = one(&builder, t);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE, 0));
+    assert(builder.relations.cursor.elements[0].weights[2] == t_ce.weights[2]);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE, 0));
+    relate(&builder, 4, NULL, 0, &q, 1, NULL, 0);
+    q_ce = one(&builder, q);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE, 0));
+    relate(&builder, 4, NULL, 0, &r, 1, NULL, 0);
+    r_ce = one(&builder, r);
+    assert(!qjs_intl_weight_freeze(&builder.relations.axes[2]));
+    assert(!qjs_intl_weight_freeze(&builder.relations.axes[3]));
+    assert(rank(&builder, 2, t_ce.weights[2]) < rank(&builder, 2, z_ce.weights[2]));
+    assert(rank(&builder, 2, z_ce.weights[2]) < rank(&builder, 2, w_ce.weights[2]));
+    assert(rank(&builder, 2, w_ce.weights[2]) < rank(&builder, 2, seed));
+    assert(rank(&builder, 2, seed) < rank(&builder, 2, y_ce.weights[2]));
+    assert(rank(&builder, 2, y_ce.weights[2]) < rank(&builder, 2, x_ce.weights[2]));
+    assert(!q_ce.weights[0] && !q_ce.weights[1] && !q_ce.weights[2]);
+    assert(rank(&builder, 3, q_ce.weights[3]) < rank(&builder, 3, r_ce.weights[3]));
+    qjs_intl_collation_builder_clear(&builder);
+    assert(!state.live);
+}
+
+static void test_last_regular_gap_and_unsupported(const QJSIntlRootInput *data)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlCollationBuilder builder;
+    QJSIntlRelationElement x_ce, y_ce;
+    const uint32_t first_han = 0x4e02, x = 'x', y = 'y';
+    unsigned int kind;
+    assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+    assert(!qjs_intl_collation_builder_reset(&builder, &first_han, 1, 1));
+    relate(&builder, 1, NULL, 0, &x, 1, NULL, 0);
+    x_ce = one(&builder, x);
+    assert(x_ce.root_primary == data->metadata.han_base + 1);
+    assert(!qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_REGULAR, 0));
+    relate(&builder, 1, NULL, 0, &y, 1, NULL, 0);
+    y_ce = one(&builder, y);
+    assert(!qjs_intl_weight_freeze(&builder.relations.axes[0]));
+    assert(rank(&builder, 0, data->metadata.han_base) < rank(&builder, 0, x_ce.weights[0]));
+    assert(rank(&builder, 0, x_ce.weights[0]) < rank(&builder, 0, y_ce.weights[0]));
+    assert(rank(&builder, 0, y_ce.weights[0]) < rank(&builder, 0, data->metadata.han_base + 1));
+    qjs_intl_collation_builder_clear(&builder);
+    for (kind = QJS_INTL_ROOT_FIRST_TERTIARY_IGNORABLE; kind <= QJS_INTL_ROOT_LAST_TRAILING; kind++) {
+        if (kind == QJS_INTL_ROOT_LAST_TERTIARY_IGNORABLE ||
+            kind == QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE || kind == QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE ||
+            kind == QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE || kind == QJS_INTL_ROOT_LAST_PRIMARY_IGNORABLE ||
+            kind == QJS_INTL_ROOT_LAST_REGULAR)
+            continue;
+        assert(!qjs_intl_collation_builder_init(&builder, data, &a));
+        assert(qjs_intl_collation_builder_logical(&builder, kind, 0) == QJS_INTL_UNSUPPORTED && builder.failed);
+        qjs_intl_collation_builder_clear(&builder);
+    }
+    assert(!state.live);
+}
+
 static void test_invalid_commands(const QJSIntlRootInput *data)
 {
     Allocation state = {0};
@@ -220,6 +348,8 @@ static size_t allocation_case(const QJSIntlRootInput *data, size_t fail_at)
     if (!status)
         status = qjs_intl_collation_builder_reset(&builder, &x, 1, 0);
     if (!status)
+        status = qjs_intl_collation_builder_logical(&builder, QJS_INTL_ROOT_LAST_SECONDARY_IGNORABLE, 0);
+    if (!status)
         status = qjs_intl_collation_builder_relate(&builder, 0, NULL, 0, y, 2, &x, 1);
     if (!status)
         status = qjs_intl_collation_builder_lookup(&builder, y, 2, &out);
@@ -247,6 +377,9 @@ int main(void)
     test_order(&data);
     test_case_extensions_and_normalization(&data);
     test_invalid_commands(&data);
+    test_logical_positions_retain_rule_history(&data);
+    test_logical_seeds_and_ignorable_classes(&data);
+    test_last_regular_gap_and_unsupported(&data);
     calls = allocation_case(&data, 0);
     for (failure = 1; failure <= calls; failure++)
         allocation_case(&data, failure);
