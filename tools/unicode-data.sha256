@@ -1,5 +1,6 @@
 # Unicode 18.0.0 inputs from https://www.unicode.org/Public/18.0.0/
 # Paths are relative to the directory created by unicode_download.sh.
+a58f8d322f3c5e254f9f97b1cbf76a454a7e02de6ac35619a5e4f27aaabfd553  Blocks.txt
 a004797658a457bec4dc11683e39f69249ea3b595b752dbea6721c4c9f587b0d  CaseFolding.txt
 c759b100e9ae8960ae6b50fc5765950a7581fd9f30d4ef95f68f25a6d97e818e  CompositionExclusions.txt
 09c928886a178fcafd93c29e4bd59073a058e5a100b716d425cb563ab50f68c9  DerivedCoreProperties.txt
