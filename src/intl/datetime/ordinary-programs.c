@@ -87,6 +87,22 @@ static QJSIntlStatus add(Build *build, QJSIntlDateOrdinaryProgram *record)
     for (i = 0; i < build->result.count; i++)
         if (equal(&normal.components, &build->result.records[i].single.components))
             goto done;
+    if (normal.hour_symbol) {
+        size_t parent = record->second != SIZE_MAX ? record->second : record->first;
+        if (parent != SIZE_MAX && parent >= build->result.count) {
+            status = QJS_INTL_DATA_ERROR;
+            goto done;
+        }
+        /* Keep the actual clock source's padding through fractional insertion
+           and date/clock composition, independently of the adapted metadata. */
+        for (i = 0; i < 2; i++) {
+            const QJSIntlDatePatternInfo *source = i ? &record->single.twelve.source_info :
+                                                      &record->single.normal.source_info;
+            record->source_hour_width[i] = source->hour_symbol ?
+                source->components.values[QJS_INTL_DATETIME_HOUR] :
+                parent != SIZE_MAX ? build->result.records[parent].source_hour_width[i] : 0;
+        }
+    }
     if (build->result.count == build->capacity) {
         status = QJS_INTL_OVERFLOW;
         goto done;
