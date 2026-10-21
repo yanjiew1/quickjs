@@ -684,3 +684,12 @@ numeric handling and locale tailoring remain separate responsibilities. Group
 skipping and iterative successor compression bound particular rescanning costs;
 contiguous lookahead still depends on the table's key depth, so this is not a
 claim of universal linear matching for arbitrary tables.
+
+The private root comparator in `src/intl/collation/compare.c` consumes those
+streams in primary, secondary, then tertiary order. It retains nonzero CEs for
+later levels only while primaries tie, with a small inline cache and checked
+allocator-backed growth. Variable weights are non-ignorable; there is no
+code-point tie-breaker. This foundation does not establish locale-tailoring or
+Collator capability. The source-data CI job checks adjacent strings in the full
+pinned CLDR non-ignorable ordering file; quick repository tests use authored
+weights, level precedence, canonical equivalence and allocation failures.

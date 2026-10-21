@@ -29,6 +29,8 @@ def fixture():
     for text, secondary in (('\u0301', 0x31), ('\u0304', 0x32),
                             ('\u030a', 0x34), ('\u0323', 0x35), ('\u0331', 0x37)):
         rows[tuple(map(ord, text))] = (ce(0, secondary),)
+    rows[(ord('A'),)] = ((False, 0x1000, 0x20, 8),)
+    rows[(ord('u'),)] = (ce(0x1000, 0x21),)
     rows[(0x20,)] = ((True, 0x500, 0x20, 2),)
     rows[(0x34f,)] = ((False, 0, 0, 0),)
     # allkeys combines the prefix CEs with the contextual suffix CEs. The context

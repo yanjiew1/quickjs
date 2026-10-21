@@ -1,0 +1,143 @@
+/* Default root level priority and comparison allocation failure.
+ * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#include "../src/intl/collation/compare.h"
+#include <assert.h>
+#include <stdlib.h>
+
+extern const uint8_t qjs_intl_collation_fixture_bytes[];
+extern const size_t qjs_intl_collation_fixture_length;
+
+typedef struct Allocation {
+    size_t calls, fail_at, live;
+} Allocation;
+
+static void *allocate(void *opaque, size_t size)
+{
+    Allocation *state = opaque;
+    void *ptr;
+    assert(size);
+    if (++state->calls == state->fail_at)
+        return NULL;
+    ptr = malloc(size);
+    assert(ptr);
+    state->live++;
+    return ptr;
+}
+
+static void *resize(void *opaque, void *ptr, size_t size)
+{
+    Allocation *state = opaque;
+    void *next;
+    assert(ptr && size);
+    if (++state->calls == state->fail_at)
+        return NULL;
+    next = realloc(ptr, size);
+    assert(next);
+    return next;
+}
+
+static void release(void *opaque, void *ptr)
+{
+    Allocation *state = opaque;
+    assert(ptr && state->live);
+    state->live--;
+    free(ptr);
+}
+
+static void check(const QJSIntlCollationContexts *data,
+                  const uint16_t *left, size_t left_length,
+                  const uint16_t *right, size_t right_length, int expected)
+{
+    Allocation state = {0};
+    QJSIntlAllocator a = {&state, allocate, resize, release};
+    int order = 9;
+    assert(!qjs_intl_collation_compare_root(data, left, left_length, right, right_length,
+                                           &a, &order));
+    assert(order == expected && !state.live);
+    assert(!qjs_intl_collation_compare_root(data, right, right_length, left, left_length,
+                                           &a, &order));
+    assert(order == -expected && !state.live);
+}
+
+#define CHECK(left, right, expected) do { \
+    const uint16_t x[] = left, y[] = right; \
+    check(data, x, sizeof(x) / sizeof(*x), y, sizeof(y) / sizeof(*y), expected); \
+} while (0)
+/* Compound array initializers need a wrapper to protect macro commas. */
+#define V(...) {__VA_ARGS__}
+static void comparisons(const QJSIntlCollationContexts *data)
+{
+    CHECK(V('a'), V('a'), 0);
+    CHECK(V('x'), V('b'), -1); /* Deliberately differs from code-point order. */
+    CHECK(V('A'), V('a'), 1);
+    CHECK(V('A','x'), V('a','b'), -1); /* Primary precedes earlier case. */
+    CHECK(V('u','x'), V('a','b'), -1); /* Primary precedes earlier accent. */
+    CHECK(V('A'), V('u'), -1); /* Secondary precedes tertiary. */
+    CHECK(V('a'), V('a','x'), -1);
+    CHECK(V('a',0x301), V('a'), 1);
+    CHECK(V('a',0x34f), V('a'), 0);
+    CHECK(V(0xe5), V('a',0x30a), 0);
+    CHECK(V(' '), V('a'), -1); /* Non-ignorable variable weight. */
+    CHECK(V(0xd800), V(0xd801), -1);
+    CHECK(V(0xd83d,0xde00), V('v'), -1);
+    CHECK(V('a',0x323,0x30a), V(0xe5), 1);
+    check(data, NULL, 0, NULL, 0, 0);
+    check(data, NULL, 0, (const uint16_t[]){0x34f}, 1, 0);
+    check(data, NULL, 0, (const uint16_t[]){0x301}, 1, -1);
+}
+#undef V
+#undef CHECK
+
+static void allocation_failures(const QJSIntlCollationContexts *data)
+{
+    uint16_t left[100], right[200];
+    Allocation state = {0};
+    QJSIntlAllocator a = {&state, allocate, resize, release};
+    size_t i, calls;
+    int order;
+    for (i = 0; i < 100; i++) {
+        left[i] = right[2 * i] = 'a';
+        right[2 * i + 1] = 0x34f;
+    }
+    /* Equal weights with different source text exhaust both streams and spill
+       the small caches, exercising malloc and realloc without an identity hit. */
+    assert(!qjs_intl_collation_compare_root(data, left, 100, right, 200, &a, &order));
+    assert(!order && !state.live);
+    calls = state.calls;
+    assert(calls > 8);
+    for (i = 1; i <= calls; i++) {
+        state.calls = 0;
+        state.fail_at = i;
+        order = 9;
+        assert(qjs_intl_collation_compare_root(data, left, 100, right, 200, &a, &order) ==
+               QJS_INTL_NO_MEMORY);
+        assert(!order && !state.live);
+    }
+    /* Identical input needs no normalization or allocation at all. */
+    state.calls = 0;
+    state.fail_at = 1;
+    assert(!qjs_intl_collation_compare_root(data, left, 100, left, 100, &a, &order));
+    assert(!order && !state.calls);
+}
+
+int main(void)
+{
+    QJSIntlPack pack;
+    QJSIntlCollationContexts data;
+    Allocation state = {0};
+    QJSIntlAllocator a = {&state, allocate, resize, release};
+    int order = 9;
+    assert(!qjs_intl_pack_open(qjs_intl_collation_fixture_bytes,
+                              qjs_intl_collation_fixture_length, &pack));
+    assert(!qjs_intl_collation_contexts_open(&pack, &data));
+    comparisons(&data);
+    allocation_failures(&data);
+    assert(qjs_intl_collation_compare_root(&data, NULL, 1, NULL, 0, &a, &order) ==
+           QJS_INTL_INVALID_ARGUMENT && !order);
+    order = 9;
+    assert(qjs_intl_collation_compare_root(NULL, NULL, 0, NULL, 0, &a, &order) ==
+           QJS_INTL_INVALID_ARGUMENT && !order);
+    assert(qjs_intl_collation_compare_root(&data, NULL, 0, NULL, 0, &a, NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    return 0;
+}
