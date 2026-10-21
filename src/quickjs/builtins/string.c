@@ -1553,6 +1553,7 @@ static JSValue js_string_normalize(JSContext *ctx, JSValueConst this_val,
     return val;
 }
 
+#ifndef CONFIG_INTL
 /* return < 0, 0 or > 0 */
 static int js_UTF32_compare(const uint32_t *buf1, int buf1_len,
                             const uint32_t *buf2, int buf2_len)
@@ -1607,7 +1608,9 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     js_free(ctx, b_buf);
     return JS_NewInt32(ctx, cmp);
 }
+#endif
 #else /* CONFIG_ALL_UNICODE */
+#ifndef CONFIG_INTL
 static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv)
 {
@@ -1627,7 +1630,29 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, b);
     return JS_NewInt32(ctx, cmp);
 }
+#endif
 #endif /* !CONFIG_ALL_UNICODE */
+
+#ifdef CONFIG_INTL
+static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv)
+{
+    JSValue a, b, result;
+
+    a = JS_ToStringCheckObject(ctx, this_val);
+    if (JS_IsException(a))
+        return a;
+    b = JS_ToString(ctx, argc ? argv[0] : JS_UNDEFINED);
+    if (JS_IsException(b)) {
+        JS_FreeValue(ctx, a);
+        return b;
+    }
+    result = js_intl_compare_strings(ctx, a, b, argc > 1 ? argc - 1 : 0, argc > 1 ? argv + 1 : NULL);
+    JS_FreeValue(ctx, a);
+    JS_FreeValue(ctx, b);
+    return result;
+}
+#endif
 
 /* also used for String.prototype.valueOf */
 static JSValue js_string_toString(JSContext *ctx, JSValueConst this_val,
