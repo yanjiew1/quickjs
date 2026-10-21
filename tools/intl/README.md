@@ -1723,8 +1723,13 @@ the contents; source acquisition and prepared-pack manifests provide hashes.
 ## Prepare typed records
 
 ```sh
+meson compile -C build intl-collation-compile
+python3 tools/intl/collation_prepare.py \
+  --sources /path/to/intl-cache/cldr-49-beta4 --profile native \
+  --compiler build/intl-collation-compile --output /path/to/native.qjcl
 python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
-  --profile native --output /path/to/native.bin --manifest /path/to/native.json
+  --profile native --compiled-collation /path/to/native.qjcl \
+  --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
@@ -1737,6 +1742,14 @@ The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
 Its `complete_services` remains empty until full service behavior is delivered.
 Normal engine builds do not invoke these collectors or parse source XML.
+
+Section 38 embeds the complete bound QJCL archive without rewriting it. Generation
+requires exact source-manifest identity, resolved bindings and pruned targets
+for the requested profile. The outer recipe hashes the nested bytes and records
+its consumed collation inputs; its generation digest is distinct from the inner
+CLDR fingerprint. Framing checks do not replace the C reader's semantic checks
+or establish public Collator availability. Unrelated authored generation fixtures
+may omit this section; production CLI generation requires it.
 
 Prepared files are in `data/intl/{minimal,native}.bin` with matching manifests
 and the CLDR license. The repository suite checks their hashes and typed tables
