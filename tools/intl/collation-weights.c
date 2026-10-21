@@ -304,3 +304,17 @@ QJSIntlStatus qjs_intl_weight_resolve(const QJSIntlWeightGraph *graph, uint32_t 
     *rank = id + (low ? graph->offsets[low - 1].added : 0);
     return QJS_INTL_OK;
 }
+
+QJSIntlStatus qjs_intl_weight_offset_at(const QJSIntlWeightGraph *graph, uint32_t index,
+                                       uint32_t *root_gap, uint32_t *cumulative_added)
+{
+    if (root_gap)
+        *root_gap = 0;
+    if (cumulative_added)
+        *cumulative_added = 0;
+    if (!graph || !graph->frozen || !root_gap || !cumulative_added || index >= graph->gap_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    *root_gap = graph->offsets[index].root;
+    *cumulative_added = graph->offsets[index].added;
+    return QJS_INTL_OK;
+}
