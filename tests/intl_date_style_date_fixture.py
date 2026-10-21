@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authored unsupported week-year styles and real calendar-year alternatives."""
+"""Month/no-week year workaround and unchanged unsupported-source boundaries."""
 import argparse
 from pathlib import Path
 import sys
@@ -36,6 +36,12 @@ def pack():
         'numeric': (GALICIAN, {'GyMEd': 'E, d M y G'}),
         'quarter': ('Y Q d', {'yMd': 'y/M/d'}),
         'twodigit': ('YY/M/d', {'yMd': 'y/M/d'}),
+        'quotedweek': ("Y 'w W' M d", {'yMd': 'y/M/d'}),
+        'weekyear': ('Y-w-M-d', {'yMd': 'y/M/d'}),
+        'weekmonth': ('Y W L d', {'yMd': 'y/M/d'}),
+        'nomonth': ('Y d', {'yMd': 'y/M/d'}),
+        'quotedmonth': ("Y 'M' d", {'yMd': 'y/M/d'}),
+        'legacy': ('EEEE Y G', {'GyE': 'E, y G'}),
         'duplicate': ('Y/Y/M/d', {'yMd': 'y/M/d'}),
         'mixed': ('Y/y/M/d', {'yMd': 'y/M/d'}),
         'related': ('Y/r/M/d', {'yMd': 'y/M/d'}),
