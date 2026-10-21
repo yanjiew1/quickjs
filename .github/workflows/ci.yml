@@ -293,7 +293,7 @@ jobs:
     - name: Check Unicode normalization conformance
       run: |
         build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
-    - name: Check NFC prefix boundaries against source properties
+    - name: Check NFC boundaries and NFD quick checks against source properties
       run: |
         build-unicode/tests/test_unicode_normalization_boundary "$RUNNER_TEMP/unicode"
     - name: Check indexed category predicates against full Unicode ranges
