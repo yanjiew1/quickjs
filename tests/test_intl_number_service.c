@@ -988,8 +988,20 @@ static void test_currency_names(const QJSIntlAllocator *allocator, const QJSIntl
     QJSIntlFormatted result, zero = {0};
     QJSIntlMathematicalValue input = value("1");
     uint32_t digits;
+    int supported;
     size_t en = find(tags, count, "en"), i, calls, live, currencies = 0;
     char code[] = "USD";
+    assert(!qjs_intl_number_currency_supported(service, bytes("USD"), &supported) && supported);
+    assert(!qjs_intl_number_currency_supported(service, bytes("ADP"), &supported) && supported);
+    assert(!qjs_intl_number_currency_supported(service, bytes("XAD"), &supported) && supported);
+    assert(!qjs_intl_number_currency_supported(service, bytes("ZZZ"), &supported) && supported);
+    assert(!qjs_intl_number_currency_supported(service, bytes("usd"), &supported) && !supported);
+    assert(!qjs_intl_number_currency_supported(service,
+              (QJSIntlBytes){"USD\0x", 5}, &supported) && !supported);
+    assert(qjs_intl_number_currency_supported(NULL, bytes("USD"), &supported)
+           == QJS_INTL_INVALID_ARGUMENT && !supported);
+    assert(qjs_intl_number_currency_supported(service, (QJSIntlBytes){NULL, 1}, &supported)
+           == QJS_INTL_INVALID_ARGUMENT && !supported);
     assert(!qjs_intl_number_currency_digits(service, bytes("JPY"), &digits) && digits == 0);
     assert(!qjs_intl_number_currency_digits(service, bytes("BHD"), &digits) && digits == 3);
     assert(!qjs_intl_number_currency_digits(service, bytes("CHF"), &digits) && digits == 2);
