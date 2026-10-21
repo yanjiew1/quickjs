@@ -1,6 +1,7 @@
 /* Host tailoring compiler input and pinned-Unicode normalization audit.
  * This stage does not allocate weights or emit executable tailorings.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#include "collation-root-input.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -258,17 +259,45 @@ static int audit_ir(const uint8_t *bytes, size_t length, Audit *audit)
     return reader.at == reader.end ? 0 : -1;
 }
 
+static void *root_malloc(void *opaque, size_t size)
+{
+    (void)opaque;
+    return malloc(size);
+}
+
+static void root_free(void *opaque, void *ptr)
+{
+    (void)opaque;
+    free(ptr);
+}
+
+static int audit_root(const uint8_t *bytes, size_t size)
+{
+    QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
+    QJSIntlRootInput view;
+    QJSIntlStatus status = qjs_intl_root_input_open(bytes, size, &allocator, &view);
+    if (status) {
+        fprintf(stderr, "invalid logical root input or allocation failure (%d)\n", (int)status);
+        return 1;
+    }
+    printf("{\"mappings\":%u,\"ces\":%u,\"han\":%u,\"primary_max\":%u}\n",
+           view.keys.row_count, view.sections[QJS_INTL_ROOT_CES].count,
+           view.metadata.han_count, view.metadata.limits.primary_max);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     FILE *file;
     uint8_t *bytes;
     long size;
     Audit audit = {.preflight = 1};
-    int failed;
-    if (argc != 3 || strcmp(argv[1], "--audit-ir")) {
-        fprintf(stderr, "usage: %s --audit-ir input.qjci\n", argv[0]);
+    int failed, root_mode;
+    if (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root"))) {
+        fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr\n", argv[0]);
         return 2;
     }
+    root_mode = !strcmp(argv[1], "--audit-root");
     file = fopen(argv[2], "rb");
     if (!file)
         return 1;
@@ -285,6 +314,12 @@ int main(int argc, char **argv)
     failed = fread(bytes, 1, (size_t)size, file) != (size_t)size;
     if (fclose(file))
         failed = 1;
+    if (root_mode) {
+        if (!failed)
+            failed = audit_root(bytes, (size_t)size);
+        free(bytes);
+        return failed ? 1 : 0;
+    }
     /* Preflight the whole artifact before any allocating normalization. A
        compact repeated range must not evade the budget by changing programs. */
     if (!failed)
