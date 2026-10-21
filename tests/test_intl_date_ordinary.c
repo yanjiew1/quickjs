@@ -248,9 +248,11 @@ static void zoned_date_clocks(const QJSIntlAllocator *allocator,
         assert(!qjs_intl_date_pattern_compile(allocator, bytes(twelve), &clock.single.twelve.pattern));
         assert(!qjs_intl_date_pattern_info(&clock.single.normal.pattern, &info));
         clock.single.normal.source_info = info;
+        clock.source_hour_width[0] = info.components.values[QJS_INTL_DATETIME_HOUR];
         clock.single.components = info.components;
         assert(!qjs_intl_date_pattern_info(&clock.single.twelve.pattern, &info));
         clock.single.twelve.source_info = info;
+        clock.source_hour_width[1] = info.components.values[QJS_INTL_DATETIME_HOUR];
         ordinary.records = &clock;
         ordinary.count = 1;
         baseline = state->live;
@@ -259,6 +261,8 @@ static void zoned_date_clocks(const QJSIntlAllocator *allocator,
                                                   0, 0, allocator, &result));
         calls = state->calls;
         assert(result.count == 4);
+        assert(result.records[0].source_hour_width[0] == QJS_INTL_DATETIME_NUMERIC &&
+               result.records[0].source_hour_width[1] == QJS_INTL_DATETIME_NUMERIC);
         assert(result.records[0].components.values[QJS_INTL_DATETIME_ZONE] == (int)kind + 1);
         snprintf(combined, sizeof(combined), "EEEE, MMMM d, y' at 'H:mm:ss %s", fields[kind]);
         pattern_equal(allocator, &result.records[0].normal, combined);
