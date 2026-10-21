@@ -213,7 +213,11 @@ jobs:
       run: |
         meson compile -C build-unicode -j "$(getconf _NPROCESSORS_ONLN)" \
           unicode-tables \
+          test_unicode_break_properties \
           unicode_gen_test
+    - name: Check compiled boundary properties against every Unicode code point
+      run: |
+        build-unicode/tests/test_unicode_break_properties "$RUNNER_TEMP/unicode"
     - name: Compare generated tables with the repository
       run: |
         status=0
