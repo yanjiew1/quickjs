@@ -15,6 +15,7 @@ an Intl service implements every required algorithm or supports every locale.
 | IANA timezone rules and identities | `tools/timezone/`; `src/timezone/` | [QJTZ container](../tools/timezone/README.md#primary-identities-and-the-binary-format) |
 | Published calendar records and Japanese eras | `tools/calendar/`; `src/calendar/` | [QJCA container](../tools/calendar/README.md#single-binary-pack) |
 | Windows timezone mapping | `tools/timezone/`; `src/timezone/` | [Windows mapping](../tools/timezone/README.md#windows-host-mappings) |
+| Logical collation root compiler input | `tools/intl/` | [QJCR host input](intl-collation-root-format.md) |
 | Unicode algorithm tables | Unicode generator; `src/unicode/` | Generated C tables, not a QJIN section |
 
 `data/intl/minimal.bin` and `data/intl/native.bin` use the same envelope and
