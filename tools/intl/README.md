@@ -177,8 +177,22 @@ with overlay replacement only for an identical key. A shorter tailored mapping
 does not hide an inherited contraction. Suppression filters inherited contexts
 without filtering later overlay additions. Node/sequence IDs are stable across
 storage growth; the query owner remains unchanged throughout a scan. The narrow
-descriptor is copied, but borrows that owner's lifetime. Mutable tailoring and
-frozen executable storage adapters are subsequent work.
+descriptor is copied, but borrows that owner's lifetime.
+
+`collation-map.c` is the mutable host adapter. Hashed `(parent, scalar)` trie
+edges support large starred rule sets without sorted-array insertion shifts.
+A reverse-prefix trie grouped by first mapped scalar selects original-text
+lookback; each prefix has its own suffix trie. Stable node/sequence IDs survive
+arena growth, and CE arrays are copied into immutable sequence storage. Replacing
+or suppressing a mapping cannot change an expansion copied earlier.
+
+Insertion publishes its terminal only after all fallible operations succeed.
+Unused trie paths/capacity may remain after failure, but no resolved mapping
+changes. Suppression removes existing contextual terminals iteratively, retains
+unprefixed singletons, and records inherited-root suppression. Later rules may
+reintroduce contexts. Tests cover allocation failure, retained sequences, long
+prefix/suffix trees, matcher integration and a 102,038-entry starred shape.
+Frozen executable storage and full instruction execution remain subsequent work.
 
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
