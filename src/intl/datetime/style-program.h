@@ -23,9 +23,10 @@ typedef struct QJSIntlDateStylePrograms {
     QJSIntlDateCombinationRecord connector;
 } QJSIntlDateStylePrograms;
 
-/* Compile the exact selected nonempty style pattern, retaining its independent
+/* Compile the selected nonempty style pattern, retaining its independent
    skeleton record and raw numbering overrides as provenance, not numeric
-   renderer options. Use the style owner's own locale/calendar/alternate indexes.
+   renderer options. Apply the month/no-week CLDR year workaround to owned
+   tokens. Use the style owner's own locale/calendar/alternate indexes.
    Reject unsupported projections and date/time family mixing; time requires an
    hour. Missing/BLOCK/empty selected patterns return UNSUPPORTED, without trying
    another style, alternate or parent. Own compiled text; source records borrow
