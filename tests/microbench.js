@@ -1105,6 +1105,82 @@ function regexp_replace(n)
     return n * 1000;
 }
 
+/* Keep construction separate from reuse of a cached bound comparison. */
+function intl_collation_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_collation_compare(n)
+{
+    var compare = intl_collation_compare.compare ||
+        (intl_collation_compare.compare = new Intl.Collator("en").compare);
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = compare("alpha", "beta");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_collation_numeric(n)
+{
+    var compare = intl_collation_numeric.compare ||
+        (intl_collation_numeric.compare = new Intl.Collator("en", { numeric: true }).compare);
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = compare("item00000000000000000002", "item10");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_collation_canonical(n)
+{
+    var compare = intl_collation_canonical.compare ||
+        (intl_collation_canonical.compare = new Intl.Collator("en").compare);
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = compare("\u00e9\u00e4\u0101", "e\u0301a\u0308a\u0304");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+/* These entry points also run on older Intl builds without Intl.Collator.
+   Their code-point fallback has different semantics: report that distinction. */
+function intl_collation_locale(n)
+{
+    var options = { numeric: false };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = "alpha".localeCompare("beta", "en", options);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_collation_default(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = "alpha".localeCompare("beta");
+        global_res = result;
+    }
+    return n * 100;
+}
+
 function intl_list_construct(n)
 {
     var i, j, result;
@@ -2290,6 +2366,14 @@ function main(argc, argv, g)
         test_list.push(intl_case_default);
         test_list.push(intl_case_lower);
         test_list.push(intl_case_upper);
+        test_list.push(intl_collation_locale);
+        test_list.push(intl_collation_default);
+    }
+    if (typeof Intl === "object" && typeof Intl.Collator === "function") {
+        test_list.push(intl_collation_construct);
+        test_list.push(intl_collation_compare);
+        test_list.push(intl_collation_numeric);
+        test_list.push(intl_collation_canonical);
     }
     if (typeof Intl === "object" && typeof Intl.ListFormat === "function") {
         test_list.push(intl_list_construct);
