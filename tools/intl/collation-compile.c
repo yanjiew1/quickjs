@@ -6,6 +6,7 @@
 #include "collation-snapshot.h"
 #include "collation-trie.h"
 #include "collation-archive.h"
+#include "../../src/intl/collation/compiled-data.h"
 #include "../../src/cutils/cutils.h"
 #include "../../src/unicode/libunicode.h"
 #include <inttypes.h>
@@ -180,6 +181,12 @@ static void *root_malloc(void *opaque, size_t size)
     return malloc(size);
 }
 
+static void *root_realloc(void *opaque, void *ptr, size_t size)
+{
+    (void)opaque;
+    return realloc(ptr, size);
+}
+
 static void root_free(void *opaque, void *ptr)
 {
     (void)opaque;
@@ -188,7 +195,7 @@ static void root_free(void *opaque, void *ptr)
 
 static int audit_root(const uint8_t *bytes, size_t size)
 {
-    QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
+    QJSIntlAllocator allocator = {NULL, root_malloc, root_realloc, root_free};
     QJSIntlRootInput view;
     QJSIntlStatus status = qjs_intl_root_input_open(bytes, size, &allocator, &view);
     if (status) {
@@ -201,7 +208,7 @@ static int audit_root(const uint8_t *bytes, size_t size)
     return 0;
 }
 
-static int read_input(const char *path, uint8_t **bytes, size_t *length)
+static int read_input(const char *path, uint8_t **bytes, size_t *length, size_t limit)
 {
     FILE *file = fopen(path, "rb");
     long size;
@@ -210,7 +217,7 @@ static int read_input(const char *path, uint8_t **bytes, size_t *length)
     *length = 0;
     if (!file)
         return 1;
-    if (fseek(file, 0, SEEK_END) || (size = ftell(file)) < 20 || size > IR_MAX_SIZE ||
+    if (fseek(file, 0, SEEK_END) || (size = ftell(file)) < 20 || (uint64_t)size > limit ||
         fseek(file, 0, SEEK_SET)) {
         fclose(file);
         return 1;
@@ -240,19 +247,21 @@ int main(int argc, char **argv)
     QJSIntlIRView view;
     QJSIntlIRDiagnostic error;
     const QJSIntlIRVisitor visitor = {NULL, audit_instruction, audit_end};
-    QJSIntlAllocator allocator = {NULL, root_malloc, normalize_realloc, root_free};
+    QJSIntlAllocator allocator = {NULL, root_malloc, root_realloc, root_free};
     Audit audit = {.preflight = 1};
     Executed executed = {0};
     QJSIntlCollationArchive archive = {0};
     QJSIntlCompiledCollation image = {0};
-    int failed, root_mode, pair_mode, execute_mode, compile_mode;
+    QJSIntlCompiledCollationData compiled;
+    int failed, root_mode, pair_mode, execute_mode, compile_mode, compiled_mode;
+    compiled_mode = argc == 3 && !strcmp(argv[1], "--audit-compiled");
     compile_mode = argc == 4 && !strcmp(argv[1], "--compile-pair");
     execute_mode = compile_mode || (argc == 4 && !strcmp(argv[1], "--execute-pair"));
     pair_mode = execute_mode || (argc == 4 && !strcmp(argv[1], "--audit-pair"));
-    if (!pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
+    if (!compiled_mode && !pair_mode && (argc != 3 || (strcmp(argv[1], "--audit-ir") && strcmp(argv[1], "--audit-root")))) {
         fprintf(stderr, "usage: %s --audit-ir input.qjci | --audit-root root.qjcr | "
                 "--audit-pair root.qjcr input.qjci | --execute-pair root.qjcr input.qjci | "
-                "--compile-pair root.qjcr input.qjci > output.qjcl\n", argv[0]);
+                "--compile-pair root.qjcr input.qjci > output.qjcl | --audit-compiled input.qjcl\n", argv[0]);
         return 2;
     }
     root_mode = !strcmp(argv[1], "--audit-root");
@@ -261,7 +270,7 @@ int main(int argc, char **argv)
         return 1;
     }
     if (pair_mode) {
-        if (read_input(argv[2], &root_bytes, &root_size))
+        if (read_input(argv[2], &root_bytes, &root_size, IR_MAX_SIZE))
             return 1;
         if (qjs_intl_root_input_open(root_bytes, root_size, &allocator, &root)) {
             free(root_bytes);
@@ -269,9 +278,19 @@ int main(int argc, char **argv)
             return 1;
         }
     }
-    if (read_input(argv[pair_mode ? 3 : 2], &bytes, &size)) {
+    if (read_input(argv[pair_mode ? 3 : 2], &bytes, &size,
+                   compiled_mode ? QJS_INTL_COMPILED_COLLATION_MAX_SIZE : IR_MAX_SIZE)) {
         free(root_bytes);
         return 1;
+    }
+    if (compiled_mode) {
+        failed = qjs_intl_compiled_collation_open(bytes, size, NULL, &allocator, &compiled);
+        if (failed)
+            fprintf(stderr, "invalid compiled collation archive (%d)\n", failed);
+        else
+            printf("{\"programs\":%u,\"root_mappings\":%u}\n", compiled.program_count, compiled.root.keys.row_count);
+        free(bytes);
+        return failed ? 1 : 0;
     }
     if (root_mode) {
         failed = audit_root(bytes, size);
@@ -295,6 +314,8 @@ int main(int argc, char **argv)
     }
     if (!failed && compile_mode)
         failed = qjs_intl_collation_archive_finish(&archive, &image);
+    if (!failed && compile_mode)
+        failed = qjs_intl_compiled_collation_open(image.bytes, image.length, root.fingerprint, &allocator, &compiled);
     if (failed) {
         if (error.source.bytes)
             fprintf(stderr, "%.*s:%u:%u: ", (int)error.source.length, (const char *)error.source.bytes,

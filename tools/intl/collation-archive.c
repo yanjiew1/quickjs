@@ -1,12 +1,13 @@
 /* One shared logical root plus sparse per-program ranked state. No struct dumps.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "collation-archive.h"
+#include "../../src/intl/collation/compiled-data.h"
 #include "../../src/intl/native/wire.h"
 #include <string.h>
 
-#define MAX_SIZE (256u * 1024 * 1024)
-#define HEADER_SIZE 64u
-#define SECTION_COUNT 12u
+#define MAX_SIZE QJS_INTL_COMPILED_COLLATION_MAX_SIZE
+#define HEADER_SIZE QJS_INTL_COMPILED_COLLATION_HEADER
+#define SECTION_COUNT QJS_INTL_COMPILED_SECTION_COUNT
 #define START (HEADER_SIZE + SECTION_COUNT * 16u)
 
 static void put32(uint8_t *p, uint32_t value)
@@ -282,9 +283,9 @@ QJSIntlStatus qjs_intl_collation_archive_finish(QJSIntlCollationArchive *owner, 
     image.length = (size_t)size;
     memset(image.bytes, 0, (size_t)size);
     memcpy(image.bytes, "QJCL", 4);
-    put32(image.bytes + 4, 1);
-    put32(image.bytes + 8, QJS_INTL_IR_UNICODE_VERSION);
-    put32(image.bytes + 12, QJS_INTL_IR_UNICODE_VERSION);
+    put32(image.bytes + 4, QJS_INTL_COMPILED_COLLATION_VERSION);
+    put32(image.bytes + 8, QJS_INTL_COMPILED_COLLATION_UNICODE);
+    put32(image.bytes + 12, QJS_INTL_COMPILED_COLLATION_UNICODE);
     put32(image.bytes + 16, (uint32_t)size);
     put32(image.bytes + 20, SECTION_COUNT);
     put32(image.bytes + 24, owner->count);
