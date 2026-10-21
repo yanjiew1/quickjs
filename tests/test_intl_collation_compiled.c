@@ -3,8 +3,10 @@
 #include "../tools/intl/collation-archive.h"
 #include "../src/intl/collation/compiled-data.h"
 #include "../src/intl/collation/ranked-elements.h"
+#include "../src/intl/collation/ranked-compare.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 extern const uint8_t intl_root_fixture[], intl_program_success[];
@@ -812,6 +814,231 @@ static void test_binding_views(Fixture *f)
     free(bytes);
 }
 
+static void check_order(Fixture *f, const QJSIntlCompiledCollationProgram *p,
+                        const QJSIntlCollationPolicy *policy,
+                        const uint16_t *left, size_t left_length,
+                        const uint16_t *right, size_t right_length, int expected)
+{
+    QJSIntlAllocator a = allocator(f);
+    size_t baseline = f->live;
+    int order = 99;
+
+    assert(!qjs_intl_collation_compare_ranked(p, left, left_length, right, right_length, &a, policy, &order));
+    if (order != expected) {
+        size_t i;
+
+        fprintf(stderr, "ranked order %d, expected %d; left:", order, expected);
+        for (i = 0; i < left_length; i++)
+            fprintf(stderr, " %04x", left[i]);
+        fprintf(stderr, "; right:");
+        for (i = 0; i < right_length; i++)
+            fprintf(stderr, " %04x", right[i]);
+        fprintf(stderr, "\n");
+    }
+    assert(order == expected && f->live == baseline);
+    assert(!qjs_intl_collation_compare_ranked(p, right, right_length, left, left_length, &a, policy, &order));
+    assert(order == -expected && f->live == baseline);
+}
+
+static void check_ascii_order(Fixture *f, const QJSIntlCompiledCollationProgram *p,
+                              const QJSIntlCollationPolicy *policy,
+                              const char *left, const char *right, int expected)
+{
+    uint16_t a[16], b[16];
+    size_t i, an = strlen(left), bn = strlen(right);
+
+    assert(an <= 16 && bn <= 16);
+    for (i = 0; i < an; i++)
+        a[i] = (unsigned char)left[i];
+    for (i = 0; i < bn; i++)
+        b[i] = (unsigned char)right[i];
+
+    check_order(f, p, policy, a, an, b, bn, expected);
+}
+
+static void test_ranked_case_levels(const QJSIntlRootInput *root)
+{
+    Fixture f = {0};
+    QJSIntlAllocator a = allocator(&f);
+    QJSIntlCollationProgram builder;
+    const QJSIntlIRProgram identity = {{(const uint8_t *)"xx", 2}, {(const uint8_t *)"standard", 8}, {0}, 0};
+    QJSIntlCompiledCollationData data;
+    QJSIntlCompiledCollationProgram p;
+    QJSIntlCollationPolicy policy;
+    const uint32_t lower = 'a', t_only = 't', s_only = 's', upper_alias = 'c';
+    const uint32_t accent[] = {'a', 0x301}, variant[] = {'a', 0x2bc};
+    const uint16_t accented[] = {'a', 0x301}, plain = 'a';
+    const uint16_t variant_upper[] = {'a', 0x2bc, 'A'}, plain_pair[] = {'a', 'a'};
+
+    init_program(&builder, root, &f);
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, &lower, 1, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 2, NULL, 0, accent, 2, NULL, 0));
+    assert(!qjs_intl_collation_builder_reset(&builder.builder, &lower, 1, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 3, NULL, 0, variant, 2, NULL, 0));
+    assert(!qjs_intl_collation_builder_logical(&builder.builder, QJS_INTL_ROOT_FIRST_SECONDARY_IGNORABLE, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 3, NULL, 0, &t_only, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_logical(&builder.builder, QJS_INTL_ROOT_FIRST_PRIMARY_IGNORABLE, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 2, NULL, 0, &s_only, 1, NULL, 0));
+    assert(!qjs_intl_collation_builder_relate(&builder.builder, 0, NULL, 0, &upper_alias, 1, NULL, 0));
+    assert(!qjs_intl_collation_archive_init(&f.archive, root, &a));
+    assert(!retain(&f, &identity, &builder));
+    clear_program(&builder);
+    assert(!qjs_intl_collation_archive_finish(&f.archive, &f.image));
+    qjs_intl_collation_archive_clear(&f.archive);
+    assert(!qjs_intl_compiled_collation_open(f.image.bytes, f.image.length, NULL, &a, &data));
+    assert(!qjs_intl_compiled_collation_program(&data, 0, &p));
+
+    policy = p.policy;
+    policy.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
+    check_ascii_order(&f, &p, &policy, "ata", "aat", 1);
+    check_order(&f, &p, &policy, variant_upper, 3, plain_pair, 2, 1);
+    policy.case_level = 1;
+    check_order(&f, &p, &policy, variant_upper, 3, plain_pair, 2, -1);
+
+    policy.case_first = QJS_INTL_COLLATION_CASE_OFF;
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_PRIMARY;
+    check_order(&f, &p, &policy, &plain, 1, accented, 2, 0);
+    check_ascii_order(&f, &p, &policy, "ata", "aat", 0);
+    check_ascii_order(&f, &p, &policy, "s", "c", 0);
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_SECONDARY;
+    check_order(&f, &p, &policy, &plain, 1, accented, 2, -1);
+    /* Tailored secondary-only CEs clear case bits even when their original
+       root text had uppercase metadata (TR35 Tailored Strings, step 5). */
+    check_ascii_order(&f, &p, &policy, "s", "c", 0);
+
+    clear_sources(&f);
+    qjs_intl_compiled_collation_clear(&f.image);
+    assert(!f.live);
+}
+
+static void test_ranked_comparison(Fixture *f)
+{
+    QJSIntlAllocator a = allocator(f);
+    QJSIntlCompiledCollationData data;
+    QJSIntlCompiledCollationProgram en, fr;
+    QJSIntlCollationPolicy policy;
+    const uint16_t latin = 'a', han = 0x4e00;
+
+    assert(!qjs_intl_compiled_collation_open(f->image.bytes, f->image.length, NULL, &a, &data));
+    assert(!qjs_intl_compiled_collation_program(&data, 0, &en));
+    assert(!qjs_intl_compiled_collation_program(&data, 1, &fr));
+    policy = fr.policy;
+
+    check_ascii_order(f, &fr, NULL, "2", "10", -1);
+    check_ascii_order(f, &fr, NULL, "002", "2", 0);
+    policy.numeric = 0;
+    check_ascii_order(f, &fr, &policy, "2", "10", 1);
+    check_ascii_order(f, &en, &policy, "g", "h", -1);
+    check_ascii_order(f, &en, &policy, "h", "i", -1);
+    check_ascii_order(f, &en, &policy, "g", "i", -1);
+    check_ascii_order(f, &en, &policy, "j", "k", 0);
+
+    /* A weaker early case difference cannot beat the later secondary b/a
+       difference. Ordinary T remains distinct from an explicit case level. */
+    check_ascii_order(f, &fr, &policy, "a", "A", -1);
+    check_ascii_order(f, &fr, &policy, "ab", "Aa", 1);
+    policy.case_first = QJS_INTL_COLLATION_UPPER_FIRST;
+    check_ascii_order(f, &fr, &policy, "a", "A", 1);
+    policy.strength = QJS_INTL_COLLATION_STRENGTH_PRIMARY;
+    check_ascii_order(f, &fr, &policy, "a", "b", 0);
+    policy.case_level = 1;
+    check_ascii_order(f, &fr, &policy, "a", "A", 1);
+    policy.case_first = QJS_INTL_COLLATION_CASE_OFF;
+    check_ascii_order(f, &fr, &policy, "ab", "Aa", -1);
+    policy = fr.policy;
+
+    check_order(f, &en, &policy, &latin, 1, &han, 1, 1);
+    check_order(f, &fr, &policy, &latin, 1, &han, 1, -1);
+    {
+        const uint16_t composed = 0xe5, decomposed[] = {'a', 0x30a};
+        const uint16_t zero = 0;
+
+        check_order(f, &en, &policy, &composed, 1, decomposed, 2, 0);
+        check_order(f, &en, &policy, NULL, 0, &zero, 1, 0);
+    }
+
+    /* A primary-equal long prefix exercises every buffer-growth allocation;
+       failed init/growth leaves a zero result and no retained allocation. */
+    {
+        uint16_t lower[128], upper[128];
+        size_t i, calls, allocations, baseline = f->live;
+        int order;
+
+        for (i = 0; i < 128; i++) {
+            lower[i] = 'a';
+            upper[i] = 'A';
+        }
+        calls = f->calls;
+        assert(!qjs_intl_collation_compare_ranked(&fr, lower, 128, upper, 128, &a, &policy, &order) && order == -1);
+        allocations = f->calls - calls;
+        assert(f->live == baseline);
+
+        for (i = 1; i <= allocations; i++) {
+            f->fail_at = f->calls + i;
+            order = 99;
+            assert(qjs_intl_collation_compare_ranked(&fr, lower, 128, upper, 128, &a, &policy, &order) == QJS_INTL_NO_MEMORY);
+            assert(!order && f->live == baseline);
+        }
+        f->fail_at = 0;
+    }
+
+    /* A first-primary mismatch must not allocate a full weak sort key. Both
+       sides pay only the same initialization cost as standalone iterators. */
+    {
+        QJSIntlCollationRankedElements it[2];
+        uint16_t left[512], right[512];
+        size_t i, calls, init_calls;
+        int order;
+
+        for (i = 0; i < 512; i++) {
+            left[i] = latin;
+            right[i] = han;
+        }
+        calls = f->calls;
+        assert(!qjs_intl_collation_ranked_elements_init(it, &fr, left, 512, policy.numeric, &a));
+        assert(!qjs_intl_collation_ranked_elements_init(it + 1, &fr, right, 512, policy.numeric, &a));
+        init_calls = f->calls - calls;
+        qjs_intl_collation_ranked_elements_clear(it);
+        qjs_intl_collation_ranked_elements_clear(it + 1);
+
+        calls = f->calls;
+        assert(!qjs_intl_collation_compare_ranked(&fr, left, 512, right, 512, &a, &policy, &order) && order == -1);
+        assert(f->calls - calls == init_calls);
+
+        /* Pure primary equality also needs no weak buffer. Wholly ignorable
+           long input must not create one even with tertiary strength. */
+        for (i = 0; i < 512; i++)
+            right[i] = 'A';
+        policy.strength = QJS_INTL_COLLATION_STRENGTH_PRIMARY;
+        calls = f->calls;
+        assert(!qjs_intl_collation_compare_ranked(&fr, left, 512, right, 512, &a, &policy, &order) && !order);
+        assert(f->calls - calls == init_calls);
+
+        memset(left, 0, sizeof(left));
+        calls = f->calls;
+        assert(!qjs_intl_collation_ranked_elements_init(it, &fr, left, 512, policy.numeric, &a));
+        init_calls = f->calls - calls;
+        qjs_intl_collation_ranked_elements_clear(it);
+
+        policy = fr.policy;
+        calls = f->calls;
+        assert(!qjs_intl_collation_compare_ranked(&fr, left, 512, NULL, 0, &a, &policy, &order) && !order);
+        assert(f->calls - calls == init_calls);
+    }
+
+    /* Unsupported stages are explicit, never silently approximated. */
+    {
+        int order = 99;
+
+        policy.shifted = 1;
+        assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_UNSUPPORTED && !order);
+        policy = fr.policy;
+        policy.case_first = (QJSIntlCollationCaseFirst)99;
+        order = 99;
+        assert(qjs_intl_collation_compare_ranked(&fr, &latin, 1, &han, 1, &a, &policy, &order) == QJS_INTL_INVALID_ARGUMENT && !order);
+    }
+}
+
 int main(void)
 {
     Fixture f = {0};
@@ -825,6 +1052,8 @@ int main(void)
     test_ranked_streams(&f, &root);
     test_ranked_numbers(&f, &root);
     test_binding_views(&f);
+    test_ranked_comparison(&f);
+    test_ranked_case_levels(&root);
     test_roundtrip_oom_and_lifetime(&f, &root);
     qjs_intl_compiled_collation_clear(&f.image);
     assert(!f.live);
