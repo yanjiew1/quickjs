@@ -11,9 +11,21 @@ static int unicode_gc_contains(uint32_t code, uint32_t mask)
 {
     const uint8_t *p = unicode_gc_table;
     const uint8_t *end = p + countof(unicode_gc_table);
-    uint32_t start = 0;
+    uint32_t start;
+    size_t lo = 0, hi = countof(unicode_gc_index) / 2;
     if (code > 0x10ffff)
         return 0;
+    /* Checkpoints bound the scan to 64 encoded runs without duplicating the
+       category data. Each pair retains the original run start and byte offset. */
+    while (lo + 1 < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (unicode_gc_index[2 * mid] <= code)
+            lo = mid;
+        else
+            hi = mid;
+    }
+    start = unicode_gc_index[2 * lo];
+    p += unicode_gc_index[2 * lo + 1];
     while (p < end) {
         uint32_t b, length, category;
         UNICODE_GC_READ(p, b, length, category);
