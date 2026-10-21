@@ -150,6 +150,7 @@ if intl_enabled
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
     'intl/common/range-compose.c',
+    'intl/datetime/append-layout.c',
     'intl/common/locale-grammar.c',
     'intl/common/source-locale.c',
     'intl/common/number-decimal.c',
