@@ -42,6 +42,10 @@ jobs:
             diff -u "src/unicode/$file" "build-unicode/$file" || status=1
           done
           exit "$status"
+      - name: Check Unicode normalization conformance
+        run: |
+          meson compile -C build-unicode unicode_gen_test -j "$(getconf _NPROCESSORS_ONLN)"
+          build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
       - name: Preserve generated tables on failure
         if: failure()
         uses: actions/upload-artifact@v7
