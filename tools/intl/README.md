@@ -147,6 +147,22 @@ Resolved targets are still source identities here; archive publication maps
 them to checked program IDs. This collector alone does not
 advertise Collator capability or override the specified Intl.Locale exceptions.
 
+`collation_prepare.py` stages root input and import-expanded IR for exactly the
+profile's sort/search targets, invokes the host compiler and atomically publishes
+the bound image after C readback. Standalone private, alternate and unused
+programs are omitted; their imported rules remain inside selected programs.
+The shared logical root is retained once. Staging uses the destination's parent
+directory and is removed on success or failure. Whole-catalog IR remains the
+default for diagnostic audits; `collation_ir.py --profile` selects the same
+target closure without compiling it.
+
+```sh
+python3 tools/intl/collation_prepare.py \
+  --sources build/intl-cache/cldr-49-beta4 --profile minimal \
+  --compiler build/intl-collation-compile \
+  --output build/collation-minimal.qjcl
+```
+
 `collation_ir.py` expands the ordered program catalog into a counted build-time
 artifact. `intl-collation-compile --audit-ir input.qjci` reads it using explicit
 little-endian loads, runs text operands through the engine's pinned Unicode NFD

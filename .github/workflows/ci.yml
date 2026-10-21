@@ -32,11 +32,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
           meson setup build-collation -Dwerror=true -Ddocumentation=disabled
-          meson compile -C build-collation -j2 test_intl_collation_minimal
+          meson compile -C build-collation -j2 test_intl_collation_minimal intl-collation-compile
           timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
             --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
           timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
             --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
+      - name: Prepare exact collation targets for each profile
+        run: |
+          for profile in minimal native; do
+            timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
+              --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+              --profile "$profile" --compiler build-collation/intl-collation-compile \
+              --output "$RUNNER_TEMP/collation-$profile.qjcl"
+          done
       - name: Audit pinned XML documents and DTD attribute schema
         run: |
           timeout 120s python3 tools/intl/cldr_xml.py \

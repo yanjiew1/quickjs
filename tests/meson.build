@@ -4625,6 +4625,15 @@ test(
 )
 
 test(
+  'intl-collation-profile-preparation',
+  python,
+  args: [files('test_intl_collation_prepare.py'), '--compiler', collation_compile],
+  depends: collation_compile,
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-collation-archive',
   python,
   args: [files('test_intl_collation_archive.py'), '--compiler', collation_compile],
