@@ -220,6 +220,43 @@ static void failures(const QJSIntlCollationContexts *data)
     }
 }
 
+static void mapping_interface(const QJSIntlCollationContexts *data)
+{
+    static const uint16_t input[] = {'a', 'b', 'c', 0x378, '0', '0', '2', 0x34f, '0'};
+    Allocation state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    QJSIntlCollationMatch match;
+    QJSIntlCollationMatchResult result;
+    QJSIntlCollationNumber number;
+    QJSIntlCollationElement element;
+    int present;
+    assert(!qjs_intl_collation_match_init(&match, data, input,
+                                         sizeof(input) / sizeof(*input), &a));
+    /* The shared matcher identifies storage or an unmatched scalar. It does
+       not invent implicit CEs or expose an expansion one element at a time. */
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT && !number.length);
+    assert(result.entry.key_count == 3 && result.entry.element_count == 1);
+    assert(!qjs_intl_collation_element_at(&result.entry, 0, &element));
+    assert(element.primary == 0x2000);
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_SCALAR && result.scalar == 0x378);
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_NUMBER && number.length == 1);
+    assert(number.digits[0] == '2');
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_ROOT && !number.length);
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_NUMBER && number.length == 1);
+    assert(number.digits[0] == '0');
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && !present);
+    assert(result.kind == QJS_INTL_COLLATION_MATCH_NONE && !number.length);
+    assert(!qjs_intl_collation_match_next(&match, &result, &number, &present) && !present);
+    qjs_intl_collation_match_clear(&match);
+    qjs_intl_collation_match_clear(&match);
+    assert(!state.live);
+}
+
 int main(void)
 {
     QJSIntlPack pack;
@@ -231,5 +268,6 @@ int main(void)
     long_runs(&data);
     input_lifetime(&data);
     failures(&data);
+    mapping_interface(&data);
     return 0;
 }
