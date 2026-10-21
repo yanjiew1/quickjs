@@ -1,4 +1,4 @@
-/* Native calendar-year reconstruction preserves unsupported style provenance.
+/* Native year-data workaround preserves selected style text and punctuation.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/datetime/style-date.h"
 #include <assert.h>
@@ -108,8 +108,12 @@ static QJSIntlDateSourceCandidates candidates(const QJSIntlDateAvailableData *da
 static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailableData *available,
                    const QJSIntlAllocator *allocator)
 {
-    const char *names[] = {"exact", "galician", "kekchi", "priority"};
-    const char *patterns[] = {"y-MM-dd", "EEEE, d 'de' MMMM 'de' y G", "dd-MM-y G", "EEEE [d] MMMM y G"};
+    const char *names[] = {"exact", "galician", "kekchi", "priority", "override", "context",
+                           "numeric", "twodigit", "quotedweek"};
+    const char *patterns[] = {"y-MM-dd", "EEEE, d 'de' MMMM 'de' y G", "dd/MM/y G",
+                              "EEEE, d 'de' MMMM 'de' y G", "EEEE, d 'de' MMMM 'de' y G",
+                              "EEEE, d 'de' MMMM 'de' y G", "EEEE, d 'de' MMMM 'de' y G",
+                              "yy/M/d", "y 'w W' M d"};
     Allocation *state = allocator->opaque;
     uint32_t root = locale_id(&styles->data, "root"), en = locale_id(&styles->data, "en");
     size_t j, i;
@@ -117,7 +121,7 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
         QJSIntlDateSourceCandidates pool = candidates(available, root, names[j], allocator);
         uint32_t calendar = calendar_id(styles, names[j]), selected = j == 2 ? en : root;
         QJSIntlDatePreparedStyle result, zero = {0};
-        QJSIntlDateStyleSource exact, exact_zero = {0};
+        QJSIntlDateStyleSource exact;
         QJSIntlDateStylePrograms composed;
         size_t calls, baseline = state->live;
         state->calls = 0;
@@ -125,17 +129,15 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
                                              &pool, allocator, &result));
         calls = state->calls;
         assert(result.style.info.year_kinds == QJS_INTL_DATE_YEAR_CALENDAR);
-        assert(result.adaptations == (j ? QJS_INTL_DATE_STYLE_REBUILT : 0));
-        assert((result.source_index == SIZE_MAX) == !j);
+        assert(!result.adaptations && result.source_index == SIZE_MAX);
+        assert(!result.replacement.text.data);
         if (j) {
-            assert(result.source_index < pool.count);
-            assert(equal(result.replacement.code, j == 1 ? "GyMMMEd" : j == 2 ? "GyMd" : "GyMMMMEEEEd"));
-            assert(equal(result.origin.origin_locale, "root"));
-            assert(qjs_intl_date_style_source_open(styles, selected, calendar, QJS_INTL_DATE_STYLE_DATE,
-                         QJS_INTL_DATE_STYLE_FULL, 0, allocator, &exact) == QJS_INTL_UNSUPPORTED);
-            assert(!memcmp(&exact, &exact_zero, sizeof(exact)));
-            assert(equal(result.style.source.text, j == 2 ? "dd/MM/Y G" : "EEEE, d 'de' MMMM 'de' Y G"));
+            assert(!qjs_intl_date_style_source_open(styles, selected, calendar, QJS_INTL_DATE_STYLE_DATE,
+                         QJS_INTL_DATE_STYLE_FULL, 0, allocator, &exact));
+            pattern_equal(allocator, &exact.pattern, patterns[j]);
+            qjs_intl_date_style_source_clear(&exact);
             if (j == 1 || j == 2) {
+                assert(equal(result.style.source.text, j == 2 ? "dd/MM/Y G" : "EEEE, d 'de' MMMM 'de' Y G"));
                 assert(equal(result.style.skeleton.text, j == 1 ? "GYMMMMEEEEd" : "GGGGGyMMdd"));
                 assert(equal(result.style.skeleton.origin_locale, j == 1 ? "root" : "en"));
                 assert(equal(result.style.source.origin_locale, "root"));
@@ -162,8 +164,36 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
         assert(!state->live);
     }
     {
-        const char *bad[] = {"override", "context", "numeric", "quarter", "twodigit",
-                             "duplicate", "mixed", "related", "time", "blocked", "empty", "missing"};
+        QJSIntlDateSourceCandidates pool = candidates(available, root, "legacy", allocator);
+        QJSIntlDatePreparedStyle result, zero = {0};
+        uint32_t calendar = calendar_id(styles, "legacy");
+        size_t calls, baseline = state->live;
+
+        /* No month: keep the existing real-source fallback, including allowed
+           weekday-name expansion, provenance, ownership and failure unwind. */
+        state->calls = 0;
+        assert(!qjs_intl_date_style_date_open(styles, root, calendar, QJS_INTL_DATE_STYLE_FULL,
+                                             0, &pool, allocator, &result));
+        calls = state->calls;
+        assert(result.adaptations == QJS_INTL_DATE_STYLE_REBUILT && result.source_index < pool.count);
+        assert(equal(result.replacement.code, "GyE") && equal(result.style.source.text, "EEEE Y G"));
+        pattern_equal(allocator, &result.style.pattern, "EEEE, y G");
+        qjs_intl_date_prepared_style_clear(&result);
+
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            assert(qjs_intl_date_style_date_open(styles, root, calendar, QJS_INTL_DATE_STYLE_FULL,
+                       0, &pool, allocator, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->fail_at = 0;
+        qjs_intl_date_source_candidates_clear(&pool);
+        assert(!state->live);
+    }
+    {
+        const char *bad[] = {"quarter", "duplicate", "mixed", "related", "time", "blocked",
+                             "empty", "missing", "weekyear", "weekmonth", "nomonth", "quotedmonth"};
         for (j = 0; j < sizeof(bad) / sizeof(*bad); j++) {
             QJSIntlDateSourceCandidates pool = candidates(available, en, bad[j], allocator);
             QJSIntlDatePreparedStyle result, zero = {0};
@@ -183,9 +213,10 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
         assert(result.source_index == SIZE_MAX);
         qjs_intl_date_prepared_style_clear(&result);
         memset(&result, 0xff, sizeof(result));
-        assert(qjs_intl_date_style_date_open(styles, root, calendar_id(styles, "galician"),
-                   QJS_INTL_DATE_STYLE_FULL, 0, NULL, allocator, &result) == QJS_INTL_UNSUPPORTED);
-        assert(!memcmp(&result, &zero, sizeof(result)));
+        assert(!qjs_intl_date_style_date_open(styles, root, calendar_id(styles, "galician"),
+                   QJS_INTL_DATE_STYLE_FULL, 0, NULL, allocator, &result));
+        pattern_equal(allocator, &result.style.pattern, "EEEE, d 'de' MMMM 'de' y G");
+        qjs_intl_date_prepared_style_clear(&result);
         assert(qjs_intl_date_style_date_open(styles, root, calendar, QJS_INTL_DATE_STYLE_FULL,
                    0, NULL, NULL, &result) == QJS_INTL_INVALID_ARGUMENT);
         assert(!memcmp(&result, &zero, sizeof(result)));

@@ -194,15 +194,18 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateCombinati
     qjs_intl_date_style_programs_clear(&result);
     qjs_intl_date_single_programs_clear(&times);
     qjs_intl_date_style_source_clear(&time);
-    /* Unsupported week-year, mixed family, no hour, missing/BLOCK/empty. */
+    /* The month/no-week CLDR workaround admits the date source; mixed family,
+       no hour and missing/BLOCK/empty sources retain their existing behavior. */
     for (i = 0; i < 6; i++) {
         QJSIntlDateStyleFamily family = i == 1 || i == 2 ? QJS_INTL_DATE_STYLE_TIME : QJS_INTL_DATE_STYLE_DATE;
         QJSIntlDateStyleWidth width = i == 0 ? QJS_INTL_DATE_STYLE_SHORT :
                                       i == 1 || i == 3 ? QJS_INTL_DATE_STYLE_FULL :
                                       i == 2 || i == 5 ? QJS_INTL_DATE_STYLE_LONG : QJS_INTL_DATE_STYLE_MEDIUM;
         assert(qjs_intl_date_style_source_open(styles, en, i == 5 ? jp : generic, family, width, 0, allocator, &bad) ==
-               (i == 5 ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED));
-        if (i == 5)
+               (i == 0 || i == 5 ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED));
+        if (i == 0)
+            pattern_equal(allocator, &bad.pattern, "dd/MM/y G");
+        if (i == 0 || i == 5)
             qjs_intl_date_style_source_clear(&bad);
         assert(!memcmp(&bad, &source_zero, sizeof(bad)));
     }
