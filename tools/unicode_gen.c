@@ -866,7 +866,7 @@ static const char *const break_incb_names[] = {
 
 enum { BREAK_GCB, BREAK_WB, BREAK_SB, BREAK_INCB, BREAK_EP, BREAK_COUNT };
 
-static char *break_trim(char *s)
+static char *ucd_trim(char *s)
 {
     char *end;
     while (isspace((unsigned char)*s))
@@ -877,7 +877,7 @@ static char *break_trim(char *s)
     return s;
 }
 
-static int break_range(const char *s, uint32_t *start, uint32_t *end)
+static int ucd_range(const char *s, uint32_t *start, uint32_t *end)
 {
     char *next;
     unsigned long a, b;
@@ -929,31 +929,31 @@ static int parse_break_properties_stream(FILE *f, const char *filename, unsigned
         line_number++;
         if (!strchr(line, '\n') && !feof(f) && strlen(line) == sizeof(line) - 1)
             goto bad;
-        p = break_trim(line);
+        p = ucd_trim(line);
         if (*p == '#') {
-            p = break_trim(p + 1);
+            p = ucd_trim(p + 1);
             if (strncmp(p, "@missing:", 9))
                 continue;
-            p = break_trim(p + 9);
+            p = ucd_trim(p + 9);
             missing = 1;
         }
         comment = strchr(p, '#');
         if (comment)
             *comment = '\0';
-        p = break_trim(p);
+        p = ucd_trim(p);
         if (!*p)
             continue;
         property = strchr(p, ';');
         if (!property)
             goto bad;
         *property++ = '\0';
-        property = break_trim(property);
+        property = ucd_trim(property);
         value = strchr(property, ';');
         if (value) {
             *value++ = '\0';
-            value = break_trim(value);
+            value = ucd_trim(value);
         }
-        property = break_trim(property);
+        property = ucd_trim(property);
         if (kind == BREAK_INCB && strcmp(property, "InCB"))
             continue;
         if (kind == BREAK_EP && strcmp(property, "Extended_Pictographic"))
@@ -963,7 +963,7 @@ static int parse_break_properties_stream(FILE *f, const char *filename, unsigned
         if (!value)
             value = property;
         extra = strchr(value, ';');
-        if (extra || break_range(break_trim(p), &start, &end))
+        if (extra || ucd_range(ucd_trim(p), &start, &end))
             goto bad;
         if (kind != BREAK_EP) {
             for (number = 0; number < counts[kind]; number++)
@@ -1009,6 +1009,131 @@ static int parse_break_properties(const char *filename, unsigned int kind)
         return -1;
     }
     return parse_break_properties_stream(f, filename, kind);
+}
+
+/* Blocks stay range-based: assignment and Unified_Ideograph are independent
+   properties, and unallocated gaps have the explicit No_Block default. */
+typedef struct UnicodeBlockRange {
+    uint32_t first, last;
+    char name[128];
+} UnicodeBlockRange;
+
+static UnicodeBlockRange *block_ranges;
+static size_t block_count;
+
+static int block_name_equal(const char *a, const char *b)
+{
+    for (;;) {
+        while (*a == '_')
+            a++;
+        while (*b == '_')
+            b++;
+        if (toupper((unsigned char)*a) != toupper((unsigned char)*b))
+            return 0;
+        if (!*a)
+            return 1;
+        a++;
+        b++;
+    }
+}
+
+/* Own and close the input stream; reject partial data instead of emitting a
+   valid-looking table after a parse, allocation or I/O failure. */
+static int parse_blocks_stream(FILE *file, const char *filename)
+{
+    char line[4096];
+    unsigned int line_number = 0;
+    int have_default = 0, error;
+    free(block_ranges);
+    block_ranges = NULL;
+    block_count = 0;
+    while (fgets(line, sizeof(line), file)) {
+        UnicodeBlockRange entry, *next;
+        char *p, *name, *comment;
+        size_t i, length;
+        int missing = 0;
+        line_number++;
+        if (!strchr(line, '\n') && !feof(file) && strlen(line) == sizeof(line) - 1)
+            goto bad;
+        p = ucd_trim(line);
+        if (*p == '#') {
+            p = ucd_trim(p + 1);
+            if (strncmp(p, "@missing:", 9))
+                continue;
+            p = ucd_trim(p + 9);
+            missing = 1;
+        }
+        comment = strchr(p, '#');
+        if (comment)
+            *comment = '\0';
+        p = ucd_trim(p);
+        if (!*p)
+            continue;
+        name = strchr(p, ';');
+        if (!name)
+            goto bad;
+        *name++ = '\0';
+        name = ucd_trim(name);
+        if (ucd_range(ucd_trim(p), &entry.first, &entry.last))
+            goto bad;
+        if (missing) {
+            if (have_default || entry.first || entry.last != CHARCODE_MAX ||
+                strcmp(name, "No_Block"))
+                goto bad;
+            have_default = 1;
+            continue;
+        }
+        length = strlen(name);
+        if (!length || length >= sizeof(entry.name) ||
+            !isalpha((unsigned char)name[0]) || (entry.first & 15) ||
+            (entry.last & 15) != 15 ||
+            (block_count && entry.first <= block_ranges[block_count - 1].last))
+            goto bad;
+        for (i = 0; i <= length; i++) {
+            unsigned char c = name[i];
+            if (c && !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                       (c >= '0' && c <= '9') || c == ' ' || c == '-' || c == '_'))
+                goto bad;
+            entry.name[i] = c == ' ' || c == '-' ? '_' : c;
+        }
+        if (block_name_equal(entry.name, "No_Block"))
+            goto bad;
+        for (i = 0; i < block_count; i++)
+            if (block_name_equal(entry.name, block_ranges[i].name))
+                goto bad;
+        if (block_count >= INT_MAX || block_count >= SIZE_MAX / sizeof(entry))
+            goto bad;
+        next = realloc(block_ranges, (block_count + 1) * sizeof(entry));
+        if (!next)
+            goto bad;
+        block_ranges = next;
+        block_ranges[block_count++] = entry;
+    }
+    error = ferror(file) || !have_default || !block_count;
+    if (fclose(file))
+        error = 1;
+    if (!error)
+        return 0;
+    fprintf(stderr, "%s: missing block default/ranges or input error\n", filename);
+    goto fail;
+bad:
+    fprintf(stderr, "%s:%u: invalid block range or name\n", filename, line_number);
+    fclose(file);
+fail:
+    free(block_ranges);
+    block_ranges = NULL;
+    block_count = 0;
+    return -1;
+}
+
+static int parse_blocks(const char *filename)
+{
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror(filename);
+        return -1;
+    }
+    return parse_blocks_stream(file, filename);
 }
 
 void parse_derived_norm_properties(const char *filename)
@@ -2215,6 +2340,25 @@ static void dump_fixed_array(UnicodeTableOutput *out, const char *name,
         total_tables++;
         total_table_bytes += count * (width / 8);
     }
+}
+
+static void build_block_table(UnicodeTableOutput *out)
+{
+    size_t i;
+    fprintf(out->header, "typedef enum UnicodeBlockEnum {\n    UNICODE_BLOCK_No_Block,\n");
+    for (i = 0; i < block_count; i++)
+        fprintf(out->header, "    UNICODE_BLOCK_%s,\n", block_ranges[i].name);
+    fprintf(out->header, "} UnicodeBlockEnum;\n\n");
+    /* IDs are the one-based range position; runtime storage needs no names or
+       explicit IDs. Keep the generated data in its single existing C owner. */
+    fprintf(out->header, "extern const uint32_t unicode_block_ranges[%zu][2];\n", block_count);
+    fprintf(out->source, "const uint32_t unicode_block_ranges[%zu][2] = {\n", block_count);
+    for (i = 0; i < block_count; i++)
+        fprintf(out->source, "    { 0x%06x, 0x%06x },\n",
+                block_ranges[i].first, block_ranges[i].last);
+    fprintf(out->source, "};\n\n");
+    total_tables++;
+    total_table_bytes += block_count * 2 * sizeof(uint32_t);
 }
 
 /* Parallel arrays avoid struct padding. A small bucket index bounds each
@@ -4038,6 +4182,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    snprintf(filename, sizeof(filename), "%s/Blocks.txt", unicode_db_path);
+    if (parse_blocks(filename))
+        return 1;
+
     //    dump_unicode_data(unicode_db);
     build_conv_table(unicode_db);
 
@@ -4115,6 +4263,7 @@ int main(int argc, char *argv[])
         build_prop_list_table(out);
         build_sequence_prop_list_table(out);
         build_break_tables(out);
+        build_block_table(out);
         fprintf(out->source, "#endif /* CONFIG_ALL_UNICODE */\n");
         fprintf(out->header, "#endif /* CONFIG_ALL_UNICODE */\n\n");
         fprintf(out->header, "#endif /* LIBUNICODE_TABLE_H */\n");
@@ -4130,5 +4279,6 @@ int main(int argc, char *argv[])
         }
     }
     re_string_list_free(&rgi_emoji_zwj_sequence);
+    free(block_ranges);
     return 0;
 }
