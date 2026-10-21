@@ -126,6 +126,20 @@ Allocation failures preserve the ordering and permit retry. A bounded chain
 test matches the pinned stroke tailoring's 102,038 insertions without creating
 millions of per-program root nodes.
 
+The shared `src/intl/collation/logical.c` root adapter coalesces each implicit
+head/continuation pair before assigning a logical primary coordinate. A tail
+that numerically resembles another head is still consumed once. Head secondary/
+tertiary weights and explicit variable/implicit metadata survive conversion.
+Malformed pairs and standalone WF1 violations are rejected.
+
+Ordinary `P << 16` and implicit `(head << 16) | tail` keys map arithmetically to
+7,471,103 virtual nonzero root coordinates, with zero remaining ignorable. The
+domain includes unused anchors but preserves real root order; it needs no
+per-codepoint table. Exhaustive ordinal adjacency tests and both prepared
+profiles' actual NFD/lookup streams validate this bridge. Current production
+comparison still uses raw root weights; compiler/ranked comparison integration
+is subsequent work.
+
 Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file

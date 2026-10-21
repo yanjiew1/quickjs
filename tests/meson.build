@@ -1988,6 +1988,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/collation/compare.c',
       '../src/intl/collation/contexts.c',
       '../src/intl/collation/elements.c',
+      '../src/intl/collation/logical.c',
       '../src/intl/collation/weights.c',
       '../src/unicode/blocks.c',
       '../src/unicode/category.c',
@@ -3218,6 +3219,10 @@ standalone = {
   'test_intl_collation_weights_graph': [
     'test_intl_collation_weights_graph.c',
     '../tools/intl/collation-weights.c',
+  ],
+  'test_intl_collation_logical': [
+    'test_intl_collation_logical.c',
+    '../src/intl/collation/logical.c',
   ],
   'test_intl_collation_data': [
     'test_intl_collation_data.c',
