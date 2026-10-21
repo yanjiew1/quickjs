@@ -55,6 +55,12 @@ int lre_is_mark(uint32_t c)
     return unicode_gc_contains(c, M(Mn) | M(Mc) | M(Me));
 }
 
+int lre_is_assigned(uint32_t c)
+{
+    /* UCD Assigned includes private-use characters and surrogate code points.
+       Scalar validity is a separate question for the consuming algorithm. */
+    return c <= 0x10ffff && !unicode_gc_contains(c, M(Cn));
+}
 
 int lre_is_decimal_digit(uint32_t c)
 {
