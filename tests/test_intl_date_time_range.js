@@ -114,6 +114,38 @@ const clock = new DTF('en', {timeZone: 'UTC', hour: 'numeric', minute: '2-digit'
 parts = check(clock, 0, 86400000);
 assert(parts.some(part => part.source !== 'shared'), true);
 
+// Without an hms interval, combine one real date with two complete clocks.
+// Keep seconds/fractions and their endpoint sources instead of dropping them
+// to reuse an hm interval or trimming a formatted common string prefix.
+for (const options of [
+    {year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit'},
+    {dateStyle: 'short', timeStyle: 'medium'},
+    {year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+        second: '2-digit', fractionalSecondDigits: 3, hourCycle: 'h23', timeZoneName: 'short'},
+]) {
+    const formatter = new DTF('en', {timeZone: 'UTC', ...options});
+    const start = Date.UTC(2024, 6, 1, 1, 2, 3, 123);
+    const end = Date.UTC(2024, 6, 1, 15, 4, 5, 678);
+    for (const [a, b] of [[start, end], [end, start]]) {
+        const range = check(formatter, a, b);
+        for (const type of ['year', 'month', 'day']) {
+            const fields = range.filter(part => part.type === type);
+            assert(fields.length, 1);
+            assert(fields[0].source, 'shared');
+        }
+        for (const [value, source] of [[a, 'startRange'], [b, 'endRange']]) {
+            for (const part of formatter.formatToParts(value)) {
+                if (['hour', 'minute', 'second', 'fractionalSecond'].includes(part.type))
+                    assert(range.some(p => p.type === part.type && p.value === part.value && p.source === source), true);
+            }
+        }
+    }
+    assert(check(formatter, start, start).every(part => part.source === 'shared'), true);
+    const crossDay = check(formatter, start, start + 86400000);
+    assert(crossDay.some(part => part.type === 'day' && part.source === 'startRange'), true);
+    assert(crossDay.some(part => part.type === 'day' && part.source === 'endRange'), true);
+}
+
 const legacy = Object.create(DTF.prototype);
 DTF.call(legacy, 'en', {timeZone: 'UTC'});
 for (const name of names)
@@ -139,6 +171,19 @@ if (typeof Temporal !== 'undefined') {
         assertThrows(TypeError, () => date[name](a.toPlainDateTime(), b));
         const zoned = Temporal.ZonedDateTime.from('2024-07-01T00:00Z[UTC]');
         assertThrows(TypeError, () => date[name](zoned, zoned));
+    }
+    // Plain date/time formatting ignores the formatter's zone for both
+    // comparison and synthesis; the shared date survives a large offset.
+    const apia = new DTF('en-US', {timeZone: namedZones ? 'Pacific/Apia' : '+13:00'});
+    const utcPlain = new DTF('en-US', {timeZone: 'UTC'});
+    const plainStart = new Temporal.PlainDateTime(2021, 8, 4, 0, 30, 45);
+    const plainEnd = new Temporal.PlainDateTime(2021, 8, 4, 23, 30, 45);
+    const plainRange = check(apia, plainStart, plainEnd);
+    assert(apia.formatRange(plainStart, plainEnd), utcPlain.formatRange(plainStart, plainEnd));
+    for (const type of ['year', 'month', 'day']) {
+        const fields = plainRange.filter(part => part.type === type);
+        assert(fields.length, 1);
+        assert(fields[0].source, 'shared');
     }
     const timeOnly = new DTF('en', {timeZone: 'UTC', hour: 'numeric'});
     assertThrows(TypeError, () => timeOnly.formatRange(a, b));
