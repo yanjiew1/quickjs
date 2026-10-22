@@ -9,23 +9,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 from cldr_xml import DataError
 from segment_alphabet import partition
-from segment_lower import Character, Language
 from segment_nfa import compile_language, endpoints
 import segment_dfa as dfa
-
-
-def node(kind, *children):
-    return Language(kind, tuple(children), None, 1 + max((child.height for child in children), default=0))
-
-
-def char(text):
-    values, ranges = sorted(set(map(ord, text))), []
-    for value in values:
-        if ranges and ranges[-1][1] == value:
-            ranges[-1] = ranges[-1][0], value + 1
-        else:
-            ranges.append((value, value + 1))
-    return Language('char', (), Character(tuple(ranges), False, None), 1)
+from intl_segment_language_fixture import char, node
 
 
 def machine(language, side, limits=dfa.DEFAULT_LIMITS):
