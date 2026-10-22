@@ -4532,6 +4532,14 @@ test(
 )
 
 test(
+  'intl-segment-program',
+  python,
+  args: files('test_intl_segment_program.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-sets',
   python,
   args: files('test_intl_segment_sets.py'),
