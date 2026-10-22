@@ -9,10 +9,20 @@ assert(DTF.length, 0);
 assert(Object.getPrototypeOf(DTF), Function.prototype);
 assert(Object.getPrototypeOf(DTF.prototype), Object.prototype);
 assert(Object.prototype.toString.call(new DTF('en', utc)), '[object Intl.DateTimeFormat]');
-for (const options of [{year: 'numeric'}, {dateStyle: 'short'}]) {
+for (const options of [{}, {year: 'numeric'}, {dateStyle: 'short'},
+    {minute: 'numeric', second: 'numeric'}, {dayPeriod: 'short'},
+    {dateStyle: 'long', hourCycle: 'h24'}, {year: 'numeric', hour12: false}]) {
     const resolved = new DTF('en', {...utc, ...options}).resolvedOptions();
-    assert(resolved.hourCycle, 'h12');
-    assert(resolved.hour12, true);
+    assert(Object.hasOwn(resolved, 'hourCycle'), false);
+    assert(Object.hasOwn(resolved, 'hour12'), false);
+}
+for (const hourCycle of ['h11', 'h12', 'h23', 'h24']) {
+    for (const options of [{hour: 'numeric'}, {timeStyle: 'short'},
+        {dateStyle: 'short', timeStyle: 'long'}]) {
+        const resolved = new DTF('en', {...utc, ...options, hourCycle}).resolvedOptions();
+        assert(resolved.hourCycle, hourCycle);
+        assert(resolved.hour12, hourCycle === 'h11' || hourCycle === 'h12');
+    }
 }
 assert(DTF('en', utc).format(0), new DTF('en', utc).format(0));
 assertThrows(TypeError, () => new DTF('en', null));
@@ -310,6 +320,12 @@ assert(date.toLocaleDateString('en', utc), ordinary.format(+date));
 Intl.DateTimeFormat = DTF;
 
 if (typeof Temporal !== 'undefined') {
+    // A date-only public view still retains the effective cycle for the
+    // proposal's PlainTime record; hiding options must not erase that state.
+    const dateOnly = new DTF('en', {...utc, hourCycle: 'h23'});
+    assert(Object.hasOwn(dateOnly.resolvedOptions(), 'hourCycle'), false);
+    assert(dateOnly.formatToParts(new Temporal.PlainTime(13, 24, 35))
+        .find(part => part.type === 'hour').value, '13');
     const plain = Temporal.PlainDateTime.from('2024-07-01T12:34:56.123456789');
     const onlyEra = new DTF('en', {...utc, era: 'narrow'});
     assert(onlyEra.format(Temporal.PlainDateTime.from('2025-11-04T14:46')).startsWith('11'), true);

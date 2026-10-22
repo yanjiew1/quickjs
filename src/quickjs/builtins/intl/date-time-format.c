@@ -724,9 +724,9 @@ static JSValue datetime_resolved(JSContext *ctx, JSValueConst this_val, int argc
         property(ctx, result, "numberingSystem", JS_NewStringLen(ctx, state->system.data, state->system.length)) < 0 ||
         property(ctx, result, "timeZone", JS_NewString(ctx, state->zone)) < 0)
         goto fail;
-    {
-        /* The Stage 4 object retains a global hour cycle for its per-Temporal
-           records, including when the ordinary Date record has no hour. */
+    if (state->components.values[QJS_INTL_DATETIME_HOUR]) {
+        /* Observable options follow the ordinary Date format. Keep the
+           effective cycle internally for other value-kind records. */
         QJSIntlDateHourCycle cycle = state->options.hour_cycle;
         if (property(ctx, result, "hourCycle", JS_NewString(ctx, hour_cycles[cycle])) < 0 ||
             property(ctx, result, "hour12", JS_NewBool(ctx, cycle <= QJS_INTL_DATE_H12)) < 0)
