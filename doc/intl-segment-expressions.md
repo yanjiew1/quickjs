@@ -149,6 +149,17 @@ limits. It is neither a UTF-16 decoder nor a production per-candidate matcher.
 Deterministic automata, checked binary encoding and native input preparation
 remain separate stages; this host instruction shape declares no runtime format.
 
+`segment_alphabet.py` partitions code points by the realized membership
+signatures of the program's overlapping predicates. It sweeps grouped interval
+endpoints rather than Unicode characters or all possible bit combinations.
+Equal signatures share a class ID, numbered by first code-point occurrence;
+the resulting contiguous class map covers the full code-point domain. The
+result retains its normalized ordered predicates, so later NFA-local predicate
+IDs can map to the matching membership-bit owner rather than a separate list.
+Predicate, pair, endpoint, class, output-range and work caps bound preparation,
+including a conservative allowance before sorting endpoints. This retains
+overlaps instead of choosing one winning Unicode property per character.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
