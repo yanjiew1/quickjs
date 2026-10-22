@@ -4436,6 +4436,14 @@ test(
 )
 
 test(
+  'intl-segment-variables',
+  python,
+  args: files('test_intl_segment_variables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-dayperiod-tables',
   python,
   args: files('test_intl_dayperiod_tables.py'),

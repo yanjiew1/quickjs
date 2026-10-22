@@ -55,9 +55,13 @@ because Intl.Segmenter has no line granularity. Unsupported relevant source
 structures fail explicitly rather than being discarded.
 
 This collection does not resolve inheritance, evaluate expressions, emit binary
-data or advertise native Segmenter support. Its next consumer must apply the
-`segmentations` parent component and expand each variable against the previous
-definition environment. Audit the authenticated source inventory with:
+data or advertise native Segmenter support. `segment_variables.py` applies the
+`segmentations` parent component and captures an immutable name-to-slot snapshot
+before each variable definition. All captured slots point backward, including
+the previous value of a redefined name. A later semantic compiler must resolve
+references through those snapshots, reject unresolved names and interpret the
+actual set/property/rule syntax; the capture step does none of those operations.
+Audit the authenticated source inventory with:
 
 ```sh
 python3 tools/intl/segment_sources.py --sources /path/to/intl-cache/cldr-49-beta4
