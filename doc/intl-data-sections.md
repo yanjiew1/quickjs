@@ -797,3 +797,12 @@ optional section. Sections 36/37 retain their independent raw diagnostic root
 for existing source-oracle tests; executable comparisons use section 38. This
 temporary root-data duplication is explicit and does not imply two runtime
 collation algorithms or source fallback between the representations.
+
+## 39 SEGMENT_DICTIONARIES
+
+Optional self-contained segmentation dictionaries, with no shared string or
+locale indexes. Directory count is the number of dictionary families. The
+host codec supports this prepared section; production profiles do not yet
+include it. See the [dictionary format](intl-segment-dictionary-format.md) for
+its versioned descriptors, array widths, suffix sharing and validation rules.
+Source: `tools/intl/segment_dictionary_tables.py`.
