@@ -192,6 +192,37 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
         assert(!state->live);
     }
     {
+        uint32_t calendar = calendar_id(styles, "altrecovery"), ascii;
+        QJSIntlDateSourceCandidates pool = candidates(available, root, "altrecovery", allocator);
+        QJSIntlDatePreparedStyle result, zero = {0};
+        size_t baseline = state->live, calls;
+        for (ascii = 0; ascii < styles->alternate_count; ascii++) {
+            QJSIntlBytes name;
+            assert(!qjs_intl_date_style_alternate_at(styles, ascii, &name));
+            if (equal(name, "ascii"))
+                break;
+        }
+        assert(ascii < styles->alternate_count);
+        state->calls = 0;
+        assert(!qjs_intl_date_style_date_preferred(styles, root, calendar,
+                   QJS_INTL_DATE_STYLE_FULL, ascii, 0, &pool, allocator, &result));
+        calls = state->calls;
+        assert(!result.adaptations && equal(result.style.source.origin_alternate, ""));
+        assert(equal(result.style.skeleton.origin_alternate, "") && equal(result.style.skeleton.text, "dy"));
+        pattern_equal(allocator, &result.style.pattern, "d y");
+        qjs_intl_date_prepared_style_clear(&result);
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            assert(qjs_intl_date_style_date_preferred(styles, root, calendar,
+                       QJS_INTL_DATE_STYLE_FULL, ascii, 0, &pool, allocator, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
+        qjs_intl_date_source_candidates_clear(&pool);
+        assert(!state->live);
+    }
+    {
         const char *bad[] = {"quarter", "duplicate", "mixed", "related", "time", "blocked",
                              "empty", "missing", "weekyear", "weekmonth", "nomonth", "quotedmonth"};
         for (j = 0; j < sizeof(bad) / sizeof(*bad); j++) {
