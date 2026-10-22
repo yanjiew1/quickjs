@@ -13,11 +13,22 @@ enum {
     QJS_INTL_DATE_ORDINARY_FIELD = 16
 };
 
+enum {
+    QJS_INTL_DATE_MONTH_SOURCE_NUMERIC = 1,
+    QJS_INTL_DATE_MONTH_SOURCE_TEXT = 2
+};
+
 typedef struct QJSIntlDateOrdinaryProgram {
     QJSIntlDateSinglePrograms single;
     /* Original clock widths before adaptation: normal, then twelve-hour.
        Zero denotes no retained clock source. Derived programs inherit these. */
     unsigned char source_hour_width[2];
+    /* Declared skeleton month kinds for the selected raw pattern and exact
+       text aliases, separately for normal/twelve source families. */
+    unsigned char source_month_kinds[2];
+    /* Raw b/B skeleton run lengths, bit (1 << width), for the same symbol
+       as the selected pattern. Zero means no evidence for width adaptation. */
+    unsigned char source_period_widths[2];
     unsigned int construction;
     size_t first, second; /* Earlier result indexes, SIZE_MAX when not used. */
     QJSIntlDateAvailableEntry append;
