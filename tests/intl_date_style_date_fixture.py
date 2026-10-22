@@ -27,6 +27,7 @@ ALTERNATIVE = "E, d 'de' MMM 'de' y G"
 def pack():
     cases = {
         'exact': ('y-MM-dd', {'yMd': 'y/M/d'}),
+        'altrecovery': ('d y', {'yd': 'y - d'}),
         'galician': (GALICIAN, {'GyMMMEd': ALTERNATIVE}),
         'kekchi': ('dd/MM/Y G', {'GyMd': 'dd-MM-y G'}),
         'priority': (GALICIAN, {'GyMMMEd': ALTERNATIVE,
@@ -54,7 +55,9 @@ def pack():
     for code, (pattern, choices) in sorted(cases.items()):
         widths = ('short',) if code == 'missing' else ('full', 'long', 'medium', 'short')
         skeleton = '<datetimeSkeleton>GYMMMMEEEEd</datetimeSkeleton>' if code == 'galician' else ''
-        date = styles('date', tuple((width, '<pattern>' + escape(pattern) + '</pattern>' + skeleton)
+        preferred = ('<pattern alt="ascii">Y d</pattern><datetimeSkeleton>dy</datetimeSkeleton>'
+                     if code == 'altrecovery' else '')
+        date = styles('date', tuple((width, '<pattern>' + escape(pattern) + '</pattern>' + skeleton + preferred)
                                    for width in widths))
         available = ''.join('<dateFormatItem id="' + key + '">' + escape(value) + '</dateFormatItem>'
                             for key, value in sorted(choices.items()))
