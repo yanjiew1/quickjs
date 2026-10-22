@@ -118,7 +118,7 @@ static QJSIntlStatus named(const QJSIntlDateTextData *data, const QJSIntlDateCal
         QJSIntlDatePeriodNameSelection period;
         uint32_t second = (local->numeric.hour * 60 + local->numeric.minute) * 60 + local->numeric.second;
         status = qjs_intl_dayperiod_select(data->periods, data->period_rules, token->symbol,
-                                           second, subsecond, &primary);
+                                           second, subsecond, data->use_midnight, &primary);
         if (!status)
             status = qjs_intl_date_period_name_select(data->names, data->locale, calendar,
                                                      token->symbol, token->width, primary, fallback, &period);
