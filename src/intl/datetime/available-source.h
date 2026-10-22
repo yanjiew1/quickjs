@@ -30,4 +30,12 @@ void qjs_intl_date_available_sources_clear(QJSIntlDateAvailableSources *sources)
 QJSIntlStatus qjs_intl_date_available_source_at(const QJSIntlDateAvailableSources *sources,
                                              size_t index, QJSIntlDateAvailableEntry *entry,
                                              QJSIntlDateAvailableNode *origin);
+/* Find an exact visible code/plural/leaf-alt key. Presence includes blocked
+   and empty values; callers decide usability only after selecting a key.
+   Borrow its unchanged source/origin, allocate nothing and reset failures. */
+QJSIntlStatus qjs_intl_date_available_source_find(const QJSIntlDateAvailableSources *,
+                                                  QJSIntlBytes code, QJSIntlDateAvailablePlural,
+                                                  QJSIntlBytes leaf_alt,
+                                                  QJSIntlDateAvailableEntry *, QJSIntlDateAvailableNode *);
+
 #endif
