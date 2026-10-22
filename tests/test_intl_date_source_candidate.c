@@ -163,6 +163,36 @@ int main(void)
     assert(!qjs_intl_date_source_candidates_open(&sources, bytes("variant"), &allocator, &list));
     assert(list.count == 1 && equal(list.records[0].source.alt, "variant"));
     qjs_intl_date_source_candidates_clear(&list);
+    /* Unusable preferred alternatives may fall back to their separately
+       resolved ordinary peers, without reviving masked same-key ancestors. */
+    assert(!qjs_intl_date_source_candidates_preferred(&sources, bytes("variant"), bytes(""), &allocator, &list));
+    assert(list.count == 12 && find(&list, "y") && find(&list, "yM"));
+    assert(equal(find(&list, "y")->source.alt, "variant"));
+    assert(find(&list, "M") && find(&list, "d"));
+    assert(equal(find(&list, "M")->source.alt, "") && equal(find(&list, "d")->source.alt, ""));
+    qjs_intl_date_source_candidates_clear(&list);
+    assert(!qjs_intl_date_source_candidates_preferred(&sources, bytes("unsupported"), bytes(""), &allocator, &list));
+    assert(find(&list, "y") && equal(find(&list, "y")->source.alt, "") && find(&list, "yM"));
+    qjs_intl_date_source_candidates_clear(&list);
+    assert(!qjs_intl_date_source_candidates_preferred(&sources, bytes("ascii"), bytes(""), &allocator, &list));
+    assert(find(&list, "y") && equal(find(&list, "y")->source.alt, ""));
+    qjs_intl_date_source_candidates_clear(&list);
+    {
+        size_t allocations;
+        state.calls = 0;
+        assert(!qjs_intl_date_source_candidates_preferred(&sources, bytes("variant"), bytes(""), &allocator, &list));
+        allocations = state.calls;
+        qjs_intl_date_source_candidates_clear(&list);
+        for (size_t step = 1; step <= allocations; step++) {
+            state.calls = 0;
+            state.fail_at = step;
+            assert(qjs_intl_date_source_candidates_preferred(&sources, bytes("variant"), bytes(""),
+                       &allocator, &list) == QJS_INTL_NO_MEMORY);
+            check_empty(&list);
+            assert(!state.live);
+        }
+        state.calls = state.fail_at = 0;
+    }
     assert(qjs_intl_date_source_candidates_open(&sources, bytes("ascii"), &allocator, &list) == QJS_INTL_DATA_ERROR);
     check_empty(&list);
     assert(!state.live);
