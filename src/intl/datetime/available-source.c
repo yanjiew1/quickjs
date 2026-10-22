@@ -162,3 +162,35 @@ QJSIntlStatus qjs_intl_date_available_source_at(const QJSIntlDateAvailableSource
     *entry = sources->records[index].entry;
     return QJS_INTL_OK;
 }
+
+QJSIntlStatus qjs_intl_date_available_source_find(const QJSIntlDateAvailableSources *sources,
+                                                  QJSIntlBytes code, QJSIntlDateAvailablePlural plural,
+                                                  QJSIntlBytes leaf_alt,
+                                                  QJSIntlDateAvailableEntry *entry,
+                                                  QJSIntlDateAvailableNode *origin)
+{
+    QJSIntlDateAvailableSource key = {0};
+    size_t lo = 0, hi;
+    if (entry)
+        memset(entry, 0, sizeof(*entry));
+    if (origin)
+        memset(origin, 0, sizeof(*origin));
+    if (!sources || !entry || !origin || !sources->data.section.bytes ||
+        (!code.data && code.length) || (!leaf_alt.data && leaf_alt.length) ||
+        (unsigned int)plural >= QJS_INTL_DATE_PLURAL_COUNT)
+        return QJS_INTL_INVALID_ARGUMENT;
+    key.entry.code = code;
+    key.entry.plural = plural;
+    key.entry.alt = leaf_alt;
+    hi = sources->count;
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (compare_key(&sources->records[mid], &key) < 0)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    if (lo == sources->count || compare_key(&sources->records[lo], &key))
+        return QJS_INTL_UNSUPPORTED;
+    return qjs_intl_date_available_source_at(sources, lo, entry, origin);
+}
