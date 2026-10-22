@@ -72,18 +72,21 @@ for (const [hourCycle, text] of [['h11', '0'], ['h12', '12'], ['h23', '0'], ['h2
     assert(formatter.resolvedOptions().hourCycle, hourCycle);
 }
 // A bare flexible period uses format-context names/rules, including exact
-// midnight/noon, without importing an hour or stand-alone-context labels.
+// noon, without importing an hour or stand-alone-context labels. Midnight
+// uses the general period because the API cannot distinguish 00:00 from 24:00.
 for (const dayPeriod of ['short', 'long', 'narrow']) {
     const formatter = new DTF('en', {...utc, dayPeriod});
     assert(formatter.resolvedOptions().dayPeriod, dayPeriod);
     assert(formatter.resolvedOptions().hour, undefined);
-    for (const [hour, text] of [[0, dayPeriod === 'narrow' ? 'mi' : 'midnight'],
+    for (const [hour, text] of [[0, 'in the morning'],
                               [12, dayPeriod === 'narrow' ? 'n' : 'noon'], [9, 'in the morning']]) {
         const parts = formatter.formatToParts(Date.UTC(2024, 0, 1, hour));
         assertArrayEquals(parts.map(part => part.type), ['dayPeriod']);
         assert(parts[0].value, text);
         assert(formatter.format(Date.UTC(2024, 0, 1, hour)), text);
     }
+    assert(formatter.format(Date.UTC(2024, 0, 1, 0, 0, 0, 1)), 'in the morning');
+    assert(formatter.format(Date.UTC(2024, 0, 1, 12, 0, 0, 1)), 'in the afternoon');
 }
 const overridden = new DTF('en-u-hc-h11', {...utc, hour: 'numeric', hour12: false, hourCycle: 'h12'});
 assert(overridden.resolvedOptions().hourCycle, 'h23');
