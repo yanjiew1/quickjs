@@ -106,6 +106,79 @@ profile change. The executable argument must contain an explicit path.
 Automata, binary encoding, runtime matching and native locale capability
 advertisement are subsequent acceptance stages.
 
+## Ignore-phase language preparation
+
+`segment_lower.py` translates prepared expressions into immutable language DAGs
+while retaining each original rule and character-atom source. At an ignore
+record, it inserts a no-break rule `complement(excluded) × ignored`. Earlier
+rules remain raw. Later positive character atoms acquire a following ignored
+closure; complemented atoms do not. Grouped one-character alternations and
+positive set differences remain single predicates. Unreviewed mixed/nested
+negation shapes fail rather than receive guessed Boolean-to-language semantics.
+
+The returned `LoweredProgram` retains its matching `PreparedVariables` owner:
+a shared character source can be a declaration span rather than a substring
+of its using rule. Keep that binding context with subsequent automata records.
+Historical sequence aliases share immutable IR nodes. Raw and ignore-aware
+uses have separate memo entries; generated closures bypass lowering so they
+cannot grow recursively. Node, edge, height and work budgets bound preparation.
+The source phase remains visible; no input text is stripped or normalized.
+The bounded short-input interpreter in `tests/intl_segment_reference.py` is
+only a semantic test oracle, not a production traversal algorithm.
+
+The future automata compiler must give repeated Thompson occurrences fresh
+continuations, or use a continuation-correct construction. Shared language-DAG
+identity does not justify sharing mutable NFA fragments in different contexts.
+
+## Bounded NFA construction and proof execution
+
+`segment_nfa.py` compiles each language into immutable host instructions with
+fresh Thompson fragments for each occurrence. Predicates share normalized range
+tuples; continuations do not share mutable patches. Construction is iterative,
+with limits of 8,192 states (and at most two edges per state), 65,536 work
+visits, 256 predicates and 262,144 retained interval pairs per language.
+Each predicate has at most 16,384 intervals. Budget exhaustion is an error,
+not permission to truncate or approximate a language.
+
+Reversal reverses concatenation recursively, preserving alternation, repetition
+and the assertion's **original text-start** meaning. The bounded host reference
+executor computes accepted code-point endpoints and closes nullable epsilon
+cycles with a visited set. It is checked against the independent short language
+oracle, including shared continuations and anchored parity beyond short context
+limits. It is neither a UTF-16 decoder nor a production per-candidate matcher.
+Deterministic automata, checked binary encoding and native input preparation
+remain separate stages; this host instruction shape declares no runtime format.
+
+`segment_alphabet.py` partitions code points by the realized membership
+signatures of the program's overlapping predicates. It sweeps grouped interval
+endpoints rather than Unicode characters or all possible bit combinations.
+Equal signatures share a class ID, numbered by first code-point occurrence;
+the resulting contiguous class map covers the full code-point domain. The
+result retains its normalized ordered predicates, so later NFA-local predicate
+IDs can map to the matching membership-bit owner rather than a separate list.
+Predicate, pair, endpoint, class, output-range and work caps bound preparation,
+including a conservative allowance before sorting endpoints. This retains
+overlaps instead of choosing one winning Unicode property per character.
+
+`segment_dfa.py` builds independent complete side machines over that shared
+alphabet. Unanchored machines inject the NFA entry after every code point,
+recognizing suffix existence on each consumed prefix. Reversed right machines
+run from original EOF backward to recognize right-prefix existence.
+
+Production normalization admits only the pinned leading-left concatenation
+anchor form, retaining the original language and deriving an anchor-free body.
+That body seeds once at original BOS and never restarts. Other production
+assertion placements fail for review. Generic NFA proof execution still retains
+the original assertion semantics.
+
+Determinization uses sorted epsilon-closed subsets, breadth-first state order
+and ascending class IDs. State, complete-transition-cell, retained-subset-member
+and construction-work caps precede interning/publication. Defaults per machine
+are 4,096 states, 1,048,576 transition cells, 262,144 retained members and
+16,000,000 work visits. Aggregate rule-profile budgets, serialization and native
+UTF-16 execution remain subsequent acceptance stages; host acceptance helpers
+are bounded proof tools, not the production input owner.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
