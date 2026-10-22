@@ -62,8 +62,12 @@ static QJSIntlStatus leap_affix(const QJSIntlDateTextData *data,
     uint32_t index, head;
     group.calendar = data->calendar;
     group.family = QJS_INTL_CAL_NAME_MONTH_PATTERN;
-    group.context = token->symbol == 'L' ? QJS_INTL_CAL_NAME_STAND_ALONE : QJS_INTL_CAL_NAME_FORMAT;
-    group.width = token->width == 4 ? QJS_INTL_CAL_NAME_WIDE :
+    /* Numeric M/L share the numeric/all template, independently of name
+       context. Apply it after digit formatting, including two-digit clipping. */
+    group.context = token->width <= 2 ? QJS_INTL_CAL_NAME_NUMERIC :
+                    token->symbol == 'L' ? QJS_INTL_CAL_NAME_STAND_ALONE : QJS_INTL_CAL_NAME_FORMAT;
+    group.width = token->width <= 2 ? QJS_INTL_CAL_NAME_ALL :
+                  token->width == 4 ? QJS_INTL_CAL_NAME_WIDE :
                   token->width == 5 ? QJS_INTL_CAL_NAME_NARROW : QJS_INTL_CAL_NAME_ABBREVIATED;
     status = qjs_intl_calendar_name_find_group(data->names, &group, &index);
     if (!status)
@@ -267,6 +271,10 @@ static QJSIntlStatus admit_field(const QJSIntlDateTextData *data, QJSCalendarId 
     if (token->symbol == 'M' || token->symbol == 'L') {
         unsigned int last = calendar == QJS_CAL_COPTIC || calendar == QJS_CAL_ETHIOAA ||
                             calendar == QJS_CAL_ETHIOPIC || calendar == QJS_CAL_HEBREW ? 13 : 12;
+        if (token->width <= 2) {
+            QJSIntlUnaryPattern affix;
+            return leap_affix(data, token, &affix);
+        }
         for (i = 1; i <= last; i++) {
             small_key(local.month_key, i);
             for (leap = 0; leap <= 1; leap++) {
@@ -312,7 +320,10 @@ QJSIntlStatus qjs_intl_date_names_admit(const QJSIntlDatePattern *pattern,
         const QJSIntlDatePatternToken *token = &pattern->tokens[i];
         const char *found;
         size_t field;
-        if (!token->symbol || ((token->symbol == 'M' || token->symbol == 'L') && token->width <= 2))
+        if (!token->symbol)
+            continue;
+        if ((token->symbol == 'M' || token->symbol == 'L') && token->width <= 2 &&
+            calendar != QJS_CAL_CHINESE && calendar != QJS_CAL_DANGI)
             continue;
         found = strchr(symbols, token->symbol);
         if (!found)
@@ -346,7 +357,19 @@ static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlDatePatter
         const Piece *piece = &pieces[i];
         size_t start = builder->length;
         QJSIntlStatus status;
-        if (piece->number.text) {
+        if (piece->number.text && (piece->affix.prefix.length || piece->affix.suffix.length)) {
+            /* The marker belongs to the month part, not a separate literal.
+               Suppress the digit body's part while retaining its UTF-16 text. */
+            QJSIntlFormatted digits = piece->number;
+            digits.part_count = 0;
+            status = qjs_intl_format_builder_text(builder, piece->affix.prefix, NULL, NULL);
+            if (!status)
+                status = qjs_intl_format_builder_body(builder, &digits);
+            if (!status)
+                status = qjs_intl_format_builder_text(builder, piece->affix.suffix, NULL, NULL);
+            if (!status)
+                status = qjs_intl_format_builder_part(builder, start, builder->length, QJS_INTL_PART_MONTH, 0);
+        } else if (piece->number.text) {
             status = qjs_intl_format_builder_body(builder, &piece->number);
         } else {
             status = qjs_intl_format_builder_text(builder, piece->affix.prefix, NULL, NULL);
@@ -405,6 +428,9 @@ QJSIntlStatus qjs_intl_date_text_format(const QJSIntlAllocator *allocator,
                                               numbers, maximum_output_length, &pieces[i].number);
         if (status == QJS_INTL_UNSUPPORTED)
             status = named(data, local, subsecond, &pattern->tokens[i], &pieces[i]);
+        else if (!status && (symbol == 'M' || symbol == 'L') &&
+                 local->has_cyclic_year && local->leap_month)
+            status = leap_affix(data, &pattern->tokens[i], &pieces[i].affix);
         if (status)
             goto done;
     }

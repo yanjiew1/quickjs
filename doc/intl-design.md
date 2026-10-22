@@ -941,7 +941,7 @@ original number-only type bound.
 weekday, cyclic-year and day-period names into owned UTF-16 and typed parts.
 Reuse the numeric kernel one field at a time; do not duplicate its digit,
 year/hour or fractional rules. Resolve names and unary leap affixes once before
-bounded two-pass emission. A complete decorated named month is one month part;
+bounded two-pass emission. A complete decorated month, numeric or named, is one month part;
 apostrophes in CLDR unary templates are literal, unlike LDML pattern quotes.
 The grammar-only unary parser lives in `common`, shared with unit formatting.
 
@@ -949,9 +949,18 @@ Era codes use explicit metadata rather than arithmetic on raw CLDR IDs. ISO's
 localized catalog stays distinct from its Gregorian era mapping; historical
 Japanese uses Gregorian labels. Hebrew names use their independent raw keys and
 year selectors. Only Chinese/Dangi's repeated nominal months receive the exact
-inherited named-month leap template. Numeric months still go directly through
-FormatNumeric: the pinned ECMA-402 numeric branch does not specify CLDR's numeric
-leap decoration, so it is not silently inserted. Flexible day periods consume
+inherited leap template. Numeric M/L fields select the numeric/all template;
+apply it after ordinary localized digit formatting and two-digit clipping.
+This preserves the nominal month and distinguishes it from its leap repetition,
+for example English `5` versus `5bis`, without using the year's ordinal month.
+
+This native CLDR policy follows TR35's regular M/L month-pattern handling and
+ICU behavior. The living ECMA-402 numeric branch (730ca2b, reviewed 2026-10-23,
+[FormatDateTimePattern](https://tc39.es/ecma402/#sec-formatdatetimepattern)) calls
+FormatNumeric directly and does not explicitly include leap decoration. Record
+this specification-text gap rather than claiming that its numeric pseudocode
+mandates the suffix. CLDR supplies the actual text; never hardcode `bis`, invent
+a textual resolved width, or trim a decorated result to its last two code points. Flexible day periods consume
 resolved format rules and a separate full-precision subsecond fact; noon plus
 one nanosecond must not use an exact-noon point. Missing/blocked/empty names or
 required templates return unsupported here, without invented lateral fallbacks.
