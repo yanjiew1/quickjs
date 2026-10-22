@@ -56,37 +56,58 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
                                                size_t date_count,
                                                const QJSIntlDateOrdinaryPrograms *ordinary,
                                                const unsigned char *admitted,
+                                               unsigned int include_period,
                                                const QJSIntlDateCombinationData *connectors,
                                                uint32_t locale, uint32_t calendar,
                                                const QJSIntlAllocator *allocator,
                                                QJSIntlDateClockPrograms *out)
 {
-    enum { SHAPES = 5, ZONE_STYLES = 7, CLOCKS = SHAPES * ZONE_STYLES };
+    enum { SHAPES = 6, ZONE_STYLES = 7, PERIODS = 7, CLOCKS = SHAPES * ZONE_STYLES * PERIODS };
     const unsigned int clock = BIT(HOUR) | BIT(MINUTE) | BIT(SECOND);
     const unsigned int date_fields = BIT(WEEKDAY) | BIT(ERA) | BIT(YEAR) | BIT(MONTH) | BIT(DAY);
     size_t indexes[CLOCKS], count = 0, i, j, capacity;
+    size_t slots = include_period ? CLOCKS : SHAPES * ZONE_STYLES;
     QJSIntlDateClockPrograms result = {0};
     QJSIntlDatePattern connector = {0};
     QJSIntlStatus status;
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || (!dates && date_count) || !ordinary || !connectors || !allocator ||
-        !allocator->malloc || !allocator->free)
+        !allocator->malloc || !allocator->free || include_period > 1)
         return QJS_INTL_INVALID_ARGUMENT;
-    for (i = 0; i < CLOCKS; i++)
+    for (i = 0; i < slots; i++)
         indexes[i] = SIZE_MAX;
     for (i = 0; i < ordinary->count; i++) {
         const QJSIntlDateTimeComponents *components = &ordinary->records[i].single.components;
         unsigned int fields = qjs_intl_datetime_component_mask(components);
         int fraction = components->values[QJS_INTL_DATETIME_FRACTION];
         int zone = components->values[QJS_INTL_DATETIME_ZONE];
-        size_t at;
+        size_t at, period = 0;
         if (admitted && !admitted[i])
             continue;
         if (zone < 0 || zone >= ZONE_STYLES)
             return QJS_INTL_INVALID_ARGUMENT;
         fields &= ~BIT(ZONE);
-        if (fields == (clock & ~BIT(SECOND)))
+        if (fields & BIT(DAY_PERIOD)) {
+            QJSIntlDatePatternInfo info;
+            int width = components->values[QJS_INTL_DATETIME_DAY_PERIOD];
+            if (!include_period)
+                continue;
+            if (width < QJS_INTL_DATETIME_NARROW || width > QJS_INTL_DATETIME_LONG)
+                return QJS_INTL_INVALID_ARGUMENT;
+            status = qjs_intl_date_pattern_info(&ordinary->records[i].single.normal.pattern, &info);
+            if (status)
+                return status;
+            if (info.period_symbol != 'b' && info.period_symbol != 'B')
+                return QJS_INTL_DATA_ERROR;
+            /* Preserve every observed textual width and b/B identity. A
+               single flexible bucket could hide an intentional source override. */
+            period = 1 + (info.period_symbol == 'B' ? 3 : 0) + width - QJS_INTL_DATETIME_NARROW;
+            fields &= ~BIT(DAY_PERIOD);
+        }
+        if (fields == BIT(HOUR) && include_period)
+            at = 5;
+        else if (fields == (clock & ~BIT(SECOND)))
             at = 0;
         else if (fields == clock)
             at = 1;
@@ -97,7 +118,7 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
         /* Preserve a whole admitted zone-bearing clock for each actual style.
            Empty slots allocate nothing; do not manufacture the Cartesian
            product of every shape and zone style. */
-        at += (size_t)zone * SHAPES;
+        at += ((size_t)zone + period * ZONE_STYLES) * SHAPES;
         if (indexes[at] == SIZE_MAX) {
             indexes[at] = i;
             count++;
@@ -142,7 +163,7 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
         status = qjs_intl_date_combination_compile(allocator, layout.text, &connector);
         if (status)
             goto fail;
-        for (j = 0; j < CLOCKS; j++) {
+        for (j = 0; j < slots; j++) {
             const QJSIntlDateSinglePrograms *time;
             QJSIntlDateClockProgram *record;
             QJSIntlDatePatternInfo info[2];
