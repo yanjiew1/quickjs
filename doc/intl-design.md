@@ -1117,6 +1117,28 @@ The final formatting module owns admission and the standard's permitted
 unavailable-name fallback policy. Zones, complete formatter admission and the public constructor
 remain separate work; this renderer alone does not advertise DateTimeFormat.
 
+`datetime/range-layout.[ch]` retains proven date/clock operands for same-day
+range synthesis. Capture the winning ordinary COMBINE, mixed date/clock or
+style inputs before their temporary owners are released; decode the actual
+LDML connector and require exact token recomposition against the final chosen
+program. This preserves quoted literals, endpoint affixes, year kinds, selected
+hour family and zone placement. Fractional descendants retain their exact
+borrowed decimal source and replay that insertion on the clock before copying
+the proved result. A relocated zone append is usable only when
+that same proof succeeds. Never split a final pattern by punctuation or trim
+common prefixes from formatted strings.
+
+When no whole interval is selected and the calendar date is equal, combine one
+shared date with two complete clock endpoints using the real interval fallback
+and retained date/time connector. This implements TR35's date/time synthesis
+path even when an hms-specific interval is absent. Date differences and records
+without a proved factorization keep the complete-endpoint fallback. Preserve
+whole-interval precedence and all-equal collapse; flatten date/glue and endpoint
+clock parts into shared/startRange/endRange provenance without losing seconds,
+fractions or zone fields. The owner copies its three programs; output is
+independent and every allocation failure unwinds without partial publication.
+See [TR35 Interval Format Algorithm](https://www.unicode.org/reports/tr35/tr35-79/tr35-dates.html#interval-format-algorithm).
+
 `datetime/zone-offset.[ch]` prepares localized GMT presentation independently
 of timezone rule arithmetic and named-zone selection. Copy exact inherited
 hourFormat and gmtFormat sources, preserving signs, bidi marks, quoted hour
