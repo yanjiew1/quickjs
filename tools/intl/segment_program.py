@@ -11,6 +11,7 @@ from segment_dfa import (DEFAULT_LIMITS as DFA_LIMITS, MAX_ANCHOR_VISITS,
                          compile_machine, production_side)
 from segment_lower import LoweredProgram
 from segment_nfa import DEFAULT_LIMITS as NFA_LIMITS, compile_language
+from segment_sets import checked_ranges
 
 Machine = namedtuple('Machine', 'dfa reverse anchored')
 Rule = namedtuple('Rule', 'source left right breaks')
@@ -37,7 +38,7 @@ def semantic_key(program):
             tuple((rule.left, rule.right, rule.breaks) for rule in program.rules))
 
 
-def assemble(lowered, limits=DEFAULT_LIMITS):
+def assemble(lowered, limits=DEFAULT_LIMITS, extra_predicates=()):
     """Compile ordered side machines under aggregate storage and work gates.
 
     lowerer and per-machine limits still apply. Charge work for every attempted
@@ -49,6 +50,8 @@ def assemble(lowered, limits=DEFAULT_LIMITS):
         raise DataError('invalid segmentation program limits')
     if not isinstance(lowered, LoweredProgram) or len(lowered.rules) > limits.rules:
         raise DataError('segmentation program rule budget exceeded')
+    if not isinstance(extra_predicates, (tuple, list)) or len(extra_predicates) > 256:
+        raise DataError('segmentation auxiliary predicate budget exceeded')
     predicates, predicate_ids, sides = [], {}, []
     nfa_states = work = predicate_pairs = 0
 
@@ -100,6 +103,24 @@ def assemble(lowered, limits=DEFAULT_LIMITS):
             nfa = nfa._replace(predicates=tuple(canonical))
             pair.append((production, nfa))
         sides.append(tuple(pair))
+    # Refinement contexts can require predicates not used by a base language.
+    # Partition them together so every emitted class has homogeneous context
+    # flags; a later policy owner must not infer flags from one sample point.
+    for values in extra_predicates:
+        if not isinstance(values, (tuple, list)) or len(values) > limits.predicate_pairs:
+            raise DataError('invalid segmentation auxiliary predicate')
+        charge(len(values) + 1)
+        values = checked_ranges(values, limits.predicate_pairs)
+        charge(len(values) + 1)
+        if values not in predicate_ids:
+            if len(predicates) >= 256:
+                raise DataError('segmentation program predicate budget exceeded')
+            if predicate_pairs + len(values) > limits.predicate_pairs:
+                raise DataError('segmentation aggregate predicate-pair budget exceeded')
+            charge(len(values) + 1)
+            predicate_ids[values] = len(predicates)
+            predicates.append(values)
+            predicate_pairs += len(values)
     alphabet = partition(tuple(predicates), ALPHABET_LIMITS._replace(work=remaining_work(ALPHABET_LIMITS.work)))
     charge(alphabet.construction_work)
     machines, machine_ids, rules = [], {}, []
