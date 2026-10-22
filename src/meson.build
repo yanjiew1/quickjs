@@ -203,6 +203,7 @@ if intl_enabled
     'intl/datetime/text.c',
     'intl/datetime/pattern.c',
     'intl/datetime/pattern-info.c',
+    'intl/datetime/period-spacing.c',
     'intl/datetime/program-adapt.c',
     'intl/datetime/single-program.c',
     'intl/datetime/ordinary-programs.c',
