@@ -23,14 +23,18 @@ typedef struct QJSIntlDateOrdinaryProgram {
     /* Original clock widths before adaptation: normal, then twelve-hour.
        Zero denotes no retained clock source. Derived programs inherit these. */
     unsigned char source_hour_width[2];
-    /* Evidence is retained per normal/twelve-hour source family. */
+    /* Declared skeleton month kinds for the selected raw pattern and exact
+       text aliases, separately for normal/twelve source families. */
     unsigned char source_month_kinds[2];
+    /* Raw b/B skeleton run lengths, bit (1 << width), for the same symbol
+       as the selected pattern. Zero means no evidence for width adaptation. */
     unsigned char source_period_widths[2];
     unsigned int construction;
     size_t first, second; /* Earlier result indexes, SIZE_MAX when not used. */
     QJSIntlDateAvailableEntry append;
     QJSIntlDateAvailableNode origin;
     QJSIntlDateCombinationRecord connector;
+    QJSIntlBytes fraction_decimal; /* Borrowed source for FRACTION construction. */
 } QJSIntlDateOrdinaryProgram;
 
 typedef struct QJSIntlDateOrdinaryPrograms {
@@ -56,7 +60,8 @@ typedef struct QJSIntlDateOrdinaryPrograms {
    Supply the unchanged pool/grouping pair and exact resolved APPEND inventory.
    Connector locale/calendar indexes belong to their own owner. Decimal is
    nonempty scalar UTF-8. Own all patterns independently of input programs;
-   provenance still borrows unchanged packs, which must outlive this owner.
+   provenance still borrows unchanged packs and the supplied decimal bytes,
+   which must outlive this owner.
    No chronology, names, ranges or public locale capability is admitted here.
    Require malloc/free and fresh disjoint output; reset and unwind on failure.
    Missing construction evidence is UNSUPPORTED, never a fabricated template. */
