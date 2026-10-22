@@ -130,6 +130,25 @@ The future automata compiler must give repeated Thompson occurrences fresh
 continuations, or use a continuation-correct construction. Shared language-DAG
 identity does not justify sharing mutable NFA fragments in different contexts.
 
+## Bounded NFA construction and proof execution
+
+`segment_nfa.py` compiles each language into immutable host instructions with
+fresh Thompson fragments for each occurrence. Predicates share normalized range
+tuples; continuations do not share mutable patches. Construction is iterative,
+with limits of 8,192 states (and at most two edges per state), 65,536 work
+visits, 256 predicates and 262,144 retained interval pairs per language.
+Each predicate has at most 16,384 intervals. Budget exhaustion is an error,
+not permission to truncate or approximate a language.
+
+Reversal reverses concatenation recursively, preserving alternation, repetition
+and the assertion's **original text-start** meaning. The bounded host reference
+executor computes accepted code-point endpoints and closes nullable epsilon
+cycles with a visited set. It is checked against the independent short language
+oracle, including shared continuations and anchored parity beyond short context
+limits. It is neither a UTF-16 decoder nor a production per-candidate matcher.
+Deterministic automata, checked binary encoding and native input preparation
+remain separate stages; this host instruction shape declares no runtime format.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
