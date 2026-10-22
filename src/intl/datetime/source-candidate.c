@@ -2,10 +2,35 @@
 #include "source-candidate.h"
 #include <string.h>
 
-static int eligible(const QJSIntlDateAvailableEntry *entry, QJSIntlBytes alt)
+static int equal(QJSIntlBytes a, QJSIntlBytes b)
 {
-    return entry->plural == QJS_INTL_DATE_NO_PLURAL && !entry->blocked && entry->text.length &&
-           entry->alt.length == alt.length && (!alt.length || !memcmp(entry->alt.data, alt.data, alt.length));
+    return a.length == b.length && (!a.length || !memcmp(a.data, b.data, a.length));
+}
+
+static QJSIntlStatus selected(const QJSIntlDateAvailableSources *sources,
+                              const QJSIntlDateAvailableEntry *entry,
+                              QJSIntlBytes preferred, QJSIntlBytes fallback, int *out)
+{
+    QJSIntlDateAvailableEntry other;
+    QJSIntlDateAvailableNode origin;
+    QJSIntlStatus status;
+    *out = 0;
+    if (entry->plural != QJS_INTL_DATE_NO_PLURAL)
+        return QJS_INTL_OK;
+    if (!equal(entry->alt, preferred)) {
+        if (!equal(entry->alt, fallback))
+            return QJS_INTL_OK;
+        /* Process a key once, at its preferred record when present. That
+           attempt may choose the separately resolved fallback key below. */
+        status = qjs_intl_date_available_source_find(sources, entry->code, entry->plural,
+                                                      preferred, &other, &origin);
+        if (!status)
+            return QJS_INTL_OK;
+        if (status != QJS_INTL_UNSUPPORTED)
+            return status;
+    }
+    *out = !equal(preferred, fallback) || (!entry->blocked && entry->text.length);
+    return QJS_INTL_OK;
 }
 
 static int useful(const QJSIntlDatePatternInfo *info)
@@ -30,10 +55,28 @@ void qjs_intl_date_source_candidates_clear(QJSIntlDateSourceCandidates *candidat
     memset(candidates, 0, sizeof(*candidates));
 }
 
-QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSources *sources,
-                                                 QJSIntlBytes leaf_alt,
-                                                 const QJSIntlAllocator *allocator,
-                                                 QJSIntlDateSourceCandidates *out)
+static QJSIntlStatus compile_candidate(const QJSIntlAllocator *allocator,
+                                       QJSIntlDateSourceCandidate *record)
+{
+    QJSIntlStatus status;
+    if (record->source.blocked || !record->source.text.length)
+        return QJS_INTL_UNSUPPORTED;
+    status = qjs_intl_date_pattern_compile(allocator, record->source.text, &record->pattern);
+    if (!status) {
+        qjs_intl_date_pattern_fix_calendar_year(&record->pattern);
+        status = qjs_intl_date_pattern_info(&record->pattern, &record->info);
+        if (!status && !useful(&record->info))
+            status = QJS_INTL_UNSUPPORTED;
+    }
+    if (status)
+        qjs_intl_date_pattern_clear(allocator, &record->pattern);
+    return status;
+}
+
+QJSIntlStatus qjs_intl_date_source_candidates_preferred(const QJSIntlDateAvailableSources *sources,
+                                                        QJSIntlBytes leaf_alt, QJSIntlBytes fallback,
+                                                        const QJSIntlAllocator *allocator,
+                                                        QJSIntlDateSourceCandidates *out)
 {
     QJSIntlDateSourceCandidates result = {0};
     QJSIntlStatus status;
@@ -41,7 +84,7 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !sources || !sources->data.section.bytes || (!leaf_alt.data && leaf_alt.length) ||
-        !allocator || !allocator->malloc || !allocator->free)
+        (!fallback.data && fallback.length) || !allocator || !allocator->malloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
     result.data = sources->data;
     result.allocator = *allocator;
@@ -51,6 +94,7 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
         QJSIntlDateAvailableEntry entry;
         QJSIntlDateAvailableNode origin;
         QJSIntlDateAvailableGroup group;
+        int choose;
         status = qjs_intl_date_available_source_at(sources, i, &entry, &origin);
         if (status)
             return status;
@@ -59,8 +103,10 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
             return status;
         if (group.family != QJS_INTL_DATE_AVAILABLE_PATTERN)
             return QJS_INTL_INVALID_ARGUMENT;
-        if (eligible(&entry, leaf_alt))
-            capacity++;
+        status = selected(sources, &entry, leaf_alt, fallback, &choose);
+        if (status)
+            return status;
+        capacity += choose;
     }
     if (capacity > SIZE_MAX / sizeof(*result.records))
         return QJS_INTL_OVERFLOW;
@@ -71,22 +117,32 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
     }
     for (i = 0; i < sources->count; i++) {
         QJSIntlDateSourceCandidate record = {0};
+        int choose;
         status = qjs_intl_date_available_source_at(sources, i, &record.source, &record.origin);
         if (status)
             goto fail;
-        if (!eligible(&record.source, leaf_alt))
-            continue;
-        status = qjs_intl_date_pattern_compile(allocator, record.source.text, &record.pattern);
+        status = selected(sources, &record.source, leaf_alt, fallback, &choose);
         if (status)
             goto fail;
-        qjs_intl_date_pattern_fix_calendar_year(&record.pattern);
-        status = qjs_intl_date_pattern_info(&record.pattern, &record.info);
-        if (status || !useful(&record.info)) {
-            qjs_intl_date_pattern_clear(allocator, &record.pattern);
-            if (status && status != QJS_INTL_UNSUPPORTED)
-                goto fail;
+        if (!choose)
             continue;
+        status = compile_candidate(allocator, &record);
+        if ((status == QJS_INTL_UNSUPPORTED || status == QJS_INTL_DATA_ERROR) &&
+            !equal(leaf_alt, fallback) && equal(record.source.alt, leaf_alt)) {
+            QJSIntlStatus unusable = status;
+            /* Fallback is another exact visible key, not a masked ancestor
+               of the failed preferred key. Operational errors never fall back. */
+            status = qjs_intl_date_available_source_find(sources, record.source.code, record.source.plural,
+                                                          fallback, &record.source, &record.origin);
+            if (!status)
+                status = compile_candidate(allocator, &record);
+            else if (status == QJS_INTL_UNSUPPORTED)
+                status = unusable;
         }
+        if (status == QJS_INTL_UNSUPPORTED)
+            continue;
+        if (status)
+            goto fail;
         result.records[result.count++] = record;
     }
     if (!result.count && result.records) {
@@ -98,6 +154,14 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
 fail:
     qjs_intl_date_source_candidates_clear(&result);
     return status;
+}
+
+QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSources *sources,
+                                                 QJSIntlBytes leaf_alt,
+                                                 const QJSIntlAllocator *allocator,
+                                                 QJSIntlDateSourceCandidates *out)
+{
+    return qjs_intl_date_source_candidates_preferred(sources, leaf_alt, leaf_alt, allocator, out);
 }
 
 QJSIntlStatus qjs_intl_date_source_candidate_at(const QJSIntlDateSourceCandidates *candidates,

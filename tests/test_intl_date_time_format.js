@@ -57,6 +57,30 @@ for (const value of [0, -1, 123456, 1719835200123]) {
         assertArrayEquals(Object.keys(part), ['type', 'value']);
 }
 
+// CLDR explicitly supplies ASCII alternatives for English AM/PM spacing.
+// Select one source for strings and parts, independently of digit substitution.
+for (const [numberingSystem, expected] of [
+    ['latn', '02:35:06 AM'], ['arab', '٠٢:٣٥:٠٦ AM'],
+    ['deva', '०२:३५:०६ AM'], ['hanidec', '〇二:三五:〇六 AM'],
+]) {
+    const formatter = new DTF('en-US', {...utc, numberingSystem,
+        hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    if (formatter.resolvedOptions().numberingSystem !== numberingSystem)
+        continue; // The minimal digit profile need not supply every system.
+    const instant = Date.UTC(2024, 0, 1, 2, 35, 6);
+    const parts = formatter.formatToParts(instant);
+    assert(formatter.format(instant), expected);
+    assert(parts.map(part => part.value).join(''), expected);
+}
+for (const timeStyle of ['short', 'medium', 'long', 'full']) {
+    const formatter = new DTF('en-US', {...utc, timeStyle});
+    const value = Date.UTC(2024, 0, 1, 2, 35, 6);
+    const parts = formatter.formatToParts(value);
+    assert(parts.map(part => part.value).join(''), formatter.format(value));
+    const period = parts.findIndex(part => part.type === 'dayPeriod');
+    assert(parts[period - 1].value, ' ');
+}
+
 // Fractional precision extends a whole minute/second pattern; it adds no hour.
 for (const digits of [1, 2, 3]) {
     const formatter = new DTF('en', {...utc, minute: 'numeric', second: 'numeric',
