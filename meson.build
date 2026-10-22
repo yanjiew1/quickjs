@@ -248,6 +248,22 @@ collation_compile = executable(
   override_options: collation_compile_overrides,
   build_by_default: get_option('tests'),
 )
+segment_property_sources = files(
+  'tools/intl/segment-property.c',
+  'src/unicode/libunicode.c',
+  'src/unicode/break-properties.c',
+  'src/cutils/cutils.c',
+) + [unicode_tables]
+segment_property = executable(
+  'intl-segment-property',
+  files('tools/intl/segment-property-main.c') + segment_property_sources,
+  native: true,
+  c_args: native_args,
+  include_directories: inc,
+  dependencies: native_deps,
+  override_options: collation_compile_overrides,
+  build_by_default: get_option('tests'),
+)
 executable(
   'unicode_gen_test',
   [
