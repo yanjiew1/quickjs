@@ -44,6 +44,54 @@ files are repaired from the authenticated archive, including in offline mode.
 Downloads, member counts, expanded sizes and individual files have bounds.
 Archive links, unsafe paths and source-cache symlinks are rejected.
 
+## Acquire segmentation dictionary data
+
+CLDR boundary rules do not supply the word dictionaries needed for CJK,
+Khmer, Lao, Myanmar and Thai. `segment-dictionary-pin.json` records released
+ICU 79.1 text inputs by immutable commit URL, byte count, SHA-256 and Git blob
+identity. This is data reuse; it does not link ICU or add an ICU backend.
+Acquire explicitly, outside normal builds:
+
+```sh
+python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
+python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache --offline
+```
+
+The `icu-dictionaries-79.1` cache contains the five source dictionaries and
+full release license. Reads authenticate consumed bytes again and include the
+license in generation identity. Keep the complete dictionary notices in
+`data/intl/LICENSE-SEGMENT-DICTIONARIES`, including libtabe/IPADIC and other
+third-party notices; the generic Unicode license is insufficient. These raw
+text inputs are for later owned binary compilation, not runtime parsing or
+proof that native dictionary segmentation is already implemented.
+
+`segment_dictionary.py` parses that authenticated cache using the pinned text
+profile: literal words for SEA, and words plus unsigned decimal path costs for
+CJK. It preserves costs (including zero), exact scalar keys, source comments
+and release/license identity. Keys are sorted without normalization. Explicit
+byte/record/key budgets and malformed/duplicate rejection precede later binary
+compilation. Inspect a prepared cache without network access:
+
+```sh
+python3 tools/intl/segment_dictionary.py --sources /path/to/intl-cache/icu-dictionaries-79.1
+```
+
+The JSON report is an inventory receipt, not runtime data or a locale capability
+claim. The parser does not select word boundaries or implement ICU's matching
+algorithm. Dictionary compilation and the native segmentation consumer own
+those separate responsibilities.
+
+`segment_dictionary_trie.py` prepares immutable scalar-label arrays from those
+records. An incremental prefix frontier finalizes children before parents and
+interns identical terminal/edge suffixes; cost differences prevent merging.
+State IDs follow deterministic postorder, allowing a reader to check acyclicity
+with `child < parent`. Alphabet IDs are zero-based u16; terminal tags reserve
+zero and index the raw cost pool. Membership and valued modes remain distinct.
+`segment_dictionary_tables.py` encodes and validates the optional section 39
+wire layout, including graph reachability, accepted-path counts and scalar/UTF-16
+length metadata. See [the format reference](../../doc/intl-segment-dictionary-format.md).
+Production packs and native word-boundary policy are integrated separately.
+
 ## Consume verified source files
 
 `segment_sources.py` collects the relevant raw `common/segments` records with
