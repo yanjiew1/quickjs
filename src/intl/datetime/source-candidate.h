@@ -36,6 +36,14 @@ QJSIntlStatus qjs_intl_date_source_candidates_open(const QJSIntlDateAvailableSou
                                                  QJSIntlBytes leaf_alt,
                                                  const QJSIntlAllocator *allocator,
                                                  QJSIntlDateSourceCandidates *out);
+/* Try preferred exact keys, then the fallback key when missing, blocked,
+   empty, syntactically invalid or not renderable here. Never retry a masked
+   ancestor of the same key. OOM/overflow and operational errors propagate.
+   Each key already resolves inheritance; an inherited usable preferred key
+   can therefore win over a nearer ordinary key. Retain actual provenance. */
+QJSIntlStatus qjs_intl_date_source_candidates_preferred(const QJSIntlDateAvailableSources *,
+                                                        QJSIntlBytes preferred, QJSIntlBytes fallback,
+                                                        const QJSIntlAllocator *, QJSIntlDateSourceCandidates *);
 void qjs_intl_date_source_candidates_clear(QJSIntlDateSourceCandidates *candidates);
 /* Borrow a const record, without allocating or transferring pattern ownership.
    Do not modify/clear borrowed records. An owner may filter its own mutable
