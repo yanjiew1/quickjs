@@ -1000,9 +1000,12 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
     formatter->numbers.two_digit = formatter->numbers.fraction[1];
     /* These typed owners share one validated pack locale catalog. Calendar
        catalogs and NumberFormat's available-locale indexes remain independent. */
+    /* With no caller context distinguishing 00:00 from 24:00, use the general
+       period at midnight, following TR35's optional midnight-support policy.
+       Keep the source rules/names intact; noon still uses its exact point. */
     formatter->format.text = (QJSIntlDateTextData){
         &formatter->data.names, &formatter->data.metadata, &formatter->data.eras,
-        &formatter->data.periods, NULL, source->source, 0,
+        &formatter->data.periods, NULL, source->source, 0, 0,
     };
     status = qjs_intl_date_name_calendar_index(&formatter->data.metadata, &formatter->data.names,
                                                bytes(qjs_calendar_identifier(formatter->calendar)),
@@ -1156,7 +1159,7 @@ static QJSIntlStatus range_period(const QJSIntlDateTextData *data, const QJSIntl
     if (!info->period_symbol || info->period_symbol == 'a')
         return QJS_INTL_OK;
     status = qjs_intl_dayperiod_select(data->periods, data->period_rules, info->period_symbol,
-                 (clock->hour * 60 + clock->minute) * 60 + clock->second, local->subsecond, &primary);
+                 (clock->hour * 60 + clock->minute) * 60 + clock->second, local->subsecond, data->use_midnight, &primary);
     if (!status)
         status = qjs_intl_date_period_name_select(data->names, data->locale, data->calendar,
                      info->period_symbol, info->period_width, primary, fallback, &name);
