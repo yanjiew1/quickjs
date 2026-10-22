@@ -102,6 +102,24 @@ for (const calendar of ['chinese', 'dangi']) {
     assert(parts.find(part => part.type === 'relatedYear').value, '1999');
     assert(parts.find(part => part.type === 'month').value, '11');
     assert(parts.find(part => part.type === 'day').value, '25');
+    // Numeric leap months keep the nominal number and the inherited CLDR
+    // marker in one month part. The ordinal sixth month here is M05L.
+    for (const month of ['numeric', '2-digit']) {
+        const formatter = new DTF('en', {...utc, calendar, year: 'numeric', month, day: 'numeric'});
+        const leapDate = Date.UTC(2047, 6, 22);
+        const leapParts = formatter.formatToParts(leapDate);
+        // Matchers may choose a different supported width. Check decoration
+        // after the actual numeric-width decision rather than forcing one.
+        const padded = formatter.resolvedOptions().month === '2-digit';
+        assert(leapParts.filter(part => part.type === 'month').length, 1);
+        assert(leapParts.find(part => part.type === 'month').value, padded ? '05bis' : '5bis');
+        assert(leapParts.map(part => part.value).join(''), formatter.format(leapDate));
+        if (typeof Temporal !== 'undefined') {
+            const plain = Temporal.PlainDate.from('2047-07-22').withCalendar(calendar);
+            assert(plain.monthCode, 'M05L');
+            assert(formatter.formatToParts(plain).find(part => part.type === 'month').value, padded ? '05bis' : '5bis');
+        }
+    }
     const range = lunisolar.formatRangeToParts(Date.UTC(2000, 0, 1), Date.UTC(1900, 0, 1));
     assertArrayEquals(range.filter(part => part.type === 'relatedYear').map(part => part.value),
         ['1999', '1899']);
