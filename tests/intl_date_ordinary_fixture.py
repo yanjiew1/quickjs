@@ -16,13 +16,24 @@ from resolve import BLOCK
 import tables
 
 
-def pack(blocked=False, padded=False, partial_connectors=False):
+def pack(blocked=False, padded=False, partial_connectors=False, month_hints=False):
     tags = ('en', 'root')
     graph = ParentGraph(tags, {}, {}, {'und': 'en-Latn-US'}, (), False)
     ordinary, append = ('gregorian', 'availableFormats', ''), ('gregorian', 'appendItems', '')
     patterns = (('M', 'L'), ('Md', 'M/d'), ('GyM', 'y M G'), ('GyMd', 'y M d G'),
                 ('Hm', 'H:mm'), ('Hms', 'H:mm:ss'), ('Bh', 'B h'), ('Bhm', 'B h:mm'),
                 ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'), ('ms', 'mm:ss'))
+    if month_hints:
+        # yMMMd sorts first, but yMd deliberately requests a numeric month
+        # through the same textual pattern. Different raw text is not an alias.
+        patterns += (('yMMMd', 'd MMM y'), ('yMd', 'd MMM y'),
+                     ('yMMMMdd', 'dd MMMM y'), ('yMdd', 'MMMM dd, y'),
+                     ('yMMMdHm', 'd MMM y HH:mm'), ('yMdHm', 'd MMM y HH:mm'),
+                     ('yMMMdhm', 'd MMM y h:mm a'),
+                     # Preserve intentional B5 -> B1 overrides and raw B3
+                     # lengths; a b skeleton cannot supply B width evidence.
+                     ('BBBBBh', 'B h'), ('bbhm', 'B h:mm'),
+                     ('BBBhms', 'BBBB h:mm:ss'))
     if padded:
         # Canonical source order puts the named date before the padded numeric
         # date. Composition should choose the latter without narrowing it.
@@ -67,4 +78,6 @@ if __name__ == '__main__':
     text += '\n' + embed.render(pack(padded=True)).replace('qjs_intl_native', 'qjs_intl_date_ordinary_padded')
     text += '\n' + embed.render(pack(partial_connectors=True)).replace('qjs_intl_native',
                                                                        'qjs_intl_date_ordinary_partial')
+    text += '\n' + embed.render(pack(month_hints=True)).replace('qjs_intl_native',
+                                                                  'qjs_intl_date_ordinary_month_hints')
     atomic_write(args.output, text.encode('ascii'))
