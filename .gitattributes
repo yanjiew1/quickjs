@@ -2,3 +2,4 @@
 /data/timezone/sources/cldr/* -text
 /data/calendar/sources/* -text
 /data/calendar/*.json -text
+/data/intl/LICENSE-SEGMENT-DICTIONARIES -text
