@@ -4461,6 +4461,31 @@ if get_option('intl') == 'native'
     timeout: 30,
   )
 
+  intl_segment_dictionary_fixture = custom_target(
+    'intl-segment-dictionary-authored-fixture',
+    output: 'intl-segment-dictionary-authored-fixture.c',
+    command: [python, files('intl_segment_dictionary_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_segment_dictionary_test = {
+    'name': 'test_intl_segment_dictionary',
+    'sources': files(
+      'test_intl_segment_dictionary.c',
+      '../src/intl/segment/dictionary.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_segment_dictionary_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_segment_dictionary_test,
+    'name': 'intl-segment-dictionary',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   test(
     'intl-segment-property-tool',
     python,
