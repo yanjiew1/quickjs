@@ -131,12 +131,12 @@ void qjs_intl_date_prepared_style_clear(QJSIntlDatePreparedStyle *style)
     memset(style, 0, sizeof(*style));
 }
 
-QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
-                                          uint32_t locale, uint32_t calendar,
-                                          QJSIntlDateStyleWidth width, uint32_t alternate,
-                                          const QJSIntlDateSourceCandidates *pool,
-                                          const QJSIntlAllocator *allocator,
-                                          QJSIntlDatePreparedStyle *out)
+static QJSIntlStatus open_style_date(const QJSIntlDateStyleData *styles,
+                                     uint32_t locale, uint32_t calendar,
+                                     QJSIntlDateStyleWidth width, uint32_t alternate, uint32_t fallback,
+                                     const QJSIntlDateSourceCandidates *pool,
+                                     const QJSIntlAllocator *allocator,
+                                     QJSIntlDatePreparedStyle *out)
 {
     QJSIntlDatePreparedStyle result = {0};
     QJSIntlDatePattern raw = {0};
@@ -149,8 +149,8 @@ QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
     if (!out || !allocator || !allocator->malloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
     result.source_index = SIZE_MAX;
-    status = qjs_intl_date_style_source_open(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
-                                              width, alternate, allocator, &result.style);
+    status = qjs_intl_date_style_source_preferred(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
+                                              width, alternate, fallback, allocator, &result.style);
     if (!status) {
         *out = result;
         return QJS_INTL_OK;
@@ -160,16 +160,16 @@ QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
     result.style.allocator = *allocator;
     result.style.family = QJS_INTL_DATE_STYLE_DATE;
     result.style.width = width;
-    status = qjs_intl_date_style_record_at(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
-                width, QJS_INTL_DATE_STYLE_PATTERN, alternate, &result.style.source);
+    status = qjs_intl_date_style_preferred_record(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
+                width, QJS_INTL_DATE_STYLE_PATTERN, alternate, fallback, &result.style.source);
     if (status)
         goto fail;
     if (result.style.source.state != QJS_INTL_DATE_STYLE_VALUE || !result.style.source.text.length) {
         status = QJS_INTL_UNSUPPORTED;
         goto fail;
     }
-    status = qjs_intl_date_style_record_at(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
-                width, QJS_INTL_DATE_STYLE_SKELETON, alternate, &result.style.skeleton);
+    status = qjs_intl_date_style_preferred_record(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
+                width, QJS_INTL_DATE_STYLE_SKELETON, alternate, fallback, &result.style.skeleton);
     if (!status)
         status = qjs_intl_date_pattern_compile(allocator, result.style.source.text, &raw);
     if (!status)
@@ -226,5 +226,36 @@ QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
 fail:
     qjs_intl_date_pattern_clear(allocator, &raw);
     qjs_intl_date_prepared_style_clear(&result);
+    return status;
+}
+
+QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
+                                          uint32_t locale, uint32_t calendar,
+                                          QJSIntlDateStyleWidth width, uint32_t alternate,
+                                          const QJSIntlDateSourceCandidates *pool,
+                                          const QJSIntlAllocator *allocator,
+                                          QJSIntlDatePreparedStyle *out)
+{
+    return open_style_date(styles, locale, calendar, width, alternate, alternate, pool, allocator, out);
+}
+
+QJSIntlStatus qjs_intl_date_style_date_preferred(const QJSIntlDateStyleData *styles,
+                                                 uint32_t locale, uint32_t calendar,
+                                                 QJSIntlDateStyleWidth width,
+                                                 uint32_t preferred, uint32_t fallback,
+                                                 const QJSIntlDateSourceCandidates *pool,
+                                                 const QJSIntlAllocator *allocator,
+                                                 QJSIntlDatePreparedStyle *out)
+{
+    QJSIntlStatus status = open_style_date(styles, locale, calendar, width, preferred, fallback, pool, allocator, out);
+    if (preferred != fallback && (status == QJS_INTL_UNSUPPORTED || status == QJS_INTL_DATA_ERROR)) {
+        status = open_style_date(styles, locale, calendar, width, fallback, fallback, pool, allocator, out);
+        if (!status) {
+            status = qjs_intl_date_style_preferred_record(styles, locale, calendar, QJS_INTL_DATE_STYLE_DATE,
+                         width, QJS_INTL_DATE_STYLE_SKELETON, preferred, fallback, &out->style.skeleton);
+            if (status)
+                qjs_intl_date_prepared_style_clear(out);
+        }
+    }
     return status;
 }
