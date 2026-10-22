@@ -15,6 +15,7 @@ typedef struct QJSIntlDateTextData {
     const QJSIntlDayPeriodData *periods;
     const QJSIntlDayPeriodRuleList *period_rules;
     uint32_t locale, calendar; /* Indexes in names, not other source owners. */
+    unsigned int use_midnight; /* Explicit 00:00 point-label policy; 0 or 1. */
 } QJSIntlDateTextData;
 
 /* Zero-initialize once for one unchanged locale/calendar/data/rule binding.
