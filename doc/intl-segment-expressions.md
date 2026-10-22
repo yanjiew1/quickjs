@@ -179,6 +179,23 @@ are 4,096 states, 1,048,576 transition cells, 262,144 retained members and
 UTF-16 execution remain subsequent acceptance stages; host acceptance helpers
 are bounded proof tools, not the production input owner.
 
+`segment_program.py` assembles complete rule programs with one shared alphabet
+and mode-aware side-machine owners. Identical completed bodies can share a
+table, while direction and BOS/restart policy remain in identity. Rule order,
+actions and source records stay separate. Semantic table keys exclude subset
+proof IDs and construction statistics; retained lowered context preserves
+original rule/declaration provenance.
+
+Aggregate caps apply across all rule sides, in addition to component limits:
+1,024 rules, 131,072 retained temporary NFA states, 65,536 retained DFA states,
+8,388,608 transition cells, 4,194,304 subset members and 128,000,000 work visits.
+At most 262,144 unique predicate pairs are retained; completed temporary NFAs
+are rebound to canonical tuple owners before storing the next side.
+Remaining work is delegated to each compiler before it runs. Completed duplicate
+machines still charge construction/key work even when their retained storage
+shares an owner. NFA/alphabet/DFA host records expose construction work for that
+accounting; statistics are not part of runtime table identity or wire data.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
