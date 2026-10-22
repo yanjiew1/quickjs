@@ -71,6 +71,15 @@ Audit the authenticated source inventory with:
 python3 tools/intl/segment_sources.py --sources /path/to/intl-cache/cldr-49-beta4
 ```
 
+The host `intl-segment-property` tool queries the project's pinned C Unicode
+tables for category, script, binary and boundary-property ranges. For example,
+`build/intl-segment-property Word_Break=ALetter` emits a versioned JSON range
+list with exclusive endpoints. This is a generator interface, not runtime JSON
+loading. It accepts exact case-sensitive C-table names/value aliases and the
+documented field aliases, rather than Unicode loose matching; it does
+not relax JavaScript RegExp's property-name rules. Consumers must use the
+reported Unicode version and cache repeated queries during one generation.
+
 `collation_root.py` validates the authenticated `common/uca/allkeys_CLDR.txt`
 root table. It retains contractions, expansions, all weight levels and variable
 flags, then orders mappings by scalar sequence for deterministic lookup-table
