@@ -4451,6 +4451,38 @@ if get_option('intl') == 'native'
   )
 
   test(
+    'intl-segment-expression',
+    python,
+    args: files('test_intl_segment_expression.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-rules',
+    python,
+    args: files('test_intl_segment_rules.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-compat',
+    python,
+    args: files('test_intl_segment_compat.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-sets',
+    python,
+    args: files('test_intl_segment_sets.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-segment-dictionary-sources',
     python,
     args: files('test_intl_segment_dictionary_sources.py'),
@@ -4511,6 +4543,18 @@ if get_option('intl') == 'native'
     'intl-segment-property-tool',
     python,
     args: [files('test_intl_segment_property_tool.py'), '--tool', segment_property],
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-property-resolver',
+    python,
+    args: [
+      files('test_intl_segment_property_resolver.py'),
+      '--tool', segment_property,
+      '--workdir', meson.current_build_dir(),
+    ],
     suite: ['repo', 'generator', 'unit'],
     timeout: 30,
   )
