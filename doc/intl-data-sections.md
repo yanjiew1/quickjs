@@ -807,3 +807,15 @@ profiles do not yet include it. See the [dictionary format](intl-segment-diction
 its versioned descriptors, array widths, suffix sharing and validation rules.
 Sources: `tools/intl/segment_dictionary_tables.py`;
 `src/intl/segment/dictionary.[ch]`.
+
+## 40 SEGMENT_PROGRAMS
+
+Optional segmentation rule programs, refinement policy and shared-locale
+routes. Directory count is the number of programs. This prepared section does
+not establish native Segmenter coverage; dictionary, suppression, word-status
+and grapheme requirements remain explicit. Production profiles do not yet
+include it. See the [program format](intl-segment-program-format.md) for the
+versioned layout, canonical numbering, resource gates and validation contract.
+Source: `tools/intl/segment_program_tables.py`.
+The private C owner `src/intl/segment/program.[ch]` validates these arrays
+against the shared-data locale inventory before publishing borrowed views.
