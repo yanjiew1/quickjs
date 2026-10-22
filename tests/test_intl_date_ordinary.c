@@ -396,8 +396,46 @@ static void date_clocks(const QJSIntlAllocator *allocator,
     qjs_intl_date_pattern_clear(allocator, &source[0]);
 }
 
+static void month_hints(const QJSIntlDateOrdinaryPrograms *programs)
+{
+    const unsigned int date_fields = (1U << QJS_INTL_DATETIME_YEAR) |
+                                     (1U << QJS_INTL_DATETIME_MONTH) | (1U << QJS_INTL_DATETIME_DAY);
+    const unsigned int aliases = QJS_INTL_DATE_MONTH_SOURCE_NUMERIC | QJS_INTL_DATE_MONTH_SOURCE_TEXT;
+    unsigned int short_seen = 0, long_seen = 0, combined = 0, fractional = 0, appended = 0, paired = 0;
+    size_t i, variant;
+    for (i = 0; i < programs->count; i++) {
+        const QJSIntlDateOrdinaryProgram *record = &programs->records[i];
+        const QJSIntlDateTimeComponents *fields = &record->single.components;
+        if (mask(fields) == date_fields && fields->values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_SHORT) {
+            assert(record->source_month_kinds[0] == aliases);
+            short_seen++;
+        }
+        if (mask(fields) == date_fields && fields->values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_LONG) {
+            /* A numeric skeleton with different text is not this source's alias. */
+            assert(record->source_month_kinds[0] == QJS_INTL_DATE_MONTH_SOURCE_TEXT);
+            long_seen++;
+        }
+        if (!record->construction && fields->values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_SHORT &&
+            fields->values[QJS_INTL_DATETIME_HOUR] == QJS_INTL_DATETIME_NUMERIC) {
+            assert(record->source_month_kinds[0] == aliases);
+            assert(record->source_month_kinds[1] == QJS_INTL_DATE_MONTH_SOURCE_TEXT);
+            paired++;
+        }
+        if (record->first == SIZE_MAX || !fields->values[QJS_INTL_DATETIME_MONTH])
+            continue;
+        const QJSIntlDateOrdinaryProgram *parent = &programs->records[record->first];
+        for (variant = 0; variant < 2; variant++)
+            assert(record->source_month_kinds[variant] == parent->source_month_kinds[
+                parent->single.components.values[QJS_INTL_DATETIME_HOUR] ? variant : 0]);
+        combined += record->construction == QJS_INTL_DATE_ORDINARY_COMBINE;
+        fractional += record->construction == QJS_INTL_DATE_ORDINARY_FRACTION;
+        appended += record->construction == QJS_INTL_DATE_ORDINARY_APPEND;
+    }
+    assert(short_seen == 1 && long_seen == 1 && paired == 1 && combined && fractional && appended);
+}
+
 static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t length,
-                int blocked, int failures, int padded)
+                int blocked, int failures, int fixture_kind)
 {
     QJSIntlData pack;
     QJSIntlDateAvailableData available;
@@ -432,7 +470,9 @@ static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t le
                     bytes("\xd9\xab"), allocator, &programs));
         calls = state->calls;
         verify(&programs);
-        if (padded)
+        if (fixture_kind == 2)
+            month_hints(&programs);
+        else if (fixture_kind == 1)
             authored_numeric(allocator, &programs);
         else
             authored(allocator, &pool, &programs);
@@ -526,6 +566,8 @@ extern const uint8_t qjs_intl_date_ordinary_fixture_bytes[], qjs_intl_date_ordin
 extern const size_t qjs_intl_date_ordinary_fixture_length, qjs_intl_date_ordinary_blocked_length;
 extern const uint8_t qjs_intl_date_ordinary_padded_bytes[];
 extern const size_t qjs_intl_date_ordinary_padded_length;
+extern const uint8_t qjs_intl_date_ordinary_month_hints_bytes[];
+extern const size_t qjs_intl_date_ordinary_month_hints_length;
 
 int main(void)
 {
@@ -535,6 +577,7 @@ int main(void)
     run(&allocator, qjs_intl_date_ordinary_fixture_bytes, qjs_intl_date_ordinary_fixture_length, 0, 1, 0);
     run(&allocator, qjs_intl_date_ordinary_blocked_bytes, qjs_intl_date_ordinary_blocked_length, 1, 0, 0);
     run(&allocator, qjs_intl_date_ordinary_padded_bytes, qjs_intl_date_ordinary_padded_length, 0, 0, 1);
+    run(&allocator, qjs_intl_date_ordinary_month_hints_bytes, qjs_intl_date_ordinary_month_hints_length, 0, 0, 2);
 #ifdef TEST_INTL_ORDINARY_PROFILE
     prepared(&allocator);
 #endif

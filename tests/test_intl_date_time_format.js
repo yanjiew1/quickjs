@@ -299,6 +299,29 @@ for (const calendar of ['chinese', 'dangi']) {
         ['1999', '1899']);
 }
 
+// Hebrew yMd intentionally uses a named month. Keep that source mapping
+// rather than preferring an inherited numeric date with an unwanted era.
+for (const month of ['numeric', '2-digit']) {
+    const options = {...utc, calendar: 'hebrew', year: 'numeric', month, day: 'numeric'};
+    const formatter = new DTF('en', options);
+    if (formatter.resolvedOptions().calendar !== 'hebrew')
+        continue;
+    const value = Date.UTC(2049, 2, 4);
+    for (const formatMatcher of ['basic', 'best fit']) {
+        const full = new DTF('en', {...options, formatMatcher});
+        const parts = full.formatToParts(value);
+        assert(full.resolvedOptions().month, 'short');
+        assert(parts.find(part => part.type === 'month').value, 'Adar I');
+        assert(parts.some(part => part.type === 'era'), false);
+        assert(parts.map(part => part.value).join(''), full.format(value));
+    }
+    if (month === 'numeric') {
+        const only = new DTF('en', {...utc, calendar: 'hebrew', month});
+        assert(only.resolvedOptions().month, 'numeric');
+        assert(only.formatToParts(value).find(part => part.type === 'month').value, '6');
+    }
+}
+
 const getter = Object.getOwnPropertyDescriptor(DTF.prototype, 'format').get;
 for (const receiver of [undefined, null, 1, {}, DTF.prototype, Object.create(f), new Proxy(f, {})]) {
     assertThrows(TypeError, () => getter.call(receiver));
