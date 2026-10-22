@@ -44,6 +44,27 @@ files are repaired from the authenticated archive, including in offline mode.
 Downloads, member counts, expanded sizes and individual files have bounds.
 Archive links, unsafe paths and source-cache symlinks are rejected.
 
+## Acquire segmentation dictionary data
+
+CLDR boundary rules do not supply the word dictionaries needed for CJK,
+Khmer, Lao, Myanmar and Thai. `segment-dictionary-pin.json` records released
+ICU 79.1 text inputs by immutable commit URL, byte count, SHA-256 and Git blob
+identity. This is data reuse; it does not link ICU or add an ICU backend.
+Acquire explicitly, outside normal builds:
+
+```sh
+python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
+python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache --offline
+```
+
+The `icu-dictionaries-79.1` cache contains the five source dictionaries and
+full release license. Reads authenticate consumed bytes again and include the
+license in generation identity. Keep the complete dictionary notices in
+`data/intl/LICENSE-SEGMENT-DICTIONARIES`, including libtabe/IPADIC and other
+third-party notices; the generic Unicode license is insufficient. These raw
+text inputs are for later owned binary compilation, not runtime parsing or
+proof that native dictionary segmentation is already implemented.
+
 ## Consume verified source files
 
 `segment_sources.py` collects the relevant raw `common/segments` records with
