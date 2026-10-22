@@ -18,7 +18,7 @@ typedef struct QJSIntlDateTextData {
 } QJSIntlDateTextData;
 
 /* Zero-initialize once for one unchanged locale/calendar/data/rule binding.
-   Numeric-only calls with null data do not bind the cache. Cache only name
+   Numeric-only calls without lunar month templates need not bind the cache. Cache only name
    proofs, not arithmetic, numeric or zone capabilities. */
 typedef struct QJSIntlDateNameAdmission {
     const QJSIntlDateTextData *data;
@@ -44,8 +44,10 @@ QJSIntlStatus qjs_intl_date_names_admit(const QJSIntlDatePattern *pattern,
 
    All owners and NumberFormat instances remain immutable and outlive this
    operation. Numeric fields reuse numeric_format's exact digit/normalization
-   contract. Numeric month remains FormatNumeric; named lunar months apply the
-   exact inherited leap template, without guessed width/context fallbacks.
+   contract. Lunar months apply the exact inherited leap template to formatted
+   digits or names, without guessed width/context fallbacks. Numeric/all
+   decoration follows CLDR's regular M/L handling; the current ECMA numeric
+   pseudocode does not explicitly include this established calendar behavior.
    Hebrew Adar names use the year-specific name, not a lunar leap prefix.
    Era lookup uses explicit canonical-code mappings; ISO retains its localized
    names while historical Japanese uses Gregorian era labels. Unavailable,
