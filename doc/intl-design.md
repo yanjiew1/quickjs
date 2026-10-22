@@ -984,6 +984,27 @@ unchanged pack. The input source index can be released independently. Distinct
 skeletons and hour cycles remain distinct even when component vectors match;
 these are source candidates, not the final ECMA format list or capability proof.
 
+Native DateTimeFormat uses an explicit browser-compatible source preference:
+try the resolved `alt="ascii"` pattern key first, then the ordinary key if it
+is missing, blocked, empty, malformed or unsupported. This is cross-alternate
+fallback, not revival of a masked ancestor of the same key. Allocation failure,
+overflow and operational errors propagate. Each exact key already resolves
+inheritance, so an inherited usable ASCII key can win over a nearer ordinary
+key. Keep both variants and their provenance in the binary data.
+
+Style patterns and datetimeSkeleton fields select their alternatives
+independently, including during calendar-year recovery. Look up alternate IDs
+inside each owning catalog; IDs are not shared across source modules. The exact
+source APIs retain their no-fallback contracts. Existing connector and interval
+data has no ASCII alternative; preserve those actual source literals. Strings
+and parts use the same selected program; range text similarly agrees with its
+parts, even when its own interval punctuation differs from single-value text.
+This is native compatibility policy allowed by ECMA-402's locale data freedom,
+not a requirement for ASCII or a numbering-system-specific digit workaround.
+Do not globally normalize Unicode whitespace in final output. The policy follows
+explicit CLDR variants documented by the
+[ICU source conversion guide](https://github.com/unicode-org/icu/blob/ddc6b66926bfac6036144ca9902992a0d6d50af9/tools/cldr/cldr-to-icu/README.md#using-altascii-cldr-alternate-values-from-the-cldr-xml).
+
 `datetime/format-source.[ch]` groups source candidates by all eleven public
 component values while retaining every original source index. Groups follow
 first input occurrence; members follow original source order, independently of
