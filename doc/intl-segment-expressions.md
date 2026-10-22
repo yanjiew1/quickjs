@@ -57,6 +57,21 @@ replacement. They become dedicated ignore records at their original rule
 positions; preparation does not strip input or reorder those phases. Unknown
 remaps fail rather than falling through to host regex substitution.
 
+`segment_sets.py` evaluates character-set operands into normalized immutable
+half-open intervals over `[0, 0x110000)`. It uses integer interval algebra and
+an injected property owner, without host Unicode data or code-point enumeration.
+Evaluation and sequence-operand traversal follow shared arena slots iteratively;
+long alias chains do not consume the Python call stack. The source AST remains
+available beside every result for later polarity-aware ignore lowering.
+
+Each evaluator bounds node visits, interval work, individual result size,
+distinct queries and retained range pairs. Aliases and bracket nodes share
+tuple owners instead of copying their ranges. The default profile allows
+131,072 nodes, 16,384 intervals per result, 8,000,000 work visits, 256 distinct
+properties and 262,144 retained interval pairs. Exceeding a budget fails without
+publishing an incomplete set; operational/property errors never imply an empty
+set or fallback to a host Unicode implementation.
+
 Automata, binary encoding, runtime matching and native locale capability
 advertisement are subsequent acceptance stages.
 
