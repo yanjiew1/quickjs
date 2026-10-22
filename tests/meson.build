@@ -4565,6 +4565,18 @@ test(
 )
 
 test(
+  'intl-segment-property-resolver',
+  python,
+  args: [
+    files('test_intl_segment_property_resolver.py'),
+    '--tool', segment_property,
+    '--workdir', meson.current_build_dir(),
+  ],
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-dayperiod-tables',
   python,
   args: files('test_intl_dayperiod_tables.py'),
