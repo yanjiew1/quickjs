@@ -3589,6 +3589,13 @@ if get_option('intl') == 'minimal'
     ) + unicode_tables,
   }
 endif
+if get_option('intl') == 'native'
+  standalone += {
+    'test_intl_segment_property': files(
+      'test_intl_segment_property.c',
+    ) + [segment_property_sources],
+  }
+endif
 standalone += {
   'test_cutils': files(
     'test_cutils.c',
@@ -4471,6 +4478,14 @@ if get_option('intl') == 'native'
     python,
     args: files('test_intl_segment_inheritance.py'),
     suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-property-tool',
+    python,
+    args: [files('test_intl_segment_property_tool.py'), '--tool', segment_property],
+    suite: ['repo', 'generator', 'unit'],
     timeout: 30,
   )
 endif
