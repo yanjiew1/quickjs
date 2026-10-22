@@ -101,6 +101,52 @@ static void empty(const QJSIntlDateSinglePrograms *programs)
         assert(!programs->components.values[i]);
 }
 
+static void period_widths(const QJSIntlAllocator *allocator)
+{
+    Allocation *state = allocator->opaque;
+    static const char *const patterns[] = {"h 'B' B", "H 'b' b", "h a"};
+    QJSIntlDatePattern source, result;
+    QJSIntlDatePatternInfo before, after;
+    QJSIntlDateTimeComponents wanted;
+    unsigned int changes;
+    size_t i, baseline;
+
+    for (i = 0; i < 3; i++) {
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(patterns[i]), &source));
+        assert(!qjs_intl_date_pattern_info(&source, &before));
+        wanted = before.components;
+        wanted.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_NARROW;
+        baseline = state->live;
+        /* Numeric-width permission alone cannot authorize a textual rewrite. */
+        assert(qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                   QJS_INTL_DATE_ADAPT_HOUR_WIDTH, i != 1, &result, &changes) == QJS_INTL_UNSUPPORTED);
+        assert(!result.storage && !changes && state->live == baseline);
+        if (i == 2) {
+            /* AM/PM is not a flexible period, even with explicit permission. */
+            assert(qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                       QJS_INTL_DATE_ADAPT_PERIOD_WIDTH, 1, &result, &changes) == QJS_INTL_UNSUPPORTED);
+        } else {
+            state->fail_at = state->calls + 1;
+            assert(qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                       QJS_INTL_DATE_ADAPT_PERIOD_WIDTH, i == 0, &result, &changes) == QJS_INTL_NO_MEMORY);
+            assert(!result.storage && !changes && state->live == baseline);
+            state->fail_at = 0;
+            assert(!qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                       QJS_INTL_DATE_ADAPT_PERIOD_WIDTH, i == 0, &result, &changes));
+            assert(changes == QJS_INTL_DATE_ADAPT_PERIOD_WIDTH);
+            assert(!qjs_intl_date_pattern_info(&result, &after));
+            assert(after.period_symbol == before.period_symbol && after.period_width == 5);
+            assert(after.components.values[QJS_INTL_DATETIME_DAY_PERIOD] == QJS_INTL_DATETIME_NARROW);
+            assert(equal(result.tokens[1].literal, i == 0 ? " B " : " b "));
+            qjs_intl_date_pattern_clear(allocator, &source);
+            assert(!qjs_intl_date_pattern_info(&result, &after));
+            qjs_intl_date_pattern_clear(allocator, &result);
+            continue;
+        }
+        qjs_intl_date_pattern_clear(allocator, &source);
+    }
+}
+
 int main(void)
 {
     static const char *const english[] = {("h:mm\xe2\x80\xaf" "a"), "HH:mm", "h:mm a"};
@@ -306,6 +352,7 @@ int main(void)
     verify(&programs);
     qjs_intl_date_single_programs_clear(&programs);
     qjs_intl_date_single_programs_clear(NULL);
+    period_widths(&b);
     assert(!input.live && !output.live);
     return 0;
 }
