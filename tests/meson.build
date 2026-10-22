@@ -4507,6 +4507,31 @@ test(
   timeout: 30,
 )
 
+intl_segment_dictionary_fixture = custom_target(
+  'intl-segment-dictionary-authored-fixture',
+  output: 'intl-segment-dictionary-authored-fixture.c',
+  command: [python, files('intl_segment_dictionary_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies,
+)
+intl_segment_dictionary_test = executable(
+  'test_intl_segment_dictionary',
+  files(
+    'test_intl_segment_dictionary.c',
+    '../src/intl/segment/dictionary.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_segment_dictionary_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-segment-dictionary',
+  intl_segment_dictionary_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 test(
   'intl-segment-property-tool',
   python,
