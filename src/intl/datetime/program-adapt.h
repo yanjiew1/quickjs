@@ -1,4 +1,4 @@
-/* Explicit numeric adaptations shared by native single-date constructors.
+/* Explicit field adaptations shared by native single-date constructors.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_DATETIME_PROGRAM_ADAPT_H
 #define QJS_INTL_DATETIME_PROGRAM_ADAPT_H
@@ -11,13 +11,16 @@ enum {
     QJS_INTL_DATE_ADAPT_SECOND_WIDTH = 8,
     QJS_INTL_DATE_ADAPT_ZONE_APPEND = 16,
     QJS_INTL_DATE_ADAPT_ZONE_EXTRACT = 32,
-    QJS_INTL_DATE_ADAPT_PERIOD_LAYOUT = 64
+    QJS_INTL_DATE_ADAPT_PERIOD_LAYOUT = 64,
+    QJS_INTL_DATE_ADAPT_PERIOD_WIDTH = 128
 };
 
 /* Copy an admitted ordinary program to an exact component vector. Permit only
    explicitly allowed HOUR/MINUTE/SECOND numeric-width changes, plus the requested
-   hour family (twelve is 0/1). Other component differences are UNSUPPORTED.
-   Preserve year kinds, period, nonnumeric fields and literals. Reproject before
+   hour family (twelve is 0/1). PERIOD_WIDTH additionally permits textual b/B
+   width changes; the caller must prove source policy and name availability.
+   Other component differences are UNSUPPORTED. Preserve year kinds, period
+   symbol, other nonnumeric fields and literals. Reproject before
    returning; h11/h24 presentation remains with the renderer. Own copied storage,
    clear via pattern_clear with the same allocator. Require unchanged inputs and
    fresh disjoint outputs; reset both on failure, release partial copies. */
