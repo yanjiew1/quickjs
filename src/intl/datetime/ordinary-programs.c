@@ -241,6 +241,7 @@ static QJSIntlStatus fraction(Build *build, size_t base)
         record.single.components = build->result.records[base].single.components;
         record.single.components.values[QJS_INTL_DATETIME_FRACTION] = digits;
         record.construction = QJS_INTL_DATE_ORDINARY_FRACTION;
+        record.fraction_decimal = build->decimal;
         status = fractional_pattern(build, &build->result.records[base].single.normal.pattern,
                                      digits, &record.single.normal.pattern);
         if (!status && build->result.records[base].single.twelve.pattern.count)
