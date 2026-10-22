@@ -802,7 +802,8 @@ collation algorithms or source fallback between the representations.
 
 Optional self-contained segmentation dictionaries, with no shared string or
 locale indexes. Directory count is the number of dictionary families. The
-host codec supports this prepared section; production profiles do not yet
-include it. See the [dictionary format](intl-segment-dictionary-format.md) for
+host codec and private C reader support this prepared section; production
+profiles do not yet include it. See the [dictionary format](intl-segment-dictionary-format.md) for
 its versioned descriptors, array widths, suffix sharing and validation rules.
-Source: `tools/intl/segment_dictionary_tables.py`.
+Sources: `tools/intl/segment_dictionary_tables.py`;
+`src/intl/segment/dictionary.[ch]`.
