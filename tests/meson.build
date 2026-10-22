@@ -3271,6 +3271,7 @@ standalone = {
     '../src/cutils/cutils.c',
     unicode_tables,
   ],
+  'test_intl_segment_property': files('test_intl_segment_property.c') + segment_property_sources,
   'test_intl_collation_compare': [
     'test_intl_collation_compare.c',
     '../src/intl/collation/compare.c',
@@ -4440,6 +4441,14 @@ test(
   python,
   args: files('test_intl_segment_inheritance.py'),
   suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-property-tool',
+  python,
+  args: [files('test_intl_segment_property_tool.py'), '--tool', segment_property],
+  suite: ['repo', 'generator'],
   timeout: 30,
 )
 
