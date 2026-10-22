@@ -72,6 +72,21 @@ properties and 262,144 retained interval pairs. Exceeding a budget fails without
 publishing an incomplete set; operational/property errors never imply an empty
 set or fallback to a host Unicode implementation.
 
+`segment_property.py` connects that evaluator to the explicit build-machine
+`intl-segment-property` executable. It never discovers a target binary on PATH.
+Successful replies must have exactly the Unicode 18 version and range schema;
+duplicate keys, non-integer endpoints and unnormalized ranges are rejected.
+Exact query strings share a generation-scoped immutable cache.
+
+The bridge drains stdout/stderr concurrently with fixed byte caps, a per-query
+deadline and a cumulative subprocess time budget. Failed children are killed
+and reaped before returning, and partially received replies are never cached.
+Defaults are 512 KiB stdout, 8 KiB stderr, ten seconds per query and 120 seconds
+per generation, with 256 queries and 262,144 retained interval pairs. These
+limits bound host preparation; they do not change runtime segmentation rules.
+Callers may tighten these profile caps; raising them requires a reviewed
+profile change. The executable argument must contain an explicit path.
+
 Automata, binary encoding, runtime matching and native locale capability
 advertisement are subsequent acceptance stages.
 
