@@ -996,14 +996,34 @@ Style patterns and datetimeSkeleton fields select their alternatives
 independently, including during calendar-year recovery. Look up alternate IDs
 inside each owning catalog; IDs are not shared across source modules. The exact
 source APIs retain their no-fallback contracts. Existing connector and interval
-data has no ASCII alternative; preserve those actual source literals. Strings
-and parts use the same selected program; range text similarly agrees with its
-parts, even when its own interval punctuation differs from single-value text.
+data has no ASCII alternative. Preserve its actual range punctuation; the one
+explicit interval preparation policy below concerns proved AM/PM spacing.
+Strings and parts use the same selected program; range text similarly agrees
+with its parts, even when range punctuation differs from single-value text.
 This is native compatibility policy allowed by ECMA-402's locale data freedom,
 not a requirement for ASCII or a numbering-system-specific digit workaround.
 Do not globally normalize Unicode whitespace in final output. The policy follows
 explicit CLDR variants documented by the
 [ICU source conversion guide](https://github.com/unicode-org/icu/blob/ddc6b66926bfac6036144ca9902992a0d6d50af9/tools/cldr/cldr-to-icu/README.md#using-altascii-cldr-alternate-values-from-the-cldr-xml).
+
+For automatic AM/PM suffixes, native interval preparation can reuse isolated
+ASCII spacing proved by the actual selected ASCII source. Capture only scalar
+h/m/s adjacency evidence while ordinary/style source owners are alive, intersect
+it with the final adapted/composed program, and include it in interval-cache
+identity. A coincidental ASCII literal in an ordinary fallback is not proof.
+For derived records, follow the actual clock parent and source index; style
+hour recovery likewise uses its selected source, not merely its requested style.
+
+A bounded raw-source scan retains apostrophe provenance discarded by decoded
+tokens. Adapt only isolated unquoted U+202F/U+2009 before the corresponding a
+field in an owned interval program. Keep quoted/mixed literals, flexible b/B
+periods, the range dash and all other punctuation unchanged. This adds no
+render-time source lookup or output-wide whitespace normalization. It is a
+native browser compatibility policy, not an ECMA requirement for identical
+spacing across distinct patterns. Raw CLDR data and exact source APIs remain
+unchanged. Short interval and seconds-visible fallback layouts can consequently
+share the user's preferred ASCII period spacing while preserving their own
+range separators.
 
 `datetime/format-source.[ch]` groups source candidates by all eleven public
 component values while retaining every original source index. Groups follow

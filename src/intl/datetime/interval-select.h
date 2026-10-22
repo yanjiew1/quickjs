@@ -37,6 +37,9 @@ QJSIntlDateRangeField qjs_intl_date_range_last_field(const QJSIntlDateTimeCompon
    extra range context. Preserve ordinary year/period semantics and represent the
    changed field at both endpoints. Never resurrect blocked/empty leaves.
    Missing or unrenderable candidates leave the corresponding fallback slot.
+   period_spacing is zero for exact source literals, or source-proved h/m/s
+   suffix bits from period-spacing.h. Apply only quote-aware isolated a spacing
+   in owned programs; preserve all other literals and immutable raw sources.
 
    Locale/calendar indexes belong to this interval owner. Names and its cache
    remain unchanged except for cached finite-domain proofs; they use their own
@@ -51,6 +54,7 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
                                              QJSCalendarId arithmetic_calendar,
                                              const QJSIntlDateTextData *names,
                                              QJSIntlDateNameAdmission *admission,
+                                             unsigned int period_spacing,
                                              const QJSIntlAllocator *allocator,
                                              QJSIntlDateIntervalSet *out);
 void qjs_intl_date_interval_set_clear(QJSIntlDateIntervalSet *set);
