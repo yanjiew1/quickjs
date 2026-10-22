@@ -125,6 +125,44 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateCombinati
     QJSIntlDateSinglePrograms times;
     size_t i, baseline;
     assert(greg != connection);
+    {
+        uint32_t ascii;
+        size_t base = state->live;
+        for (ascii = 0; ascii < styles->alternate_count; ascii++) {
+            QJSIntlBytes name;
+            assert(!qjs_intl_date_style_alternate_at(styles, ascii, &name));
+            if (equal(name, "ascii"))
+                break;
+        }
+        assert(ascii < styles->alternate_count);
+        assert(!qjs_intl_date_style_source_preferred(styles, en, greg, QJS_INTL_DATE_STYLE_TIME,
+                   QJS_INTL_DATE_STYLE_MEDIUM, ascii, 0, allocator, &bad));
+        assert(equal(bad.source.origin_alternate, "ascii"));
+        assert(equal(bad.skeleton.text, "hm") && equal(bad.skeleton.origin_alternate, ""));
+        assert(equal(bad.skeleton.numbers, "latn"));
+        pattern_equal(allocator, &bad.pattern, "h:mm 'ASCII' a");
+        qjs_intl_date_style_source_clear(&bad);
+        state->calls = 0;
+        state->fail_at = 1;
+        assert(qjs_intl_date_style_source_preferred(styles, en, greg, QJS_INTL_DATE_STYLE_TIME,
+                   QJS_INTL_DATE_STYLE_MEDIUM, ascii, 0, allocator, &bad) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&bad, &source_zero, sizeof(bad)) && state->live == base);
+        state->calls = state->fail_at = 0;
+        assert(!qjs_intl_date_style_source_preferred(styles, en, greg, QJS_INTL_DATE_STYLE_TIME,
+                   QJS_INTL_DATE_STYLE_FULL, ascii, 0, allocator, &bad));
+        assert(equal(bad.source.origin_alternate, ""));
+        qjs_intl_date_style_source_clear(&bad);
+        assert(!qjs_intl_date_style_source_preferred(styles, en, greg, QJS_INTL_DATE_STYLE_TIME,
+                   QJS_INTL_DATE_STYLE_LONG, ascii, 0, allocator, &bad));
+        assert(equal(bad.source.origin_alternate, ""));
+        qjs_intl_date_style_source_clear(&bad);
+        assert(!qjs_intl_date_style_source_preferred(styles, en, greg, QJS_INTL_DATE_STYLE_TIME,
+                   QJS_INTL_DATE_STYLE_SHORT, ascii, 0, allocator, &bad));
+        assert(equal(bad.source.origin_alternate, ""));
+        assert(equal(bad.skeleton.origin_alternate, "ascii") && equal(bad.skeleton.text, "Bh"));
+        qjs_intl_date_style_source_clear(&bad);
+        assert(state->live == base);
+    }
     date = source(styles, allocator, en, greg, QJS_INTL_DATE_STYLE_DATE, QJS_INTL_DATE_STYLE_FULL);
     time = source(styles, allocator, en, greg, QJS_INTL_DATE_STYLE_TIME, QJS_INTL_DATE_STYLE_MEDIUM);
     assert(equal(date.skeleton.text, "yMMMMEEEEd") && equal(time.skeleton.numbers, "latn"));
