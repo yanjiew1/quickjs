@@ -9,7 +9,7 @@ from collections import namedtuple
 from cldr_xml import DataError
 from segment_sets import DOMAIN_END, checked_ranges
 
-Alphabet = namedtuple('Alphabet', 'predicates ranges masks')
+Alphabet = namedtuple('Alphabet', 'predicates ranges masks construction_work')
 AlphabetLimits = namedtuple('AlphabetLimits', 'predicates pairs endpoints classes ranges work')
 DEFAULT_LIMITS = AlphabetLimits(256, 262144, 524290, 16384, 524289, 8000000)
 
@@ -84,7 +84,7 @@ def partition(predicates, limits=DEFAULT_LIMITS):
         previous = point
     if previous != DOMAIN_END or mask:
         raise DataError('incomplete segmentation alphabet sweep')
-    return Alphabet(tuple(prepared), tuple(ranges), tuple(masks))
+    return Alphabet(tuple(prepared), tuple(ranges), tuple(masks), work)
 
 
 def classify(alphabet, code):
