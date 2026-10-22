@@ -4456,6 +4456,38 @@ test(
 )
 
 test(
+  'intl-segment-dictionary-sources',
+  python,
+  args: files('test_intl_segment_dictionary_sources.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-dictionary-parser',
+  python,
+  args: files('test_intl_segment_dictionary.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-dictionary-trie',
+  python,
+  args: files('test_intl_segment_dictionary_trie.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-dictionary-tables',
+  python,
+  args: files('test_intl_segment_dictionary_tables.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-property-tool',
   python,
   args: [files('test_intl_segment_property_tool.py'), '--tool', segment_property],
