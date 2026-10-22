@@ -23,6 +23,7 @@ typedef struct QJSIntlDateOrdinaryProgram {
     QJSIntlDateAvailableEntry append;
     QJSIntlDateAvailableNode origin;
     QJSIntlDateCombinationRecord connector;
+    QJSIntlBytes fraction_decimal; /* Borrowed source for FRACTION construction. */
 } QJSIntlDateOrdinaryProgram;
 
 typedef struct QJSIntlDateOrdinaryPrograms {
@@ -48,7 +49,8 @@ typedef struct QJSIntlDateOrdinaryPrograms {
    Supply the unchanged pool/grouping pair and exact resolved APPEND inventory.
    Connector locale/calendar indexes belong to their own owner. Decimal is
    nonempty scalar UTF-8. Own all patterns independently of input programs;
-   provenance still borrows unchanged packs, which must outlive this owner.
+   provenance still borrows unchanged packs and the supplied decimal bytes,
+   which must outlive this owner.
    No chronology, names, ranges or public locale capability is admitted here.
    Require malloc/free and fresh disjoint output; reset and unwind on failure.
    Missing construction evidence is UNSUPPORTED, never a fabricated template. */
