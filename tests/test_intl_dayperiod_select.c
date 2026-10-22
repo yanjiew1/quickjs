@@ -46,7 +46,7 @@ static void clock_code(const QJSIntlDayPeriodData *data, const QJSIntlDayPeriodR
                        QJSIntlDayPeriodCode expected)
 {
     QJSIntlDayPeriodCode code = QJS_INTL_DAYPERIOD_CODE_COUNT;
-    assert(!qjs_intl_dayperiod_select(data, rules, symbol, second, fraction, &code));
+    assert(!qjs_intl_dayperiod_select(data, rules, symbol, second, fraction, 1, &code));
     assert(code == expected);
 }
 
@@ -79,6 +79,13 @@ static void check(const QJSIntlDayPeriodData *data)
     same(root, resolve(data, QJS_INTL_DAYPERIOD_FORMAT, "und-ZZ"));
     for (i = 0; i < sizeof(cases) / sizeof(*cases); i++)
         clock_code(data, &en, 'B', cases[i].second, cases[i].fraction, cases[i].code);
+    assert(!qjs_intl_dayperiod_select(data, &en, 'B', 0, 0, 0, &code));
+    assert(code == QJS_INTL_DAYPERIOD_NIGHT1); /* Keep the variable range at 00:00. */
+    assert(!qjs_intl_dayperiod_select(data, &en, 'b', 0, 0, 0, &code));
+    assert(code == QJS_INTL_DAYPERIOD_AM);
+    assert(!qjs_intl_dayperiod_select(data, &en, 'B', 43200, 0, 0, &code));
+    assert(code == QJS_INTL_DAYPERIOD_NOON);
+    assert(qjs_intl_dayperiod_select(data, &en, 'B', 0, 0, 2, &code) == QJS_INTL_INVALID_ARGUMENT);
     clock_code(data, &selected, 'B', 0, 0, QJS_INTL_DAYPERIOD_NIGHT1);
     clock_code(data, &selected, 'B', 43200, 0, QJS_INTL_DAYPERIOD_MORNING1);
     clock_code(data, &root, 'B', 0, 0, QJS_INTL_DAYPERIOD_AM);
@@ -121,14 +128,14 @@ static void check(const QJSIntlDayPeriodData *data)
     assert(qjs_intl_dayperiod_resolve(data, QJS_INTL_DAYPERIOD_FORMAT, bytes("en"), NULL) == QJS_INTL_INVALID_ARGUMENT);
     invalid = (QJSIntlDayPeriodRuleList){data->rule_count, 1};
     code = QJS_INTL_DAYPERIOD_NOON;
-    assert(qjs_intl_dayperiod_select(data, &invalid, 'B', 0, 0, &code) == QJS_INTL_INVALID_ARGUMENT && code == QJS_INTL_DAYPERIOD_AM);
+    assert(qjs_intl_dayperiod_select(data, &invalid, 'B', 0, 0, 1, &code) == QJS_INTL_INVALID_ARGUMENT && code == QJS_INTL_DAYPERIOD_AM);
     invalid = (QJSIntlDayPeriodRuleList){UINT32_MAX, UINT32_MAX};
-    assert(qjs_intl_dayperiod_select(data, &invalid, 'B', 0, 0, &code) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_dayperiod_select(NULL, &en, 'B', 0, 0, &code) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_dayperiod_select(data, &en, 'X', 0, 0, &code) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_dayperiod_select(data, &en, 'B', 86400, 0, &code) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_dayperiod_select(data, &en, 'B', 0, 2, &code) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_dayperiod_select(data, &en, 'B', 0, 0, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(data, &invalid, 'B', 0, 0, 1, &code) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(NULL, &en, 'B', 0, 0, 1, &code) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(data, &en, 'X', 0, 0, 1, &code) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(data, &en, 'B', 86400, 0, 1, &code) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(data, &en, 'B', 0, 2, 1, &code) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_dayperiod_select(data, &en, 'B', 0, 0, 1, NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
 int main(void)
