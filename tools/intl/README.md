@@ -65,6 +65,22 @@ third-party notices; the generic Unicode license is insufficient. These raw
 text inputs are for later owned binary compilation, not runtime parsing or
 proof that native dictionary segmentation is already implemented.
 
+`segment_dictionary.py` parses that authenticated cache using the pinned text
+profile: literal words for SEA, and words plus unsigned decimal path costs for
+CJK. It preserves costs (including zero), exact scalar keys, source comments
+and release/license identity. Keys are sorted without normalization. Explicit
+byte/record/key budgets and malformed/duplicate rejection precede later binary
+compilation. Inspect a prepared cache without network access:
+
+```sh
+python3 tools/intl/segment_dictionary.py --sources /path/to/intl-cache/icu-dictionaries-79.1
+```
+
+The JSON report is an inventory receipt, not runtime data or a locale capability
+claim. The parser does not select word boundaries or implement ICU's matching
+algorithm. Dictionary compilation and the native segmentation consumer own
+those separate responsibilities.
+
 ## Consume verified source files
 
 `segment_sources.py` collects the relevant raw `common/segments` records with
