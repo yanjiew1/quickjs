@@ -183,7 +183,7 @@ static void admission(const QJSIntlAllocator *allocator, QJSIntlDateTextData dat
     data.calendar = calendar(data.names, "gregorian");
     admit(allocator, NULL, QJS_CAL_GREGORY, "y-MM-dd HH:mm:ss", QJS_INTL_OK);
     admit(allocator, NULL, QJS_CAL_GREGORY, "r", QJS_INTL_UNSUPPORTED);
-    admit(allocator, NULL, QJS_CAL_CHINESE, "r MM", QJS_INTL_OK);
+    admit(allocator, NULL, QJS_CAL_CHINESE, "r MM", QJS_INTL_INVALID_ARGUMENT);
     admit(allocator, &data, QJS_CAL_GREGORY, "G", QJS_INTL_OK);
     admit(allocator, &data, QJS_CAL_GREGORY, "a b B", QJS_INTL_UNSUPPORTED); /* Repeated period. */
     admit(allocator, &data, QJS_CAL_GREGORY, "a", QJS_INTL_OK);
@@ -212,9 +212,19 @@ static void admission(const QJSIntlAllocator *allocator, QJSIntlDateTextData dat
     admit(allocator, &data, QJS_CAL_HEBREW, "MMMM", QJS_INTL_OK); /* Adar I is needed only in leap years. */
     data.calendar = calendar(data.names, "chinese");
     admit(allocator, &data, QJS_CAL_CHINESE, "MMMM", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_CHINESE, "M", QJS_INTL_OK);
+    admit(allocator, &data, QJS_CAL_CHINESE, "LL", QJS_INTL_OK);
     admit(allocator, &data, QJS_CAL_CHINESE, "MMM", QJS_INTL_DATA_ERROR); /* Invalid leap template. */
     admit(allocator, &data, QJS_CAL_CHINESE, "U", QJS_INTL_OK);
     admit(allocator, &data, QJS_CAL_GREGORY, "U", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "numericbad");
+    admit(allocator, &data, QJS_CAL_CHINESE, "MM", QJS_INTL_DATA_ERROR);
+    data.calendar = calendar(data.names, "numericblocked");
+    admit(allocator, &data, QJS_CAL_CHINESE, "M", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "numericempty");
+    admit(allocator, &data, QJS_CAL_CHINESE, "L", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "gregorian");
+    admit(allocator, &data, QJS_CAL_CHINESE, "M", QJS_INTL_UNSUPPORTED); /* Missing template. */
     data.calendar = calendar(data.names, "periodonly");
     admit(allocator, &data, QJS_CAL_GREGORY, "B", QJS_INTL_OK); /* Complete rules need no unused a names. */
     admit(allocator, &data, QJS_CAL_GREGORY, "a", QJS_INTL_UNSUPPORTED);
@@ -307,8 +317,20 @@ static void names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberForm
     data.calendar = calendar(data.names, "chinese");
     check(allocator, numbers, &data, &local, 0, "r U MMMM", "2023 cycle四十 閏'second月'!");
     check(allocator, numbers, &data, &local, 0, "LLLL", "(standalone月)閏");
-    check(allocator, numbers, &data, &local, 0, "M", "2");
-    check(allocator, numbers, &data, &local, 0, "MM", "02");
+    check(allocator, numbers, &data, &local, 0, "M", "[閏2]");
+    check(allocator, numbers, &data, &local, 0, "MM", "[閏02]");
+    check(allocator, numbers, &data, &local, 0, "LL", "[閏02]");
+    result = render(allocator, numbers, &data, &local, 0, "MM");
+    assert(result.part_count == 1 && result.parts[0].type == QJS_INTL_PART_MONTH);
+    assert(result.parts[0].start == 0 && result.parts[0].end == result.length);
+    qjs_intl_formatted_clear(allocator, &result);
+    data.calendar = calendar(data.names, "numericbad");
+    failure(allocator, numbers, &data, &local, "MM", QJS_INTL_DATA_ERROR);
+    data.calendar = calendar(data.names, "numericblocked");
+    failure(allocator, numbers, &data, &local, "M", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "numericempty");
+    failure(allocator, numbers, &data, &local, "L", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "chinese");
     failure(allocator, numbers, &data, &local, "G", QJS_INTL_UNSUPPORTED);
     failure(allocator, numbers, &data, &local, "MMM", QJS_INTL_DATA_ERROR);
     failure(allocator, numbers, &data, &local, "MMMMM", QJS_INTL_UNSUPPORTED);
@@ -316,6 +338,8 @@ static void names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberForm
     check(allocator, numbers, &data, &local, 0, "U MMMM", "cycle四十 閏'second月'!");
     local.leap_month = 0;
     check(allocator, numbers, &data, &local, 0, "MMMM", "second月");
+    check(allocator, numbers, &data, &local, 0, "M", "2");
+    check(allocator, numbers, &data, &local, 0, "MM", "02");
 }
 
 static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,
@@ -331,36 +355,39 @@ static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateNumber
     local.era_calendar = QJS_CAL_GREGORY;
     strcpy(local.era_code, "ce");
     strcpy(local.month_key, "1");
-    data.calendar = calendar(data.names, "gregorian");
     data.locale = locale(&data.names->data, "en");
-    assert(!qjs_intl_date_pattern_compile(allocator, bytes("EEEE MMMM d y G HH:mm:ss.SSS a"), &pattern));
-    baseline = state->live;
-    state->calls = 0;
-    assert(!qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
-                                     numbers, &data, 1000, &result));
-    calls = state->calls;
-    limit = result.length;
-    expected(&result, "Sunday January 3 2021 CE 12:02:03.987 PM");
-    qjs_intl_formatted_clear(allocator, &result);
-    for (i = 1; i <= calls; i++) {
+    for (int lunar = 0; lunar <= 1; lunar++) {
+        data.calendar = calendar(data.names, lunar ? "chinese" : "gregorian");
+        local.has_cyclic_year = local.leap_month = lunar;
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(lunar ? "MM" : "EEEE MMMM d y G HH:mm:ss.SSS a"), &pattern));
+        baseline = state->live;
         state->calls = 0;
-        state->fail_at = i;
-        memset(&result, 0xff, sizeof(result));
+        assert(!qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
+                                         numbers, &data, 1000, &result));
+        calls = state->calls;
+        limit = result.length;
+        expected(&result, lunar ? "[閏01]" : "Sunday January 3 2021 CE 12:02:03.987 PM");
+        qjs_intl_formatted_clear(allocator, &result);
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            memset(&result, 0xff, sizeof(result));
+            assert(qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
+                                            numbers, &data, 1000, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
         assert(qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
-                                        numbers, &data, 1000, &result) == QJS_INTL_NO_MEMORY);
+                                        numbers, &data, limit - 1, &result) == QJS_INTL_OVERFLOW);
         assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        assert(!qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
+                                         numbers, &data, limit, &result));
+        qjs_intl_formatted_clear(allocator, &result);
+        assert(qjs_intl_date_text_format(allocator, &pattern, &local, 0, QJS_INTL_DATE_H23,
+                                        numbers, &data, 1000, &result) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        qjs_intl_date_pattern_clear(allocator, &pattern);
     }
-    state->calls = state->fail_at = 0;
-    assert(qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
-                                    numbers, &data, limit - 1, &result) == QJS_INTL_OVERFLOW);
-    assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
-    assert(!qjs_intl_date_text_format(allocator, &pattern, &local, 1, QJS_INTL_DATE_H23,
-                                     numbers, &data, limit, &result));
-    qjs_intl_formatted_clear(allocator, &result);
-    assert(qjs_intl_date_text_format(allocator, &pattern, &local, 0, QJS_INTL_DATE_H23,
-                                    numbers, &data, 1000, &result) == QJS_INTL_INVALID_ARGUMENT);
-    assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
-    qjs_intl_date_pattern_clear(allocator, &pattern);
 }
 
 static void prepared_names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,
@@ -441,6 +468,16 @@ int main(void)
     close_numbers(&numbers);
     numbers = open_numbers(service, en, bytes("mathbold"));
     result = render(&allocator, &numbers, &data, &local, 0, "MMMM yy");
+    {
+        QJSIntlFormatted month;
+        data.calendar = calendar(data.names, "chinese");
+        local.has_cyclic_year = local.leap_month = 1;
+        month = render(&allocator, &numbers, &data, &local, 0, "MM");
+        expected(&month, "[閏𝟎𝟏]");
+        assert(month.part_count == 1 && month.parts[0].type == QJS_INTL_PART_MONTH);
+        assert(month.parts[0].start == 0 && month.parts[0].end == 7);
+        qjs_intl_formatted_clear(&allocator, &month);
+    }
     close_numbers(&numbers);
     qjs_intl_number_close(service);
     memset(&name_data, 0, sizeof(name_data));
