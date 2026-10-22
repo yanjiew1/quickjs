@@ -19,7 +19,7 @@ jobs:
   intl-locale:
     name: Native Intl APIs (${{ matrix.profile }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
@@ -59,7 +59,9 @@ jobs:
           if test '${{ matrix.profile }}' = minimal; then
             profile_config=(-c tests/intl-minimal-test262.conf)
           fi
-          timeout 300s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+          # The full DateTimeFormat directory includes locale inventories and
+          # Temporal ranges; leave room for those alongside the other APIs.
+          timeout 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
             -t -m -c tests/intl-locale-test262.conf \
             "${profile_config[@]}" \
             --timing-log test262_intl_timings.jsonl
