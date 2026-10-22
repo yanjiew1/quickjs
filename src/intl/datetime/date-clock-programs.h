@@ -24,6 +24,9 @@ typedef struct QJSIntlDateClockPrograms {
    clock pairs: HM, HMS and HMS with one/two/three fractional digits, retaining
    each actually admitted timezone-name style independently. Missing clock/style
    pairs are not synthesized, and only present pairs determine allocation size.
+   include_period (0/1) additionally retains H-only clocks and each observed
+   b/B textual width separately; callers opt in for explicit dayPeriod requests.
+   The false path preserves the original plain clock catalog and source order.
    A date must contain year, month or day; weekday-only append layouts are not
    handled here. A NULL date is absent; optional admitted flags belong to the
    ordinary owner.
@@ -44,6 +47,7 @@ QJSIntlStatus qjs_intl_date_clock_programs_open(const QJSIntlDatePattern *const 
                                                size_t date_count,
                                                const QJSIntlDateOrdinaryPrograms *ordinary,
                                                const unsigned char *admitted,
+                                               unsigned int include_period,
                                                const QJSIntlDateCombinationData *connectors,
                                                uint32_t locale, uint32_t calendar,
                                                const QJSIntlAllocator *allocator,
