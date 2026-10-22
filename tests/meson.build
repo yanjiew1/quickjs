@@ -1532,6 +1532,25 @@ test(
   timeout: 30,
 )
 
+intl_date_period_spacing_test = executable(
+  'test_intl_date_period_spacing',
+  files(
+    'test_intl_date_period_spacing.c',
+    '../src/intl/datetime/period-spacing.c',
+    '../src/intl/datetime/pattern.c',
+  ),
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-date-period-spacing',
+  intl_date_period_spacing_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_date_pattern_info_test = executable(
   'test_intl_date_pattern_info',
   files(
@@ -2581,6 +2600,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/datetime/native.c',
       '../src/intl/datetime/interval-program.c',
       '../src/intl/datetime/interval-select.c',
+      '../src/intl/datetime/period-spacing.c',
       '../src/intl/datetime/range-layout.c',
       '../src/intl/datetime/available-source.c',
       '../src/intl/datetime/basic-match.c',

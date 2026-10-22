@@ -82,7 +82,7 @@ static void selector_authored(const QJSIntlAllocator *allocator)
     baseline = state->live;
     state->calls = 0;
     assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
-                                           QJS_CAL_GREGORY, &names, &admission, allocator, &set));
+                                           QJS_CAL_GREGORY, &names, &admission, 0, allocator, &set));
     calls = state->calls;
     program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_MONTH);
     assert(set.count == 1 && program && program->sources[0] == QJS_INTL_RANGE_END);
@@ -97,7 +97,7 @@ static void selector_authored(const QJSIntlAllocator *allocator)
         state->fail_at = i;
         memset(&set, 0xff, sizeof(set));
         assert(qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
-                   QJS_CAL_GREGORY, &names, &admission, allocator, &set) == QJS_INTL_NO_MEMORY);
+                   QJS_CAL_GREGORY, &names, &admission, 0, allocator, &set) == QJS_INTL_NO_MEMORY);
         assert(!memcmp(&set, &zero, sizeof(set)) && state->live == baseline);
     }
     state->calls = state->fail_at = 0;
@@ -113,7 +113,7 @@ static void selector_authored(const QJSIntlAllocator *allocator)
     assert(calendar < data.calendar_count);
     assert(!qjs_intl_date_pattern_compile(allocator, bytes("y/M/d"), &ordinary));
     assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
-                                           QJS_CAL_GREGORY, &names, &admission, allocator, &set));
+                                           QJS_CAL_GREGORY, &names, &admission, 0, allocator, &set));
     program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_DAY);
     assert(program);
     for (i = 0; i < program->pattern.count; i++)
@@ -149,7 +149,7 @@ static void selector_authored(const QJSIntlAllocator *allocator)
         memset(&admission, 0, sizeof(admission));
         assert(!qjs_intl_date_pattern_compile(allocator, bytes("r U"), &ordinary));
         assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
-                                               QJS_CAL_CHINESE, &names, &admission, allocator, &set));
+                                               QJS_CAL_CHINESE, &names, &admission, 0, allocator, &set));
         program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_YEAR);
         assert(set.count == 1 && program && program->pattern.count == 7);
         assert(program->sources[0] == QJS_INTL_RANGE_START && program->sources[4] == QJS_INTL_RANGE_END);
