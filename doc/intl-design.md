@@ -991,6 +991,46 @@ English `hm` and `Hm`, for example, have different hour widths, requiring
 explicit width adaptation before pairing normal and 12-hour programs. Flexible
 day periods, ranges and required-subset synthesis also remain separate steps.
 
+Mixed date/clock preparation opts into flexible-period sources only when
+explicit dayPeriod and date fields are both requested. Clock-only requests
+need no mixed records; their date-only Temporal records are null. Retain each actually observed b/B width, clock
+shape and zone style separately, including H-only clocks; equal field presence
+alone must not hide a genuine source or intentional width override. Allocate
+only combinations whose date and clock operands exist. The no-period path
+preserves its plain candidate order and allocation count. Clock indexes still
+refer to the original owner, so source-width evidence and range recomposition
+use the actual selected operand rather than a similar pattern.
+
+Native BestFit may adapt an explicitly requested b/B textual width after
+matching, without changing the period symbol, names or literal layout. Retain
+raw skeleton run-length bits for each selected source and exact-text aliases;
+an already matching skeleton length preserves its differing pattern width as
+an intentional TR35 override. API short/long/narrow requests use canonical
+lengths 1/4/5; raw B/BB/BBB evidence remains distinct. Derived date-clock records
+inherit period evidence from the clock, independently of the date's month hints.
+Only widths whose reachable names pass renderer admission are considered.
+
+Score effective metadata without allocating a candidate catalog, then adapt
+only the winning owned program. Basic keeps its specified finite-record scoring.
+AM/PM is not converted to a flexible period. Replay the same adaptation on
+retained range clock operands before proving exact recomposition. Result metadata,
+strings and parts therefore describe the same actual width; do not relabel a
+short token as narrow merely to satisfy resolvedOptions.
+
+Ordinary preparation also retains declared numeric/text month requests for
+its selected source and aliases with exactly identical raw pattern text. This
+preserves mappings such as Hebrew `yMd` to `d MMM y` after component grouping
+has merged it with a textual skeleton. Capture both source families, including
+sources selected outside the original group; derived records inherit the
+month-bearing parent, which is the first/date operand of COMBINE. Date-only
+matching uses normal hints regardless of the formatter's hour cycle.
+
+Native best fit waives its additional numeric/text appearance penalty when a
+declared source mapping already requested that kind. Keep Basic scores,
+missing/extra-field penalties and the actual chosen width intact. This is not
+a global ban on Hebrew numeric months: month-only numeric requests remain
+numeric, while full dates can truthfully resolve to the source's short name.
+
 `datetime/single-program.[ch]` prepares owned normal/12-hour programs for one
 source group before range construction and renderer admission. A fixed table
 of year-kind and period classes finds compatible whole-source pairs without
@@ -1113,6 +1153,28 @@ required templates return unsupported here, without invented lateral fallbacks.
 The final formatting module owns admission and the standard's permitted
 unavailable-name fallback policy. Zones, complete formatter admission and the public constructor
 remain separate work; this renderer alone does not advertise DateTimeFormat.
+
+`datetime/range-layout.[ch]` retains proven date/clock operands for same-day
+range synthesis. Capture the winning ordinary COMBINE, mixed date/clock or
+style inputs before their temporary owners are released; decode the actual
+LDML connector and require exact token recomposition against the final chosen
+program. This preserves quoted literals, endpoint affixes, year kinds, selected
+hour family and zone placement. Fractional descendants retain their exact
+borrowed decimal source and replay that insertion on the clock before copying
+the proved result. A relocated zone append is usable only when
+that same proof succeeds. Never split a final pattern by punctuation or trim
+common prefixes from formatted strings.
+
+When no whole interval is selected and the calendar date is equal, combine one
+shared date with two complete clock endpoints using the real interval fallback
+and retained date/time connector. This implements TR35's date/time synthesis
+path even when an hms-specific interval is absent. Date differences and records
+without a proved factorization keep the complete-endpoint fallback. Preserve
+whole-interval precedence and all-equal collapse; flatten date/glue and endpoint
+clock parts into shared/startRange/endRange provenance without losing seconds,
+fractions or zone fields. The owner copies its three programs; output is
+independent and every allocation failure unwinds without partial publication.
+See [TR35 Interval Format Algorithm](https://www.unicode.org/reports/tr35/tr35-79/tr35-dates.html#interval-format-algorithm).
 
 `datetime/zone-offset.[ch]` prepares localized GMT presentation independently
 of timezone rule arithmetic and named-zone selection. Copy exact inherited
