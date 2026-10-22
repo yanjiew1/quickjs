@@ -3,7 +3,8 @@
 QJIN optional section **39** stores self-contained scalar dictionaries. It
 needs no shared string or locale indexes. The host encoder and validator are
 `tools/intl/segment_dictionary_tables.py`; suffix preparation belongs to
-`segment_dictionary_trie.py`. Production packs do not include this section yet.
+`segment_dictionary_trie.py`. The private C reader is
+`src/intl/segment/dictionary.[ch]`. Production packs do not include this section yet.
 Presence alone establishes no executable segmentation or locale capability.
 
 This is an internal format, independent of ICU's serialized tries. All integers
@@ -94,3 +95,10 @@ owns grapheme-safe boundaries, unknown-word progress, script-run policy and any
 weighted path selection. Source authentication and release/license identity
 belong to acquisition and the QJIN generation receipt. Derivatives must retain
 the full distributed dictionary license and applicable source-header notices.
+
+The C reader accepts an already opened `QJSIntlPack`, avoiding an unnecessary
+shared-string or locale-table dependency. Opening borrows immutable bytes and
+uses only temporary validation scratch. Querying edges or terminal values
+allocates nothing. A dictionary view may be copied by value; the underlying
+pack bytes must remain alive. An accessor's pointer into a data owner also
+requires that owner object to remain unchanged and alive.
