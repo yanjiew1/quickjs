@@ -38,16 +38,17 @@ QJSIntlStatus qjs_intl_dayperiod_resolve(const QJSIntlDayPeriodData *data,
 
 QJSIntlStatus qjs_intl_dayperiod_select(const QJSIntlDayPeriodData *data,
                                       const QJSIntlDayPeriodRuleList *rules, unsigned int symbol,
-                                      uint32_t second, unsigned int fraction, QJSIntlDayPeriodCode *out)
+                                      uint32_t second, unsigned int fraction, unsigned int use_midnight,
+                                      QJSIntlDayPeriodCode *out)
 {
     QJSIntlDayPeriodCode result;
     uint32_t i;
     if (out)
         *out = QJS_INTL_DAYPERIOD_AM;
-    if (!out || second >= 86400 || fraction > 1 || (symbol != 'a' && symbol != 'b' && symbol != 'B'))
+    if (!out || second >= 86400 || fraction > 1 || use_midnight > 1 || (symbol != 'a' && symbol != 'b' && symbol != 'B'))
         return QJS_INTL_INVALID_ARGUMENT;
     result = second < 43200 ? QJS_INTL_DAYPERIOD_AM : QJS_INTL_DAYPERIOD_PM;
-    if (symbol == 'b' && !fraction && (second == 0 || second == 43200))
+    if (symbol == 'b' && !fraction && ((use_midnight && second == 0) || second == 43200))
         result = second ? QJS_INTL_DAYPERIOD_NOON : QJS_INTL_DAYPERIOD_MIDNIGHT;
     if (symbol != 'B' || !rules) {
         *out = result;
@@ -62,7 +63,8 @@ QJSIntlStatus qjs_intl_dayperiod_select(const QJSIntlDayPeriodData *data,
         if (status)
             return status;
         if (rule.form == QJS_INTL_DAYPERIOD_AT) {
-            if (!fraction && second == rule.start) {
+            if (!fraction && second == rule.start &&
+                (use_midnight || rule.code != QJS_INTL_DAYPERIOD_MIDNIGHT)) {
                 *out = rule.code;
                 return QJS_INTL_OK;
             }
