@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-PIN = '7ab7fafa0003f73fc85c1b95d88094d33f7eb8bd'
+PIN = 'd53ebc8b1931d9f1541e43d59650776e4b766248'
 
 
 def main():
