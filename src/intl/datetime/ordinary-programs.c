@@ -62,6 +62,78 @@ static void initialize(Build *build, QJSIntlDateOrdinaryProgram *record)
     record->single.normal.source_index = record->single.twelve.source_index = SIZE_MAX;
 }
 
+static unsigned int month_kind(QJSIntlBytes skeleton)
+{
+    unsigned int kind = 0;
+    size_t i = 0;
+    while (i < skeleton.length) {
+        unsigned int symbol = (unsigned char)skeleton.data[i];
+        size_t first = i++;
+        if (!symbol || !strchr("GyYuUrQqMLlwWdDFgEecabBhHKkjJCmsSAzZvVOXx", symbol))
+            return 0;
+        while (i < skeleton.length && (unsigned char)skeleton.data[i] == symbol)
+            i++;
+        if (symbol == 'M' || symbol == 'L') {
+            if (kind || i - first > 5)
+                return 0;
+            kind = i - first <= 2 ? QJS_INTL_DATE_MONTH_SOURCE_NUMERIC : QJS_INTL_DATE_MONTH_SOURCE_TEXT;
+        }
+    }
+    return kind;
+}
+
+static int same_source_text(const QJSIntlDateSourceCandidate *a, const QJSIntlDateSourceCandidate *b)
+{
+    return a->source.text.length == b->source.text.length &&
+           (!a->source.text.length || a->source.text.data == b->source.text.data ||
+            !memcmp(a->source.text.data, b->source.text.data, a->source.text.length));
+}
+
+static QJSIntlStatus month_sources(const Build *build, const QJSIntlDateFormatSources *groups,
+                                    size_t group, QJSIntlDateOrdinaryProgram *record)
+{
+    QJSIntlDateTimeComponents ignored;
+    size_t count, variant, i;
+    QJSIntlStatus status;
+    if (!record->single.components.values[QJS_INTL_DATETIME_MONTH])
+        return QJS_INTL_OK;
+    status = qjs_intl_date_format_source_group(groups, group, &ignored, &count);
+    if (status)
+        return status;
+    for (variant = 0; variant < 2; variant++) {
+        const QJSIntlDateSingleProgram *program = variant ? &record->single.twelve : &record->single.normal;
+        const QJSIntlDateSourceCandidate *selected;
+        int inside = 0;
+        if (!program->pattern.count)
+            continue;
+        if (program->source_index >= build->pool->count)
+            return QJS_INTL_DATA_ERROR;
+        selected = &build->pool->records[program->source_index];
+        /* Pairing can select a source outside this group. Seed its own hint
+           before collecting aliases represented by the selected raw text. */
+        record->source_month_kinds[variant] = month_kind(selected->source.code);
+        for (i = 0; i < count; i++) {
+            const QJSIntlDateSourceCandidate *alias;
+            size_t index;
+            status = qjs_intl_date_format_source_member(groups, group, i, &index);
+            if (status || index >= build->pool->count)
+                return status ? status : QJS_INTL_DATA_ERROR;
+            inside |= index == program->source_index;
+            alias = &build->pool->records[index];
+            if (same_source_text(alias, selected))
+                record->source_month_kinds[variant] |= month_kind(alias->source.code);
+        }
+        if (!inside) {
+            /* A representative with a different hour width belongs to another
+               group. Include its exact-text aliases too, not only its own key. */
+            for (i = 0; i < build->pool->count; i++)
+                if (same_source_text(&build->pool->records[i], selected))
+                    record->source_month_kinds[variant] |= month_kind(build->pool->records[i].source.code);
+        }
+    }
+    return QJS_INTL_OK;
+}
+
 static QJSIntlStatus add(Build *build, QJSIntlDateOrdinaryProgram *record)
 {
     QJSIntlDatePatternInfo normal, twelve;
@@ -102,6 +174,19 @@ static QJSIntlStatus add(Build *build, QJSIntlDateOrdinaryProgram *record)
                 source->components.values[QJS_INTL_DATETIME_HOUR] :
                 parent != SIZE_MAX ? build->result.records[parent].source_hour_width[i] : 0;
         }
+    }
+    if (normal.components.values[QJS_INTL_DATETIME_MONTH] && record->first != SIZE_MAX) {
+        const QJSIntlDateOrdinaryProgram *parent;
+        if (record->first >= build->result.count) {
+            status = QJS_INTL_DATA_ERROR;
+            goto done;
+        }
+        parent = &build->result.records[record->first];
+        /* COMBINE's first operand is the date; its second is the clock.
+           Date-only operands use normal even for a twelve-hour result. */
+        for (i = 0; i < 2; i++)
+            record->source_month_kinds[i] = parent->source_month_kinds[
+                parent->single.components.values[QJS_INTL_DATETIME_HOUR] ? i : 0];
     }
     if (build->result.count == build->capacity) {
         status = QJS_INTL_OVERFLOW;
@@ -439,9 +524,13 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
         if (status == QJS_INTL_UNSUPPORTED)
             continue;
         if (!status)
+            status = month_sources(&build, groups, i, &record);
+        if (!status)
             status = add(&build, &record);
-        if (status)
+        if (status) {
+            qjs_intl_date_single_programs_clear(&record.single);
             goto fail;
+        }
     }
     for (i = 0; i < sizeof(required) / sizeof(*required); i++) {
         status = ensure(&build, required[i]);

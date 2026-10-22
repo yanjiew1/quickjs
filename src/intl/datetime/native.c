@@ -659,17 +659,23 @@ static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
 }
 
 static QJSIntlStatus match_score(const QJSIntlDateTimeFormatter *formatter,
-                                  const QJSIntlDateTimeComponents *request,
-                                  const QJSIntlDateTimeComponents *candidate, int *out)
+                                 const QJSIntlDateTimeComponents *request,
+                                 const QJSIntlDateTimeComponents *candidate,
+                                 unsigned int source_month_kinds, int *out)
 {
     int a = request->values[QJS_INTL_DATETIME_MONTH];
     int b = candidate->values[QJS_INTL_DATETIME_MONTH];
+    unsigned int requested_kind = a <= QJS_INTL_DATETIME_NUMERIC ?
+                                  QJS_INTL_DATE_MONTH_SOURCE_NUMERIC : QJS_INTL_DATE_MONTH_SOURCE_TEXT;
     QJSIntlStatus status = qjs_intl_datetime_basic_score(request, candidate, out);
+
     /* Native best fit distinguishes numeric/text months more strongly than
-       width alone. Preserve source padding: matching skeleton lengths can
-       deliberately select a different pattern width under TR35. */
+       width alone, except when a declared skeleton intentionally maps the
+       requested kind to this pattern (for example Hebrew yMd -> d MMM y).
+       Keep Basic scoring and the actual selected component width unchanged. */
     if (!status && formatter->options.best_fit && a && b &&
-        ((a <= QJS_INTL_DATETIME_NUMERIC) != (b <= QJS_INTL_DATETIME_NUMERIC)))
+        ((a <= QJS_INTL_DATETIME_NUMERIC) != (b <= QJS_INTL_DATETIME_NUMERIC)) &&
+        !(source_month_kinds & requested_kind))
         *out -= 20;
     return status;
 }
@@ -678,7 +684,7 @@ typedef struct DateCandidate {
     const QJSIntlDateTimeComponents *components;
     const QJSIntlDatePattern *normal, *twelve;
     const QJSIntlDateClockProgram *mixed;
-    unsigned int source_hour_width;
+    unsigned int source_hour_width, source_month_kinds;
     const QJSIntlDateOrdinaryProgram *ordinary;
 } DateCandidate;
 
@@ -726,7 +732,7 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
             return QJS_INTL_OK;
         extended.values[QJS_INTL_DATETIME_ZONE] = append->zone;
     }
-    status = match_score(formatter, request, candidate, &score);
+    status = match_score(formatter, request, candidate, source->source_month_kinds, &score);
     /* Best fit may retain the selected hour family's genuine source padding.
        Prefer it over stripping a two-digit source to satisfy a numeric request
        (the ordinary width mismatch costs six). Basic and explicit two-digit
@@ -754,7 +760,10 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
     for (i = 0; i < programs->ordinary.count; i++) {
         const QJSIntlDateSinglePrograms *single = &programs->ordinary.records[i].single;
         DateCandidate source = {&single->components, &single->normal.pattern, &single->twelve.pattern, NULL,
-                                programs->ordinary.records[i].source_hour_width[twelve], &programs->ordinary.records[i]};
+                                programs->ordinary.records[i].source_hour_width[twelve],
+                                programs->ordinary.records[i].source_month_kinds[
+                                    twelve && single->components.values[QJS_INTL_DATETIME_HOUR]],
+                                &programs->ordinary.records[i]};
         if (!programs->admitted[i])
             continue;
         status = consider_record(formatter, request, &source, append, extensions, match);
@@ -763,7 +772,7 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
     }
     for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
         const QJSIntlDateStyleSource *date = &programs->dates[i].style;
-        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, NULL};
+        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, 0, NULL};
         if (!date->pattern.count)
             continue;
         status = consider_record(formatter, request, &source, append, extensions, match);
@@ -773,7 +782,7 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
     for (i = 0; i < programs->mixed.count; i++) {
         const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
         DateCandidate source = {&record->components, &record->normal, &record->twelve, record,
-                                record->source_hour_width[twelve], NULL};
+                                record->source_hour_width[twelve], 0, NULL};
         status = consider_record(formatter, request, &source, append, extensions, match);
         if (status)
             return status;
