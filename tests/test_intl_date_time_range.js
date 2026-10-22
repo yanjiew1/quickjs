@@ -167,6 +167,34 @@ for (const type of ['year', 'month', 'day']) {
 assert(mixedRange.some(part => part.type === 'dayPeriod' && part.value === 'n' && part.source === 'startRange'), true);
 assert(mixedRange.some(part => part.type === 'dayPeriod' && part.value === 'noon'), false);
 
+// An admitted ASCII clock source also governs its interval period separator.
+// Keep the source's thin-space range dash; this is not output-wide rewriting.
+const asciiClock = new DTF('en-US', {timeZone: 'UTC', timeStyle: 'short'});
+function periodSpaces(range) {
+    return range.filter((part, i) => part.type === 'literal' && range[i + 1]?.type === 'dayPeriod')
+        .map(part => part.value);
+}
+for (const [start, end] of [[0, 86400], [0, 23 * 3600000]]) {
+    const range = check(asciiClock, start, end);
+    assert(periodSpaces(range).length > 0, true);
+    assert(periodSpaces(range).every(value => value === ' '), true);
+    assert(range.some(part => part.source === 'shared' && part.value.includes('\u2009–\u2009')), true);
+}
+assert(check(asciiClock, 0, 1).map(part => part.value).join(''), asciiClock.format(0));
+if (typeof Temporal !== 'undefined') {
+    const start = new Temporal.PlainDateTime(2024, 7, 1, 0, 30, 45);
+    const end = new Temporal.PlainDateTime(2024, 7, 1, 23, 30, 45);
+    const zones = namedZones ? ['UTC', 'Pacific/Apia', 'America/New_York'] : ['UTC', '+13:00'];
+    for (const timeZone of zones) {
+        const formatter = new DTF('en-US', {timeZone});
+        const range = check(formatter, start, end);
+        assert(periodSpaces(range).length, 2);
+        assert(periodSpaces(range).every(value => value === ' '), true);
+        assert(periodSpaces(check(formatter, start.toPlainTime(), end.toPlainTime()))
+            .every(value => value === ' '), true);
+    }
+}
+
 const legacy = Object.create(DTF.prototype);
 DTF.call(legacy, 'en', {timeZone: 'UTC'});
 for (const name of names)
