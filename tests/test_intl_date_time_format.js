@@ -16,13 +16,34 @@ for (const options of [{}, {year: 'numeric'}, {dateStyle: 'short'},
     assert(Object.hasOwn(resolved, 'hourCycle'), false);
     assert(Object.hasOwn(resolved, 'hour12'), false);
 }
+const hourOptions = [{hour: 'numeric'}, {dateStyle: 'short', timeStyle: 'long'}];
+for (const timeStyle of ['full', 'long', 'medium', 'short'])
+    hourOptions.push({timeStyle});
 for (const hourCycle of ['h11', 'h12', 'h23', 'h24']) {
-    for (const options of [{hour: 'numeric'}, {timeStyle: 'short'},
-        {dateStyle: 'short', timeStyle: 'long'}]) {
+    for (const options of hourOptions) {
         const resolved = new DTF('en', {...utc, ...options, hourCycle}).resolvedOptions();
         assert(resolved.hourCycle, hourCycle);
         assert(resolved.hour12, hourCycle === 'h11' || hourCycle === 'h12');
+        // Exercise extension negotiation on a supported locale in both data
+        // profiles, independently of German/Japanese locale availability.
+        const extension = new DTF(`en-u-hc-${hourCycle}`, {...utc, ...options}).resolvedOptions();
+        assert(extension.hourCycle, hourCycle);
+        assert(extension.hour12, resolved.hour12);
+        const selected = hourCycle === 'h23' ? 'h12' : 'h23';
+        assert(new DTF(`en-u-hc-${hourCycle}`, {...utc, ...options, hourCycle: selected})
+            .resolvedOptions().hourCycle, selected);
     }
+}
+assert(new DTF('en', {...utc, hour: 'numeric', hour12: true}).resolvedOptions().hourCycle, 'h12');
+assert(new DTF('en', {...utc, hour: 'numeric', hour12: false}).resolvedOptions().hourCycle, 'h23');
+if (DTF.supportedLocalesOf(['de']).length === 0) {
+    // ResolveLocale uses an empty extension when lookup falls back to the
+    // default locale. Explicit options still apply to that selected locale.
+    const options = {...utc, localeMatcher: 'lookup', hour: 'numeric'};
+    assert(new DTF('de-u-hc-h11', options).resolvedOptions().hourCycle,
+        new DTF([], options).resolvedOptions().hourCycle);
+    assert(new DTF('de-u-hc-h11', {...options, hourCycle: 'h11'})
+        .resolvedOptions().hourCycle, 'h11');
 }
 assert(DTF('en', utc).format(0), new DTF('en', utc).format(0));
 assertThrows(TypeError, () => new DTF('en', null));
