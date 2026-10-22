@@ -30,6 +30,7 @@ import number_pattern_tables
 import preference_tables
 import plural_tables
 import segment_dictionary_tables
+import segment_program_tables
 from list_patterns import PARTS, VARIANTS, pattern
 from parents import locale_id
 from resolve import BLOCK, INHERIT
@@ -259,6 +260,7 @@ def validate(binary):
             'collation_contexts': collation_contexts.decode(sections.get(bundle.COLLATION_CONTEXTS), collation),
             'compiled_collation': collation_bundle.decode(sections.get(bundle.COMPILED_COLLATION)),
             'segment_dictionaries': segment_dictionary_tables.decode(sections.get(bundle.SEGMENT_DICTIONARIES)),
+            'segment_programs': segment_program_tables.decode(sections.get(bundle.SEGMENT_PROGRAMS), len(tags)),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
