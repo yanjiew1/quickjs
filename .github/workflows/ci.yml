@@ -242,6 +242,7 @@ jobs:
   mingw-windows:
     name: MinGW Windows target
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       WINEARCH: win64
       WINEDEBUG: "-all"
@@ -252,10 +253,13 @@ jobs:
         with:
           submodules: true
       - name: Install MinGW and Wine
+        # Bound package-network stalls independently of the build/test budget.
+        timeout-minutes: 15
         run: |
           sudo apt update
           sudo apt install -y wine64 mingw-w64 meson ninja-build
       - name: Setup Wine
+        timeout-minutes: 5
         run: |
           # Set the prefix here, where runner shell variables are available.
           export WINEPREFIX="$RUNNER_TEMP/quickjs-wine64"
