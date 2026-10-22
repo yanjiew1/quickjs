@@ -126,6 +126,15 @@ class SegmentProgramTests(unittest.TestCase):
         self.assertTrue(all(owner is owners[0] for owner in owners))
         self.assertEqual(result.totals.predicate_pairs, 1)
 
+    def test_auxiliary_predicates_split_classes_without_changing_languages(self):
+        source = lowered(((char('ab'), node('epsilon'), False),))
+        program = programs.assemble(source, extra_predicates=(((97, 98),),))
+        self.assertIn(((97, 98),), program.alphabet.predicates)
+        self.assertEqual(decisions(program, 'ab'), ((True, None), (False, 0), (True, None)))
+        with self.assertRaisesRegex(DataError, 'predicate-pair budget'):
+            programs.assemble(source, programs.DEFAULT_LIMITS._replace(predicate_pairs=1),
+                              extra_predicates=(((97, 98),),))
+
 
 if __name__ == '__main__':
     unittest.main()
