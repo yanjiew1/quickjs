@@ -194,6 +194,7 @@ if intl_enabled
     'intl/datetime/interval-data.c',
     'intl/datetime/interval-program.c',
     'intl/datetime/interval-select.c',
+    'intl/datetime/range-layout.c',
     'intl/datetime/name-data.c',
     'intl/datetime/name-select.c',
     'intl/datetime/local-time.c',
