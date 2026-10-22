@@ -106,6 +106,30 @@ profile change. The executable argument must contain an explicit path.
 Automata, binary encoding, runtime matching and native locale capability
 advertisement are subsequent acceptance stages.
 
+## Ignore-phase language preparation
+
+`segment_lower.py` translates prepared expressions into immutable language DAGs
+while retaining each original rule and character-atom source. At an ignore
+record, it inserts a no-break rule `complement(excluded) × ignored`. Earlier
+rules remain raw. Later positive character atoms acquire a following ignored
+closure; complemented atoms do not. Grouped one-character alternations and
+positive set differences remain single predicates. Unreviewed mixed/nested
+negation shapes fail rather than receive guessed Boolean-to-language semantics.
+
+The returned `LoweredProgram` retains its matching `PreparedVariables` owner:
+a shared character source can be a declaration span rather than a substring
+of its using rule. Keep that binding context with subsequent automata records.
+Historical sequence aliases share immutable IR nodes. Raw and ignore-aware
+uses have separate memo entries; generated closures bypass lowering so they
+cannot grow recursively. Node, edge, height and work budgets bound preparation.
+The source phase remains visible; no input text is stripped or normalized.
+The bounded short-input interpreter in `tests/intl_segment_reference.py` is
+only a semantic test oracle, not a production traversal algorithm.
+
+The future automata compiler must give repeated Thompson occurrences fresh
+continuations, or use a continuation-correct construction. Shared language-DAG
+identity does not justify sharing mutable NFA fragments in different contexts.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
