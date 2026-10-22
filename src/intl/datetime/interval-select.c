@@ -1,6 +1,7 @@
 /* Select actual interval source programs; no JS coercion or endpoint rendering.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "interval-select.h"
+#include "period-spacing.h"
 #include "basic-match.h"
 #include <limits.h>
 #include <string.h>
@@ -162,6 +163,7 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
                                              QJSCalendarId arithmetic_calendar,
                                              const QJSIntlDateTextData *names,
                                              QJSIntlDateNameAdmission *admission,
+                                             unsigned int period_spacing,
                                              const QJSIntlAllocator *allocator,
                                              QJSIntlDateIntervalSet *out)
 {
@@ -184,12 +186,13 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !data || !names || !admission || !allocator || !allocator->malloc || !allocator->free ||
-        locale >= data->section.count || calendar >= data->calendar_count ||
+        (period_spacing & ~7U) || locale >= data->section.count || calendar >= data->calendar_count ||
         (unsigned int)cycle > QJS_INTL_DATE_H24 || (unsigned int)arithmetic_calendar >= QJS_CAL_COUNT)
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_date_pattern_info(ordinary, &info);
     if (status)
         return status;
+    period_spacing = qjs_intl_date_period_ascii_mask(ordinary, period_spacing);
     wanted = qjs_intl_datetime_component_mask(&info.components);
     last_field = qjs_intl_date_range_last_field(&info.components);
     result.allocator = *allocator;
@@ -233,6 +236,8 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
                 continue;
             if (!status)
                 status = qjs_intl_date_interval_program_open(allocator, entry.text, &info, cycle, &program);
+            if (!status && period_spacing)
+                qjs_intl_date_period_ascii_interval(&program.pattern, entry.text, period_spacing);
             if (!status && (wanted & ~qjs_intl_datetime_component_mask(&program.components)))
                 status = QJS_INTL_UNSUPPORTED;
             /* A changed field must actually expose both endpoints. Keep the
