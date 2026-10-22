@@ -151,6 +151,27 @@ for (const dayPeriod of ['short', 'long', 'narrow']) {
     assert(formatter.format(Date.UTC(2024, 0, 1, 0, 0, 0, 1)), 'in the morning');
     assert(formatter.format(Date.UTC(2024, 0, 1, 12, 0, 0, 1)), 'in the afternoon');
 }
+// Best fit adapts real b/B widths without changing the localized names or
+// literal layout. Basic still scores the finite source catalog unchanged.
+for (const dayPeriod of ['short', 'long', 'narrow']) {
+    for (const clock of [{hour: 'numeric'}, {hour: '2-digit', minute: 'numeric'},
+                         {hour: 'numeric', minute: 'numeric', second: 'numeric'},
+                         {year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric'}]) {
+        const formatter = new DTF('en', {...utc, ...clock, dayPeriod});
+        assert(formatter.resolvedOptions().dayPeriod, dayPeriod);
+        for (const hour of [0, 9, 12, 15]) {
+            const stamp = Date.UTC(2024, 0, 1, hour);
+            const parts = formatter.formatToParts(stamp);
+            assert(parts.map(part => part.value).join(''), formatter.format(stamp));
+            assert(parts.find(part => part.type === 'dayPeriod').value,
+                   hour === 12 ? (dayPeriod === 'narrow' ? 'n' : 'noon') :
+                   hour < 12 ? 'in the morning' : 'in the afternoon');
+        }
+    }
+}
+const basicPeriod = new DTF('en', {...utc, hour: 'numeric', dayPeriod: 'narrow', formatMatcher: 'basic'});
+assert(basicPeriod.resolvedOptions().dayPeriod, 'short');
+assert(basicPeriod.formatToParts(Date.UTC(2024, 0, 1, 12)).find(part => part.type === 'dayPeriod').value, 'noon');
 const overridden = new DTF('en-u-hc-h11', {...utc, hour: 'numeric', hour12: false, hourCycle: 'h12'});
 assert(overridden.resolvedOptions().hourCycle, 'h23');
 assert(overridden.resolvedOptions().locale, 'en');
@@ -304,6 +325,29 @@ for (const calendar of ['chinese', 'dangi']) {
     const range = lunisolar.formatRangeToParts(Date.UTC(2000, 0, 1), Date.UTC(1900, 0, 1));
     assertArrayEquals(range.filter(part => part.type === 'relatedYear').map(part => part.value),
         ['1999', '1899']);
+}
+
+// Hebrew yMd intentionally uses a named month. Keep that source mapping
+// rather than preferring an inherited numeric date with an unwanted era.
+for (const month of ['numeric', '2-digit']) {
+    const options = {...utc, calendar: 'hebrew', year: 'numeric', month, day: 'numeric'};
+    const formatter = new DTF('en', options);
+    if (formatter.resolvedOptions().calendar !== 'hebrew')
+        continue;
+    const value = Date.UTC(2049, 2, 4);
+    for (const formatMatcher of ['basic', 'best fit']) {
+        const full = new DTF('en', {...options, formatMatcher});
+        const parts = full.formatToParts(value);
+        assert(full.resolvedOptions().month, 'short');
+        assert(parts.find(part => part.type === 'month').value, 'Adar I');
+        assert(parts.some(part => part.type === 'era'), false);
+        assert(parts.map(part => part.value).join(''), full.format(value));
+    }
+    if (month === 'numeric') {
+        const only = new DTF('en', {...utc, calendar: 'hebrew', month});
+        assert(only.resolvedOptions().month, 'numeric');
+        assert(only.formatToParts(value).find(part => part.type === 'month').value, '6');
+    }
 }
 
 const getter = Object.getOwnPropertyDescriptor(DTF.prototype, 'format').get;
