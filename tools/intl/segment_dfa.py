@@ -11,24 +11,30 @@ from segment_alphabet import Alphabet, classify
 from segment_lower import Language
 from segment_nfa import Instruction, NFA
 
-ProductionSide = namedtuple('ProductionSide', 'language anchored reverse')
+ProductionSide = namedtuple('ProductionSide', 'language anchored reverse construction_work')
 DFA = namedtuple('DFA', 'rows accepted subsets restart construction_work')
 DFALimits = namedtuple('DFALimits', 'states cells members work')
 DEFAULT_LIMITS = DFALimits(4096, 1048576, 262144, 16000000)
 MAX_ANCHOR_VISITS = 262144
 
 
-def production_side(language, side):
+def production_side(language, side, work_limit=None):
     """Verify the pinned leading-left anchor form and derive an anchor-free body.
 
     Retain the caller's original language for NFA equivalence/provenance. New
     assertion placements require review rather than unconditional epsilon
     substitution or silently restarting anchored contexts.
     """
+    if work_limit is not None and (type(work_limit) is not int or work_limit < 1):
+        raise DataError('invalid segmentation anchor work limit')
+    budget = MAX_ANCHOR_VISITS if work_limit is None else min(MAX_ANCHOR_VISITS, work_limit)
     if (side not in ('left', 'right') or not isinstance(language, Language) or
-            not isinstance(language.children, tuple) or
-            any(not isinstance(child, Language) for child in language.children)):
+            not isinstance(language.children, tuple)):
         raise DataError('invalid segmentation production side')
+    if len(language.children) > budget:
+        raise DataError('segmentation anchor verification budget exceeded')
+    if any(not isinstance(child, Language) for child in language.children):
+        raise DataError('invalid segmentation production child')
     anchored = (side == 'left' and language.kind == 'concat' and language.children and
                 language.children[0].kind == 'start')
     body = language
@@ -42,25 +48,25 @@ def production_side(language, side):
             raise DataError('empty anchored segmentation body')
         body = children[0] if len(children) == 1 else Language(
             'concat', children, None, 1 + max(child.height for child in children))
-    pending, seen, visits = [body], set(), 0
+    pending, seen, visits = [body], set(), len(language.children)
     while pending:
         node = pending.pop()
         visits += 1
-        if visits > MAX_ANCHOR_VISITS:
+        if visits > budget:
             raise DataError('segmentation anchor verification budget exceeded')
         if id(node) in seen:
             continue
-        if len(seen) >= MAX_ANCHOR_VISITS:
+        if len(seen) >= budget:
             raise DataError('segmentation anchor verification budget exceeded')
         if not isinstance(node, Language) or not isinstance(node.children, tuple):
             raise DataError('invalid segmentation production language')
         if node.kind == 'start':
             raise DataError('unreviewed segmentation anchor placement')
-        if len(pending) + len(node.children) > MAX_ANCHOR_VISITS:
+        if len(pending) + len(node.children) > budget - visits:
             raise DataError('segmentation anchor pending budget exceeded')
         seen.add(id(node))
         pending.extend(node.children)
-    return ProductionSide(body, bool(anchored), side == 'right')
+    return ProductionSide(body, bool(anchored), side == 'right', visits)
 
 
 class _Compiler:
