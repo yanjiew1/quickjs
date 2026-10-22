@@ -31,6 +31,9 @@ def pack():
       </monthPatternWidth></monthPatternContext>
       <monthPatternContext type="stand-alone"><monthPatternWidth type="wide">
       <monthPattern type="leap">({0})閏</monthPattern></monthPatternWidth>
+      </monthPatternContext>
+      <monthPatternContext type="numeric"><monthPatternWidth type="all">
+      <monthPattern type="leap">[閏{0}]</monthPattern></monthPatternWidth>
       </monthPatternContext></monthPatterns>
       <cyclicNameSets><cyclicNameSet type="years"><cyclicNameContext type="format">
       <cyclicNameWidth type="abbreviated"><cyclicName type="40">cycle四十</cyclicName>
@@ -64,6 +67,10 @@ def pack():
         calendar('hebrew', group('months', hebrew + '<month type="6" yeartype="leap">Adar I</month>'
                  '<month type="7" yeartype="leap">Adar II</month><month type="7">Adar</month>')) +
         calendar('chinese', lunar) + calendar('dangi', lunar) +
+        ''.join(calendar(name, '<monthPatterns><monthPatternContext type="numeric">'
+            '<monthPatternWidth type="all"><monthPattern type="leap">' + text +
+            '</monthPattern></monthPatternWidth></monthPatternContext></monthPatterns>')
+            for name, text in (('numericbad', '{1}'), ('numericblocked', BLOCK), ('numericempty', ''))) +
         calendar('periodonly', group('dayPeriods', periods, width='abbreviated')))
     source.set('en', calendar('gregorian', group('months', '<month type="2">' + BLOCK + '</month>'
                '<month type="3"/>') + group('dayPeriods', '<dayPeriod type="noon"/>', width='abbreviated')))
