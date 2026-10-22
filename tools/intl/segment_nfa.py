@@ -13,7 +13,7 @@ from segment_sets import DOMAIN_END, checked_ranges
 
 Instruction = namedtuple('Instruction', 'kind first second predicate')
 Fragment = namedtuple('Fragment', 'entry patches')
-NFA = namedtuple('NFA', 'instructions predicates entry')
+NFA = namedtuple('NFA', 'instructions predicates entry construction_work')
 NFALimits = namedtuple('NFALimits', 'states work predicates retained_pairs ranges')
 DEFAULT_LIMITS = NFALimits(8192, 65536, 256, 262144, 16384)
 
@@ -132,7 +132,7 @@ class _Builder:
             raise DataError('incomplete segmentation NFA fragments')
         accept = self.emit('accept')
         self.patch(fragments[0].patches, accept)
-        return NFA(tuple(self.instructions), tuple(self.predicates), fragments[0].entry)
+        return NFA(tuple(self.instructions), tuple(self.predicates), fragments[0].entry, self.work)
 
 
 def compile_language(language, reverse=False, limits=DEFAULT_LIMITS):
