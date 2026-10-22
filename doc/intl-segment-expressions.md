@@ -179,6 +179,52 @@ are 4,096 states, 1,048,576 transition cells, 262,144 retained members and
 UTF-16 execution remain subsequent acceptance stages; host acceptance helpers
 are bounded proof tools, not the production input owner.
 
+`segment_program.py` assembles complete rule programs with one shared alphabet
+and mode-aware side-machine owners. Identical completed bodies can share a
+table, while direction and BOS/restart policy remain in identity. Rule order,
+actions and source records stay separate. Semantic table keys exclude subset
+proof IDs and construction statistics; retained lowered context preserves
+original rule/declaration provenance.
+
+Aggregate caps apply across all rule sides, in addition to component limits:
+1,024 rules, 131,072 retained temporary NFA states, 65,536 retained DFA states,
+8,388,608 transition cells, 4,194,304 subset members and 128,000,000 work visits.
+At most 262,144 unique predicate pairs are retained; completed temporary NFAs
+are rebound to canonical tuple owners before storing the next side.
+Remaining work is delegated to each compiler before it runs. Completed duplicate
+machines still charge construction/key work even when their retained storage
+shares an owner. NFA/alphabet/DFA host records expose construction work for that
+accounting; statistics are not part of runtime table identity or wire data.
+
+## Refinement-aware native profiles
+
+`segment_profile.py` owns the pinned native policy beside pure base languages.
+An explicit word-rule ID whitelist permits later lexical replacement; all
+unreviewed, separator, raw ZWJ/space/ignore and RI decisions remain protected.
+Core lexical rows require their root origin; Japanese's two extra lexical rows
+require their Japanese origin. Only root sentence rule 11 is a suppressible soft
+break. Rule action changes require review.
+
+Sentence context predicates for SATerm, Close, Sp, ParaSep and the actual ignored
+union join the same alphabet, including any predicates unused by a base machine.
+Membership bits therefore give homogeneous per-class flags, not guesses from one
+sample character. The selected profile requires these context categories to be
+disjoint. Original winning-rule indexes remain available for refinement.
+
+Context preparation has a separate fixed set-evaluator budget, shared by all
+five queries: 131,072 nodes, 16,384 intervals per result, 8,000,000 work steps,
+256 property queries and 262,144 retained interval pairs. The program limits
+above cover base-machine construction, including auxiliary-predicate storage.
+Context-to-predicate lookups occur once per context; flag assignment then uses
+at most five bit tests for each of the alphabet's at most 16,384 classes.
+
+Profile identity includes granularity, rule roles, class context and unresolved
+requirements, in addition to base machine tables. Word requires dictionaries,
+word status and selected grapheme protection; sentence requires suppressions and
+grapheme protection. These prepared flags do not advertise executable native
+coverage. The future runtime must satisfy every requirement and retain endpoint
+and hard-boundary protections before exposing native locales.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
