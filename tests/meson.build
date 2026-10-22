@@ -1743,6 +1743,25 @@ if intl_enabled
     },
   }]
 
+  intl_date_period_spacing_test = {
+    'name': 'test_intl_date_period_spacing',
+    'sources': files(
+      'test_intl_date_period_spacing.c',
+      '../src/intl/datetime/period-spacing.c',
+      '../src/intl/datetime/pattern.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_period_spacing_test,
+    'name': 'intl-date-period-spacing',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_pattern_info_test = {
     'name': 'test_intl_date_pattern_info',
     'sources': files(
@@ -2782,6 +2801,7 @@ if intl_enabled
         '../src/intl/datetime/native.c',
         '../src/intl/datetime/interval-program.c',
         '../src/intl/datetime/interval-select.c',
+        '../src/intl/datetime/period-spacing.c',
         '../src/intl/datetime/range-layout.c',
         '../src/intl/datetime/available-source.c',
         '../src/intl/datetime/basic-match.c',
