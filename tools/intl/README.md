@@ -81,6 +81,14 @@ claim. The parser does not select word boundaries or implement ICU's matching
 algorithm. Dictionary compilation and the native segmentation consumer own
 those separate responsibilities.
 
+`segment_dictionary_trie.py` prepares immutable scalar-label arrays from those
+records. An incremental prefix frontier finalizes children before parents and
+interns identical terminal/edge suffixes; cost differences prevent merging.
+State IDs follow deterministic postorder, allowing a reader to check acyclicity
+with `child < parent`. Alphabet IDs are zero-based u16; terminal tags reserve
+zero and index the raw cost pool. Membership and valued modes remain distinct.
+This stage supplies no runtime binary or matching policy yet.
+
 ## Consume verified source files
 
 `segment_sources.py` collects the relevant raw `common/segments` records with
