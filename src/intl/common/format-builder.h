@@ -13,7 +13,8 @@ typedef struct QJSIntlFormatBuilder {
 /* Internal two-pass writer: zero-init result, choose a nonzero limit, measure,
    allocate exact text/part capacities, reset length/count, then replay the same
    immutable inputs. Consumers own allocation and cleanup. Body parts must
-   already form a valid partition. Optional first/last track nonspace UTF-16
+   form a valid partition, or be empty when the caller assigns one enclosing
+   part to the copied text. Optional first/last track nonspace UTF-16
    bounds across multiple text appends; supply both, initially SIZE_MAX/0.
    Scalar text excludes NUL and malformed UTF-8. Leading/trailing Unicode
    White_Space is available for callers to classify separately as literal. */
