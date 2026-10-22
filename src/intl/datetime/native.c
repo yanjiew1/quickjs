@@ -11,6 +11,7 @@
 #include "interval-data.h"
 #include "interval-select.h"
 #include "range-layout.h"
+#include "period-spacing.h"
 #include "name-select.h"
 #include "../common/range-compose.h"
 #include "../locale/preference-data.h"
@@ -57,6 +58,7 @@ typedef struct DateRecord {
     QJSIntlDatePattern pattern;
     QJSIntlDateTimeComponents components;
     QJSIntlDateRangeLayout range_layout; /* Own proven date/clock operands. */
+    unsigned int period_spacing; /* Source-proved ASCII suffix adjacency. */
     const QJSIntlDateIntervalSet *intervals; /* Borrows a formatter-owned set. */
 } DateRecord;
 
@@ -661,6 +663,24 @@ static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
     return status;
 }
 
+static QJSIntlStatus single_spacing(const Programs *programs, const QJSIntlDateSingleProgram *single,
+                                    const QJSIntlDateStyleSource *style, unsigned int *out)
+{
+    unsigned int proof = 0;
+    *out = 0;
+    if (single->source_index != SIZE_MAX) {
+        const QJSIntlDateSourceCandidate *source;
+        if (single->source_index >= programs->pool.count)
+            return QJS_INTL_DATA_ERROR;
+        source = &programs->pool.records[single->source_index];
+        proof = qjs_intl_date_period_ascii_source(source->source.text, source->source.alt);
+    } else if (style) {
+        proof = qjs_intl_date_period_ascii_source(style->source.text, style->source.origin_alternate);
+    }
+    *out = qjs_intl_date_period_ascii_mask(&single->pattern, proof);
+    return QJS_INTL_OK;
+}
+
 static QJSIntlStatus match_score(const QJSIntlDateTimeFormatter *formatter,
                                  const QJSIntlDateTimeComponents *request,
                                  const QJSIntlDateTimeComponents *candidate,
@@ -690,6 +710,44 @@ typedef struct DateCandidate {
     unsigned int source_hour_width, source_month_kinds, source_period_widths;
     const QJSIntlDateOrdinaryProgram *ordinary;
 } DateCandidate;
+
+static QJSIntlStatus candidate_spacing(const QJSIntlDateTimeFormatter *formatter, const Programs *programs,
+                                       const DateCandidate *source, DateRecord *out)
+{
+    const QJSIntlDateOrdinaryProgram *ordinary = source->ordinary;
+    size_t depth;
+    if (!qjs_intl_date_period_ascii_mask(&out->pattern, 7))
+        return QJS_INTL_OK;
+    if (source->mixed) {
+        if (source->mixed->clock_index >= programs->ordinary.count)
+            return QJS_INTL_DATA_ERROR;
+        ordinary = &programs->ordinary.records[source->mixed->clock_index];
+    }
+    if (!ordinary)
+        return QJS_INTL_OK;
+    for (depth = 0; depth < programs->ordinary.count; depth++) {
+        int twelve = formatter->options.hour_cycle <= QJS_INTL_DATE_H12 &&
+                     ordinary->single.components.values[QJS_INTL_DATETIME_HOUR];
+        const QJSIntlDateSingleProgram *single = twelve ? &ordinary->single.twelve : &ordinary->single.normal;
+        size_t parent;
+        if (single->source_index != SIZE_MAX) {
+            unsigned int proof;
+            QJSIntlStatus status = single_spacing(programs, single, NULL, &proof);
+            if (!status)
+                out->period_spacing = qjs_intl_date_period_ascii_mask(&out->pattern, proof);
+            return status;
+        }
+        /* COMBINE's second input is the clock. Fractional and append records
+           instead inherit their first/base source. Keep only scalar evidence. */
+        parent = ordinary->second != SIZE_MAX ? ordinary->second : ordinary->first;
+        if (parent == SIZE_MAX)
+            return QJS_INTL_OK;
+        if (parent >= programs->ordinary.count)
+            return QJS_INTL_DATA_ERROR;
+        ordinary = &programs->ordinary.records[parent];
+    }
+    return QJS_INTL_DATA_ERROR;
+}
 
 enum { APPEND_ERA = 1, APPEND_ZONE = 2 };
 
@@ -1094,6 +1152,8 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         }
     }
     if (!status)
+        status = candidate_spacing(formatter, programs, &match.source, out);
+    if (!status)
         status = retain_range_layout(formatter, programs, &append, &match, out);
     return status;
 }
@@ -1152,12 +1212,16 @@ static QJSIntlStatus get_record(QJSIntlDateTimeFormatter *formatter, const Progr
 
 static QJSIntlStatus adjust_style(QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                   const QJSIntlDateStylePrograms *style, unsigned int allowed,
-                                  DateRecord *out)
+                                  unsigned int period_spacing, DateRecord *out)
 {
     QJSIntlDateTimeComponents request = style->components;
     unsigned int i;
-    if (!(qjs_intl_datetime_component_mask(&style->components) & ~allowed))
-        return copy_record(formatter, &style->components, &style->normal, &style->twelve, out);
+    if (!(qjs_intl_datetime_component_mask(&style->components) & ~allowed)) {
+        QJSIntlStatus status = copy_record(formatter, &style->components, &style->normal, &style->twelve, out);
+        if (!status)
+            out->period_spacing = qjs_intl_date_period_ascii_mask(&out->pattern, period_spacing);
+        return status;
+    }
     for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
         if (!((allowed >> i) & 1))
             request.values[i] = 0;
@@ -1175,6 +1239,7 @@ static QJSIntlStatus select_records(QJSIntlDateTimeFormatter *formatter, uint32_
         QJSIntlDateStylePrograms style = {0};
         const QJSIntlAllocator *allocator = &formatter->allocator;
         const DateData *data = &formatter->data;
+        unsigned int period_spacing = 0;
         if (options->date_style) {
             status = qjs_intl_date_style_date_preferred(&data->styles, locale, programs->style_calendar,
                        options->date_style - 1, programs->style_alternate, 0, &programs->pool, allocator, &date);
@@ -1201,26 +1266,39 @@ static QJSIntlStatus select_records(QJSIntlDateTimeFormatter *formatter, uint32_
                                               &formatter->format.text, &programs->names);
         if (status)
             goto style_done;
+        if (options->time_style) {
+            const QJSIntlDateSingleProgram *clock = options->hour_cycle <= QJS_INTL_DATE_H12 ?
+                                                  &hours.twelve : &hours.normal;
+            status = single_spacing(programs, clock, &time, &period_spacing);
+            if (status)
+                goto style_done;
+        }
         status = copy_record(formatter, &style.components, &style.normal, &style.twelve,
                                &formatter->records[QJS_INTL_DATE_VALUE_DATE]);
         if (!status)
             status = copy_record(formatter, &style.components, &style.normal, &style.twelve,
                                    &formatter->records[QJS_INTL_DATE_VALUE_INSTANT]);
+        if (!status) {
+            DateRecord *date_record = &formatter->records[QJS_INTL_DATE_VALUE_DATE];
+            DateRecord *instant_record = &formatter->records[QJS_INTL_DATE_VALUE_INSTANT];
+            date_record->period_spacing = qjs_intl_date_period_ascii_mask(&date_record->pattern, period_spacing);
+            instant_record->period_spacing = qjs_intl_date_period_ascii_mask(&instant_record->pattern, period_spacing);
+        }
         if (!status && options->date_style)
             status = adjust_style(formatter, programs, &style, DATE_FIELDS | BIT(ERA),
-                                    &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_DATE]);
+                                    period_spacing, &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_DATE]);
         if (!status && options->date_style)
             status = adjust_style(formatter, programs, &style, BIT(ERA) | BIT(YEAR) | BIT(MONTH),
-                                    &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_YEAR_MONTH]);
+                                    period_spacing, &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_YEAR_MONTH]);
         if (!status && options->date_style)
             status = adjust_style(formatter, programs, &style, BIT(MONTH) | BIT(DAY),
-                                    &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_MONTH_DAY]);
+                                    period_spacing, &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_MONTH_DAY]);
         if (!status && options->time_style)
             status = adjust_style(formatter, programs, &style, TIME_FIELDS,
-                                    &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_TIME]);
+                                    period_spacing, &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_TIME]);
         if (!status)
             status = adjust_style(formatter, programs, &style, DATE_FIELDS | BIT(ERA) | TIME_FIELDS,
-                                    &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_DATE_TIME]);
+                                    period_spacing, &formatter->records[QJS_INTL_DATE_VALUE_PLAIN_DATE_TIME]);
         if (!status && options->date_style && options->time_style) {
             const QJSIntlDatePattern *clock = record_pattern(formatter, &hours.components,
                                                                &hours.normal.pattern, &hours.twelve.pattern);
@@ -1507,14 +1585,16 @@ QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatte
         /* Several value kinds select the same ordinary program. Their zone
            interpretation differs at rendering, not during interval matching. */
         for (j = 0; j < i; j++)
-            if (same_pattern(&formatter->records[i].pattern, &formatter->records[j].pattern))
+            if (formatter->records[i].period_spacing == formatter->records[j].period_spacing &&
+                same_pattern(&formatter->records[i].pattern, &formatter->records[j].pattern))
                 break;
         owners[i] = j < i ? owners[j] : i;
         if (j < i)
             continue;
         status = qjs_intl_date_interval_set_open(&formatter->data.intervals, formatter->format.text.locale,
                      calendar, &formatter->records[i].pattern, formatter->options.hour_cycle,
-                     formatter->calendar, &formatter->format.text, &admission, &formatter->allocator, &sets[i]);
+                     formatter->calendar, &formatter->format.text, &admission,
+                     formatter->records[i].period_spacing, &formatter->allocator, &sets[i]);
         if (status)
             goto done;
     }
