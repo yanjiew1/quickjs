@@ -1015,6 +1015,16 @@ English `hm` and `Hm`, for example, have different hour widths, requiring
 explicit width adaptation before pairing normal and 12-hour programs. Flexible
 day periods, ranges and required-subset synthesis also remain separate steps.
 
+Mixed date/clock preparation opts into flexible-period sources only when
+explicit dayPeriod and date fields are both requested. Clock-only requests
+need no mixed records; their date-only Temporal records are null. Retain each actually observed b/B width, clock
+shape and zone style separately, including H-only clocks; equal field presence
+alone must not hide a genuine source or intentional width override. Allocate
+only combinations whose date and clock operands exist. The no-period path
+preserves its plain candidate order and allocation count. Clock indexes still
+refer to the original owner, so source-width evidence and range recomposition
+use the actual selected operand rather than a similar pattern.
+
 Native BestFit may adapt an explicitly requested b/B textual width after
 matching, without changing the period symbol, names or literal layout. Retain
 raw skeleton run-length bits for each selected source and exact-text aliases;

@@ -285,6 +285,9 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
         if (append_mode == 3) {
             options.best_fit = 1;
             options.components.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_NARROW;
+            options.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+            options.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_SHORT;
+            options.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
         }
         if (append_mode == 2) {
             options.components.values[QJS_INTL_DATETIME_FRACTION] = 3;

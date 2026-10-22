@@ -155,7 +155,8 @@ for (const dayPeriod of ['short', 'long', 'narrow']) {
 // literal layout. Basic still scores the finite source catalog unchanged.
 for (const dayPeriod of ['short', 'long', 'narrow']) {
     for (const clock of [{hour: 'numeric'}, {hour: '2-digit', minute: 'numeric'},
-                         {hour: 'numeric', minute: 'numeric', second: 'numeric'}]) {
+                         {hour: 'numeric', minute: 'numeric', second: 'numeric'},
+                         {year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric'}]) {
         const formatter = new DTF('en', {...utc, ...clock, dayPeriod});
         assert(formatter.resolvedOptions().dayPeriod, dayPeriod);
         for (const hour of [0, 9, 12, 15]) {

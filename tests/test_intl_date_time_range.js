@@ -131,6 +131,19 @@ const narrowRange = check(narrowPeriod, noon, afternoon);
 assert(narrowRange.some(part => part.type === 'dayPeriod' && part.value === 'n'), true);
 assert(narrowRange.some(part => part.type === 'dayPeriod' && part.value === 'noon'), false);
 
+// Mixed date/period sources keep their actual clock operand after width
+// adaptation, so same-day fallback shares the date and retains endpoint names.
+const mixedPeriod = new DTF('en', {timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: 'numeric', second: 'numeric', dayPeriod: 'narrow'});
+const mixedRange = check(mixedPeriod, noon, afternoon);
+for (const type of ['year', 'month', 'day']) {
+    const fields = mixedRange.filter(part => part.type === type);
+    assert(fields.length, 1);
+    assert(fields[0].source, 'shared');
+}
+assert(mixedRange.some(part => part.type === 'dayPeriod' && part.value === 'n' && part.source === 'startRange'), true);
+assert(mixedRange.some(part => part.type === 'dayPeriod' && part.value === 'noon'), false);
+
 const legacy = Object.create(DTF.prototype);
 DTF.call(legacy, 'en', {timeZone: 'UTC'});
 for (const name of names)

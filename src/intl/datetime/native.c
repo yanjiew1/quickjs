@@ -628,7 +628,10 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
         /* Both inputs already passed name admission. A literal-only connector
            introduces no new name domain, and the builder verifies the union. */
         status = qjs_intl_date_clock_programs_open(dates, QJS_INTL_DATE_STYLE_WIDTH_COUNT,
-                     &out->ordinary, out->admitted, &data->connectors, locale,
+                     &out->ordinary, out->admitted,
+                     formatter->options.components.values[QJS_INTL_DATETIME_DAY_PERIOD] != 0 &&
+                     (qjs_intl_datetime_component_mask(&formatter->options.components) & DATE_FIELDS) != 0,
+                     &data->connectors, locale,
                      out->connector_calendar, allocator, &out->mixed);
     }
 done:
