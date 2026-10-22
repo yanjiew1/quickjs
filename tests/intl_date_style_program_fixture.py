@@ -37,10 +37,11 @@ def pack():
         ('long', '<pattern numbers="M=romanlow">d MMMM y</pattern>'),
         ('medium', '<pattern>y-MM-dd</pattern>'),
         ('short', '<pattern>y/M/d</pattern>'))) + styles('time', (
-        ('full', '<pattern>h:mm:ss a zzzz</pattern>'),
-        ('long', '<pattern>h:mm:ss a z</pattern>'),
-        ('medium', '<pattern>h:mm a</pattern><datetimeSkeleton numbers="latn">hm</datetimeSkeleton>'),
-        ('short', '<pattern>Bh:mm [z]</pattern>'))) + connectors((
+        ('full', '<pattern>h:mm:ss a zzzz</pattern><pattern alt="ascii">' + BLOCK + '</pattern>'),
+        ('long', '<pattern>h:mm:ss a z</pattern><pattern alt="ascii"/>'),
+        ('medium', '<pattern>h:mm a</pattern><pattern alt="ascii">h:mm &apos;ASCII&apos; a</pattern>'
+                   '<datetimeSkeleton numbers="latn">hm</datetimeSkeleton>'),
+        ('short', '<pattern>Bh:mm [z]</pattern><pattern alt="ascii">Q</pattern><datetimeSkeleton alt="ascii">Bh</datetimeSkeleton>'))) + connectors((
         ('full', '{1}, {0}', "{1} 'at' {0}"),
         ('long', '{0} / {1}', ''),
         ('medium', '{1} ~ {0}', BLOCK),

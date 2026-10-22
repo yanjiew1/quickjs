@@ -474,7 +474,7 @@ typedef struct Programs {
     QJSIntlDateClockPrograms mixed;
     QJSIntlDateNameAdmission names;
     unsigned char *admitted;
-    uint32_t style_calendar, connector_calendar;
+    uint32_t style_calendar, connector_calendar, style_alternate;
 } Programs;
 
 static void programs_clear(const QJSIntlAllocator *allocator, Programs *programs)
@@ -534,6 +534,17 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
     if (!status)
         status = qjs_intl_date_combination_calendar_index(&data->metadata, &data->connectors,
                                                           calendar, &out->connector_calendar);
+    /* Prefer explicit CLDR ASCII variants for browser-compatible time
+       spacing. Resolve each owner's alternate index independently; never
+       rewrite source strings or normalize unrelated Unicode whitespace. */
+    for (uint32_t alternate = 1; !status && alternate < data->styles.alternate_count; alternate++) {
+        QJSIntlBytes name;
+        status = qjs_intl_date_style_alternate_at(&data->styles, alternate, &name);
+        if (!status && equal(name, bytes("ascii"))) {
+            out->style_alternate = alternate;
+            break;
+        }
+    }
     if (!status)
         status = inventory(&data->available, locale, available_calendar, QJS_INTL_DATE_AVAILABLE_PATTERN,
                             allocator, &patterns);
@@ -541,7 +552,7 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
         status = inventory(&data->available, locale, available_calendar, QJS_INTL_DATE_AVAILABLE_APPEND,
                             allocator, &out->append);
     if (!status)
-        status = qjs_intl_date_source_candidates_open(&patterns, (QJSIntlBytes){0}, allocator, &out->pool);
+        status = qjs_intl_date_source_candidates_preferred(&patterns, bytes("ascii"), (QJSIntlBytes){0}, allocator, &out->pool);
     if (status)
         goto done;
     /* Filter owned sources before grouping: an unavailable first L/context or
@@ -599,7 +610,7 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
        when the available skeleton inventory contains only abbreviated forms. */
     for (i = 0; !status && i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
         QJSIntlDatePreparedStyle *date = &out->dates[i];
-        status = qjs_intl_date_style_date_open(&data->styles, locale, out->style_calendar, i, 0,
+        status = qjs_intl_date_style_date_preferred(&data->styles, locale, out->style_calendar, i, out->style_alternate, 0,
                                                &out->pool, allocator, date);
         if (!status)
             status = qjs_intl_date_names_admit(&date->style.pattern, formatter->calendar,
@@ -1076,14 +1087,14 @@ static QJSIntlStatus select_records(QJSIntlDateTimeFormatter *formatter, uint32_
         const QJSIntlAllocator *allocator = &formatter->allocator;
         const DateData *data = &formatter->data;
         if (options->date_style) {
-            status = qjs_intl_date_style_date_open(&data->styles, locale, programs->style_calendar,
-                       options->date_style - 1, 0, &programs->pool, allocator, &date);
+            status = qjs_intl_date_style_date_preferred(&data->styles, locale, programs->style_calendar,
+                       options->date_style - 1, programs->style_alternate, 0, &programs->pool, allocator, &date);
             if (status)
                 goto style_done;
         }
         if (options->time_style) {
-            status = qjs_intl_date_style_source_open(&data->styles, locale, programs->style_calendar,
-                       QJS_INTL_DATE_STYLE_TIME, options->time_style - 1, 0, allocator, &time);
+            status = qjs_intl_date_style_source_preferred(&data->styles, locale, programs->style_calendar,
+                       QJS_INTL_DATE_STYLE_TIME, options->time_style - 1, programs->style_alternate, 0, allocator, &time);
             if (!status)
                 status = qjs_intl_date_style_time_programs_open(&time, &programs->pool,
                            &programs->append, allocator, &hours);
