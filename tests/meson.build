@@ -4473,6 +4473,38 @@ if get_option('intl') == 'native'
   )
 
   test(
+    'intl-segment-lower',
+    python,
+    args: files('test_intl_segment_lower.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-nfa',
+    python,
+    args: files('test_intl_segment_nfa.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-alphabet',
+    python,
+    args: files('test_intl_segment_alphabet.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-dfa',
+    python,
+    args: files('test_intl_segment_dfa.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-segment-sets',
     python,
     args: files('test_intl_segment_sets.py'),
