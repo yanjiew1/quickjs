@@ -27,11 +27,55 @@ void qjs_intl_date_style_source_clear(QJSIntlDateStyleSource *source)
     memset(source, 0, sizeof(*source));
 }
 
-QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
-                                            uint32_t locale, uint32_t calendar,
-                                            QJSIntlDateStyleFamily family, QJSIntlDateStyleWidth width,
-                                            uint32_t alternate, const QJSIntlAllocator *allocator,
-                                            QJSIntlDateStyleSource *out)
+QJSIntlStatus qjs_intl_date_style_preferred_record(const QJSIntlDateStyleData *data,
+                                                   uint32_t locale, uint32_t calendar,
+                                                   QJSIntlDateStyleFamily family,
+                                                   QJSIntlDateStyleWidth width,
+                                                   QJSIntlDateStyleField field,
+                                                   uint32_t preferred, uint32_t fallback,
+                                                   QJSIntlDateStyleRecord *out)
+{
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!data || !out || preferred >= data->alternate_count || fallback >= data->alternate_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_date_style_record_at(data, locale, calendar, family, width, field, preferred, out);
+    if (!status && preferred != fallback) {
+        QJSIntlDateStyleRecord normal;
+        status = qjs_intl_date_style_record_at(data, locale, calendar, family, width, field, fallback, &normal);
+        if (!status && (out->state != QJS_INTL_DATE_STYLE_VALUE || !out->text.length)) {
+            *out = normal;
+        } else if (!status && normal.state == QJS_INTL_DATE_STYLE_VALUE && normal.text.length) {
+            uint32_t current = locale;
+            /* A parent alternate must not replace a more specific regional
+               pattern, such as the en-GB 24-hour clock with en's 12-hour one. */
+            while (current != UINT32_MAX) {
+                QJSIntlBytes tag;
+                uint32_t parent;
+                status = qjs_intl_data_locale(&data->data, current, &tag, &parent);
+                if (status)
+                    break;
+                if (tag.length == out->origin_locale.length &&
+                    !memcmp(tag.data, out->origin_locale.data, tag.length))
+                    break;
+                if (tag.length == normal.origin_locale.length &&
+                    !memcmp(tag.data, normal.origin_locale.data, tag.length)) {
+                    *out = normal;
+                    break;
+                }
+                current = parent;
+            }
+        }
+    }
+    return status;
+}
+
+static QJSIntlStatus source_open(const QJSIntlDateStyleData *data,
+                                 uint32_t locale, uint32_t calendar,
+                                 QJSIntlDateStyleFamily family, QJSIntlDateStyleWidth width,
+                                 uint32_t alternate, uint32_t fallback, const QJSIntlAllocator *allocator,
+                                 QJSIntlDateStyleSource *out)
 {
     QJSIntlDateStyleSource result = {0};
     QJSIntlStatus status;
@@ -44,14 +88,14 @@ QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
     result.allocator = *allocator;
     result.family = family;
     result.width = width;
-    status = qjs_intl_date_style_record_at(data, locale, calendar, family, width,
-                                           QJS_INTL_DATE_STYLE_PATTERN, alternate, &result.source);
+    status = qjs_intl_date_style_preferred_record(data, locale, calendar, family, width,
+                                           QJS_INTL_DATE_STYLE_PATTERN, alternate, fallback, &result.source);
     if (status)
         return status;
     if (result.source.state != QJS_INTL_DATE_STYLE_VALUE || !result.source.text.length)
         return QJS_INTL_UNSUPPORTED;
-    status = qjs_intl_date_style_record_at(data, locale, calendar, family, width,
-                                           QJS_INTL_DATE_STYLE_SKELETON, alternate, &result.skeleton);
+    status = qjs_intl_date_style_preferred_record(data, locale, calendar, family, width,
+                                           QJS_INTL_DATE_STYLE_SKELETON, alternate, fallback, &result.skeleton);
     if (status)
         return status;
     status = qjs_intl_date_pattern_compile(allocator, result.source.text, &result.pattern);
@@ -79,6 +123,37 @@ QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
     return QJS_INTL_OK;
 fail:
     qjs_intl_date_style_source_clear(&result);
+    return status;
+}
+
+QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
+                                            uint32_t locale, uint32_t calendar,
+                                            QJSIntlDateStyleFamily family, QJSIntlDateStyleWidth width,
+                                            uint32_t alternate, const QJSIntlAllocator *allocator,
+                                            QJSIntlDateStyleSource *out)
+{
+    return source_open(data, locale, calendar, family, width, alternate, alternate, allocator, out);
+}
+
+QJSIntlStatus qjs_intl_date_style_source_preferred(const QJSIntlDateStyleData *data,
+                                                   uint32_t locale, uint32_t calendar,
+                                                   QJSIntlDateStyleFamily family, QJSIntlDateStyleWidth width,
+                                                   uint32_t preferred, uint32_t fallback,
+                                                   const QJSIntlAllocator *allocator,
+                                                   QJSIntlDateStyleSource *out)
+{
+    QJSIntlStatus status = source_open(data, locale, calendar, family, width, preferred, fallback, allocator, out);
+    if (preferred != fallback && (status == QJS_INTL_UNSUPPORTED || status == QJS_INTL_DATA_ERROR)) {
+        status = source_open(data, locale, calendar, family, width, fallback, fallback, allocator, out);
+        /* Pattern fallback does not discard an independently usable preferred
+           skeleton. Source fields retain their own resolved provenance. */
+        if (!status) {
+            status = qjs_intl_date_style_preferred_record(data, locale, calendar, family, width,
+                         QJS_INTL_DATE_STYLE_SKELETON, preferred, fallback, &out->skeleton);
+            if (status)
+                qjs_intl_date_style_source_clear(out);
+        }
+    }
     return status;
 }
 
