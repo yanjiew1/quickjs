@@ -4436,9 +4436,9 @@ test(
 )
 
 test(
-  'intl-segment-variables',
+  'intl-segment-inheritance',
   python,
-  args: files('test_intl_segment_variables.py'),
+  args: files('test_intl_segment_inheritance.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
