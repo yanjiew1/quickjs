@@ -123,6 +123,14 @@ for (const options of [
     assert(crossDay.some(part => part.type === 'day' && part.source === 'endRange'), true);
 }
 
+// A selected narrow period remains narrow in range endpoint text and parts.
+const narrowPeriod = new DTF('en', {timeZone: 'UTC', hour: 'numeric', minute: 'numeric',
+    second: 'numeric', dayPeriod: 'narrow'});
+const noon = Date.UTC(2024, 6, 1, 12), afternoon = Date.UTC(2024, 6, 1, 15);
+const narrowRange = check(narrowPeriod, noon, afternoon);
+assert(narrowRange.some(part => part.type === 'dayPeriod' && part.value === 'n'), true);
+assert(narrowRange.some(part => part.type === 'dayPeriod' && part.value === 'noon'), false);
+
 const legacy = Object.create(DTF.prototype);
 DTF.call(legacy, 'en', {timeZone: 'UTC'});
 for (const name of names)

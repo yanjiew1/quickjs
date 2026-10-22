@@ -684,7 +684,7 @@ typedef struct DateCandidate {
     const QJSIntlDateTimeComponents *components;
     const QJSIntlDatePattern *normal, *twelve;
     const QJSIntlDateClockProgram *mixed;
-    unsigned int source_hour_width, source_month_kinds;
+    unsigned int source_hour_width, source_month_kinds, source_period_widths;
     const QJSIntlDateOrdinaryProgram *ordinary;
 } DateCandidate;
 
@@ -700,7 +700,47 @@ typedef struct DateMatch {
     DateCandidate source;
     int score;
     unsigned int extensions;
+    int period; /* Effective BestFit width, zero when the source is unchanged. */
+    QJSIntlDateNameAdmission admission;
 } DateMatch;
+
+static QJSIntlStatus period_adaptation(const QJSIntlDateTimeFormatter *formatter,
+                                        const QJSIntlDateTimeComponents *request,
+                                        const DateCandidate *source,
+                                        QJSIntlDateNameAdmission *admission, int *out)
+{
+    int wanted = request->values[QJS_INTL_DATETIME_DAY_PERIOD];
+    const QJSIntlDatePattern *pattern;
+    QJSIntlDatePattern view = {0};
+    QJSIntlDatePatternToken token;
+    QJSIntlStatus status;
+    size_t i, width;
+
+    *out = 0;
+    if (!formatter->options.best_fit || !wanted || !source->source_period_widths ||
+        !source->components->values[QJS_INTL_DATETIME_DAY_PERIOD] ||
+        source->components->values[QJS_INTL_DATETIME_DAY_PERIOD] == wanted)
+        return QJS_INTL_OK;
+    width = wanted == QJS_INTL_DATETIME_NARROW ? 5 : wanted == QJS_INTL_DATETIME_LONG ? 4 : 1;
+    /* TR35 preserves a differing pattern width when its source skeleton
+       already requested this exact run length: that is a locale override. */
+    if (source->source_period_widths & (1U << width))
+        return QJS_INTL_OK;
+    pattern = record_pattern(formatter, source->components, source->normal, source->twelve);
+    for (i = 0; i < pattern->count; i++) {
+        if (pattern->tokens[i].symbol != 'b' && pattern->tokens[i].symbol != 'B')
+            continue;
+        token = pattern->tokens[i];
+        token.width = width;
+        view.tokens = &token;
+        view.count = 1;
+        status = qjs_intl_date_names_admit(&view, formatter->calendar, &formatter->format.text, admission);
+        if (!status)
+            *out = wanted;
+        return status == QJS_INTL_UNSUPPORTED ? QJS_INTL_OK : status;
+    }
+    return QJS_INTL_OK;
+}
 
 static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
                                      const QJSIntlDateTimeComponents *request,
@@ -710,13 +750,17 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
     QJSIntlDateTimeComponents extended;
     const QJSIntlDateTimeComponents *candidate = source->components;
     unsigned int fields = 0;
-    int score;
-    QJSIntlStatus status;
-    if (extensions) {
+    int score, period;
+    QJSIntlStatus status = period_adaptation(formatter, request, source, &match->admission, &period);
+    if (status)
+        return status;
+    if (extensions || period) {
         fields = qjs_intl_datetime_component_mask(candidate);
         extended = *candidate;
         candidate = &extended;
     }
+    if (period)
+        extended.values[QJS_INTL_DATETIME_DAY_PERIOD] = period;
     if (extensions & APPEND_ERA) {
         /* A whole ordinary clock has no retained date operand. Do not guess
            where its date ends; mixed records retain the actual source inputs. */
@@ -746,6 +790,7 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
         match->score = score;
         match->source = *source;
         match->extensions = extensions;
+        match->period = period;
     }
     return status;
 }
@@ -763,6 +808,8 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
                                 programs->ordinary.records[i].source_hour_width[twelve],
                                 programs->ordinary.records[i].source_month_kinds[
                                     twelve && single->components.values[QJS_INTL_DATETIME_HOUR]],
+                                programs->ordinary.records[i].source_period_widths[
+                                    twelve && single->components.values[QJS_INTL_DATETIME_HOUR]],
                                 &programs->ordinary.records[i]};
         if (!programs->admitted[i])
             continue;
@@ -772,7 +819,7 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
     }
     for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
         const QJSIntlDateStyleSource *date = &programs->dates[i].style;
-        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, 0, NULL};
+        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, 0, 0, NULL};
         if (!date->pattern.count)
             continue;
         status = consider_record(formatter, request, &source, append, extensions, match);
@@ -782,7 +829,8 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
     for (i = 0; i < programs->mixed.count; i++) {
         const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
         DateCandidate source = {&record->components, &record->normal, &record->twelve, record,
-                                record->source_hour_width[twelve], 0, NULL};
+                                record->source_hour_width[twelve], 0,
+                                programs->ordinary.records[record->clock_index].source_period_widths[twelve], NULL};
         status = consider_record(formatter, request, &source, append, extensions, match);
         if (status)
             return status;
@@ -871,7 +919,7 @@ static QJSIntlStatus retain_range_layout(QJSIntlDateTimeFormatter *formatter, co
     const QJSIntlDateSinglePrograms *time;
     const QJSIntlDateOrdinaryProgram *ordinary = source->ordinary;
     const QJSIntlDateOrdinaryProgram *fraction = NULL;
-    QJSIntlDatePattern extended = {0}, extended_clock = {0}, fractional_clock = {0};
+    QJSIntlDatePattern extended = {0}, extended_clock = {0}, fractional_clock = {0}, period_clock = {0};
     QJSIntlBytes connector;
     QJSIntlStatus status;
     if (ordinary && ordinary->construction == QJS_INTL_DATE_ORDINARY_FRACTION) {
@@ -919,6 +967,20 @@ static QJSIntlStatus retain_range_layout(QJSIntlDateTimeFormatter *formatter, co
             return status;
         clock = &fractional_clock;
     }
+    if (match->period) {
+        QJSIntlDatePatternInfo info;
+        unsigned int adaptations;
+        status = qjs_intl_date_pattern_info(clock, &info);
+        if (status)
+            goto done;
+        info.components.values[QJS_INTL_DATETIME_DAY_PERIOD] = match->period;
+        status = qjs_intl_date_program_adapt(&formatter->allocator, clock, &info.components,
+                     QJS_INTL_DATE_ADAPT_PERIOD_WIDTH, formatter->options.hour_cycle <= QJS_INTL_DATE_H12,
+                     &period_clock, &adaptations);
+        if (status)
+            goto done;
+        clock = &period_clock;
+    }
     if (match->extensions & APPEND_ERA) {
         status = qjs_intl_date_pattern_join(&formatter->allocator, &append->era_layout.pattern,
                                             date, &append->era_field, &extended);
@@ -942,6 +1004,7 @@ done:
     qjs_intl_date_pattern_clear(&formatter->allocator, &extended);
     qjs_intl_date_pattern_clear(&formatter->allocator, &extended_clock);
     qjs_intl_date_pattern_clear(&formatter->allocator, &fractional_clock);
+    qjs_intl_date_pattern_clear(&formatter->allocator, &period_clock);
     return status == QJS_INTL_UNSUPPORTED ? QJS_INTL_OK : status;
 }
 
@@ -1013,6 +1076,20 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
     }
     status = match.extensions ? extend_record(formatter, programs, &append, &match, out) :
              copy_record(formatter, match.source.components, match.source.normal, match.source.twelve, out);
+    if (!status && match.period) {
+        QJSIntlDatePattern adapted = {0};
+        QJSIntlDateTimeComponents components = out->components;
+        unsigned int adaptations;
+        components.values[QJS_INTL_DATETIME_DAY_PERIOD] = match.period;
+        status = qjs_intl_date_program_adapt(&formatter->allocator, &out->pattern, &components,
+                     QJS_INTL_DATE_ADAPT_PERIOD_WIDTH, formatter->options.hour_cycle <= QJS_INTL_DATE_H12,
+                     &adapted, &adaptations);
+        if (!status) {
+            qjs_intl_date_pattern_clear(&formatter->allocator, &out->pattern);
+            out->pattern = adapted;
+            out->components = components;
+        }
+    }
     if (!status)
         status = retain_range_layout(formatter, programs, &append, &match, out);
     return status;

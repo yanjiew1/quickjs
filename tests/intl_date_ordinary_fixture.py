@@ -29,7 +29,11 @@ def pack(blocked=False, padded=False, partial_connectors=False, month_hints=Fals
         patterns += (('yMMMd', 'd MMM y'), ('yMd', 'd MMM y'),
                      ('yMMMMdd', 'dd MMMM y'), ('yMdd', 'MMMM dd, y'),
                      ('yMMMdHm', 'd MMM y HH:mm'), ('yMdHm', 'd MMM y HH:mm'),
-                     ('yMMMdhm', 'd MMM y h:mm a'))
+                     ('yMMMdhm', 'd MMM y h:mm a'),
+                     # Preserve intentional B5 -> B1 overrides and raw B3
+                     # lengths; a b skeleton cannot supply B width evidence.
+                     ('BBBBBh', 'B h'), ('bbhm', 'B h:mm'),
+                     ('BBBhms', 'BBBB h:mm:ss'))
     if padded:
         # Canonical source order puts the named date before the padded numeric
         # date. Composition should choose the latter without narrowing it.

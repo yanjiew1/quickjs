@@ -282,6 +282,10 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
         options.components.values[QJS_INTL_DATETIME_SECOND] = QJS_INTL_DATETIME_NUMERIC;
         options.components.values[QJS_INTL_DATETIME_ZONE] = QJS_INTL_DATETIME_ZONE_SHORT;
         options.forced_zone = 1;
+        if (append_mode == 3) {
+            options.best_fit = 1;
+            options.components.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_NARROW;
+        }
         if (append_mode == 2) {
             options.components.values[QJS_INTL_DATETIME_FRACTION] = 3;
             options.components.values[QJS_INTL_DATETIME_WEEKDAY] = QJS_INTL_DATETIME_LONG;
@@ -600,6 +604,7 @@ int main(int argc, char **argv)
     failures(&allocator, service, en, 0);
     failures(&allocator, service, en, 1);
     failures(&allocator, service, en, 2);
+    failures(&allocator, service, en, 3);
     options.maximum_output_length = 1000;
     options.date_style = QJS_INTL_DATE_STYLE_FULL + 1;
     formatter = open_formatter(service, en, &options);

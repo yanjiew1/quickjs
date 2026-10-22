@@ -1015,6 +1015,22 @@ English `hm` and `Hm`, for example, have different hour widths, requiring
 explicit width adaptation before pairing normal and 12-hour programs. Flexible
 day periods, ranges and required-subset synthesis also remain separate steps.
 
+Native BestFit may adapt an explicitly requested b/B textual width after
+matching, without changing the period symbol, names or literal layout. Retain
+raw skeleton run-length bits for each selected source and exact-text aliases;
+an already matching skeleton length preserves its differing pattern width as
+an intentional TR35 override. API short/long/narrow requests use canonical
+lengths 1/4/5; raw B/BB/BBB evidence remains distinct. Derived date-clock records
+inherit period evidence from the clock, independently of the date's month hints.
+Only widths whose reachable names pass renderer admission are considered.
+
+Score effective metadata without allocating a candidate catalog, then adapt
+only the winning owned program. Basic keeps its specified finite-record scoring.
+AM/PM is not converted to a flexible period. Replay the same adaptation on
+retained range clock operands before proving exact recomposition. Result metadata,
+strings and parts therefore describe the same actual width; do not relabel a
+short token as narrow merely to satisfy resolvedOptions.
+
 Ordinary preparation also retains declared numeric/text month requests for
 its selected source and aliases with exactly identical raw pattern text. This
 preserves mappings such as Hebrew `yMd` to `d MMM y` after component grouping

@@ -434,6 +434,38 @@ static void month_hints(const QJSIntlDateOrdinaryPrograms *programs)
     assert(short_seen == 1 && long_seen == 1 && paired == 1 && combined && fractional && appended);
 }
 
+static void period_hints(const QJSIntlDateOrdinaryPrograms *programs)
+{
+    unsigned int override = 0, raw_three = 0, symbol = 0, inherited = 0;
+    size_t i, variant;
+
+    for (i = 0; i < programs->count; i++) {
+        const QJSIntlDateOrdinaryProgram *record = &programs->records[i];
+        const QJSIntlDateTimeComponents *fields = &record->single.components;
+        unsigned int clock = (1U << QJS_INTL_DATETIME_HOUR);
+        if (mask(fields) == (clock | (1U << QJS_INTL_DATETIME_DAY_PERIOD))) {
+            assert(record->source_period_widths[0] == ((1U << 1) | (1U << 5)));
+            assert(record->source_period_widths[1] == record->source_period_widths[0]);
+            override++;
+        }
+        if (!record->construction && fields->values[QJS_INTL_DATETIME_DAY_PERIOD] == QJS_INTL_DATETIME_LONG) {
+            assert(record->source_period_widths[0] == (1U << 3));
+            raw_three++;
+        }
+        if (mask(fields) == (clock | (1U << QJS_INTL_DATETIME_MINUTE) | (1U << QJS_INTL_DATETIME_DAY_PERIOD))) {
+            assert(record->source_period_widths[0] == (1U << 1));
+            symbol++;
+        }
+        if (record->first != SIZE_MAX && fields->values[QJS_INTL_DATETIME_DAY_PERIOD]) {
+            size_t parent = record->second != SIZE_MAX ? record->second : record->first;
+            for (variant = 0; variant < 2; variant++)
+                assert(record->source_period_widths[variant] == programs->records[parent].source_period_widths[variant]);
+            inherited++;
+        }
+    }
+    assert(override == 1 && raw_three == 1 && symbol == 1 && inherited);
+}
+
 static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t length,
                 int blocked, int failures, int fixture_kind)
 {
@@ -470,8 +502,10 @@ static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t le
                     bytes("\xd9\xab"), allocator, &programs));
         calls = state->calls;
         verify(&programs);
-        if (fixture_kind == 2)
+        if (fixture_kind == 2) {
             month_hints(&programs);
+            period_hints(&programs);
+        }
         else if (fixture_kind == 1)
             authored_numeric(allocator, &programs);
         else
