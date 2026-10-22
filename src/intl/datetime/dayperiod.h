@@ -23,10 +23,15 @@ QJSIntlStatus qjs_intl_dayperiod_resolve(const QJSIntlDayPeriodData *data,
    fields do not round the clock. a always chooses AM/PM; b proposes exact
    midnight/noon then AM/PM. Neither reads data/rules. B uses a resolved list
    from this unchanged owner: exact points, variable ranges, then AM/PM.
+   use_midnight is a boolean caller policy: when false, b at 00:00 uses AM
+   and B ignores the exact midnight point in favor of the variable range.
+   Noon remains available. TR35 treats midnight support as a caller choice
+   because start-of-day and end-of-day usage can be ambiguous.
    A NULL B list denotes absent rules; empty lists also fall back to AM/PM.
    Keep fixed/variable label availability and localized-name fallback with the
    renderer. Allocate nothing, change no inputs and reset output on failure. */
 QJSIntlStatus qjs_intl_dayperiod_select(const QJSIntlDayPeriodData *data,
                                       const QJSIntlDayPeriodRuleList *rules, unsigned int symbol,
-                                      uint32_t second, unsigned int fraction, QJSIntlDayPeriodCode *out);
+                                      uint32_t second, unsigned int fraction, unsigned int use_midnight,
+                                      QJSIntlDayPeriodCode *out);
 #endif
