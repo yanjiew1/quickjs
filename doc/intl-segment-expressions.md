@@ -160,6 +160,25 @@ Predicate, pair, endpoint, class, output-range and work caps bound preparation,
 including a conservative allowance before sorting endpoints. This retains
 overlaps instead of choosing one winning Unicode property per character.
 
+`segment_dfa.py` builds independent complete side machines over that shared
+alphabet. Unanchored machines inject the NFA entry after every code point,
+recognizing suffix existence on each consumed prefix. Reversed right machines
+run from original EOF backward to recognize right-prefix existence.
+
+Production normalization admits only the pinned leading-left concatenation
+anchor form, retaining the original language and deriving an anchor-free body.
+That body seeds once at original BOS and never restarts. Other production
+assertion placements fail for review. Generic NFA proof execution still retains
+the original assertion semantics.
+
+Determinization uses sorted epsilon-closed subsets, breadth-first state order
+and ascending class IDs. State, complete-transition-cell, retained-subset-member
+and construction-work caps precede interning/publication. Defaults per machine
+are 4,096 states, 1,048,576 transition cells, 262,144 retained members and
+16,000,000 work visits. Aggregate rule-profile budgets, serialization and native
+UTF-16 execution remain subsequent acceptance stages; host acceptance helpers
+are bounded proof tools, not the production input owner.
+
 References reviewed 2026-10-23:
 
 - [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
