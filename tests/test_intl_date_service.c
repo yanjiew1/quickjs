@@ -289,6 +289,7 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
         options.components.values[QJS_INTL_DATETIME_ZONE] = QJS_INTL_DATETIME_ZONE_SHORT;
         options.forced_zone = 1;
         if (append_mode == 2) {
+            options.components.values[QJS_INTL_DATETIME_FRACTION] = 3;
             options.components.values[QJS_INTL_DATETIME_WEEKDAY] = QJS_INTL_DATETIME_LONG;
             options.components.values[QJS_INTL_DATETIME_ERA] = QJS_INTL_DATETIME_SHORT;
             options.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
@@ -404,24 +405,47 @@ static void ranges(const QJSIntlAllocator *allocator, const QJSIntlDateTimeServi
     baseline = state->live;
     assert(!qjs_intl_datetime_check_value_format(formatter, QJS_INTL_DATE_VALUE_DATE));
     /* Sweep distinct endpoints and the independently allocated shared-result
-       path without repeating expensive JS realm setup at every failure. */
-    for (unsigned int shared = 0; shared < 2; shared++) {
-        int64_t last = shared ? 1719835200 : 1719921600;
+       path without repeating expensive JS realm setup at every failure.
+       The third case proves the shared-date/two-clock renderer as well. */
+    for (unsigned int shared = 0; shared < 3; shared++) {
+        QJSIntlDateValueKind kind = shared == 2 ? QJS_INTL_DATE_VALUE_PLAIN_DATE_TIME : QJS_INTL_DATE_VALUE_DATE;
+        int64_t last = shared == 2 ? 1719838800 : shared ? 1719835200 : 1719921600;
         state->calls = 0;
-        assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+        assert(!qjs_intl_datetime_format_range(formatter, kind,
                                                1719835200, 0, last, 0, &result));
         calls = state->calls;
+        if (shared == 2) {
+            unsigned int date_fields = 0, endpoint_hours = 0;
+            for (i = 0; i < result.part_count; i++) {
+                const QJSIntlRangePart *field = &result.parts[i];
+                if (field->type == QJS_INTL_PART_YEAR || field->type == QJS_INTL_PART_MONTH ||
+                    field->type == QJS_INTL_PART_DAY) {
+                    assert(field->source == QJS_INTL_RANGE_SHARED);
+                    date_fields++;
+                } else if (field->type == QJS_INTL_PART_HOUR) {
+                    assert(field->source != QJS_INTL_RANGE_SHARED);
+                    endpoint_hours++;
+                }
+            }
+            assert(date_fields == 3 && endpoint_hours == 2);
+        }
         qjs_intl_formatted_range_clear(allocator, &result);
         assert(state->live == baseline && calls);
         for (i = 1; i <= calls; i++) {
             state->calls = 0;
             state->fail_at = i;
             memset(&result, 0xff, sizeof(result));
-            assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+            assert(qjs_intl_datetime_format_range(formatter, kind,
                        1719835200, 0, last, 0, &result) == QJS_INTL_NO_MEMORY);
             assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
         }
         state->calls = state->fail_at = 0;
+        if (shared == 2) {
+            assert(!qjs_intl_datetime_format_range(formatter, kind,
+                       1719835200, 0, last, 0, &result));
+            qjs_intl_formatted_range_clear(allocator, &result);
+            assert(state->live == baseline);
+        }
     }
     memset(&result, 0xff, sizeof(result));
     assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
