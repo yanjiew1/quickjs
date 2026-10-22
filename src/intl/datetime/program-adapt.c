@@ -6,11 +6,14 @@ static unsigned int width_flag(size_t field)
 {
     return field == QJS_INTL_DATETIME_HOUR ? QJS_INTL_DATE_ADAPT_HOUR_WIDTH :
            field == QJS_INTL_DATETIME_MINUTE ? QJS_INTL_DATE_ADAPT_MINUTE_WIDTH :
-           field == QJS_INTL_DATETIME_SECOND ? QJS_INTL_DATE_ADAPT_SECOND_WIDTH : 0;
+           field == QJS_INTL_DATETIME_SECOND ? QJS_INTL_DATE_ADAPT_SECOND_WIDTH :
+           field == QJS_INTL_DATETIME_DAY_PERIOD ? QJS_INTL_DATE_ADAPT_PERIOD_WIDTH : 0;
 }
 
-static int numeric(int value)
+static int legal_width(size_t field, int value)
 {
+    if (field == QJS_INTL_DATETIME_DAY_PERIOD)
+        return value >= QJS_INTL_DATETIME_NARROW && value <= QJS_INTL_DATETIME_LONG;
     return value == QJS_INTL_DATETIME_NUMERIC || value == QJS_INTL_DATETIME_TWO_DIGIT;
 }
 
@@ -31,14 +34,16 @@ QJSIntlStatus qjs_intl_date_program_adapt(const QJSIntlAllocator *allocator,
         *adaptations = 0;
     if (!out || !adaptations || !components || !allocator || !allocator->malloc || !allocator->free ||
         twelve > 1 || (allowed_widths & ~(QJS_INTL_DATE_ADAPT_HOUR_WIDTH |
-                                         QJS_INTL_DATE_ADAPT_MINUTE_WIDTH | QJS_INTL_DATE_ADAPT_SECOND_WIDTH)))
+                                         QJS_INTL_DATE_ADAPT_MINUTE_WIDTH | QJS_INTL_DATE_ADAPT_SECOND_WIDTH |
+                                         QJS_INTL_DATE_ADAPT_PERIOD_WIDTH)))
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_date_pattern_info(source, &before);
     if (status)
         return status;
     for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++) {
         if (before.components.values[i] != components->values[i] &&
-            (!(width_flag(i) & allowed_widths) || !numeric(before.components.values[i]) || !numeric(components->values[i])))
+            (!(width_flag(i) & allowed_widths) || !legal_width(i, before.components.values[i]) ||
+             !legal_width(i, components->values[i])))
             return QJS_INTL_UNSUPPORTED;
     }
     status = qjs_intl_date_pattern_copy(allocator, source, &result);
@@ -48,6 +53,14 @@ QJSIntlStatus qjs_intl_date_program_adapt(const QJSIntlAllocator *allocator,
         QJSIntlDatePatternToken *token = &result.tokens[i];
         size_t field, width;
         int hour = token->symbol == 'h' || token->symbol == 'H' || token->symbol == 'K' || token->symbol == 'k';
+        if (token->symbol == 'b' || token->symbol == 'B') {
+            int value = components->values[QJS_INTL_DATETIME_DAY_PERIOD];
+            if (before.components.values[QJS_INTL_DATETIME_DAY_PERIOD] != value) {
+                token->width = value == QJS_INTL_DATETIME_NARROW ? 5 : value == QJS_INTL_DATETIME_LONG ? 4 : 1;
+                changed |= QJS_INTL_DATE_ADAPT_PERIOD_WIDTH;
+            }
+            continue;
+        }
         if (!hour && token->symbol != 'm' && token->symbol != 's')
             continue;
         field = hour ? QJS_INTL_DATETIME_HOUR : token->symbol == 'm' ? QJS_INTL_DATETIME_MINUTE : QJS_INTL_DATETIME_SECOND;
