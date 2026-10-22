@@ -87,7 +87,10 @@ interns identical terminal/edge suffixes; cost differences prevent merging.
 State IDs follow deterministic postorder, allowing a reader to check acyclicity
 with `child < parent`. Alphabet IDs are zero-based u16; terminal tags reserve
 zero and index the raw cost pool. Membership and valued modes remain distinct.
-This stage supplies no runtime binary or matching policy yet.
+`segment_dictionary_tables.py` encodes and validates the optional section 39
+wire layout, including graph reachability, accepted-path counts and scalar/UTF-16
+length metadata. See [the format reference](../../doc/intl-segment-dictionary-format.md).
+Production packs and native word-boundary policy are integrated separately.
 
 ## Consume verified source files
 
