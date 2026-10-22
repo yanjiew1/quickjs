@@ -4492,6 +4492,14 @@ test(
 )
 
 test(
+  'intl-segment-compat',
+  python,
+  args: files('test_intl_segment_compat.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-sets',
   python,
   args: files('test_intl_segment_sets.py'),

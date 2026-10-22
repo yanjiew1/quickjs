@@ -25,6 +25,22 @@ sequence without changing any earlier binding. Sequence-valued references
 cannot appear inside character sets. Unknown names fail: this layer supplies
 no implicit Japanese `$FE` definition or other source correction.
 
+`segment_compat.py` separately defines the native Japanese word-profile
+correction. The pinned Japanese tailoring still uses `$FE` after CLDR-18917
+removed that declaration from root in favor of ignore remaps. The explicit
+correction restores the historical `[$Format $Extend $ZWJ]` union before the
+first Japanese wrapper. It requires the exact CLDR commit, root/Japanese
+source hashes and declaration sequence; changed inputs require another review.
+Its input is the unmodified collector output; explicit declaration checks also
+guard the three inherited dependencies used by the inserted union.
+
+This produces derived records and an immutable correction receipt. It never
+rewrites authenticated XML or changes strict raw compilation. The receipt marks
+the inserted declaration as synthetic despite the derived group's retained
+source identity. No other unresolved variable receives a fallback definition.
+The historical definition can be inspected in
+[root before the ignore-remap migration](https://github.com/unicode-org/cldr/blob/56a2de16366cd5bfe18628e941ea84849cfd4153/common/segments/root.xml).
+
 ## Grammar and later preparation
 
 The profile admits properties, literal escapes, nested sets, set union and
