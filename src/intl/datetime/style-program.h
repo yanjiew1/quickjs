@@ -36,6 +36,20 @@ QJSIntlStatus qjs_intl_date_style_source_open(const QJSIntlDateStyleData *data,
                                             QJSIntlDateStyleFamily family, QJSIntlDateStyleWidth width,
                                             uint32_t alternate, const QJSIntlAllocator *allocator,
                                             QJSIntlDateStyleSource *out);
+/* Explicit native alternate preference, independently for pattern and skeleton.
+   Missing/blocked/empty fields use their fallback key; preferred source syntax
+   or projection failures also try the fallback source. Operational errors
+   propagate. The exact source_open API retains its no-fallback contract. */
+QJSIntlStatus qjs_intl_date_style_preferred_record(const QJSIntlDateStyleData *, uint32_t locale,
+                                                   uint32_t calendar, QJSIntlDateStyleFamily,
+                                                   QJSIntlDateStyleWidth, QJSIntlDateStyleField,
+                                                   uint32_t preferred, uint32_t fallback,
+                                                   QJSIntlDateStyleRecord *);
+QJSIntlStatus qjs_intl_date_style_source_preferred(const QJSIntlDateStyleData *, uint32_t locale,
+                                                   uint32_t calendar, QJSIntlDateStyleFamily,
+                                                   QJSIntlDateStyleWidth, uint32_t preferred,
+                                                   uint32_t fallback, const QJSIntlAllocator *,
+                                                   QJSIntlDateStyleSource *);
 void qjs_intl_date_style_source_clear(QJSIntlDateStyleSource *source);
 
 /* DateTimeStyleFormat's single-date composition, before range construction.
