@@ -38,14 +38,25 @@ Only Unicode Pattern_White_Space is insignificant; NBSP remains a literal.
 Source size, token count, node count, recursive nesting and constructed tree
 height are bounded before publication. Flat adjacent unions use n-ary nodes;
 difference boundaries retain their left-to-right structure. Errors retain
-original expression offsets. Property names remain
-symbolic until a separate pinned C-property resolver checks their meanings.
+original expression offsets. Property names remain symbolic until a separate
+pinned C-property resolver checks their meanings.
 
 Complement nodes and reference provenance deliberately survive parsing. The
 later UAX #29 ignore lowering needs to distinguish positive properties from
 negations even when they have equivalent evaluated ranges. Boundary operators
-and the two recognized ignore remaps belong to separate rule preparation;
-they are not generic capture or replacement syntax in this expression parser.
+and the two recognized ignore remaps belong to `segment_rules.py`; they are not
+generic capture or replacement syntax in the expression parser. That owner
+prepares the historical arena and verifies its snapshots, then parses rules
+against the final visible bindings. It retains inherited priority and original
+source identity, with aggregate node, binding and rule budgets.
+
+Only a top-level unescaped `×`, `÷` or `→` separates a rule. Empty ordinary
+sides are epsilon. The word rule 4 and sentence rule 5 ignore forms require
+their exact named capture, excluded/ignored variable lists, closure and `${X}`
+replacement. They become dedicated ignore records at their original rule
+positions; preparation does not strip input or reorder those phases. Unknown
+remaps fail rather than falling through to host regex substitution.
+
 Automata, binary encoding, runtime matching and native locale capability
 advertisement are subsequent acceptance stages.
 

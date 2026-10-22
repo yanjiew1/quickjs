@@ -4484,6 +4484,14 @@ test(
 )
 
 test(
+  'intl-segment-rules',
+  python,
+  args: files('test_intl_segment_rules.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-dictionary-sources',
   python,
   args: files('test_intl_segment_dictionary_sources.py'),
