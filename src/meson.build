@@ -268,6 +268,7 @@ if intl_enabled
     'intl/relative/data.c',
     'intl/relative/format.c',
     'intl/relative/native.c',
+    'intl/segment/dictionary.c',
     'intl/unit/identifier.c',
     'intl/unit/data.c',
     'intl/unit/format.c',
