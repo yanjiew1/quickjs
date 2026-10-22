@@ -26,7 +26,8 @@ def pack(bad=None):
             ('rU', '', '', 'r(U)'), ('SSS', '', '', 's.SSS'), ('E', '', '', 'EEEEEE'),
             ('Q', '', '', 'Q'), ('j', '', '', "'literal'"), ('a', '', '', 'a'),
             ('y', 'other', '', "'"), ('y', '', 'ascii', "'"),
-            ('y', '', 'variant', 'yyyy'), ('y', '', 'unsupported', 'Q'),
+            ('y', '', 'variant', 'yyyy'), ('M', '', 'variant', BLOCK),
+            ('d', '', 'variant', ''), ('y', '', 'unsupported', 'Q'),
             ('a', '', 'unsupported', 'a'), ('j', '', 'unsupported', "'only'")]
     if bad is not None:
         root.append(('zzzz', '', '', bad))

@@ -35,5 +35,13 @@ QJSIntlStatus qjs_intl_date_style_date_open(const QJSIntlDateStyleData *styles,
                                           const QJSIntlDateSourceCandidates *pool,
                                           const QJSIntlAllocator *allocator,
                                           QJSIntlDatePreparedStyle *out);
+/* Preferred/fallback selection also applies during style recovery. If the
+   preferred source cannot be prepared, try the separately resolved fallback
+   source. Operational errors propagate. Alternate indexes belong to styles. */
+QJSIntlStatus qjs_intl_date_style_date_preferred(const QJSIntlDateStyleData *, uint32_t locale,
+                                                 uint32_t calendar, QJSIntlDateStyleWidth,
+                                                 uint32_t preferred, uint32_t fallback,
+                                                 const QJSIntlDateSourceCandidates *,
+                                                 const QJSIntlAllocator *, QJSIntlDatePreparedStyle *);
 void qjs_intl_date_prepared_style_clear(QJSIntlDatePreparedStyle *style);
 #endif
