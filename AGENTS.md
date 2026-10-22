@@ -114,6 +114,14 @@ For documentation-only tasks, check Markdown, references and the file-change sco
   in that directory for current coverage.
   Track exact SHAs and attempts; queued or running jobs have not passed. Inspect
   failures in tests and fixtures as well as production code.
+- Investigate Test262 failures before changing tests: trace the latest applicable
+  ECMA algorithms, relevant CLDR/Unicode rules, source-data selection and the
+  implementation. If other engines pass, inspect why; distinguish required
+  behavior from compatibility policy and optional support. Attempt relevant
+  optional behavior rather than immediately treating its coverage as invalid.
+  Modify a test only after establishing that it contradicts the specification
+  or is outdated, and record the exact specification revision, reason and
+  supporting evidence. A differing output alone is insufficient evidence.
 - Remove skips made obsolete by fixes/features. Keep intentional long-running
   exclusions explicit. Do not hide correctness failures or performance costs by
   adding skips or updating expected-error baselines; check suspect tests against
