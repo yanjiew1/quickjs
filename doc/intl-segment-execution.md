@@ -81,3 +81,22 @@ character category, attachment to a surrounding script run, and protected base
 and grapheme decisions. This native routing policy does not claim exact
 Line_Break=SA classification. Dictionary refinement and native admission remain
 separate work.
+
+## Final native input owner
+
+`segment/native-input.[ch]` connects decoding, compiled rule scans, literal
+sentence suppression and native grapheme protection into final boundary vectors.
+The private pipeline currently accepts grapheme and sentence programs; dictionary
+word refinement and public native provider admission remain unfinished.
+
+Selected and grapheme scans share one decoded scalar/UTF-16 owner during
+preparation. For sentence input, remove approved suppression cuts, then
+intersect with the native grapheme decisions. Only after every fallible stage
+succeeds are final UTF-16 indexes copied into one retained allocation. Temporary
+text, scans and matcher scratch are all released, including on OOM.
+
+The result borrows no program, list, text or service pointer. Binary-search
+`next` and `containing` queries allocate nothing and carry no mutable traversal
+cursor, so several clients may query the same prepared input independently.
+The common service wrapper can retain the original JS string separately for
+segment text extraction; its data is not needed to query these vectors.

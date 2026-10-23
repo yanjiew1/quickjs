@@ -246,6 +246,7 @@ if intl_enabled
     'intl/relative/native.c',
     'intl/segment/dictionary.c',
     'intl/segment/literal-graph.c',
+    'intl/segment/native-input.c',
     'intl/segment/program.c',
     'intl/segment/routing.c',
     'intl/segment/scan.c',

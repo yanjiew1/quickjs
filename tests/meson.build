@@ -4759,6 +4759,31 @@ test(
   timeout: 30,
 )
 
+intl_segment_native_input_test = executable(
+  'test_intl_segment_native_input',
+  files(
+    'test_intl_segment_native_input.c',
+    '../src/intl/segment/native-input.c',
+    '../src/intl/segment/suppression.c',
+    '../src/intl/segment/suppression-data.c',
+    '../src/intl/segment/literal-graph.c',
+    '../src/intl/segment/scan.c',
+    '../src/intl/segment/program.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_segment_program_fixture, intl_segment_suppression_runtime_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-segment-native-input',
+  intl_segment_native_input_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 test(
   'intl-segment-property-tool',
   python,
