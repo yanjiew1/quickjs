@@ -2,6 +2,7 @@
 """Typed Intl pack sections and deterministic authored generation fixtures."""
 from pathlib import Path
 import json
+import copy
 import re
 import struct
 import sys
@@ -12,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import acquire
 import bundle
 import collation_contexts
+import check_data
 import collation_root
 import generate
 import locale_metadata
@@ -259,6 +261,37 @@ class VerifiedFixture(Sources):
 
 
 class TableTests(unittest.TestCase):
+
+    def test_generated_source_registry_and_global_preferences(self):
+        for profile in ('minimal', 'native'):
+            source = VerifiedFixture()
+            binary, manifest = generate.generate(source, profile)
+            result = check_data.verify(source, binary, manifest)
+            self.assertEqual(result['profile'], profile)
+            self.assertGreaterEqual(result['global_numbering_locales'], result['locales'])
+        # A consistent, structurally valid minimal pack can still lose an
+        # unselected locale's global preferences. The source audit must notice.
+        source = VerifiedFixture()
+        binary, manifest = generate.generate(source, 'minimal')
+        decoded = tables.validate(binary)
+        parts = dict(decoded['envelope']['sections'])
+        count, payload = parts[bundle.NUMBERING_PREFERENCES]
+        dropped = next(row[0] for row in decoded['numbering']['locales']
+                       if row[0] not in decoded['locales'])
+        rows = [payload[at:at + 20] for at in range(0, len(payload), 20)
+                if decoded['strings'][struct.unpack_from('<I', payload, at)[0]] != dropped]
+        self.assertEqual(len(rows), count - 1)
+        parts[bundle.NUMBERING_PREFERENCES] = (len(rows), b''.join(rows))
+        changed = copy.deepcopy(manifest)
+        changed['inputs']['sections'][str(bundle.NUMBERING_PREFERENCES)] = {
+            'count': len(rows), 'sha256': acquire.digest(b''.join(rows))}
+        generation = acquire.digest(acquire.json_bytes(changed['inputs']))
+        binary = bundle.pack(parts, bytes.fromhex(generation), 'minimal')
+        changed.update(generation=generation, sha256=acquire.digest(binary), bytes=len(binary))
+        with self.assertRaisesRegex(ValueError, 'global source numbering locales'):
+            check_data.verify(source, binary, changed)
+
+
     def test_currency_override_compilation_follows_profile_projection(self):
         source = VerifiedFixture()
         name = 'common/main/de.xml'

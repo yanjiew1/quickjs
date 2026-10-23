@@ -1,0 +1,18 @@
+{
+  "cldr": {
+    "archive": {
+      "format": "tar.gz",
+      "sha256": "fab8cbc6ae78c89cc0c3ae4cd061c2137dd9ab913d75a5cc226c4fbd84a0d2cc",
+      "url": "https://codeload.github.com/unicode-org/cldr/tar.gz/96e54b273d2da4ec6fbad350ba19ff23fa24a588"
+    },
+    "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+    "distribution": "git",
+    "manifest_sha256": "0508dd42955ba7d261c07eff48d263409df17b1c56f171d019f1468251655863",
+    "prerelease": false,
+    "published": "2026-10-22",
+    "release": "49",
+    "tag": "release-49"
+  },
+  "format": 1,
+  "reviewed": "2026-10-23"
+}
