@@ -100,15 +100,15 @@ Script_Extensions can include punctuation; the refinement owner must also check
 character category, attachment to a surrounding script run, and protected base
 and grapheme decisions. This native routing policy does not claim exact
 Line_Break=SA classification. [Word refinement](intl-segment-word-refinement.md)
-owns those decisions; native admission remains separate work.
+owns those decisions; the native provider admits only complete data profiles.
 
 ## Final native input owner
 
 `segment/native-input.[ch]` connects decoding, compiled rule scans, literal
 sentence suppression and native grapheme protection into final boundary vectors.
 The private pipeline connects grapheme, word and sentence preparation.
-Public native provider admission remains
-unfinished until production data and complete locale capability are validated.
+The native provider validates the production data and complete locale capability
+before exposing this pipeline through the common service interface.
 
 Selected and grapheme scans share one decoded scalar/UTF-16 owner during
 preparation. For sentence input, remove approved suppression cuts, then
@@ -147,6 +147,7 @@ Partial initialization is never published and releases all temporary owners.
 
 Authored complete/malformed packs exercise this provider through the same C
 interface, with physical allocation failure sweeps and queries after service
-and segmenter teardown. Production data/compile-time selection and JavaScript
-API admission remain a separate integration step; these tests do not establish
-complete source-language conformance or public native Segmenter availability.
+and segmenter teardown. Production selection compiles this provider for native and the Unicode-default
+provider for minimal. Common JavaScript tests exercise the binding for both;
+profile-specific tests retain deliberate source differences. The authored C
+fixtures do not independently establish source-language conformance.
