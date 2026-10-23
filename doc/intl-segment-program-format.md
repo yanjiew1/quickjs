@@ -120,3 +120,6 @@ outputs on failure. Missing sections/routes and unsupported versions, Unicode
 versions or semantic profiles return `UNSUPPORTED`; bad magic and malformed
 known-format records return `DATA_ERROR`. No source-language equivalence or
 native locale capability is inferred from a successful open.
+
+The [base executor](intl-segment-execution.md) consumes these views in two
+directional passes over an explicitly owned decoded input.

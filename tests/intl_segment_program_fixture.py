@@ -35,8 +35,17 @@ def main():
     lexical[157] = 1
     sections += [('rejecting', (1, bytes(rejecting))), ('lexical', (1, bytes(lexical)))]
     nullable = profile('GraphemeClusterBreak', ((node('epsilon'), node('epsilon'), True),))
+    directional = profile('GraphemeClusterBreak', ((char('a'), node('concat', char('b'), char('c')), False),))
+    priority = profile('GraphemeClusterBreak', ((char('a'), char('b'), False),
+                                              (node('epsilon'), node('epsilon'), True)))
+    bits = profile('GraphemeClusterBreak', tuple((char('a'), char(str(i)), False) for i in range(10)) +
+                   ((char('x'), char('9'), False),))
+    r = char('r')
+    parity = profile('GraphemeClusterBreak', ((node('concat', node('start'), r,
+                                                   node('star', node('concat', r, r))), r, False),))
     for name, source in (('empty', empty), ('sentence', sentence), ('bos', bos),
-                         ('wide', wide), ('nullable', nullable)):
+                         ('wide', wide), ('nullable', nullable), ('directional', directional),
+                         ('priority', priority), ('bits', bits), ('parity', parity)):
         kind = wire.project(source).kind
         sections.append((name, wire.encode((source,), ((0, kind, 0),), bytes(32), 2)))
     sections.append(('two', wire.encode((empty, profile()), ((0, 0, 0), (0, 1, 1)), bytes(32), 2)))

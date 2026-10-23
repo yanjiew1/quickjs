@@ -4576,6 +4576,27 @@ test(
   timeout: 30,
 )
 
+intl_segment_scan_test = executable(
+  'test_intl_segment_scan',
+  files(
+    'test_intl_segment_scan.c',
+    '../src/intl/segment/scan.c',
+    '../src/intl/segment/program.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_segment_program_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-segment-scan',
+  intl_segment_scan_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 test(
   'intl-segment-profile',
   python,
