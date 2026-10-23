@@ -287,6 +287,7 @@ executable(
   override_options: ['b_lto=false', 'b_sanitize=none'],
   build_by_default: false,
 )
+# The selected native-calendar repository tests execute this build-machine tool.
 calendar_boundary = executable(
   'calendar-boundary',
   [
@@ -300,7 +301,7 @@ calendar_boundary = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: ['b_lto=false', 'b_sanitize=none'],
-  build_by_default: false,
+  build_by_default: get_option('tests') and (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native',
 )
 
 # A validated byte pack has one C owner, generated without target execution.
