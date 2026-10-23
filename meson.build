@@ -49,6 +49,9 @@ inc = include_directories(
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
 intl_enabled = get_option('intl') != 'disabled'
+if not intl_enabled and get_option('intl_data_file') != ''
+  error('intl_data_file requires an enabled Intl profile')
+endif
 if intl_enabled
   common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER']
   if get_option('intl') == 'minimal'
@@ -365,13 +368,18 @@ windows_timezone_data = custom_target(
   build_by_default: false,
 )
 if intl_enabled
+  intl_data_path = get_option('intl_data_file')
+  if intl_data_path == ''
+    intl_data_path = 'data/intl/' + get_option('intl') + '.bin'
+  endif
   intl_data = custom_target(
     'native-intl-data',
-    input: files('data/intl/' + get_option('intl') + '.bin'),
+    input: files(intl_data_path),
     output: 'intl-data.c',
     command: [
       python,
       files('tools/intl/embed.py'),
+      '--profile', get_option('intl'),
       '--input', '@INPUT@',
       '--output', '@OUTPUT@',
     ],
