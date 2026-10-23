@@ -57,7 +57,6 @@ if intl_enabled
   if get_option('intl') == 'minimal'
     common_args += '-DCONFIG_INTL_SEGMENT_MINIMAL'
   endif
-  warning('Intl is under development; only the documented completed APIs are available')
 endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
@@ -802,7 +801,7 @@ summary(
     'Forced GC': get_option('gc_stress'),
     'Allocation iteration': get_option('malloc_iter'),
     'Sanitizers': get_option('b_sanitize'),
-    'Intl (incomplete)': get_option('intl'),
+    'Intl profile': get_option('intl'),
     'Native code generator': meson.is_cross_build(),
   },
 )
