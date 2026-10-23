@@ -230,8 +230,8 @@ still emits ASCII exponent digits without transliteration. Reviewed living
 draft `730ca2b88c305862db7be2f83c510dcca33ab48c` on 2026-10-22
 (Asia/Taipei); [issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
 tracks the discrepancy, without an adopted correction. The reference behavior
-is CLDR 49-beta4's
-[number patterns](https://github.com/unicode-org/cldr/blob/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2/docs/ldml/tr35-numbers.md#Number_Patterns)
+is CLDR 49's
+[number patterns](https://github.com/unicode-org/cldr/blob/96e54b273d2da4ec6fbad350ba19ff23fa24a588/docs/ldml/tr35-numbers.md#Number_Patterns)
 and ICU's
 [scientific formatter](https://github.com/unicode-org/icu/blob/ad484f3d6c036ba06193ac7c3bc2233a53ab68b8/icu4c/source/i18n/number_scientific.cpp).
 This choice changes glyph selection only; exponent calculation, rounding,
@@ -578,14 +578,20 @@ uses its own bundled versions; never combine newer native alias/plural data
 silently into an otherwise ICU4C profile. Record Unicode, CLDR, tzdb and model
 versions individually, since their release/version numbers are not interchangeable.
 
-For this first implementation, the user selected CLDR 49 beta to align with
-Unicode 18. Pin `release-49-beta4` (published 2026-10-12), commit
-`7cdeb9e7fac52c59f22fc7248b05f989ee5689c2`, reviewed 2026-10-19.
-This is an explicit prerelease exception to the normal release policy. Record
-the beta qualifier in generated provenance; upgrading to the final release
-requires regeneration and validation rather than silently changing the inputs.
-Use the complete release-tag source tree, since production ZIPs may omit
-records before our module-specific collectors apply their documented selection policy.
+Production data uses the official CLDR 49 common release ZIP (released
+2026-10-22), with matching release-tag commit
+`96e54b273d2da4ec6fbad350ba19ff23fa24a588`, reviewed 2026-10-23. The published
+common distribution deliberately filters lower-coverage locale data. Apply the
+module collectors' documented selection to that distribution without backfilling
+missing records from Git.
+
+The complete Git `common/` snapshot is a separate, explicitly pinned generation
+choice. Preserve all of its selected locales, test it independently and retain
+its distinct manifest/compiled fingerprints. A generated pack can be selected
+with the build-time `intl_data_file` option; the backend remains native and the
+minimal/native profile must match. Source and build directories remain separate.
+The release and Git caches have separate materialized roots, so authenticating
+one cannot invalidate an open owner of the other.
 
 ## CLDR XML collection and resolution
 
@@ -778,7 +784,7 @@ Both profiles run the complete Segmenter Test262 directory through the shared
 selection. The minimal overlay excludes only two explicitly documented cases
 that assume locales outside its inventory; native retains both cases. The profile
 distinction is observable: Unicode 18 GB9c joins a leading Indic linker with its
-consonant, whereas the pinned CLDR beta root still has the older consonant-led
+consonant, whereas the pinned CLDR root still has the older consonant-led
 rule. Tests preserve that distinction instead of treating the profiles as equal.
 
 ### Native Segmenter profile and data preparation
@@ -793,7 +799,7 @@ owner outlives its segmenters, and prepared vectors can outlive both. See
 Native preparation must keep three inputs separate: pinned Unicode break properties,
 CLDR locale rules and sentence suppressions, and separately versioned dictionary
 data. A CLDR release label does not establish the version of every break
-algorithm. In particular, the beta root's GB9c rule differs from the Unicode 18
+algorithm. In particular, the released root's GB9c rule differs from the Unicode 18
 default described above. Keep that difference explicit in the selected profile
 and its tests; do not replace the shared Unicode default silently.
 
@@ -833,7 +839,7 @@ silently. Reuse the binding's original UTF-16 positions and independent cursors.
 
 References: [ECMA-402 Segmenter internal slots](https://tc39.es/ecma402/#sec-intl.segmenter-internal-slots),
 [Unicode 18 text segmentation](https://www.unicode.org/reports/tr29/tr29-49.html),
-and the pinned [CLDR segmentation specification](https://github.com/unicode-org/cldr/blob/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2/docs/ldml/tr35-general.md#segmentations).
+and the pinned [CLDR segmentation specification](https://github.com/unicode-org/cldr/blob/96e54b273d2da4ec6fbad350ba19ff23fa24a588/docs/ldml/tr35-general.md#segmentations).
 
 DateTimeFormat preparation starts with `tools/intl/date_pattern_syntax.py`, a
 host-side TR35 date-pattern tokenizer. It preserves field symbols/run lengths
@@ -1239,7 +1245,7 @@ pieces use selected decimal formatters and the whole result is one timeZoneName
 part, without leaking number subparts. The owner and results have independent
 lifetimes, bounded output and allocation-failure cleanup.
 
-A supplied gmtZeroFormat remains authoritative. The pinned CLDR 49 beta4 data
+A supplied gmtZeroFormat remains authoritative. The pinned CLDR 49 common data
 omits this source; absent, blocked or empty zero labels use the positive numeric
 GMT template rather than inventing a language-independent standalone label.
 This follows its accompanying TR35 examples GMT+00:00 and UTC+0. Source-only
@@ -1448,7 +1454,7 @@ region, fallback and dual-offset templates as well as ListFormat/interval pairs.
 Apostrophes are literal in these substitution templates. Hour formats have their
 own lexer for two quoted hour/minute subpatterns; signs, directional marks,
 spacing and source field widths survive unchanged. Names, cities and unknown
-GMT text are literal strings. CLDR 49 beta4 has no `gmtZeroFormat`; the collector
+GMT text are literal strings. CLDR 49 common has no `gmtZeroFormat`; the collector
 does not manufacture one. Runtime zero-offset and localized digit policy belong
 to the renderer. Supplemental metazone periods, golden zones and primary-zone
 presentation maps have a separate owner; their standard/daylight offset hints
