@@ -193,8 +193,12 @@ class _Archive:
         return data
 
 
-def archive_files(archive, pin):
-    """Return the complete pinned data inventory, without extracting paths."""
+def archive_inventory(archive, pin):
+    """Inspect hash-checked archive bytes without accepting a manifest pin.
+
+    Maintenance tools use this to propose a new inventory. Normal acquisition
+    additionally checks the accepted inventory identity in archive_files().
+    """
     if len(archive) > MAX_DOWNLOAD or digest(archive) != pin['archive']['sha256']:
         raise ValueError('archive differs from source pin')
     selected = {}
@@ -232,6 +236,12 @@ def archive_files(archive, pin):
     manifest = {'archive_sha256': pin['archive']['sha256'],
                 'files': hashes, 'release': pin['release']}
     encoded = json_bytes(manifest)
+    return selected, encoded
+
+
+def archive_files(archive, pin):
+    """Return the complete pinned data inventory, without extracting paths."""
+    selected, encoded = archive_inventory(archive, pin)
     if digest(encoded) != pin['manifest_sha256']:
         raise ValueError('source inventory differs from pin')
     return selected, encoded
@@ -284,6 +294,10 @@ class Sources:
         if digest(manifest) != pin['manifest_sha256']:
             raise ValueError('source manifest differs from pin')
         self.manifest = json.loads(manifest.decode('utf-8'))
+        if (not isinstance(self.manifest, dict) or
+                self.manifest.get('release') != pin['release'] or
+                self.manifest.get('archive_sha256') != pin['archive']['sha256']):
+            raise ValueError('source manifest release/archive identity differs from pin')
         self.consumed = set()
 
     def paths(self, prefix):
