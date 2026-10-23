@@ -30,23 +30,28 @@
     }
   },
   "cldr": {
-    "release": "48.2.3",
-    "commit": "91c267402229a59e3ef2774544f001bf959e8809",
-    "released": "2026-09-30",
+    "release": "49",
+    "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+    "released": "2026-10-22",
+    "archive": {
+      "format": "zip",
+      "sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip"
+    },
     "files": {
-      "timezone.json": {
-        "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/cldr-json/cldr-bcp47/bcp47/timezone.json",
-        "sha256": "e9ba00dc084c02f427660e5009724159478efac4e1663d2d0cacab17d733a7af"
+      "timezone.xml": {
+        "path": "common/bcp47/timezone.xml",
+        "sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae"
       },
-      "windowsZones.json": {
-        "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/cldr-json/cldr-core/supplemental/windowsZones.json",
-        "sha256": "fa1ee8731ff106b66c003b55af19313a2498bd34ab4ae6261fb937c0b34f21d1"
+      "windowsZones.xml": {
+        "path": "common/supplemental/windowsZones.xml",
+        "sha256": "5f902f94106a396cb7774f0b0e1ca4dfecb686494045350c0b4935d378e3913b"
       },
       "LICENSE": {
-        "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/LICENSE",
-        "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b"
+        "path": "LICENSE",
+        "sha256": "65eb33419e22a297550a811b5b535f5e532f9a7e0114b516c0ea18afd53c3804"
       }
     }
   },
-  "reviewed": "2026-10-19"
+  "reviewed": "2026-10-23"
 }
