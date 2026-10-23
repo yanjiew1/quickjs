@@ -61,6 +61,7 @@ jobs:
         meson compile -C build-collation -j "$(getconf _NPROCESSORS_ONLN)" \
           test_intl_collation_minimal \
           intl-collation-compile \
+          intl-segment-property \
           test_intl_collation_compiled
     - name: Compare the complete pinned root collation ordering
       run: |
@@ -76,6 +77,20 @@ jobs:
             --profile "$profile" --compiler build-collation/intl-collation-compile \
             --output "$RUNNER_TEMP/collation-$profile.qjcl"
         done
+    - name: Prepare pinned native segmentation rules and dictionaries
+      run: |
+        timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
+          --cache "$RUNNER_TEMP/intl-cache"
+        timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+          --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
+          --property-tool build-collation/intl-segment-property \
+          --output "$RUNNER_TEMP/native-segmentation.qjin" \
+          --manifest "$RUNNER_TEMP/native-segmentation.json" \
+          --license "$RUNNER_TEMP/LICENSE-SEGMENT-DICTIONARIES" \
+          --notices "$RUNNER_TEMP/NOTICE-SEGMENT-DICTIONARIES"
+        cmp data/intl/LICENSE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/LICENSE-SEGMENT-DICTIONARIES"
+        cmp data/intl/NOTICE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/NOTICE-SEGMENT-DICTIONARIES"
     - name: Audit pinned XML documents and DTD attribute schema
       run: |
         timeout 120s python3 tools/intl/cldr_xml.py \
@@ -211,9 +226,13 @@ jobs:
     - name: Reproduce prepared native and minimal Intl sections
       run: |
         for profile in minimal native; do
+          segmentation=()
+          if test "$profile" = native; then
+            segmentation=(--compiled-segmentation "$RUNNER_TEMP/native-segmentation.qjin")
+          fi
           timeout --kill-after=30s 600s python3 tools/intl/generate.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
-            --profile "$profile" \
+            --profile "$profile" "${segmentation[@]}" \
             --compiled-collation "$RUNNER_TEMP/collation-$profile.qjcl" \
             --output "$RUNNER_TEMP/intl-$profile.bin" \
             --manifest "$RUNNER_TEMP/intl-$profile.json"
