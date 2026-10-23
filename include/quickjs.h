@@ -589,11 +589,6 @@ static js_force_inline JSValue JS_NewInt32(JSContext *ctx, int32_t val)
     return JS_MKVAL(JS_TAG_INT, val);
 }
 
-static js_force_inline JSValue JS_NewCatchOffset(JSContext *ctx, int32_t val)
-{
-    return JS_MKVAL(JS_TAG_CATCH_OFFSET, val);
-}
-
 static js_force_inline JSValue JS_NewInt64(JSContext *ctx, int64_t val)
 {
     JSValue v;
