@@ -1513,7 +1513,26 @@ int main(void)
     size_t count, i, en;
     assert(!qjs_intl_number_open(&allocator, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
-    assert(count == (TEST_INTL_PROFILE ? 1211 : 2));
+    {
+        QJSIntlData data;
+        size_t available = 0;
+        uint32_t index;
+        /* The service must expose every locale from the selected pack except
+           source root, preserving order even when the source distribution differs. */
+        assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, &allocator, &data));
+        assert(count == data.locales.count - 1);
+        for (index = 0; index < data.locales.count; index++) {
+            QJSIntlBytes tag;
+            uint32_t parent;
+            assert(!qjs_intl_data_locale(&data, index, &tag, &parent));
+            if (parent != UINT32_MAX) {
+                assert(available < count && tags[available].length == tag.length &&
+                       !memcmp(tags[available].data, tag.data, tag.length));
+                available++;
+            }
+        }
+        assert(available == count);
+    }
     en = find(tags, count, "en");
     test_system_capabilities(&allocator, service, en, count);
     test_formats(&allocator, service, tags, count);
