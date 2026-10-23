@@ -35,7 +35,8 @@
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 int JS_ToBoolFree(JSRuntime *rt, JSValue val);
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
-JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val, int argc,
+                              JSValueConst *argv);
 JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
 
 #endif
