@@ -29,6 +29,96 @@
 #include "oom-allocator.h"
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
+#include "../src/quickjs/internal/string.h"
+
+static void rope_print_write(void *opaque, const char *buf, size_t len)
+{
+    DynBuf *output = opaque;
+    dbuf_put(output, (const uint8_t *)buf, len);
+}
+
+/* The representation and binary API cannot be checked from JavaScript. */
+static void test_rope_serialization(void)
+{
+    static const char source[] = "'a'.repeat(10000) + '\\u0100\\u0000\\ud800'";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue rope, loaded, flat, holder;
+    JSMemoryUsage before, live;
+    uint8_t *buf;
+    size_t len;
+    DynBuf output;
+    JSPrintValueOptions options;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_ComputeMemoryUsage(rt, &before);
+    rope = JS_Eval(ctx, source, sizeof(source) - 1, "rope.js", JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsStringRope(rope));
+    assert(JS_VALUE_GET_TAG(rope) == JS_TAG_STRING_ROPE);
+    dbuf_init(&output);
+    JS_PrintValueSetDefaultOptions(&options);
+    options.raw_dump = TRUE;
+    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    dbuf_putc(&output, 0);
+    assert(!dbuf_error(&output));
+    assert(strstr((const char *)output.buf, "[rope len=10003 depth=1]"));
+    dbuf_free(&output);
+    dbuf_init(&output);
+    options.raw_dump = FALSE;
+    options.max_string_length = 3;
+    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    dbuf_putc(&output, 0);
+    assert(!dbuf_error(&output));
+    assert(strstr((const char *)output.buf, "aaa"));
+    assert(strstr((const char *)output.buf, "10000 more characters"));
+    dbuf_free(&output);
+    dbuf_init(&output);
+    options.max_string_length = 10003;
+    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    dbuf_putc(&output, 0);
+    assert(!dbuf_error(&output));
+    assert(strstr((const char *)output.buf, "\xc4\x80\\u0000\\ud800"));
+    dbuf_free(&output);
+    /* Normal object properties participate in string memory accounting. */
+    holder = JS_NewObject(ctx);
+    assert(!JS_IsException(holder));
+    assert(JS_SetPropertyStr(ctx, holder, "savedRope", rope) >= 0);
+    JS_ComputeMemoryUsage(rt, &live);
+    assert(live.str_size >= before.str_size + sizeof(JSStringRope));
+    rope = JS_GetPropertyStr(ctx, holder, "savedRope");
+    buf = JS_WriteObject(ctx, &len, rope, 0);
+    assert(buf && len);
+    loaded = JS_ReadObject(ctx, buf, len, 0);
+    js_free(ctx, buf);
+    assert(JS_IsFlatString(loaded));
+    flat = JS_ToString(ctx, rope);
+    assert(JS_IsFlatString(flat));
+    assert(JS_VALUE_GET_STRING(flat)->len == 10003);
+    assert(js_string_eq(JS_VALUE_GET_STRING(loaded), JS_VALUE_GET_STRING(flat)));
+    assert(string_rope_get(rope, 10000) == 0x100);
+    assert(string_rope_get(rope, 10001) == 0);
+    assert(string_rope_get(rope, 10002) == 0xd800);
+    JS_FreeValue(ctx, loaded);
+    JS_FreeValue(ctx, flat);
+    JS_FreeValue(ctx, rope);
+    {
+        static const char dag_source[] =
+            "(function() { let s = 'x'.repeat(9000);"
+            "for (let i = 0; i < 16; i++) s = s + s; return s; })()";
+        JSValue result = JS_Eval(ctx, dag_source, sizeof(dag_source) - 1,
+                                 "shared-rope.js", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(result));
+        assert(JS_IsStringRope(result));
+        assert(JS_SetPropertyStr(ctx, holder, "sharedRope", result) >= 0);
+        JS_ComputeMemoryUsage(rt, &live);
+        assert(live.str_size < before.str_size + 1024 * 1024);
+    }
+    JS_FreeValue(ctx, holder);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
 
 static void test_bytecode_roundtrip(const char *source)
 {
@@ -513,6 +603,7 @@ static void test_writer_allocation_failure(int kind)
 
 int main(void)
 {
+    test_rope_serialization();
     test_bytecode_roundtrip(
         "var fn = function self() {"
         " [self] = [0]; (() => { [self] = [1]; })(); return self; };"
