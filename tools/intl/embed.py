@@ -5,6 +5,7 @@ from pathlib import Path
 
 from acquire import atomic_write
 from tables import validate
+import bundle
 
 
 def render(binary):
@@ -17,6 +18,11 @@ def render(binary):
              '#if defined(__has_attribute)', '#if __has_attribute(nonstring)',
              '__attribute__((nonstring))', '#endif', '#endif',
              'const uint8_t qjs_intl_native_bytes[%d] =' % len(binary)]
+    if bundle.SEGMENT_DICTIONARIES in bundle.unpack(binary)['sections']:
+        lines[3:3] = [
+            ' * Dictionary data derived from ICU; see data/intl/LICENSE-SEGMENT-DICTIONARIES',
+            ' * and data/intl/NOTICE-SEGMENT-DICTIONARIES for complete source attributions.',
+        ]
     # A string initializer avoids a compiler AST node per byte of a large pack.
     # C's explicit array bound omits only the implicit literal terminator; real
     # embedded/trailing zero bytes remain part of the exact binary object.

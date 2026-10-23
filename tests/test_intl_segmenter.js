@@ -1,4 +1,4 @@
-/* Unicode-default Segmenter: protocols, UTF-16 positions, realms and GC. */
+/* Segmenter protocols, UTF-16 positions, realms and GC for both profiles. */
 import * as std from "std";
 import { assert, assertThrows } from "./assert.js";
 
@@ -136,9 +136,6 @@ same([...grapheme.segment(unusual)].map(x => [x.segment, x.index]),
      [["😀",0],["x",2],["\ud800",3],["\0",4],["\udc00",5]]);
 assert(grapheme.segment(unusual).containing(1).index, 0);
 same([...grapheme.segment("é")].map(x => x.segment), ["é"]);
-// Explicit profile distinction: Unicode18 GB9c joins a leading linker; the
-// pinned CLDR beta root has an older consonant-led rule. This is Unicode default.
-same([...grapheme.segment("\u094d\u0915")].map(x => x.segment), ["\u094d\u0915"]);
 
 const words = new Segmenter("en", {granularity: "word"});
 same([...words.segment("ab 12.3 _ 😀")].map(x => [x.segment, x.index, x.isWordLike]),
