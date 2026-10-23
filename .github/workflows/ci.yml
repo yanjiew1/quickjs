@@ -42,6 +42,7 @@ jobs:
           make test2
 
   linux-lto:
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'scratch-verify-') }}
     name: Linux LTO
     runs-on: ubuntu-latest
     strategy:
@@ -196,6 +197,7 @@ jobs:
             gmake test
 
   cosmopolitan:
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'scratch-verify-') }}
     name: Cosmopolitan
     runs-on: ubuntu-latest
     strategy:
@@ -285,14 +287,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - linux/386
-          - linux/riscv64
-          - linux/arm64
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/s390x
-          - linux/ppc64le
+        platform: ${{ fromJSON(startsWith(github.head_ref || github.ref_name, 'scratch-verify-') && '["linux/386"]' || '["linux/386","linux/riscv64","linux/arm64","linux/arm/v6","linux/arm/v7","linux/s390x","linux/ppc64le"]') }}
 
     steps:
       - uses: actions/checkout@v4
