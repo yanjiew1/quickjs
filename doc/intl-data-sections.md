@@ -802,8 +802,8 @@ collation algorithms or source fallback between the representations.
 
 Optional self-contained segmentation dictionaries, with no shared string or
 locale indexes. Directory count is the number of dictionary families. The
-host codec and private C reader support this prepared section; production
-profiles do not yet include it. See the [dictionary format](intl-segment-dictionary-format.md) for
+host codec and private C reader support this prepared section. The production
+native profile includes all five families; minimal excludes the section. See the [dictionary format](intl-segment-dictionary-format.md) for
 its versioned descriptors, array widths, suffix sharing and validation rules.
 Sources: `tools/intl/segment_dictionary_tables.py`;
 `src/intl/segment/dictionary.[ch]`.
@@ -813,8 +813,8 @@ Sources: `tools/intl/segment_dictionary_tables.py`;
 Optional segmentation rule programs, refinement policy and shared-locale
 routes. Directory count is the number of programs. This prepared section does
 not establish native Segmenter coverage; dictionary, suppression, word-status
-and grapheme requirements remain explicit. Production profiles do not yet
-include it. See the [program format](intl-segment-program-format.md) for the
+and grapheme requirements remain explicit. The production native profile
+includes every locale/granularity route; minimal excludes the section. See the [program format](intl-segment-program-format.md) for the
 versioned layout, canonical numbering, resource gates and validation contract.
 Source: `tools/intl/segment_program_tables.py`.
 The private C owner `src/intl/segment/program.[ch]` validates these arrays
@@ -823,8 +823,8 @@ against the shared-data locale inventory before publishing borrowed views.
 ## 41 SEGMENT_SUPPRESSIONS
 
 Optional complete sentence suppression lists and shared-locale routes. Directory
-count is the number of lists, including explicit empty policies. Production
-profiles do not yet include this section. See the
+count is the number of lists, including explicit empty policies. The production
+native profile includes complete locale routes; minimal excludes this section. See the
 [suppression format](intl-segment-suppression-format.md) for exact directories,
 literal graph arrays, missing/empty distinctions and resource gates.
 Source: `tools/intl/segment_suppression_tables.py`.

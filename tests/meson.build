@@ -4185,8 +4185,11 @@ if intl_enabled
     'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
   }
 endif
-if get_option('intl') == 'minimal'
-  js_tests += {'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js']}
+if intl_enabled
+  js_tests += {
+    'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js'],
+    'intl-segmenter-profile': ['-m', 'tests/test_intl_segmenter_profile.js', get_option('intl')],
+  }
 endif
 if intl_enabled
   test(
