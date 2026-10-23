@@ -3,7 +3,7 @@
 #define QUICKJS_TEMPORAL_TIME_ZONE_H
 
 #include "types.h"
-#include "../timezone/timezone.h"
+#include "../timezone/identifier.h"
 
 typedef enum QJSTemporalDisambiguation {
     QJS_TEMPORAL_COMPATIBLE,
@@ -14,12 +14,7 @@ typedef enum QJSTemporalDisambiguation {
 
 /* Named handles borrow immutable backend data. Offset zones are whole
    minutes; named offsets retain historical seconds. No record owns memory. */
-typedef struct QJSTemporalZone {
-    char identifier[256];
-    int64_t offset_nanoseconds;
-    int is_offset;
-    const QJSTimeZone *named;
-} QJSTemporalZone;
+typedef QJSTimeZoneIdentifier QJSTemporalZone;
 
 int qjs_temporal_zone_parse(QJSTemporalZone *result,
                             const char *identifier, size_t length);
