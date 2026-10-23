@@ -426,6 +426,63 @@ static void daylight_information(void)
     assert(info.offset_seconds == 3600 && info.is_dst);
 }
 
+static void constant_information(void)
+{
+    Fixture f;
+    QJSTzifState state;
+    int64_t times[] = {-10, 10};
+    unsigned char indices[] = {1, 0};
+    int constant = 99;
+    fixture(&f, '3', times, indices, 2, 0, 0, "");
+    state = parse(&f);
+    /* Equal endpoint offsets/flags do not prove a constant interior. */
+    assert(!qjs_tzif_info_is_constant(&state, -20, 20, &constant) && !constant);
+    assert(!qjs_tzif_info_is_constant(&state, -10, 9, &constant) && constant);
+    assert(!qjs_tzif_info_is_constant(&state, -10, 10, &constant) && !constant);
+    assert(!qjs_tzif_info_is_constant(&state, 10, 20, &constant) && constant);
+    assert(!qjs_tzif_info_is_constant(&state, -10, -10, &constant) && constant);
+    none(&state, -20, 1, 0); /* Offset-only transition semantics stay unchanged. */
+    f.bytes[f.types + 10] = 0; /* Abbreviation-only change. */
+    state = parse(&f);
+    assert(!qjs_tzif_info_is_constant(&state, -20, 20, &constant) && constant);
+    fixture(&f, '3', NULL, NULL, 0, 3600, 3600, "STD-1DST-1,M3.2.0,M11.1.0");
+    state = parse(&f);
+    assert(!qjs_tzif_info_is_constant(&state, 1704067200, 1735689600, &constant) && !constant);
+    assert(!qjs_tzif_info_is_constant(&state, 1719792000, 1722470400, &constant) && constant);
+    none(&state, 1704067200, 1, 0);
+    {
+        int64_t at = 0;
+        unsigned char dst = 1;
+        fixture(&f, '3', &at, &dst, 1, 0, 0, "UTC0");
+        state = parse(&f);
+        assert(!qjs_tzif_info_is_constant(&state, 0, 1, &constant) && !constant);
+        assert(!qjs_tzif_info_is_constant(&state, 1, 2, &constant) && constant);
+        none(&state, 0, 1, 0);
+    }
+    fixture(&f, '3', NULL, NULL, 0, 0, 3600, "STD0DST-1,M1.1.0/0,365/145");
+    state = parse(&f);
+    assert(!qjs_tzif_info_is_constant(&state, INT64_C(1736121601), INT64_C(2588198399), &constant) && constant);
+    assert(!qjs_tzif_info_is_constant(&state, INT64_C(1736121601), INT64_C(2588198400), &constant) && !constant);
+    {
+        int64_t at = 0;
+        unsigned char standard = 0;
+        fixture(&f, '3', &at, &standard, 1, 0, 0, "STD0DST0,0/0,J365/25");
+        state = parse(&f);
+        assert(state.future == 3);
+        assert(!qjs_tzif_info_is_constant(&state, 0, 1, &constant) && !constant);
+        assert(!qjs_tzif_info_is_constant(&state, 1, 2, &constant) && constant);
+        fixture(&f, '3', &at, &standard, 1, 0, 0, "UTC0");
+        state = parse(&f);
+        assert(!qjs_tzif_info_is_constant(&state, -QJS_TZ_OFFSET_LIMIT, QJS_TZ_OFFSET_LIMIT, &constant) && constant);
+    }
+    constant = 99;
+    assert(qjs_tzif_info_is_constant(&state, 1, 0, &constant) == QJS_TZ_RANGE && constant == 99);
+    assert(qjs_tzif_info_is_constant(&state, -QJS_TZ_OFFSET_LIMIT - 1, 0, &constant) == QJS_TZ_RANGE && constant == 99);
+    assert(qjs_tzif_info_is_constant(&state, 0, QJS_TZ_OFFSET_LIMIT + 1, &constant) == QJS_TZ_RANGE && constant == 99);
+    assert(qjs_tzif_info_is_constant(NULL, 0, 1, &constant) == QJS_TZ_DATA && constant == 99);
+    assert(qjs_tzif_info_is_constant(&state, 0, 1, NULL) == QJS_TZ_DATA);
+}
+
 int main(void)
 {
     framing();
@@ -434,5 +491,6 @@ int main(void)
     local_times();
     three_offsets();
     daylight_information();
+    constant_information();
     return 0;
 }
