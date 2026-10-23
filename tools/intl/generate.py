@@ -55,6 +55,7 @@ import plural_rules
 import plural_tables
 import relative_patterns
 import relative_tables
+import segment_bundle
 import duration_patterns
 import duration_tables
 import tables
@@ -65,9 +66,11 @@ import unit_grammar_tables
 from source_inputs import Inputs
 
 
-def generate(sources, profile, compiled_collation=None):
+def generate(sources, profile, compiled_collation=None, compiled_segmentation=None):
     if profile not in bundle.PROFILES:
         raise ValueError('unknown native Intl data profile')
+    if compiled_segmentation is not None and profile != 'native':
+        raise ValueError('compiled segmentation requires the native profile')
     inputs_read = Inputs(sources)
     # Authored fixtures can omit optional service sections. The production CLI
     # requires the already compiled profile; generation never invents a fallback.
@@ -78,6 +81,11 @@ def generate(sources, profile, compiled_collation=None):
 
     inputs_read.read('LICENSE')
     graph, fallback_aliases = availability.complete(parents.load(inputs_read))
+    tags = availability.profile_locales(graph, profile)
+    segmentation_sections, segmentation_inputs = {}, None
+    if compiled_segmentation is not None:
+        segmentation_sections, segmentation_inputs = segment_bundle.pair(
+            inputs_read, sources.pin, graph, tags, compiled_segmentation)
     locale_data = locale_metadata.collect(inputs_read, graph)
     preference_data = preferences.collect(inputs_read)
     numbering_data = numbering.collect(inputs_read, graph)
@@ -108,7 +116,6 @@ def generate(sources, profile, compiled_collation=None):
     lists = list_patterns.collect(inputs_read, graph)
     # Only formatter locale rows are reduced for minimal. Global identity,
     # preferences and timezone metadata retain their full source coverage.
-    tags = availability.profile_locales(graph, profile)
     selected_tags = set(tags)
     symbol_data['rows'] = tuple(row for row in symbol_data['rows'] if row[0] in selected_tags)
     pattern_data['rows'] = tuple(row for row in pattern_data['rows'] if row[0] in selected_tags)
@@ -202,6 +209,7 @@ def generate(sources, profile, compiled_collation=None):
     if compiled_section is not None:
         sections[bundle.COMPILED_COLLATION] = compiled_section
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
+    sections.update(segmentation_sections)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -209,6 +217,8 @@ def generate(sources, profile, compiled_collation=None):
               'formatter_fallbacks': tuple(row for row in fallback_aliases if row[0] in selected_tags),
               'sections': {str(identity): {'count': count, 'sha256': acquire.digest(data)}
                            for identity, (count, data) in sorted(sections.items())}}
+    if segmentation_inputs is not None:
+        inputs['segmentation'] = segmentation_inputs
     generation = bytes.fromhex(acquire.digest(acquire.json_bytes(inputs)))
     binary = bundle.pack(sections, generation, profile)
     tables.validate(binary)
@@ -233,11 +243,18 @@ def main():
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--profile', choices=tuple(bundle.PROFILES), required=True)
     parser.add_argument('--compiled-collation', type=Path, required=True)
+    parser.add_argument('--compiled-segmentation', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     args = parser.parse_args()
+    if args.profile == 'native' and args.compiled_segmentation is None:
+        parser.error('--compiled-segmentation is required for the native profile')
+    if args.profile != 'native' and args.compiled_segmentation is not None:
+        parser.error('--compiled-segmentation applies only to the native profile')
     binary, manifest = generate(acquire.Sources(args.sources), args.profile,
-                                args.compiled_collation.read_bytes())
+                                args.compiled_collation.read_bytes(),
+                                args.compiled_segmentation.read_bytes()
+                                if args.compiled_segmentation is not None else None)
     acquire.atomic_write(args.output, binary)
     acquire.atomic_write(args.manifest, acquire.json_bytes(manifest))
 
