@@ -73,6 +73,12 @@ int qjs_timezone_backend_info(const QJSTimeZoneRules *rules, int64_t seconds,
     return qjs_tzif_info(&rules->tzif, seconds, result);
 }
 
+int qjs_timezone_backend_info_is_constant(const QJSTimeZoneRules *rules, int64_t first,
+                                          int64_t last, int *constant)
+{
+    return qjs_tzif_info_is_constant(&rules->tzif, first, last, constant);
+}
+
 int qjs_timezone_backend_candidates(const QJSTimeZoneRules *rules, int64_t wall,
                                    QJSTimeZoneVisit *visit, void *opaque,
                                    size_t *count, int32_t *gap_before,
