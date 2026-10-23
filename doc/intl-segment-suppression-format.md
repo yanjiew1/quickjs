@@ -7,6 +7,12 @@ belong to `scalar_trie_tables.py`. List inheritance and source provenance remain
 with the preparation stage described in [sentence suppressions](intl-segment-suppressions.md).
 Presence alone establishes no executable Segmenter capability.
 
+The private C reader is `src/intl/segment/suppression-data.[ch]`. It opens
+against validated shared QJIN data, retains no allocation and publishes copied
+borrowed views only after the complete section validates. The immutable pack
+bytes must outlive these views. Queries allocate nothing; temporary validation
+scratch is released on both success and failure.
+
 All integers are unsigned little-endian. Read bytes explicitly, without casting
 native structures. The section is at most 32 MiB.
 

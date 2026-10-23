@@ -4695,6 +4695,33 @@ test(
   timeout: 30,
 )
 
+intl_segment_suppression_fixture = custom_target(
+  'intl-segment-suppression-authored-fixture',
+  output: 'intl-segment-suppression-authored-fixture.c',
+  command: [python, files('intl_segment_suppression_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files('test_intl_segment_suppression_tables.py'),
+)
+intl_segment_suppression_test = executable(
+  'test_intl_segment_suppression',
+  files(
+    'test_intl_segment_suppression.c',
+    '../src/intl/segment/suppression-data.c',
+    '../src/intl/segment/literal-graph.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_segment_suppression_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-segment-suppression-reader',
+  intl_segment_suppression_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 test(
   'intl-segment-property-tool',
   python,

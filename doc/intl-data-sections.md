@@ -828,3 +828,4 @@ profiles do not yet include this section. See the
 [suppression format](intl-segment-suppression-format.md) for exact directories,
 literal graph arrays, missing/empty distinctions and resource gates.
 Source: `tools/intl/segment_suppression_tables.py`.
+The private C owner is `src/intl/segment/suppression-data.[ch]`.
