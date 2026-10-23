@@ -46,6 +46,14 @@ python3 tools/intl/acquire.py --cache /path/to/intl-cache \
   --source-pin tools/intl/pin-git.json
 ```
 
+An optional independent check compares that authenticated snapshot with an
+actual release checkout, including Git blob IDs and edited working-tree files:
+
+```sh
+python3 tools/intl/check_git.py --repository /path/to/cldr-checkout \
+  --sources /path/to/intl-cache/cldr-49-git
+```
+
 Pass the same `--source-pin` to `collation_prepare.py`, `segment_prepare.py` and
 `generate.py`, with `/path/to/intl-cache/cldr-49-git` as `--sources`. It determines
 the complete selected registry before assigning compiled locale IDs. Dictionary
