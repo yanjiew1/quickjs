@@ -38,8 +38,8 @@ in the timezone pin. The IANA rule release remains independently selected.
 Choose a cache on a filesystem with sufficient space:
 
 ```sh
-python3 tools/timezone/acquire.py --cache /path/to/timezone-cache
-python3 tools/timezone/acquire.py --cache /path/to/timezone-cache --offline
+python3 tools/data/acquire.py timezone --cache /path/to/timezone-cache
+python3 tools/data/acquire.py timezone --cache /path/to/timezone-cache --offline
 ```
 
 Acquisition uses HTTPS, verifies the release archive's SHA-256, limits download
@@ -103,7 +103,7 @@ separately validates complete TZif contents before embedding or use.
 After acquisition, generate the checked-in pack and its audit manifest:
 
 ```sh
-python3 tools/timezone/generate.py \
+python3 tools/data/generate.py timezone \
   --cache /path/to/timezone-cache \
   --output /path/to/build/timezone-data.bin \
   --manifest /path/to/build/timezone-data-manifest.json
