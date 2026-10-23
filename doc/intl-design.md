@@ -761,25 +761,34 @@ availability. Its plain C contract lives in `src/intl/segment/segment.h`; the
 Unicode-default backend delegates grapheme, word and sentence boundaries to the
 shared Unicode 18 algorithms. It does not claim to execute CLDR break rules or
 dictionary tailoring. Minimal word-like status means the segment contains a
-Unicode Letter or Decimal_Number. Native exposure waits for those additional
-rules and language-specific data, rather than advertising incomplete coverage.
+Unicode Letter or Decimal_Number. Native uses the same status policy after
+its CLDR rule, dictionary and sentence-suppression refinements.
 
 Boundaries and segment data refer to the original UTF-16 input, including NUL,
 lone surrogates and indices inside pairs. `containing()` walks known boundaries
 from zero; the shared Unicode forward APIs cannot start at arbitrary code-unit
 indices. Each iterator has its own cursor. Bindings retain one shared immutable
 input conversion and separate Segmenter references, so dropping a Segments
-wrapper does not invalidate an iterator. No eager boundary array is required.
+wrapper does not invalidate an iterator. Minimal needs no eager boundary
+array. Native prepares an immutable final index/status vector once per input;
+queries allocate nothing and use binary search for arbitrary containing indexes.
 
 Repository tests cover protocols, realms, coercion, GC and allocation failures.
-The minimal Test262 overlay enables the whole Segmenter directory, except two
-explicitly documented cases that assume locales outside this profile. Native
-acceptance will retain those cases and add CLDR/dictionary coverage. The profile
+Both profiles run the complete Segmenter Test262 directory through the shared
+selection. The minimal overlay excludes only two explicitly documented cases
+that assume locales outside its inventory; native retains both cases. The profile
 distinction is observable: Unicode 18 GB9c joins a leading Indic linker with its
 consonant, whereas the pinned CLDR beta root still has the older consonant-led
 rule. Tests preserve that distinction instead of treating the profiles as equal.
 
-### Native Segmenter data preparation
+### Native Segmenter profile and data preparation
+
+Native uses the full completed locale inventory, excluding source root, after
+checking all three granularity routes, complete suppression policies and five
+dictionary families. Backend choice remains compile-time. The service/configuration
+owner outlives its segmenters, and prepared vectors can outlive both. See
+[execution and ownership](intl-segment-execution.md) and the
+[production archive](intl-segment-archive.md) for the data/reader boundaries.
 
 Native preparation must keep three inputs separate: pinned Unicode break properties,
 CLDR locale rules and sentence suppressions, and separately versioned dictionary
