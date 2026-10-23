@@ -2,6 +2,7 @@
  * This profile does not execute CLDR break rules or dictionary tailoring.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "segment.h"
+#include "minimal-inline.h"
 #include "../../cutils/cutils.h"
 #include "../../unicode/libunicode.h"
 #include "../../unicode/grapheme.h"
@@ -12,10 +13,6 @@
 
 struct QJSIntlSegmentService {
     QJSIntlAllocator allocator;
-};
-struct QJSIntlSegmenter {
-    QJSIntlAllocator allocator;
-    QJSIntlGranularity granularity;
 };
 
 static const QJSIntlBytes available[] = {{"en", 2}, {"en-US", 5}};
@@ -79,40 +76,50 @@ void qjs_intl_segmenter_close(QJSIntlSegmenter *segmenter)
         segmenter->allocator.free(segmenter->allocator.opaque, segmenter);
 }
 
-static int valid_input(const QJSIntlSegmenter *segmenter, const QJSIntlUTF16 *input,
-                       QJSIntlSegment *out)
+QJSIntlStatus (qjs_intl_segment_input_prepare)(const QJSIntlSegmenter *segmenter, const QJSIntlUTF16 *text,
+                                             QJSIntlSegmentInput *out)
+{
+    return qjs_intl_segment_input_prepare_inline(segmenter, text, out);
+}
+
+void (qjs_intl_segment_input_clear)(QJSIntlSegmentInput *input)
+{
+    qjs_intl_segment_input_clear_inline(input);
+}
+
+static int valid_input(const QJSIntlSegmentInput *input, QJSIntlSegment *out)
 {
     if (out)
         memset(out, 0, sizeof(*out));
-    return segmenter && input && out && (input->data || !input->length) &&
-        input->length <= SIZE_MAX / sizeof(*input->data);
+    return input && out && (unsigned int)input->granularity <= QJS_INTL_SEGMENT_SENTENCE &&
+        (input->text.data || !input->text.length) &&
+        input->text.length <= SIZE_MAX / sizeof(*input->text.data);
 }
 
-QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmenter *segmenter,
-                                    const QJSIntlUTF16 *input, size_t start, QJSIntlSegment *out)
+QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmentInput *input, size_t start, QJSIntlSegment *out)
 {
     size_t end, at;
-    if (!valid_input(segmenter, input, out) || start > input->length)
+    if (!valid_input(input, out) || start > input->text.length)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (start == input->length)
+    if (start == input->text.length)
         return QJS_INTL_OK;
-    if (segmenter->granularity == QJS_INTL_SEGMENT_GRAPHEME)
-        end = unicode_grapheme_next(input->data, input->length, start);
-    else if (segmenter->granularity == QJS_INTL_SEGMENT_WORD)
-        end = unicode_word_next(input->data, input->length, start);
+    if (input->granularity == QJS_INTL_SEGMENT_GRAPHEME)
+        end = unicode_grapheme_next(input->text.data, input->text.length, start);
+    else if (input->granularity == QJS_INTL_SEGMENT_WORD)
+        end = unicode_word_next(input->text.data, input->text.length, start);
     else
-        end = unicode_sentence_next(input->data, input->length, start);
-    if (end <= start || end > input->length)
+        end = unicode_sentence_next(input->text.data, input->text.length, start);
+    if (end <= start || end > input->text.length)
         return QJS_INTL_DATA_ERROR;
     *out = (QJSIntlSegment){start, end, 1, 0};
-    if (segmenter->granularity == QJS_INTL_SEGMENT_WORD) {
+    if (input->granularity == QJS_INTL_SEGMENT_WORD) {
         /* Minimal policy: a word-like segment contains a Letter or Nd. This
            includes Han/Hiragana/complex-context letters without treating a
            punctuation-only underscore or emoji as a word. Native dictionary
            classification can replace this policy behind the same contract. */
         at = start;
         while (at < end) {
-            uint32_t c = unicode_utf16_next(input->data, end, &at);
+            uint32_t c = unicode_utf16_next(input->text.data, end, &at);
             if (lre_is_letter(c) || lre_is_decimal_digit(c)) {
                 out->is_word_like = 1;
                 break;
@@ -122,20 +129,19 @@ QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmenter *segmenter,
     return QJS_INTL_OK;
 }
 
-QJSIntlStatus qjs_intl_segment_containing(const QJSIntlSegmenter *segmenter,
-                                          const QJSIntlUTF16 *input, size_t index,
+QJSIntlStatus qjs_intl_segment_containing(const QJSIntlSegmentInput *input, size_t index,
                                           QJSIntlSegment *out)
 {
     QJSIntlStatus status;
     size_t start = 0;
-    if (!valid_input(segmenter, input, out))
+    if (!valid_input(input, out))
         return QJS_INTL_INVALID_ARGUMENT;
-    if (index >= input->length)
+    if (index >= input->text.length)
         return QJS_INTL_OK;
     /* The default algorithms require known boundaries, so never start them at
        an arbitrary index inside a surrogate pair, cluster or word. */
     do {
-        status = qjs_intl_segment_next(segmenter, input, start, out);
+        status = qjs_intl_segment_next(input, start, out);
         if (status)
             return status;
         start = out->end;
