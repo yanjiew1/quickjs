@@ -5,6 +5,43 @@
 #include "data.h"
 #include <string.h>
 
+int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out)
+{
+    const char *first = NULL, *second = NULL;
+    switch (calendar) {
+    case QJS_CAL_BUDDHIST: first = "be"; break;
+    case QJS_CAL_COPTIC: case QJS_CAL_HEBREW: first = "am"; break;
+    case QJS_CAL_ETHIOAA: first = "aa"; break;
+    case QJS_CAL_ETHIOPIC: first = "am"; second = "aa"; break;
+    case QJS_CAL_GREGORY: first = "ce"; second = "bce"; break;
+    case QJS_CAL_INDIAN: first = "shaka"; break;
+    case QJS_CAL_ISLAMIC_CIVIL: case QJS_CAL_ISLAMIC_TBLA:
+    case QJS_CAL_ISLAMIC_UMALQURA: first = "ah"; second = "bh"; break;
+    case QJS_CAL_PERSIAN: first = "ap"; break;
+    case QJS_CAL_ROC: first = "roc"; second = "broc"; break;
+    case QJS_CAL_JAPANESE: {
+        size_t count = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        if (index < count) {
+            QJSCalendarEra era;
+            int error = qjs_calendar_data_japanese_era(&qjs_native_calendar_data, index, &era);
+            if (error)
+                return error;
+            *out = era.name;
+            return QJS_CAL_OK;
+        }
+        index -= count;
+        first = "ce";
+        second = "bce";
+        break;
+    }
+    default: break;
+    }
+    if (!first || index > 1 || (index && !second))
+        return QJS_CAL_UNSUPPORTED;
+    *out = index ? second : first;
+    return QJS_CAL_OK;
+}
+
 void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
                      QJSCalendarDate *date)
 {
