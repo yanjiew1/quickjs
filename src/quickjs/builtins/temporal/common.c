@@ -32,7 +32,11 @@
 
 int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result)
 {
-    return js_default_time_zone_get(ctx, result);
+    int error = js_default_time_zone_get(ctx, result);
+    return error == QJS_TZ_MEMORY ? QJS_TEMPORAL_ERROR_MEMORY :
+           error == QJS_TZ_RANGE ? QJS_TEMPORAL_ERROR_RANGE :
+           error == QJS_TZ_UNSUPPORTED ? QJS_TEMPORAL_ERROR_UNSUPPORTED :
+           error ? QJS_TEMPORAL_ERROR_BACKEND : 0;
 }
 
 size_t js_temporal_memory_usage(JSValueConst object, JSValue *owned_value)
