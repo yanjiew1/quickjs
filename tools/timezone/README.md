@@ -1,10 +1,11 @@
 # Native timezone source inputs
 
-`pin.json` selects released **IANA tzdata 2026e** and **CLDR JSON 48.2.3**.
+`pin.json` selects released **IANA tzdata 2026e** and **CLDR 49 common release XML**.
 The IANA Git tag resolves to `039ef27cc5f062a2055cb67435d6d71adbefd27d`.
-CLDR is pinned to `91c267402229a59e3ef2774544f001bf959e8809`.
-The CLDR JSON patch release includes timezone changes for tzdata 2026e;
-the older CLDR XML 48.2 release does not include all those changes.
+CLDR is pinned to `96e54b273d2da4ec6fbad350ba19ff23fa24a588`.
+The vendored BCP47 aliases and Windows mappings are exact members of the
+authenticated official common archive; its URL/hash and member paths are recorded
+in the timezone pin. The IANA rule release remains independently selected.
 
 ## Acquisition
 
@@ -22,22 +23,22 @@ only the named regular files, validates the complete source set before writing,
 and never follows archive paths or symlinks. Existing verified inputs need no
 network. Updating a release requires an explicit pin review.
 
-The cache contains `tz-2026e/` and its archive. Raw CLDR timezone metadata is
+The cache contains `tz-2026e/` and its archive. Raw CLDR 49 common-release timezone metadata is
 versioned under `data/timezone/sources/cldr`, with the Unicode license. Acquisition verifies those
-vendored files without downloading duplicate cache copies. `timezone.json`
-supplies geographic alias groups; `windowsZones.json` supplies
+vendored files without downloading duplicate cache copies. `timezone.xml`
+supplies geographic alias groups; `windowsZones.xml` supplies
 Windows-key/territory mappings. These are generator inputs, never runtime
-JSON dependencies. The native backend's final data is a single binary pack.
+XML dependencies. The native backend's final data is a single binary pack.
 
 Normal builds do not download data, read installed timezone files, or run
 this acquisition script. Pinned zic sources are available only for build-host
 data generation; target runtime code does not link tzcode.
 
-Sources reviewed on 2026-10-19:
+Sources reviewed on 2026-10-23:
 
 - [IANA release archive](https://www.iana.org/time-zones/releases/2026e)
-- [CLDR 48.2.3 release notes](https://cldr.unicode.org/downloads/cldr-48)
-- [Released CLDR JSON sources](https://github.com/unicode-org/cldr-json/tree/48.2.3)
+- [CLDR 49 release notes](https://cldr.unicode.org/downloads/cldr-49)
+- [Official CLDR common archive](https://unicode.org/Public/cldr/49/cldr-common-49.zip)
 
 Run the fast offline acquisition contracts with:
 
@@ -118,9 +119,9 @@ date-line gaps and distant future recurrence. The test uses only embedded data.
 
 ## Windows host mappings
 
-`windows.py` converts the released `windowsZones.json` into a compact WTZ1
+`windows.py` converts the released `windowsZones.xml` into a compact WTZ1
 binary table with interned strings and 16-bit indices. Meson emits that binary
-as its own C translation unit; runtime code never parses JSON. This host
+as its own C translation unit; runtime code never parses XML. This host
 identity table is separate from the single QJTZ rule pack and requires no
 additional runtime data file. Every IANA target is checked against the pack.
 
