@@ -101,7 +101,7 @@ both final profiles. Normal builds still consume only `data/intl/native.bin`
 or `minimal.bin`; `embed.py` emits one C owner and attributes dictionary-derived
 bytes to the full dictionary license and per-file notice paths.
 
-For the full Git source variant, pass `--source-pin tools/intl/pin-git.json`
+For the full Git source variant, pass `--source-pin data/intl/pin-git.json`
 and the `cldr-49-git` source root to preparation and final generation. Each
 archive retains that exact source recipe; common/Git archives are not
 interchangeable even when their compiled rule languages agree.

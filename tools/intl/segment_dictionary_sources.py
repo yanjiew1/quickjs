@@ -50,7 +50,8 @@ def validate_pin(pin):
 
 
 def load_pin(path=None):
-    path = Path(__file__).with_name('segment-dictionary-pin.json') if path is None else Path(path)
+    path = (Path(__file__).resolve().parents[2] / 'data/intl/segment-dictionary-pin.json'
+            if path is None else Path(path))
     return validate_pin(json.loads(path.read_text()))
 
 
