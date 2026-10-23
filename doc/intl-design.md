@@ -1652,7 +1652,14 @@ its implementation remains outside both preceding versions' completion gates.
 For implementation commits, local validation is a fresh combined ASan+UBSan
 build and bounded repository tests. Prefer JS regressions, std.createRealm and
 std.gc; use C for backend contracts, embedding/OOM and inaccessible state.
-Full Test262 runs in CI with all available runner threads and per-case timings;
+Full Test262 runs in CI with all available runner threads and per-case timings.
+The enabled-Intl job selects the entire `intl402` tree, including Number,
+BigInt, Date, Array and TypedArray locale wrappers, Intl namespace invariants
+and Temporal integration. `Temporal=auto` admits only enabled Temporal builds;
+minimal locale-availability exclusions remain in its separate overlay. Explicit
+feature metadata includes TypedArray and exponentiation, preventing unknown-tag
+skips from silently dropping their cases.
+
 CI supplies sanitizer and platform variants. Track exact revisions and inspect
 failures instead of treating queued work as evidence. Keep intentional long
 tests, including the requested DST exclusions, explicitly recorded.
