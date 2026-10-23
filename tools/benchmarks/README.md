@@ -157,6 +157,14 @@ Bound callbacks initialize during their first timed invocation; the adaptive
 minimum reports warmed steady-state costs rather than cold service startup.
 These cases leave the frozen 72-case comparison fixture unchanged.
 
+The guarded live `intl_segment` cases separate Segmenter construction, repeated
+input preparation, complete word iteration and cached-input `containing()`.
+Iteration and lookup reuse Segments prepared once per fresh process. Scores
+count constructions, preparations, full iteration passes or individual lookups,
+respectively. Use the same script and enabled backend on both revisions;
+prepared native lookup and the minimal Unicode traversal are different
+algorithms. These cases leave the frozen historical catalog unchanged.
+
 Zoo's self-contained files are fetched only when requested, from the
 exact `ivankra/javascript-zoo` revision in the manifest. Every download
 has a SHA-256 check before execution. The original source notices remain
