@@ -1,5 +1,15 @@
 fs = import('fs')
 
+if intl_enabled
+  test(
+    'data-source-pins',
+    python,
+    args: files('test_source_pins.py'),
+    suite: ['repo', 'unit', 'generator'],
+    timeout: 30,
+  )
+endif
+
 # Component declarations capture their selected fixture and compile context.
 component_test_specs = []
 
