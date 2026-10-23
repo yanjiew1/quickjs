@@ -189,6 +189,7 @@ tests/test_intl_duration_format.js
 tests/test_intl_display_names.js
 tests/test_intl_locale_preferences.js
 tests/test_intl_supported_values.js
+tests/test_intl_to_locale_string.js
 tests/test_intl_string_case.js
 tests/test_intl_segmenter.js
 tests/test_intl_segmenter_profile.js
