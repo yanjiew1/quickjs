@@ -44,15 +44,40 @@ payload. The reviewed CLDR profile has seven declared lists, with a longest key
 of 11 scalars; bounds leave explicit room for future source updates without
 silently truncating them.
 
-## Subsequent runtime policy
+## Runtime matching
 
-Prepared literal graphs alone do not satisfy native suppression execution.
-Runtime integration must match complete raw entries, including internal cuts
-in multi-part abbreviations, and remove only approved soft sentence decisions.
-It must preserve endpoints, paragraph breaks and the original terminator anchor
-through the admitted Close/Sp/ignored tail. It must not skip arbitrary ignored
-characters inside literal entries. Native locale admission remains separate.
+`src/intl/segment/suppression.[ch]` applies complete literal graphs to prepared
+sentence decisions. It matches raw entries at original scalar positions,
+including overlapping entries and internal cuts in multi-part abbreviations.
+Ignored characters inside a literal do not disappear. Its graph owner is the
+[section 41 reader](intl-segment-suppression-format.md); native locale admission
+and final grapheme protection remain separate integration steps.
+
+At most `M` cursors are live, where `M` is the checked longest key length. A
+terminal records a full-match end and the furthest end for its start. A monotonic
+interval sweep recognizes candidates strictly inside complete matches without
+revisiting every covered position per match. Work is `O(n * M * log D)`, for `n`
+scalars and maximum outgoing degree `D`; scratch is `O(n + M)`. There is no
+arbitrary text-length or context cutoff.
+
+Only source-qualified root SB11 soft decisions may be removed. Endpoints,
+paragraph breaks and other rule roles stay unchanged. The original SATerm anchor
+survives ignored text, then Close characters before the first space, then spaces
+with ignored text between them. A paragraph separator invalidates the anchor,
+including through following ignored text. A full match ending at that original
+anchor can remove the following soft candidate; a complete entry spanning an
+internal candidate supplies its own context. Case folding and whitespace
+stripping are not part of this policy.
+Paragraph separators also terminate literal cursors: an entry spanning a hard
+paragraph boundary cannot authorize removal of soft cuts on either side.
+
+Matching and removal masks use temporary allocator-owned scratch. The scan's
+break vector changes only after the whole pass succeeds; OOM or invalid input
+cannot publish partial removals. No state or allocation is retained by the
+filter, and original UTF-16 mapping stays with the decoded text owner.
 
 Sources reviewed 2026-10-23: CLDR 49 beta4 commit
 `7cdeb9e7fac52c59f22fc7248b05f989ee5689c2`, `common/segments/*.xml`, and
 [UAX #29 revision 49: sentence boundaries](https://www.unicode.org/reports/tr29/tr29-49.html#Sentence_Boundaries).
+CLDR's literal-list role is described in
+[TR35 segmentation suppressions](https://unicode.org/reports/tr35/tr35-general.html#Segmentation_Suppressions).
