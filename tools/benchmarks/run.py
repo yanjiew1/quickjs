@@ -27,6 +27,7 @@ import urllib.request
 
 HERE = Path(__file__).resolve().parent
 MANIFEST = HERE / "manifest.json"
+BELLARD_REPOSITORY = "https://github.com/bellard/quickjs.git"
 
 
 class BenchmarkCancelled(Exception):
@@ -202,6 +203,23 @@ def checked_parent_revision(candidate, expected):
     if result.stdout.strip() != expected:
         raise ValueError("Baseline must be the candidate's actual immediate first parent")
     return expected
+
+
+def checked_baseline(candidate, baseline, expected, kind):
+    checked_revision(baseline, expected)
+    if kind == "parent":
+        checked_parent_revision(candidate, expected)
+        return
+    result = subprocess.run(["git", "-C", str(baseline), "remote", "get-url", "origin"],
+                            text=True, capture_output=True, check=True)
+    origin = result.stdout.strip()
+    if (origin[:-4] if origin.endswith(".git") else origin) not in (
+            "https://github.com/bellard/quickjs", "git@github.com:bellard/quickjs"):
+        raise ValueError("Bellard baseline must have bellard/quickjs as its origin")
+
+
+def baseline_label(state):
+    return "Bellard QuickJS" if state.get("baseline_kind") == "bellard" else "Immediate parent"
 
 
 def feature_config(suite):
@@ -422,13 +440,13 @@ def summarize(rows, rounds):
         for case in dict.fromkeys(row["case"] for row in subset):
             selected = [row for row in subset if row["case"] == case]
             values = {}
-            for variant in ("parent", "candidate"):
+            for variant in ("baseline", "candidate"):
                 samples = [row["value"] for row in selected if row["variant"] == variant]
                 if len(samples) != rounds[suite]:
                     raise ValueError(f"Incomplete {suite}/{case}/{variant} samples")
                 values[variant] = sorted(samples)[len(samples) // 2] if suite == "zoo" else statistics.median(samples)
-            ratio = values["candidate"] / values["parent"] if suite == "zoo" else values["parent"] / values["candidate"]
-            cases[case] = {"parent": values["parent"], "candidate": values["candidate"],
+            ratio = values["candidate"] / values["baseline"] if suite == "zoo" else values["baseline"] / values["candidate"]
+            cases[case] = {"baseline": values["baseline"], "candidate": values["candidate"],
                            "sample_count_each": rounds[suite], "unit": selected[0]["unit"],
                            "candidate_speed_ratio": ratio,
                            "candidate_change_percent": 100 * (ratio - 1)}
@@ -446,7 +464,8 @@ def markdown(report, state, observed=None):
             "Shared hosted runner measurements can fluctuate. No performance threshold is a correctness gate.", "",
             f"Status: **{state['status']}**. Compiler: `{state['compiler']}`.", "",
             f"Candidate: `{state['candidate_revision']}`.",
-            f"Immediate parent: `{state['parent_revision']}`.",
+            f"{baseline_label(state)}: `{state['baseline_revision']}`.",
+            f"Baseline source: `{state.get('baseline_repository') or 'candidate repository, verified first parent'}` (exact revision; no latest-version claim).",
             f"Tooling: `{state.get('tooling_revision') or 'unprovided local checkout'}`. Runner SHA-256: `{state.get('runner_sha256', 'unprovided')}`.", "",
             "Both engines use identical frozen workloads, fresh processes per case, -O2, assertions disabled (-DNDEBUG), and no LTO.", "",
             "Build feature configuration: `" + json.dumps(state.get("feature_config", {}), sort_keys=True) + "`.", "",
@@ -488,10 +507,10 @@ def markdown(report, state, observed=None):
     for suite, data in report.items():
         text.extend([f"## {suite}", "",
                      f"Geometric mean speed change: **{data['candidate_change_percent']:+.2f}%**. Positive is faster.", "",
-                     "| Case | Parent | Candidate | Unit | Samples each | Change |",
+                     f"| Case | {baseline_label(state)} | Candidate | Unit | Samples each | Change |",
                      "| --- | ---: | ---: | --- | ---: | ---: |"])
         for name, case in data["cases"].items():
-            text.append(f"| {name} | {case['parent']:.6g} | {case['candidate']:.6g} | {case['unit']} | {case['sample_count_each']} | {case['candidate_change_percent']:+.2f}% |")
+            text.append(f"| {name} | {case['baseline']:.6g} | {case['candidate']:.6g} | {case['unit']} | {case['sample_count_each']} | {case['candidate_change_percent']:+.2f}% |")
         text.append("")
     return "\n".join(text)
 
@@ -499,8 +518,10 @@ def markdown(report, state, observed=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", type=Path, required=True)
-    parser.add_argument("--parent", type=Path, required=True)
-    parser.add_argument("--parent-revision", required=True)
+    parser.add_argument("--baseline", "--parent", dest="baseline", type=Path, required=True)
+    parser.add_argument("--baseline-revision", "--parent-revision", dest="baseline_revision", required=True)
+    parser.add_argument("--baseline-kind", choices=("parent", "bellard"), default="parent",
+                        help="Verify actual immediate parent, or an exact Bellard origin checkout")
     parser.add_argument("--tooling-revision", help="Exact tooling checkout revision (optional)")
     parser.add_argument("--candidate-revision", required=True)
     parser.add_argument("--compiler", choices=("gcc", "clang"), required=True)
@@ -512,20 +533,22 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.build_jobs < 1 or any(not re.fullmatch(r"[0-9a-f]{40}", revision)
-                                  for revision in (args.candidate_revision, args.parent_revision,
+                                  for revision in (args.candidate_revision, args.baseline_revision,
                                                    *([args.tooling_revision] if args.tooling_revision else []))):
         parser.error("Positive build jobs and exact 40-character revision required")
     args.candidate = args.candidate.resolve()
-    args.parent = args.parent.resolve()
+    args.baseline = args.baseline.resolve()
     args.output = args.output.resolve()
-    if args.candidate == args.parent or args.output.exists():
+    if args.candidate == args.baseline or args.output.exists():
         parser.error("Distinct source directories and a new output directory required")
     manifest = json.loads(MANIFEST.read_text())
     args.output.mkdir(parents=True)
-    state = {"status": "running", "compiler": args.compiler,
+    state = {"report_schema_version": 2, "status": "running", "compiler": args.compiler,
              "candidate_revision": args.candidate_revision,
-             "parent_revision": args.parent_revision,
-             "comparison": "candidate versus actual immediate first parent",
+             "baseline_revision": args.baseline_revision, "baseline_kind": args.baseline_kind,
+             "baseline_repository": BELLARD_REPOSITORY if args.baseline_kind == "bellard" else None,
+             "comparison": "candidate versus " + ("Bellard QuickJS at exact recorded revision"
+                          if args.baseline_kind == "bellard" else "actual immediate first parent"),
              "tooling_revision": args.tooling_revision, "runner_sha256": sha256(__file__),
              "feature_config": {},
              "legacy_make_feature_request": feature_config(args.suite),
@@ -541,8 +564,7 @@ def main():
         for name, expected in manifest["bundled_sha256"].items():
             verify_fixture(HERE / "fixtures" / name, expected)
         checked_revision(args.candidate, args.candidate_revision)
-        checked_revision(args.parent, args.parent_revision)
-        checked_parent_revision(args.candidate, args.parent_revision)
+        checked_baseline(args.candidate, args.baseline, args.baseline_revision, args.baseline_kind)
         if args.tooling_revision:
             checked_revision(HERE.parents[1], args.tooling_revision)
         v8 = assemble_v8(manifest, args.candidate, args.output / "fresh-v8.js") \
@@ -552,15 +574,14 @@ def main():
         observed = environment(args.compiler, before_affinity)
         write_json(args.output / "environment-before-build.json", observed)
         builds = {}
-        for variant, source in (("parent", args.parent), ("candidate", args.candidate)):
+        for variant, source in (("baseline", args.baseline), ("candidate", args.candidate)):
             directory = args.output / variant
             directory.mkdir()
             builds[variant] = build(source, args.compiler, directory, args.build_jobs, args.suite)
             state["feature_config"][variant] = builds[variant]["feature_config"]
             write_json(args.output / "builds.json", builds)
         checked_revision(args.candidate, args.candidate_revision)
-        checked_revision(args.parent, args.parent_revision)
-        checked_parent_revision(args.candidate, args.parent_revision)
+        checked_baseline(args.candidate, args.baseline, args.baseline_revision, args.baseline_kind)
         zoo = fetch_zoo(manifest, args.output) if args.suite in ("zoo", "all") else None
         cases = []
         if args.suite in ("core", "all"):
@@ -573,7 +594,7 @@ def main():
         write_json(args.output / "environment-before-measurement.json", observed)
         for index, (suite, case, detail) in enumerate(cases):
             for rep in range(state["rounds"][suite]):
-                order = ("parent", "candidate") if (index + rep) % 2 == 0 else ("candidate", "parent")
+                order = ("baseline", "candidate") if (index + rep) % 2 == 0 else ("candidate", "baseline")
                 for variant in order:
                     work = args.output / "runs" / suite / case.replace("/", "-") / f"{rep + 1}-{variant}"
                     work.mkdir(parents=True)
@@ -593,8 +614,7 @@ def main():
         for variant in builds:
             verify_fixture(builds[variant]["binary"], builds[variant]["binary_sha256"])
         checked_revision(args.candidate, args.candidate_revision)
-        checked_revision(args.parent, args.parent_revision)
-        checked_parent_revision(args.candidate, args.parent_revision)
+        checked_baseline(args.candidate, args.baseline, args.baseline_revision, args.baseline_kind)
         for name, expected in manifest["bundled_sha256"].items():
             verify_fixture(HERE / "fixtures" / name, expected)
         if args.tooling_revision:
