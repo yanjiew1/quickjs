@@ -22,18 +22,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Verify offline acquisition contracts
-        run: python3 tests/test_intl_sources.py
+        run: |
+          python3 tests/test_intl_sources.py
       - name: Acquire and authenticate pinned CLDR data
         run: |
           timeout 180s python3 tools/intl/acquire.py \
             --cache "$RUNNER_TEMP/intl-cache"
           echo "CLDR_SOURCE=$RUNNER_TEMP/intl-cache/cldr-49" >> "$GITHUB_ENV"
-      - name: Compare the complete pinned root collation ordering
+      - name: Install host-tool dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
-          meson setup build-collation -Dwerror=true -Ddocumentation=disabled
-          meson compile -C build-collation -j2 test_intl_collation_minimal intl-collation-compile
+      - name: Configure explicit Intl data tooling
+        run: |
+          meson setup build-collation -Dwerror=true -Ddocumentation=disabled \
+            -Dintl=minimal -Dtemporal=false
+      - name: Compile collation and segmentation host tools
+        run: |
+          meson compile -C build-collation -j "$(getconf _NPROCESSORS_ONLN)" \
+            test_intl_collation_minimal test_intl_collation_compiled \
+            intl-collation-compile intl-segment-property
+      - name: Compare the complete pinned root collation ordering
+        run: |
           timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
             --ordered "$CLDR_SOURCE/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
           timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
@@ -50,7 +60,6 @@ jobs:
         run: |
           timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
             --cache "$RUNNER_TEMP/intl-cache"
-          meson compile -C build-collation -j2 intl-segment-property
           timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
             --sources "$CLDR_SOURCE" \
             --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
@@ -90,9 +99,8 @@ jobs:
           timeout 60s python3 tools/intl/collation_root_input.py \
             --sources "$CLDR_SOURCE" \
             --output "$RUNNER_TEMP/collation-root.qjcr"
-      - name: Compile and verify collation programs with pinned Unicode
+      - name: Verify collation programs with pinned Unicode
         run: |
-          meson compile -C build-collation -j2 intl-collation-compile test_intl_collation_compiled
           timeout 60s build-collation/intl-collation-compile \
             --audit-root "$RUNNER_TEMP/collation-root.qjcr"
           timeout 90s python3 tools/intl/collation_ir.py \
@@ -217,30 +225,118 @@ jobs:
     name: Temporal ${{ matrix.profile }} configuration
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
-        profile: [minimal, host-offset, disabled]
+        include:
+          - profile: minimal
+            intl: disabled
+            temporal: 'true'
+            calendars: iso
+            timezone: minimal
+            policy: utc
+            library: static
+          - profile: host-offset
+            intl: disabled
+            temporal: 'true'
+            calendars: native
+            timezone: minimal
+            policy: host-offset
+            library: static
+          - profile: disabled
+            intl: disabled
+            temporal: 'false'
+            calendars: iso
+            timezone: minimal
+            policy: utc
+            library: static
+          - profile: iso-named
+            intl: disabled
+            temporal: 'true'
+            calendars: iso
+            timezone: native
+            policy: utc
+            library: shared
+          - profile: intl-iso-minimal
+            intl: native
+            temporal: 'true'
+            calendars: iso
+            timezone: minimal
+            policy: host-offset
+            library: shared
+          - profile: intl-native-minimal
+            intl: minimal
+            temporal: 'true'
+            calendars: native
+            timezone: minimal
+            policy: utc
+            library: static
+    # Limited backend rows validate selected capabilities through repository tests.
+    # Full native calendar/zone Test262 remains in the ordinary and sanitizer lanes.
     steps:
       - uses: actions/checkout@v7
       - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
-      - name: Build and run repository tests
+      - name: Configure selected build
+        id: configure
         run: |
-          enabled=true
-          backend=minimal
-          calendars=native
-          policy=utc
-          if test '${{ matrix.profile }}' = minimal; then calendars=iso; fi
-          if test '${{ matrix.profile }}' = disabled; then enabled=false; backend=native; fi
-          if test '${{ matrix.profile }}' = host-offset; then policy=host-offset; fi
-          meson setup build -Dwerror=true -Dtemporal="$enabled" \
-            -Dcalendars="$calendars" \
-            -Dtimezone_backend="$backend" -Dsystem_timezone_policy="$policy"
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+          meson setup build -Dwerror=true -Ddocumentation=disabled \
+            -Dintl=${{ matrix.intl }} -Dtemporal=${{ matrix.temporal }} \
+            -Dcalendars=${{ matrix.calendars }} -Dtimezone_backend=${{ matrix.timezone }} \
+            -Dsystem_timezone_policy=${{ matrix.policy }} -Ddefault_library=${{ matrix.library }}
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-capability-${{ matrix.profile }}
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
   calendar-data:
     name: Native calendar data regeneration
     runs-on: ubuntu-latest
@@ -291,25 +387,26 @@ jobs:
           "$GITHUB_WORKSPACE/tools/unicode_download.sh"
           cd unicode
           sha256sum --check "$GITHUB_WORKSPACE/tools/unicode-data.sha256"
-      - name: Regenerate Unicode tables
+      - name: Configure Unicode source reproduction
         run: |
           meson setup build-unicode -Dwerror=true -Dunicode_data="$RUNNER_TEMP/unicode"
-          meson compile -C build-unicode unicode-tables -j "$(getconf _NPROCESSORS_ONLN)"
+      - name: Compile Unicode generator and corpus drivers
+        run: |
+          meson compile -C build-unicode -j "$(getconf _NPROCESSORS_ONLN)" \
+            unicode-tables test_unicode_break_properties test_unicode_grapheme \
+            test_unicode_word test_unicode_sentence unicode_gen_test \
+            test_unicode_normalization_boundary test_unicode
       - name: Check compiled boundary properties against every Unicode code point
         run: |
-          meson compile -C build-unicode test_unicode_break_properties -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode_break_properties "$RUNNER_TEMP/unicode"
       - name: Check Unicode grapheme boundary conformance
         run: |
-          meson compile -C build-unicode test_unicode_grapheme -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode_grapheme "$RUNNER_TEMP/unicode/auxiliary/GraphemeBreakTest.txt"
       - name: Check Unicode word boundary conformance
         run: |
-          meson compile -C build-unicode test_unicode_word -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode_word "$RUNNER_TEMP/unicode/auxiliary/WordBreakTest.txt"
       - name: Check Unicode sentence boundary conformance
         run: |
-          meson compile -C build-unicode test_unicode_sentence -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode_sentence "$RUNNER_TEMP/unicode/auxiliary/SentenceBreakTest.txt"
       - name: Compare generated tables with the repository
         run: |
@@ -320,15 +417,12 @@ jobs:
           exit "$status"
       - name: Check Unicode normalization conformance
         run: |
-          meson compile -C build-unicode unicode_gen_test -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/unicode_gen_test "$RUNNER_TEMP/unicode"
       - name: Check NFC boundaries and NFD quick checks against source properties
         run: |
-          meson compile -C build-unicode test_unicode_normalization_boundary -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode_normalization_boundary "$RUNNER_TEMP/unicode"
       - name: Check indexed category predicates against full Unicode ranges
         run: |
-          meson compile -C build-unicode test_unicode -j "$(getconf _NPROCESSORS_ONLN)"
           build-unicode/tests/test_unicode --all-categories
           build-unicode/tests/test_unicode --blocks "$RUNNER_TEMP/unicode/Blocks.txt"
           build-unicode/tests/test_unicode --decimal "$RUNNER_TEMP/unicode/UnicodeData.txt"
@@ -342,16 +436,43 @@ jobs:
             build-unicode/libunicode-table.h
 
   linux:
-    name: Linux (${{ matrix.arch }})
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      CC: ${{ matrix.cc }}
+      INTL_PROFILE: ${{ matrix.intl }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
+          - name: Linux (x86_64)
+            id: linux-x86_64
+            arch: x86_64
             runner: ubuntu-latest
-          - arch: arm64
+            cc: gcc
+            intl: disabled
+            library: both
+            microbench: true
+          - name: Linux (arm64)
+            id: linux-arm64
+            arch: arm64
             runner: ubuntu-24.04-arm
+            cc: gcc
+            intl: minimal
+            library: both
+            microbench: true
+          - name: Linux 32bit
+            id: linux-32bit
+            arch: x86
+            runner: ubuntu-latest
+            cc: gcc -m32
+            intl: native
+            library: static
+            microbench: false
     steps:
       - uses: actions/checkout@v7
         with:
@@ -360,54 +481,132 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
-      - name: Build
+      - name: Install 32-bit compiler support
+        if: matrix.arch == 'x86'
         run: |
-          meson setup build -Dwerror=true -Ddefault_library=both
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-
+          sudo apt-get install -y gcc-multilib
+      - name: Configure selected build
+        id: configure
+        run: |
+          meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
+            -Dintl=${{ matrix.intl }} -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
       - name: Stats
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           ./build/qjs -qd
-      - name: Run built-in tests
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
       - name: Run microbench
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && matrix.microbench }}
         run: |
           meson compile -C build microbench
-
-      - name: Run test262
+      - name: Bootstrap pinned Test262
+        id: bootstrap-test262
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        timeout-minutes: 10
         run: |
           python3 tools/build/test262.py bootstrap
-          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
-
-      - name: Report Test262 timings
+      - name: Run core Test262
+        id: test262-core
+        if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' }}
+        timeout-minutes: 25
+        run: |
+          python3 tools/build/test262.py run --runner build/run-test262 \
+            --threads "$(getconf _NPROCESSORS_ONLN)" \
+            --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
+            2>&1 | tee test262_runtime.log
+      - name: Run selected-profile Intl Test262
+        id: test262-intl
+        if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' && matrix.intl != 'disabled' }}
+        timeout-minutes: 20
+        run: |
+          profile_config=()
+          if test "$INTL_PROFILE" = minimal; then
+            profile_config=(-c tests/intl-minimal-test262.conf)
+          fi
+          build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+            -t -m -c tests/intl-locale-test262.conf "${profile_config[@]}" \
+            --timing-log test262_intl_timings.jsonl --progress-log test262_intl_progress.jsonl \
+            2>&1 | tee test262_intl_runtime.log
+      - name: Report Test262 timings and core Temporal selection
         if: always()
         run: |
+          report_status=0
+          for prefix in test262 test262_intl; do
+            if test -f "${prefix}_timings.jsonl"; then
+              python3 tools/ci/report_test262_timings.py "${prefix}_timings.jsonl" \
+                --csv "${prefix}_timings.csv" --markdown "${prefix}_timings.md" || report_status=$?
+              if test -f "${prefix}_timings.md"; then
+                cat "${prefix}_timings.md" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done
+          # This audit matches the core configuration's explicit non-Intl selection,
+          # including when the same executable also supplies a separate Intl run.
           if test -f test262_timings.jsonl; then
-            report_status=0
-            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
-            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
             python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
               --markdown test262_selection.md || report_status=$?
             cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
-            exit "$report_status"
           fi
-      - name: Preserve Test262 timings
+          exit "$report_status"
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-timings-linux-${{ matrix.arch }}
+          name: native-${{ matrix.id }}
           path: |
-            test262_timings.jsonl
-            test262_timings.csv
-            test262_timings.md
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+            test262*timings.*
+            test262*progress.jsonl
+            test262*runtime.log
             test262_selection.md
-
+          if-no-files-found: ignore
   linux-lto:
     name: Linux LTO
+    # Historical changed-tree verification omits LTO; normal branch tips retain it.
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'scratch-verify-') }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
     steps:
@@ -418,77 +617,72 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
-      - name: Build
+      - name: Configure selected build
+        id: configure
         run: |
-          meson setup build -Dwerror=true -Db_lto=true
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-
-      - name: Run built-in tests
+          meson setup build -Dwerror=true -Db_lto=true -Dintl=native \
+            -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
         run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
       - name: Run microbench
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           meson compile -C build microbench
-
-  linux-32bit:
-    name: Linux 32bit
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: true
-      - name: Install gcc-multilib
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-multilib
-      - name: Install Meson and Ninja
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y meson ninja-build
-      - name: Build
-        run: |
-          CC='gcc -m32' meson setup build -Dwerror=true
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-
-      - name: Run built-in tests
-        run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
-      - name: Run test262
-        run: |
-          python3 tools/build/test262.py bootstrap
-          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
-
-      - name: Report Test262 timings
+      - name: Record source and runner identity
         if: always()
         run: |
-          if test -f test262_timings.jsonl; then
-            report_status=0
-            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
-            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
-            python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
-              --markdown test262_selection.md || report_status=$?
-            cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
-            exit "$report_status"
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
           fi
-      - name: Preserve Test262 timings
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-timings-linux-32bit
+          name: native-linux-lto
           path: |
-            test262_timings.jsonl
-            test262_timings.csv
-            test262_timings.md
-            test262_selection.md
-
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
   macos:
     name: macOS
     runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      INTL_PROFILE: minimal
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
     steps:
@@ -496,47 +690,116 @@ jobs:
       - name: Install Meson and Ninja
         run: |
           brew install meson ninja
-      - name: Build
+      - name: Configure selected build
+        id: configure
         run: |
-          meson setup build -Dwerror=true
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-
+          meson setup build -Dwerror=true -Dintl=minimal -Dtemporal=true \
+            -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
       - name: Stats
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           ./build/qjs -qd
-      - name: Run built-in tests
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
-      - name: Run test262
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Bootstrap pinned Test262
+        id: bootstrap-test262
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        timeout-minutes: 10
         run: |
           python3 tools/build/test262.py bootstrap
-          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
-
-      - name: Report Test262 timings
+      - name: Run core Test262
+        id: test262-core
+        if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' }}
+        timeout-minutes: 25
+        run: |
+          python3 tools/build/test262.py run --runner build/run-test262 \
+            --threads "$(getconf _NPROCESSORS_ONLN)" \
+            --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
+            2>&1 | tee test262_runtime.log
+      - name: Run selected-profile Intl Test262
+        id: test262-intl
+        if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' }}
+        timeout-minutes: 20
+        run: |
+          profile_config=()
+          if test "$INTL_PROFILE" = minimal; then
+            profile_config=(-c tests/intl-minimal-test262.conf)
+          fi
+          build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+            -t -m -c tests/intl-locale-test262.conf "${profile_config[@]}" \
+            --timing-log test262_intl_timings.jsonl --progress-log test262_intl_progress.jsonl \
+            2>&1 | tee test262_intl_runtime.log
+      - name: Report Test262 timings and core Temporal selection
         if: always()
         run: |
+          report_status=0
+          for prefix in test262 test262_intl; do
+            if test -f "${prefix}_timings.jsonl"; then
+              python3 tools/ci/report_test262_timings.py "${prefix}_timings.jsonl" \
+                --csv "${prefix}_timings.csv" --markdown "${prefix}_timings.md" || report_status=$?
+              if test -f "${prefix}_timings.md"; then
+                cat "${prefix}_timings.md" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done
+          # This audit matches the core configuration's explicit non-Intl selection,
+          # including when the same executable also supplies a separate Intl run.
           if test -f test262_timings.jsonl; then
-            report_status=0
-            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
-            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
             python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
               --markdown test262_selection.md || report_status=$?
             cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
-            exit "$report_status"
           fi
-      - name: Preserve Test262 timings
+          exit "$report_status"
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-timings-macos
+          name: native-macos
           path: |
-            test262_timings.jsonl
-            test262_timings.csv
-            test262_timings.md
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+            test262*timings.*
+            test262*progress.jsonl
+            test262*runtime.log
             test262_selection.md
-
+          if-no-files-found: ignore
   mingw-windows:
     name: MinGW Windows target
     runs-on: ubuntu-latest
@@ -544,6 +807,9 @@ jobs:
     env:
       WINEARCH: win64
       WINEDEBUG: "-all"
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
     steps:
@@ -576,10 +842,17 @@ jobs:
           #sudo apt install -y binfmt-support wine-binfmt
           #echo ":Wine:M::MZ::/usr/bin/wine:" > /etc/binfmt.d/wine.conf
           #sudo systemctl restart systemd-binfmt
-      - name: Build
+      - name: Configure selected build
+        id: configure
         run: |
           meson setup build --cross-file build-aux/cross/mingw64.ini --cross-file build-aux/cross/wine64.ini -Ddefault_library=shared
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
+      - name: Prepare Windows runtime DLLs and loader path
+        id: runtime
+        run: |
           cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll build/
           gcc_runtime=$(x86_64-w64-mingw32-gcc -print-file-name=libgcc_s_seh-1.dll)
           if test ! -f "$gcc_runtime"; then
@@ -589,14 +862,55 @@ jobs:
           # Script drivers also run executables from source-free directories.
           wine_path=$(/usr/lib/wine/wine64 winepath.exe -w "$PWD/build")
           printf 'WINEPATH=%s\n' "$wine_path" >> "$GITHUB_ENV"
-
-      - name: Run built-in tests
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.runtime.outcome == 'success' }}
         run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.runtime.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-mingw-windows
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
   windows-msys:
     name: Windows MSYS2
     runs-on: windows-latest
+    env:
+      INTL_PROFILE: native
     defaults:
       run:
         shell: msys2 {0}
@@ -607,37 +921,103 @@ jobs:
           msystem: UCRT64
           update: true
           install: git diffutils python mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
-      - name: Build
+      - name: Configure selected build
+        id: configure
         run: |
-          meson setup build -Dwerror=true -Ddefault_library=both
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-
+          meson setup build -Dwerror=true -Ddefault_library=both -Dintl=native \
+            -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
+        run: |
+          set -o pipefail
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
       - name: Stats
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           ./build/qjs -qd
-      - name: Run built-in tests
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
-
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
       - name: Run microbench
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           meson compile -C build microbench
-
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-windows-msys
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
   linux-shared-install:
     name: Linux shared library installation
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
       - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build pkg-config
-      - name: Build and test the shared configuration
+      - name: Configure selected build
+        id: configure
         run: |
-          meson setup build --prefix "$RUNNER_TEMP/quickjs-install" -Dwerror=true -Ddefault_library=shared
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+          meson setup build --prefix "$RUNNER_TEMP/quickjs-install" \
+            -Dwerror=true -Ddefault_library=shared -Dintl=disabled -Dtemporal=true
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
+      - name: Run repository unit tests
+        id: repo-unit
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run repository integration tests
+        id: repo-integration
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
       - name: Install and exercise public consumers
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: |
           meson install -C build
           prefix="$RUNNER_TEMP/quickjs-install"
@@ -648,3 +1028,181 @@ jobs:
           cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \
             -Wl,-rpath,"$libdir/quickjs" -o "$RUNNER_TEMP/public-embedding"
           "$RUNNER_TEMP/public-embedding"
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-linux-shared-install
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
+  value-check:
+    name: JSValue compile diagnostic (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: core-off
+            intl: disabled
+            temporal: 'false'
+          - id: temporal-native
+            intl: disabled
+            temporal: 'true'
+          - id: intl-native-temporal
+            intl: native
+            temporal: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install diagnostic compiler and build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc meson ninja-build
+      - name: Configure selected build
+        id: configure
+        run: |
+          CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
+            -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
+            -Dintl=${{ matrix.intl }} -Dtemporal=${{ matrix.temporal }} \
+            -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" quickjs-value-check 2>&1 | tee build/compile.log
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-value-check-${{ matrix.id }}
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+          if-no-files-found: ignore
+  fuzz-smoke:
+    name: Clang libFuzzer build and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CC: clang
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Clang and build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang meson ninja-build
+      - name: Configure selected build
+        id: configure
+        run: |
+          meson setup build -Dwerror=true -Ddocumentation=disabled \
+            -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
+            -Dintl=native -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+      - name: Compile selected build
+        id: compile
+        run: |
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" fuzz_eval fuzz_compile fuzz_regexp 2>&1 | tee build/compile.log
+      - name: Run bounded fuzzer smoke tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          mkdir -p build/fuzz-corpus/js build/fuzz-corpus/regexp
+          printf '%s\n' 'let x = 6 * 7; Promise.resolve(x);' > build/fuzz-corpus/js/core.js
+          printf '%s\n' 'new Intl.DateTimeFormat("en").format(0); Temporal.Now.instant();' > build/fuzz-corpus/js/intl.js
+          printf 'a+\0aaa' > build/fuzz-corpus/regexp/basic
+          for target in eval compile; do
+            timeout --kill-after=10s 30s "build/tools/build/fuzz_$target" \
+              -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 "build/fuzz-corpus/js" \
+              2>&1 | tee "build/fuzz-$target.log"
+          done
+          timeout --kill-after=10s 30s build/tools/build/fuzz_regexp \
+            -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 build/fuzz-corpus/regexp \
+            2>&1 | tee build/fuzz-regexp.log
+      - name: Record source and runner identity
+        if: always()
+        run: |
+          git rev-parse HEAD > ci-identity.txt
+          printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+          uname -a >> ci-identity.txt
+          meson --version >> ci-identity.txt
+          python3 --version >> ci-identity.txt
+          if test -d test262/.git; then
+            printf 'test262=' >> ci-identity.txt
+            git -C test262 rev-parse HEAD >> ci-identity.txt
+          fi
+          if test -f build/.ninja_log; then
+            # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+            cp build/.ninja_log build/ninja-actions.log
+          fi
+      - name: Preserve configuration and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-fuzz-smoke
+          path: |
+            build/meson-info/intro-buildoptions.json
+            build/meson-info/intro-tests.json
+            build/meson-info/intro-targets.json
+            build/compile_commands.json
+            build/compile.log
+            build/ninja-actions.log
+            build/meson-logs/
+            ci-identity.txt
+            build/fuzz-*.log
+            crash-*
+            timeout-*
+          if-no-files-found: ignore

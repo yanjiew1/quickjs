@@ -52,10 +52,12 @@ jobs:
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-git"
           timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
             --cache "$RUNNER_TEMP/intl-cache"
-      - name: Compile build-machine data tools
+      - name: Configure build-machine data tools
         run: |
           meson setup host-tools -Dwerror=true -Ddocumentation=disabled \
             -Dtests=false -Dexamples=false -Dtemporal=false
+      - name: Compile build-machine data tools
+        run: |
           meson compile -C host-tools -j "$(getconf _NPROCESSORS_ONLN)" \
             intl-collation-compile intl-segment-property
       - name: Prepare the full native Git profile
@@ -120,26 +122,51 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang meson ninja-build
-      - name: Build and test the selected full Git data
+      - name: Configure the selected full Git data
         env:
           CC: clang
         run: |
           meson setup build -Dwerror=true -Ddocumentation=disabled \
             -Dintl=native -Dtemporal=true -Ddefault_library=both \
+            -Dcalendars=native -Dtimezone_backend=native -Dsystem_timezone_policy=utc \
             -Dintl_data_file="$RUNNER_TEMP/full-git-intl/native-git.bin" \
             -Db_sanitize=address,undefined
-          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
-          meson test -C build --no-rebuild --print-errorlogs \
-            --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Compile selected targets
+        id: compile
+        run: meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+      - name: Run repository unit tests
+        run: |
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Run repository integration tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Audit every full Git DateTimeFormat locale and calendar
+        run: |
           python3 tools/ci/audit_intl_datetime.py \
             build/tests/test_intl_date_service_native \
             --threads "$(getconf _NPROCESSORS_ONLN)"
+      - name: Install pinned Test262
+        run: python3 tools/build/test262.py bootstrap
       - name: Check every Intl entry point with full Git locale coverage
         run: |
-          python3 tools/build/test262.py bootstrap
-          timeout 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+          timeout --kill-after=30s 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
             -t -m -c tests/intl-locale-test262.conf \
-            --timing-log test262_intl_timings.jsonl
+            --timing-log test262_intl_timings.jsonl \
+            --progress-log test262_intl_progress.jsonl
+      - name: Report repository test results
+        if: always()
+        run: |
+          for stage in repo-unit repo-integration; do
+            log="build/meson-logs/$stage.txt"
+            if test -f "$log"; then
+              printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+              tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
       - name: Report per-test timings
         if: always()
         run: |
@@ -156,5 +183,7 @@ jobs:
             test262_intl_timings.jsonl
             test262_intl_timings.csv
             test262_intl_timings.md
-            build/meson-logs/testlog.txt
+            test262_intl_progress.jsonl
+            build/meson-logs/repo-unit.*
+            build/meson-logs/repo-integration.*
           if-no-files-found: ignore
