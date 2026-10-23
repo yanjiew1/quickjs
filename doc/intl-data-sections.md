@@ -819,3 +819,13 @@ versioned layout, canonical numbering, resource gates and validation contract.
 Source: `tools/intl/segment_program_tables.py`.
 The private C owner `src/intl/segment/program.[ch]` validates these arrays
 against the shared-data locale inventory before publishing borrowed views.
+
+## 41 SEGMENT_SUPPRESSIONS
+
+Optional complete sentence suppression lists and shared-locale routes. Directory
+count is the number of lists, including explicit empty policies. Production
+profiles do not yet include this section. See the
+[suppression format](intl-segment-suppression-format.md) for exact directories,
+literal graph arrays, missing/empty distinctions and resource gates.
+Source: `tools/intl/segment_suppression_tables.py`.
+The private C owner is `src/intl/segment/suppression-data.[ch]`.
