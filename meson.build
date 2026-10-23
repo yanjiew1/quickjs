@@ -178,9 +178,10 @@ unicode_gen = executable(
   build_by_default: false,
 )
 unicode_tables = files('src/unicode/libunicode-table.c')
+unicode_table_headers = []
 if get_option('unicode_data') != ''
   ucd = meson.project_source_root() / get_option('unicode_data')
-  unicode_tables = custom_target(
+  generated_unicode_tables = custom_target(
     'unicode-tables',
     input: files(
       ucd / 'Blocks.txt',
@@ -206,7 +207,14 @@ if get_option('unicode_data') != ''
     ],
     command: [unicode_gen, ucd, '@OUTPUT0@'],
   )
+  unicode_tables = [generated_unicode_tables[0]]
+  unicode_table_headers = [generated_unicode_tables[1]]
 endif
+# Separate object owners must wait for the matching generated declarations.
+# The generator above keeps its original dependencies, avoiding a cycle.
+unicode_headers = declare_dependency(sources: unicode_table_headers)
+host_deps += [unicode_headers]
+native_deps += [unicode_headers]
 collation_compile_overrides = ['b_lto=false']
 if meson.is_cross_build()
   # The generator runs on the build machine, independently of target runtimes.
@@ -246,7 +254,7 @@ collation_compile = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: collation_compile_overrides,
-  build_by_default: get_option('tests'),
+  build_by_default: get_option('tests') and intl_enabled,
 )
 segment_property_sources = files(
   'tools/intl/segment-property.c',
@@ -262,7 +270,7 @@ segment_property = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: collation_compile_overrides,
-  build_by_default: get_option('tests'),
+  build_by_default: get_option('tests') and get_option('intl') == 'native',
 )
 executable(
   'unicode_gen_test',
@@ -747,32 +755,35 @@ run_test262 = executable(
   gnu_symbol_visibility: 'hidden',
 )
 
-# These are compile checks only; the multiple tool main definitions are not linked.
-check_sources = engine_sources + vm_sources + compiler_sources + files(
-  'src/quickjs-libc/event-loop.c',
-  'src/quickjs-libc/host.c',
-  'src/quickjs-libc/module-loader.c',
-  'src/quickjs-libc/os.c',
-  'src/quickjs-libc/std.c',
-  'src/quickjs-libc/worker.c',
-  'tools/qjs.c',
-  'tools/qjsc.c',
-  'tools/run-test262.c',
-)
-# The non-runnable pointer-tag model makes negative-tag base cases unreachable.
-check_args = ['-DCONFIG_CHECK_JSVALUE']
-if cc.get_id() == 'gcc' and cc.has_argument('-Winfinite-recursion')
-  check_args += '-Wno-infinite-recursion'
+# This diagnostic uses a separate, non-runnable value representation.
+if get_option('check_jsvalue')
+  # These are compile checks only; the multiple tool main definitions are not linked.
+  check_sources = engine_sources + vm_sources + compiler_sources + files(
+    'src/quickjs-libc/event-loop.c',
+    'src/quickjs-libc/host.c',
+    'src/quickjs-libc/module-loader.c',
+    'src/quickjs-libc/os.c',
+    'src/quickjs-libc/std.c',
+    'src/quickjs-libc/worker.c',
+    'tools/qjs.c',
+    'tools/qjsc.c',
+    'tools/run-test262.c',
+  )
+  # The non-runnable pointer-tag model makes negative-tag base cases unreachable.
+  check_args = ['-DCONFIG_CHECK_JSVALUE']
+  if cc.get_id() == 'gcc' and cc.has_argument('-Winfinite-recursion')
+    check_args += '-Wno-infinite-recursion'
+  endif
+  static_library(
+    'quickjs-value-check',
+    check_sources,
+    c_args: host_args + check_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['optimization=0', 'b_lto=false'],
+    install: false,
+  )
 endif
-static_library(
-  'quickjs-value-check',
-  check_sources,
-  c_args: host_args + check_args,
-  include_directories: inc,
-  dependencies: host_deps,
-  override_options: ['optimization=0', 'b_lto=false'],
-  install: false,
-)
 
 pkg = import('pkgconfig')
 pkg.generate(
@@ -796,12 +807,39 @@ if get_option('tests')
 endif
 summary(
   {
+    'Cross compilation': meson.is_cross_build(),
+    'Library type': get_option('default_library'),
+    'LTO': get_option('b_lto'),
+    'Sanitizers': get_option('b_sanitize'),
     'Tests': get_option('tests'),
     'Examples': get_option('examples'),
-    'Forced GC': get_option('gc_stress'),
-    'Allocation iteration': get_option('malloc_iter'),
-    'Sanitizers': get_option('b_sanitize'),
-    'Intl profile': get_option('intl'),
-    'Native code generator': meson.is_cross_build(),
+    'Unicode tables': get_option('unicode_data') == '' ? 'bundled' : 'generated',
   },
+  section: 'Build',
+  bool_yn: true,
+)
+features = {
+  'Temporal API': get_option('temporal'),
+  'Intl profile': get_option('intl'),
+}
+if get_option('temporal') or intl_enabled
+  features += {
+    'Calendar arithmetic': get_option('calendars'),
+    'Named-zone backend': get_option('timezone_backend'),
+    'Default-zone fallback': get_option('system_timezone_policy'),
+  }
+endif
+if intl_enabled
+  features += {'Intl data': get_option('intl_data_file') == '' ? 'bundled' : get_option('intl_data_file')}
+endif
+summary(features, section: 'Features', bool_yn: true)
+summary(
+  {
+    'GC stress': get_option('gc_stress'),
+    'Allocation iteration': get_option('malloc_iter'),
+    'JSValue type checks': get_option('check_jsvalue'),
+    'Fuzzing targets': get_option('fuzzing'),
+  },
+  section: 'Diagnostics',
+  bool_yn: true,
 )

@@ -2,13 +2,19 @@ option(
   'tests',
   type: 'boolean',
   value: true,
-  description: 'Build repository regression tests',
+  description: 'Build and register repository unit and integration tests',
 )
 option(
   'examples',
   type: 'boolean',
   value: true,
   description: 'Build embedding examples',
+)
+option(
+  'check_jsvalue',
+  type: 'boolean',
+  value: false,
+  description: 'Compile the non-runnable JSValue type diagnostic',
 )
 option(
   'gc_stress',
@@ -26,26 +32,26 @@ option(
   'fuzzing',
   type: 'boolean',
   value: false,
-  description: 'Build libFuzzer entry points with Clang',
+  description: 'Build libFuzzer test executables (requires Clang)',
 )
 option(
   'qjsc_cc',
   type: 'array',
   value: [],
-  description: 'Compiler command used by installed qjsc executable output',
+  description: 'C compiler command used by qjsc executable output',
 )
 option(
   'unicode_data',
   type: 'string',
   value: '',
-  description: 'Optional UCD directory for Unicode table regeneration',
+  description: 'Unicode source-data directory; empty uses bundled tables',
 )
 
 option(
   'documentation',
   type: 'feature',
   value: 'auto',
-  description: 'Enable optional HTML and PDF documentation targets',
+  description: 'Documentation targets: enabled, disabled, or auto-detected (PDF optional)',
 )
 
 option(
@@ -53,38 +59,38 @@ option(
   type: 'combo',
   choices: ['disabled', 'minimal', 'native'],
   value: 'disabled',
-  description: 'Intl: disabled or native algorithms with minimal/common-release locale data',
+  description: 'Intl support: disabled, minimal English data, or native locale data',
 )
 option(
   'intl_data_file',
   type: 'string',
   value: '',
-  description: 'Optional prepared Intl pack for the selected profile (for example full Git locale data)',
+  description: 'Prepared Intl pack to embed for the selected profile; empty uses bundled data',
 )
 option(
   'temporal',
   type: 'boolean',
   value: true,
-  description: 'Build native Temporal with the selected calendar and timezone capabilities',
+  description: 'Enable the Temporal JavaScript API',
 )
 option(
   'calendars',
   type: 'combo',
   choices: ['native', 'iso'],
   value: 'native',
-  description: 'Calendar extensions: all standard native calendars or only core ISO',
+  description: 'Calendar arithmetic: core ISO only, or native calendar extensions',
 )
 option(
   'timezone_backend',
   type: 'combo',
   choices: ['native', 'minimal'],
   value: 'native',
-  description: 'Additional named zones: embedded IANA rules or an empty backend',
+  description: 'Named-zone backend: native IANA rules or minimal; UTC and offsets remain in core',
 )
 option(
   'system_timezone_policy',
   type: 'combo',
   choices: ['utc', 'host-offset'],
   value: 'utc',
-  description: 'Fallback when the host timezone cannot be mapped to a supported name',
+  description: 'Default-zone fallback when no supported host zone is found: UTC or current host offset',
 )

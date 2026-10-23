@@ -25,6 +25,23 @@ for (const key of ["calendar", "collation", "currency", "numberingSystem", "time
     assert(supported(key).join(","), values.join(","));
 }
 
+// Meson supplies the selected arithmetic/rule providers. Assert their promised
+// capabilities, so adapting individual witnesses cannot hide under-reporting.
+if (scriptArgs.length > 1) {
+    assert(["iso", "native"].includes(scriptArgs[1]));
+    const calendars = scriptArgs[1] === "iso" ? ["gregory", "iso8601"] : [
+        "buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic",
+        "gregory", "hebrew", "indian", "islamic-civil", "islamic-tbla",
+        "islamic-umalqura", "iso8601", "japanese", "persian", "roc",
+    ];
+    assert(inventories.calendar.join(","), calendars.join(","));
+    assert(["minimal", "native"].includes(scriptArgs[2]));
+    if (scriptArgs[2] === "minimal")
+        assert(inventories.timeZone.join(","), "UTC");
+    else
+        assert(inventories.timeZone.includes("America/New_York"));
+}
+
 let calls = 0;
 assert(supported({ [Symbol.toPrimitive](hint) {
     assert(hint, "string");

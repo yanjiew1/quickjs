@@ -50,12 +50,29 @@ if get_option('fuzzing')
     error('The fuzzing targets require a Clang compiler with libFuzzer.')
   endif
   fuzz_args = host_args + ['-fsanitize=fuzzer-no-link']
+  fuzz_sources = engine_sources + compiler_sources + support_sources
+  fuzz_data_sources = data_sources
+  if host_machine.system() == 'windows'
+    fuzz_sources += windows_timezone_sources
+    fuzz_data_sources += windows_timezone_data_sources
+  endif
   fuzz_engine = static_library(
     'quickjs-fuzz',
-    engine_sources + compiler_sources + support_sources,
+    fuzz_sources,
     c_args: fuzz_args,
     include_directories: inc,
     dependencies: host_deps,
+    build_by_default: false,
+  )
+  # The instrumented engine needs the same selected immutable data owners.
+  # Keep their arrays outside LTO, as for the ordinary engine libraries.
+  fuzz_data = static_library(
+    'quickjs-fuzz-data',
+    fuzz_data_sources,
+    c_args: fuzz_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_lto=false'],
     build_by_default: false,
   )
   fuzz_vm = static_library(
@@ -76,7 +93,7 @@ if get_option('fuzzing')
       sources,
       c_args: fuzz_args,
       link_args: ['-fsanitize=fuzzer'],
-      link_with: [fuzz_vm, fuzz_engine],
+      link_with: [fuzz_vm, fuzz_engine, fuzz_data],
       include_directories: [inc, include_directories('../..')],
       dependencies: host_deps,
     )

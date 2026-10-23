@@ -3,6 +3,29 @@ import * as std from 'std';
 import {assert, assertThrows, assertArrayEquals} from './assert.js';
 
 const DTF = Intl.DateTimeFormat;
+// Configured runs must exercise every promised provider; direct invocation
+// without Meson arguments can discover the optional capabilities instead.
+function hasCalendar(calendar) {
+    if (scriptArgs.length > 1) {
+        assert(['iso', 'native'].includes(scriptArgs[1]));
+        return scriptArgs[1] === 'native';
+    }
+    return new DTF('en', {calendar}).resolvedOptions().calendar === calendar;
+}
+let namedZones;
+if (scriptArgs.length > 2) {
+    assert(['iso', 'native'].includes(scriptArgs[1]));
+    assert(['minimal', 'native'].includes(scriptArgs[2]));
+    namedZones = scriptArgs[2] === 'native';
+} else {
+    try {
+        new DTF('en', {timeZone: 'America/New_York'});
+        namedZones = true;
+    } catch (error) {
+        assert(error instanceof RangeError);
+        namedZones = false;
+    }
+}
 const date = new DTF('en', {timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric'});
 const first = Date.UTC(2024, 6, 1), last = Date.UTC(2024, 6, 3);
 const names = ['formatRange', 'formatRangeToParts'];
@@ -161,7 +184,8 @@ assert(check(asciiClock, 0, 1).map(part => part.value).join(''), asciiClock.form
 if (typeof Temporal !== 'undefined') {
     const start = new Temporal.PlainDateTime(2024, 7, 1, 0, 30, 45);
     const end = new Temporal.PlainDateTime(2024, 7, 1, 23, 30, 45);
-    for (const timeZone of ['UTC', 'Pacific/Apia', 'America/New_York']) {
+    const zones = namedZones ? ['UTC', 'Pacific/Apia', 'America/New_York'] : ['UTC', '+13:00'];
+    for (const timeZone of zones) {
         const formatter = new DTF('en-US', {timeZone});
         const range = check(formatter, start, end);
         assert(periodSpaces(range).length, 2);
@@ -199,7 +223,7 @@ if (typeof Temporal !== 'undefined') {
     }
     // Plain date/time formatting ignores the formatter's zone for both
     // comparison and synthesis; the shared date survives a large offset.
-    const apia = new DTF('en-US', {timeZone: 'Pacific/Apia'});
+    const apia = new DTF('en-US', {timeZone: namedZones ? 'Pacific/Apia' : '+13:00'});
     const utcPlain = new DTF('en-US', {timeZone: 'UTC'});
     const plainStart = new Temporal.PlainDateTime(2021, 8, 4, 0, 30, 45);
     const plainEnd = new Temporal.PlainDateTime(2021, 8, 4, 23, 30, 45);
@@ -211,19 +235,25 @@ if (typeof Temporal !== 'undefined') {
         assert(fields[0].source, 'shared');
     }
     const timeOnly = new DTF('en', {timeZone: 'UTC', hour: 'numeric'});
-    const japanese = Temporal.PlainDate.from('2024-07-03[u-ca=japanese]');
-    // The first PlainDate's null format precedes the second calendar mismatch.
-    assertThrows(TypeError, () => timeOnly.formatRange(a, japanese));
+    assertThrows(TypeError, () => timeOnly.formatRange(a, b));
+    if (hasCalendar('japanese')) {
+        const japanese = Temporal.PlainDate.from('2024-07-03[u-ca=japanese]');
+        // The first PlainDate's null format precedes the second calendar mismatch.
+        assertThrows(TypeError, () => timeOnly.formatRange(a, japanese));
+    }
     for (const calendar of ['chinese', 'dangi']) {
+        if (!hasCalendar(calendar))
+            continue;
         const formatter = new DTF('en', {timeZone: 'UTC', calendar, month: 'numeric', day: 'numeric'});
         const normal = Temporal.PlainDate.from({calendar, year: 2023, monthCode: 'M02', day: 1});
         const leap = Temporal.PlainDate.from({calendar, year: 2023, monthCode: 'M02L', day: 1});
         // Same related year, nominal month and day, but distinct month codes.
         assert(check(formatter, normal, leap).some(part => part.source !== 'shared'), true);
     }
-    // Comparing these plain values in the formatter's zone would map both
-    // UTC-encoded inputs to the repeated 01:30 and incorrectly collapse them.
-    const local = new DTF('en', {timeZone: 'America/Los_Angeles', hour: '2-digit',
+    // Plain values retain their clock fields. The named-zone witness also
+    // crosses a repeated DST hour; the fixed-offset provider has no DST rules.
+    const local = new DTF('en', {timeZone: namedZones ? 'America/Los_Angeles' : '-07:00',
+        hour: '2-digit',
         minute: '2-digit', hourCycle: 'h23'});
     parts = check(local, Temporal.PlainDateTime.from('2026-11-01T08:30'),
         Temporal.PlainDateTime.from('2026-11-01T09:30'));

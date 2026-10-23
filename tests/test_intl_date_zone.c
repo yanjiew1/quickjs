@@ -358,7 +358,8 @@ int main(void)
             break;
     assert(en < count);
     numbers = open_numbers(service, en, bytes("latn"));
-    authored(&allocator, &metadata, &numbers);
+    if (qjs_timezone_count())
+        authored(&allocator, &metadata, &numbers);
     fixed_zero_sources(&allocator, &numbers);
     assert(!qjs_intl_timezone_name_data_open(&pack, &allocator, &names));
     assert(!qjs_intl_timezone_presentation_data_open(&pack, &allocator, &presentation));
@@ -382,16 +383,18 @@ int main(void)
     check(&allocator, NULL, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT, "GMT+0");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "UTC");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_LONG, "Coordinated Universal Time");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "EST");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG, "Eastern Daylight Time");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, "ET");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Eastern Time");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_OFFSET, "GMT-4");
-    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT-04:00");
-    check(&allocator, &data, &offset, &numbers, "America/Vancouver", 1719835200,
-          QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Pacific Time (Canada)");
-    check(&allocator, &data, &offset, &numbers, "Africa/Casablanca", 1719835200,
-          QJS_INTL_DATETIME_ZONE_LONG, "GMT+01:00");
+    if (qjs_timezone_count()) {
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "EST");
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG, "Eastern Daylight Time");
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, "ET");
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Eastern Time");
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_OFFSET, "GMT-4");
+        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT-04:00");
+        check(&allocator, &data, &offset, &numbers, "America/Vancouver", 1719835200,
+              QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Pacific Time (Canada)");
+        check(&allocator, &data, &offset, &numbers, "Africa/Casablanca", 1719835200,
+              QJS_INTL_DATETIME_ZONE_LONG, "GMT+01:00");
+    }
     qjs_intl_date_offset_clear(&offset);
     close_numbers(&numbers);
     qjs_intl_number_close(service);

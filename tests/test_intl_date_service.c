@@ -175,13 +175,19 @@ static void part(const QJSIntlFormatted *result, QJSIntlPartType type, const cha
     assert(end == result->length && found == 1);
 }
 
+/* Keep the same July wall-clock witness with either named-zone provider. */
+static const char *test_zone(void)
+{
+    return qjs_timezone_count() ? "US/Eastern" : "-04:00";
+}
+
 static QJSIntlDateTimeFormatter *open_formatter(const QJSIntlDateTimeService *service, size_t locale,
                                                 const QJSIntlDateTimeOptions *options)
 {
     QJSIntlDateTimeFormatter *formatter;
     QJSTimeZoneIdentifier zone;
     QJSIntlStatus status;
-    assert(!qjs_timezone_parse_identifier(&zone, "US/Eastern", 10));
+    assert(!qjs_timezone_parse_identifier(&zone, test_zone(), strlen(test_zone())));
     status = qjs_intl_datetime_formatter_open(service, locale, bytes("gregory"), bytes("latn"),
                                               &zone, options, &formatter);
     if (status)
@@ -204,7 +210,7 @@ static void defaults(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     assert(!qjs_intl_datetime_formatter_info(formatter, &calendar, &system, &zone, &components));
     assert(calendar.length == 7 && !memcmp(calendar.data, "gregory", 7));
     assert(system.length == 4 && !memcmp(system.data, "latn", 4));
-    assert(!strcmp(zone, "US/Eastern"));
+    assert(!strcmp(zone, test_zone()));
     assert(components.values[QJS_INTL_DATETIME_YEAR] && components.values[QJS_INTL_DATETIME_MONTH] &&
            components.values[QJS_INTL_DATETIME_DAY] && !components.values[QJS_INTL_DATETIME_HOUR]);
     assert(!qjs_intl_datetime_format(formatter, QJS_INTL_DATE_VALUE_DATE, 1719835200, 0, &result));
@@ -300,7 +306,7 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     } else {
         options.date_style = options.time_style = QJS_INTL_DATE_STYLE_FULL + 1;
     }
-    assert(!qjs_timezone_parse_identifier(&zone, "America/New_York", 16));
+    assert(!qjs_timezone_parse_identifier(&zone, test_zone(), strlen(test_zone())));
     state->calls = 0;
     assert(!qjs_intl_datetime_formatter_open(service, locale, bytes("gregory"), bytes("latn"), &zone, &options, &formatter));
     calls = state->calls;
@@ -602,8 +608,12 @@ int main(int argc, char **argv)
     ranges(&allocator, service, en);
     prepared_ranges(&allocator, service, en);
     capabilities(&allocator, service, en, tags[en]);
-    for (unsigned int c = 0; c < QJS_CAL_COUNT; c++)
-        styles(&allocator, service, en, tags[en], bytes(qjs_calendar_identifier(c)), 0);
+    for (unsigned int c = 0; c < QJS_CAL_COUNT; c++) {
+        QJSIntlBytes identifier = bytes(qjs_calendar_identifier(c));
+        assert(!qjs_intl_datetime_calendar_supported(service, identifier, &supported));
+        if (supported)
+            styles(&allocator, service, en, tags[en], identifier, 0);
+    }
     failures(&allocator, service, en, 0);
     failures(&allocator, service, en, 1);
     failures(&allocator, service, en, 2);

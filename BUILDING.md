@@ -41,8 +41,20 @@ shared-library PIC settings still match that library.
 
 `--num-processes` controls concurrent repository tests. Use `--timeout-multiplier`
 for slow emulators or instrumentation. The `threading` suite selects concurrency
-tests; `--repeat` can repeat a focused test. Compile-only `CONFIG_CHECK_JSVALUE`
-checks are included in every default build.
+tests; `--repeat` can repeat a focused test. Repository tests use the selected
+Intl profile, calendar and timezone backends; other configurations have their
+own CI jobs. Component tests share objects only when their source identity and
+complete compilation settings match.
+
+The non-runnable `CONFIG_CHECK_JSVALUE` type diagnostic is opt-in:
+
+```sh
+meson setup build-value-check -Dcheck_jsvalue=true
+meson compile -C build-value-check quickjs-value-check
+```
+
+This separate representation is checked at compile time; it is never linked
+into the interpreter used by runtime tests.
 
 ## Intl profiles
 

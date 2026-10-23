@@ -306,14 +306,21 @@ for (const hourCycle of ['h12', 'h23']) {
 // Both real cyclic-only and numeric related-year sources exist. The native
 // policy prefers a numeric year without changing U into another field kind.
 for (const calendar of ['chinese', 'dangi']) {
+    const lunisolar = new DTF('en', {...utc, calendar});
+    if (lunisolar.resolvedOptions().calendar !== calendar) {
+        // An ISO-only arithmetic build negotiates the English Gregorian
+        // default, whose requested era must still be formatted normally.
+        const fallback = new DTF('en', {...utc, calendar, era: 'short',
+            year: 'numeric', month: 'numeric', day: 'numeric'});
+        assert(fallback.resolvedOptions().calendar, 'gregory');
+        assert(fallback.formatToParts(0).some(part => part.type === 'era'), true);
+        continue;
+    }
     // These calendars have no canonical eras. A requested era cannot invent a
     // name or make an otherwise supported date formatter unavailable.
     const noEra = new DTF('en', {...utc, calendar, era: 'short',
         year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(0);
     assert(noEra.some(part => part.type === 'era'), false);
-    const lunisolar = new DTF('en', {...utc, calendar});
-    if (lunisolar.resolvedOptions().calendar !== calendar)
-        continue; // An ISO-only arithmetic build cannot select these calendars.
     const parts = lunisolar.formatToParts(Date.UTC(2000, 0, 1));
     assert(parts.find(part => part.type === 'relatedYear').value, '1999');
     assert(parts.find(part => part.type === 'month').value, '11');

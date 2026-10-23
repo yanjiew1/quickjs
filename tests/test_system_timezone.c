@@ -18,7 +18,7 @@ static void parsed(const char *value, const char *expected)
 
 int main(void)
 {
-    const char *invalid[] = {NULL, "America/New_York", "/etc/localtime",
+    const char *invalid[] = {NULL, "/etc/localtime",
         ":/usr/share/zoneinfo/UTC", "UTC+24", "UTC-5:60", "UTC-5:30:01",
         "STD5DST,M3.2.0,M11.1.0", "AB5", "<AB>5", "<ABC5", "UTC999"};
     char result[32] = "unchanged";
@@ -34,6 +34,13 @@ int main(void)
     parsed(":UTC-5:30:00", "+05:30");
     parsed("<+0530>-5:30", "+05:30");
     parsed("UTC+23:59", "-23:59");
+    if (qjs_timezone_count()) {
+        parsed("America/New_York", "America/New_York");
+    } else {
+        assert(qjs_timezone_parse_environment(result, sizeof(result),
+                                              "America/New_York") == QJS_TZ_RANGE);
+        assert(!strcmp(result, "unchanged"));
+    }
     for (i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
         assert(qjs_timezone_parse_environment(result, sizeof(result), invalid[i]) == QJS_TZ_RANGE);
         assert(!strcmp(result, "unchanged"));
