@@ -1867,7 +1867,8 @@ records; `native` retains the full graph. Section IDs
 and string IDs are stable within a generation, not across source upgrades.
 The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
-Its `complete_services` remains empty until full service behavior is delivered.
+Its `complete_services` field does not advertise executable capabilities; each
+module owns checked runtime admission separately.
 Normal engine builds do not invoke these collectors or parse source XML.
 
 Section 38 embeds the complete bound QJCL archive without rewriting it. Generation
@@ -2008,7 +2009,7 @@ Number/BigInt `toLocaleString` validate their receiver before reading locale or
 option arguments, then use an intrinsic formatter without observing public
 constructor/format replacements. Intl-off behavior remains the ECMA-262 path.
 
-The focused Test262 profile now includes NumberFormat and its normative optional
+The shared Test262 selection covers NumberFormat and its normative optional
 constructor mode. Minimal excludes exact strings for unadvertised locales.
 Three exact range-output tests prescribe collapse/spacing choices beyond the
 current draft's ILND/no-collapse contract; their explicit exclusions cite that
@@ -2033,7 +2034,7 @@ plural units, signed zero, exact internal rounding, auto lookup, numbering-syste
 precedence, subclasses, cross-realm behavior, reentrant coercion and GC. C tests
 inject allocation failure in constructor, format, formatToParts, resolvedOptions
 and supportedLocalesOf with fresh realm objects and warmed immutable services.
-The focused Test262 configuration includes RelativeTimeFormat; the English-only
+The shared Test262 selection includes RelativeTimeFormat; the English-only
 profile explicitly excludes seven cases requiring unavailable German/Polish data.
 
 ## Digital-duration source patterns
@@ -2200,11 +2201,10 @@ Runtime service caches close after object finalizers have released those handles
 Focused JavaScript tests cover options/input getter and coercion order, abrupt
 completion, branding, parts, exact fractions, negative zero, numbering systems,
 subclasses, realms and GC. Native tests cover reached binding allocation failures
-and successful retries. The focused CI Test262 configuration admits DurationFormat
-and Temporal.Duration locale formatting (`Temporal=auto`). Two tests also call
-not-yet-delivered `supportedValuesOf` or DateTimeFormat APIs and remain deferred
-until those dependencies land; repository checks cover Duration's numeric-system
-options and method descriptors directly. The minimal profile
+and successful retries. The shared CI Test262 selection covers DurationFormat,
+its supportedValuesOf/DateTimeFormat integration, and Temporal locale formatting
+when `Temporal=auto` admits that capability. Repository checks cover Duration's
+numeric-system options and method descriptors directly. The minimal profile
 excludes only two Duration cases that require unsupported German/Serbian/Chinese
 locales; English array-like locale arguments are covered in the repository tests.
 The native profile keeps both cases.
@@ -2243,9 +2243,9 @@ service teardown and partial-intrinsic cleanup. JavaScript tests cover option
 and code coercion order, abrupt completion, canonical fallback, descriptors,
 subclasses, cross-realm behavior and GC reentrancy. Binding OOM tests reuse warmed
 runtime services with fresh realm objects and retry every reached failure point.
-CI admits both DisplayNames Test262 feature flags. One branding case also
-constructs the undelivered DateTimeFormat and remains deferred until that
-constructor lands; repository checks cover every currently delivered Intl receiver.
+CI admits both DisplayNames Test262 feature flags, including branding checks
+that construct DateTimeFormat. Repository checks complement the complete shared
+Intl selection with direct receiver and failure-path coverage.
 Microbenchmarks cover construction, composed language names, calendar aliases
 and currency-name queries.
 
