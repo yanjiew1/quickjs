@@ -1027,6 +1027,22 @@ fall back to English. No process-global libc locale is changed.
 Passing @code{NULL} to the setter clears the snapshot so the next use discovers
 it again. Both APIs throw @code{TypeError} when Intl is disabled.
 
+@subsection Default time zone
+
+Build with Temporal or Intl enabled to use these APIs. The default zone is
+shared by Date, Temporal and Intl across all realms in the runtime.
+@code{JS_SetDefaultTimeZone(ctx, identifier)} copies a supported identifier and
+returns zero on success. Failure returns @code{-1} with an exception and
+preserves the previous setting. @code{NULL} or an unsupported identifier throws
+@code{RangeError}; @code{NULL} is not a reset operation. Raw contexts need base
+objects for exception construction.
+
+@code{JS_GetDefaultTimeZone(ctx)} returns an owned JavaScript string, released
+normally with @code{JS_FreeValue}. Before an explicit setting, first use
+snapshots the discovered system default, subject to the selected timezone
+backend and UTC or current-host-offset fallback policy. Both APIs throw
+@code{TypeError} when neither Temporal nor Intl is enabled.
+
 @subsection Native callback captures
 
 @code{JS_NewCFunctionData} borrows and duplicates each supplied captured value;
