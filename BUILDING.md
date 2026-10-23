@@ -229,3 +229,18 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 `extras` selections require the corresponding toolchains or Unicode inputs.
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
+
+### Select a prepared Intl data pack
+
+Use `-Dintl_data_file=/path/to/pack.bin` to select a separately prepared pack
+for an enabled Intl build. The file must match the selected `minimal` or `native`
+profile. Absolute paths and paths relative to the source directory are accepted;
+the build directory can be elsewhere.
+
+```sh
+meson setup /path/to/build /path/to/source \
+  -Dintl=native -Dintl_data_file=/path/to/pack.bin
+```
+
+The build validates and embeds the selected file as one C translation unit.
+Normal builds continue to use the bundled profile when the option is empty.
