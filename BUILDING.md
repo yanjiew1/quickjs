@@ -61,6 +61,9 @@ into the interpreter used by runtime tests.
 
 ## Intl profiles
 
+For version upgrades, alternate data sources and candidate-pin generation, see
+the [data maintenance guide](doc/data-updates.md).
+
 Intl is disabled by default. `-Dintl=minimal` enables English/root locale data;
 `-Dintl=native` enables the locale data in CLDR 49's official common release.
 Both profiles use native C algorithms, without an ICU dependency, source-data
