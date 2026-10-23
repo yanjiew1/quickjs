@@ -99,6 +99,8 @@ static void close_numbers(QJSIntlDateNumberFormats *numbers)
 
 extern const uint8_t qjs_intl_date_zone_fixture_bytes[];
 extern const size_t qjs_intl_date_zone_fixture_length;
+extern const uint8_t qjs_intl_date_zone_gmt_bytes[];
+extern const size_t qjs_intl_date_zone_gmt_length;
 extern const uint8_t qjs_intl_date_zone_conflict_bytes[], qjs_intl_date_zone_gap_bytes[],
                      qjs_intl_date_zone_ambiguous_bytes[], qjs_intl_date_zone_perpetual_bytes[];
 extern const size_t qjs_intl_date_zone_conflict_length, qjs_intl_date_zone_gap_length,
@@ -175,7 +177,7 @@ static QJSIntlFormatted render(const QJSIntlAllocator *allocator, const QJSIntlD
                                 const char *value)
 {
     QJSIntlFormatted result;
-    assert(!qjs_intl_date_zone_format(allocator, data, offset, numbers, zone(name), 0, instant, style, 1000, &result));
+    assert(!qjs_intl_date_zone_format(allocator, data, offset, numbers, name ? zone(name) : NULL, 0, instant, style, 1000, &result));
     expected(&result, value);
     assert(result.part_count == 1 && result.parts[0].type == QJS_INTL_PART_TIME_ZONE_NAME);
     return result;
@@ -238,6 +240,7 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetad
                                       1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, 1000, &result));
     expected(&result, "GMT+01:30");
     qjs_intl_formatted_clear(allocator, &result);
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT, "GMT+0");
     check(allocator, &data, &offset, numbers, "Europe/Dublin", 1704110400,
           QJS_INTL_DATETIME_ZONE_LONG, "Winter label");
     check(allocator, &data, &offset, numbers, "Europe/Dublin", 1719835200,
@@ -308,6 +311,29 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetad
 }
 #endif
 
+static void fixed_zero_sources(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers)
+{
+    QJSIntlData pack;
+    QJSIntlTimeZoneNameData names;
+    QJSIntlDateZoneData data = {0};
+    QJSIntlDateOffset offset;
+
+    assert(!qjs_intl_data_open(qjs_intl_date_zone_gmt_bytes, qjs_intl_date_zone_gmt_length, allocator, &pack));
+    assert(!qjs_intl_timezone_name_data_open(&pack, allocator, &names));
+    data.names = &names;
+    data.names_locale = locale(&pack, "root");
+    assert(!qjs_intl_date_offset_from_data(&names, data.names_locale, allocator, &offset));
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG, "Zone standard");
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Zone generic");
+    /* Blocked/empty child zone leaves must not revive their root zone labels.
+       An independent metazone fallback still uses its requested name type. */
+    data.names_locale = locale(&pack, "en");
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG, "Meta standard");
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Meta generic");
+    check(allocator, &data, &offset, numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT+00:00");
+    qjs_intl_date_offset_clear(&offset);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -340,6 +366,7 @@ int main(void)
 #ifdef CONFIG_TIMEZONE_NATIVE
     authored(&allocator, &metadata, &numbers);
 #endif
+    fixed_zero_sources(&allocator, &numbers);
     assert(!qjs_intl_timezone_name_data_open(&pack, &allocator, &names));
     assert(!qjs_intl_timezone_presentation_data_open(&pack, &allocator, &presentation));
     assert(!qjs_intl_name_data_open(&pack, &allocator, &regions));
@@ -351,6 +378,15 @@ int main(void)
     data.regions_locale = locale(&pack, "en");
     data.territory = bytes("US");
     assert(!qjs_intl_date_offset_from_data(&names, data.names_locale, &allocator, &offset));
+    /* Zero custom offsets may use GMT names without becoming the UTC ID.
+       Explicit offset styles, absent name data and nonzero offsets stay numeric. */
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT, "GMT");
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG, "Greenwich Mean Time");
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, "GMT");
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Greenwich Mean Time");
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT_OFFSET, "GMT+0");
+    check(&allocator, &data, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT+00:00");
+    check(&allocator, NULL, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT, "GMT+0");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "UTC");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_LONG, "Coordinated Universal Time");
 #ifdef CONFIG_TIMEZONE_NATIVE
