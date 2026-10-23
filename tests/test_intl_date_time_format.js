@@ -547,3 +547,22 @@ if (typeof Temporal !== 'undefined') {
         assert(new Temporal.ZonedDateTime(0n, '-01:00').toLocaleString('en').includes('GMT-1'));
     }
 }
+
+// Match the staging String/internalUsage witness on a supported locale. Its
+// German exact-output variant remains part of the full native Test262 run.
+{
+    const value = 24 * 60 * 60 * 1000;
+    const expected = new DTF('en', utc).format(value);
+    const descriptor = Object.getOwnPropertyDescriptor(String.prototype, Symbol.split);
+    try {
+        for (const replacement of ['', 'x-foo', 'de-u-co', 'en-US']) {
+            String.prototype[Symbol.split] = function() { return [replacement]; };
+            assert(new DTF('en', utc).format(value), expected);
+        }
+    } finally {
+        if (descriptor)
+            Object.defineProperty(String.prototype, Symbol.split, descriptor);
+        else
+            delete String.prototype[Symbol.split];
+    }
+}
