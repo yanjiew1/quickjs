@@ -47,7 +47,7 @@ jobs:
         python3 tests/test_intl_sources.py
     - name: Acquire and authenticate pinned CLDR data
       run: |
-        timeout 180s python3 tools/intl/acquire.py \
+        timeout 180s python3 tools/data/acquire.py cldr \
           --cache "$RUNNER_TEMP/intl-cache"
         echo "CLDR_SOURCE=$RUNNER_TEMP/intl-cache/cldr-49" >> "$GITHUB_ENV"
     - name: Install intl source data build dependencies
@@ -80,7 +80,7 @@ jobs:
         done
     - name: Prepare pinned native segmentation rules and dictionaries
       run: |
-        timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
+        timeout --kill-after=15s 180s python3 tools/data/acquire.py dictionaries \
           --cache "$RUNNER_TEMP/intl-cache"
         timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
           --sources "$CLDR_SOURCE" \
@@ -252,7 +252,7 @@ jobs:
     - uses: actions/checkout@v7
     - name: Acquire original calendar source receipts
       run: |
-        python3 tools/calendar/acquire.py --cache "$RUNNER_TEMP/calendar-sources" \
+        python3 tools/data/acquire.py calendar --cache "$RUNNER_TEMP/calendar-sources" \
           --source ummalqura_data.rs --source icu4x-korea-data.rs \
           --source kabise.txt --source cldr-calendarData.xml
     - name: Reproduce factual JSON from authenticated source
@@ -267,7 +267,7 @@ jobs:
         python3 tools/calendar/normalize.py --cache "$RUNNER_TEMP/calendar-sources" --output-dir "$RUNNER_TEMP/calendar"
         cmp data/calendar/persian.json "$RUNNER_TEMP/calendar/persian.json"
         cmp data/calendar/japanese.json "$RUNNER_TEMP/calendar/japanese.json"
-        python3 tools/calendar/generate.py --output "$RUNNER_TEMP/calendar-data.bin" --manifest "$RUNNER_TEMP/calendar-manifest.json"
+        python3 tools/data/generate.py calendar --output "$RUNNER_TEMP/calendar-data.bin" --manifest "$RUNNER_TEMP/calendar-manifest.json"
         cmp data/calendar/calendar-data.bin "$RUNNER_TEMP/calendar-data.bin"
         cmp data/calendar/calendar-data-manifest.json "$RUNNER_TEMP/calendar-manifest.json"
   timezone-data:
@@ -278,11 +278,11 @@ jobs:
     - uses: actions/checkout@v7
     - name: Acquire and verify released inputs
       run: |
-        timeout 180s python3 tools/timezone/acquire.py \
+        timeout 180s python3 tools/data/acquire.py timezone \
           --cache "$RUNNER_TEMP/timezone-cache"
     - name: Regenerate the single binary pack
       run: |
-        timeout 600s python3 tools/timezone/generate.py \
+        timeout 600s python3 tools/data/generate.py timezone \
           --cache "$RUNNER_TEMP/timezone-cache" \
           --output "$RUNNER_TEMP/timezone-data.bin" \
           --manifest "$RUNNER_TEMP/timezone-data-manifest.json"
