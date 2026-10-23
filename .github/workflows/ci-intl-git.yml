@@ -47,7 +47,7 @@ jobs:
             --branch release-49 -c core.autocrlf=false \
             https://github.com/unicode-org/cldr.git "$RUNNER_TEMP/cldr-git"
           timeout --kill-after=15s 180s python3 tools/intl/acquire.py \
-            --cache "$RUNNER_TEMP/intl-cache" --source-pin tools/intl/pin-git.json
+            --cache "$RUNNER_TEMP/intl-cache" --source-pin data/intl/pin-git.json
           python3 tools/intl/check_git.py --repository "$RUNNER_TEMP/cldr-git" \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-git"
           timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
@@ -64,11 +64,11 @@ jobs:
         run: |
           source_root="$RUNNER_TEMP/intl-cache/cldr-49-git"
           timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
-            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --sources "$source_root" --source-pin data/intl/pin-git.json \
             --profile native --compiler host-tools/intl-collation-compile \
             --output "$RUNNER_TEMP/git-collation.qjcl"
           timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
-            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --sources "$source_root" --source-pin data/intl/pin-git.json \
             --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
             --property-tool host-tools/intl-segment-property \
             --output "$RUNNER_TEMP/git-segmentation.qjin" \
@@ -76,14 +76,14 @@ jobs:
             --license "$RUNNER_TEMP/git-dictionary-license.txt" \
             --notices "$RUNNER_TEMP/git-dictionary-notices.txt"
           timeout --kill-after=30s 600s python3 tools/intl/generate.py \
-            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --sources "$source_root" --source-pin data/intl/pin-git.json \
             --profile native --compiled-collation "$RUNNER_TEMP/git-collation.qjcl" \
             --compiled-segmentation "$RUNNER_TEMP/git-segmentation.qjin" \
             --segmentation-manifest "$RUNNER_TEMP/git-segmentation.json" \
             --output "$RUNNER_TEMP/native-git.bin" \
             --manifest "$RUNNER_TEMP/native-git-manifest.json"
           python3 tools/intl/check_data.py --sources "$source_root" \
-            --source-pin tools/intl/pin-git.json \
+            --source-pin data/intl/pin-git.json \
             --input "$RUNNER_TEMP/native-git.bin" \
             --manifest "$RUNNER_TEMP/native-git-manifest.json"
       - uses: actions/upload-artifact@v7
@@ -115,7 +115,7 @@ jobs:
           from pathlib import Path
           root = Path(os.environ['RUNNER_TEMP']) / 'full-git-intl'
           manifest = json.loads((root / 'native-git-manifest.json').read_text())
-          pin = json.loads(Path('tools/intl/pin-git.json').read_text())['cldr']
+          pin = json.loads(Path('data/intl/pin-git.json').read_text())['cldr']
           assert manifest['inputs']['cldr'] == pin
           assert manifest['sha256'] == hashlib.sha256((root / 'native-git.bin').read_bytes()).hexdigest()
           PYTHON
