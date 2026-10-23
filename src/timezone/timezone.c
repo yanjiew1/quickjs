@@ -86,6 +86,19 @@ int qjs_timezone_info(const QJSTimeZone *zone, int64_t epoch_seconds,
     return 0;
 }
 
+int qjs_timezone_info_is_constant(const QJSTimeZone *zone, int64_t first,
+                                  int64_t last, int *constant)
+{
+    if (!zone || !constant)
+        return QJS_TZ_DATA;
+    if (first > last)
+        return QJS_TZ_RANGE;
+    if (zone->rules)
+        return qjs_timezone_backend_info_is_constant(zone->rules, first, last, constant);
+    *constant = 1;
+    return QJS_TZ_OK;
+}
+
 int qjs_timezone_candidates(const QJSTimeZone *zone, int64_t local_seconds,
                             QJSTimeZoneVisit *visit, void *opaque,
                             size_t *count, int32_t *gap_before,
