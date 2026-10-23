@@ -95,6 +95,19 @@ class SegmentCompatibilityTests(unittest.TestCase):
                 compat.japanese_word_fe(self.sources, records())
             self.sources.data[name] = original
 
+    def test_distribution_guards_use_separate_reviewed_byte_hashes(self):
+        self.sources.pin['distribution'] = 'unknown'
+        with self.assertRaisesRegex(DataError, 'source distribution'):
+            compat.japanese_word_fe(self.sources, records())
+        self.sources.pin['distribution'] = 'git'
+        with self.assertRaisesRegex(DataError, 'changed.*source'):
+            compat.japanese_word_fe(self.sources, records())
+        hashes = {name: hashlib.sha256(data).hexdigest() for name, data in self.sources.data.items()}
+        with mock.patch.object(compat, 'GIT_HASHES', hashes):
+            result = compat.japanese_word_fe(self.sources, records())
+        self.assertEqual(result.corrections[0].root_sha256, hashes[compat.ROOT])
+        self.assertEqual(result.corrections[0].source_sha256, hashes[compat.JAPANESE])
+
     def test_reject_changed_declarations_missing_duplicate_or_reapplied_tailoring(self):
         root, japanese = records()
         cases = [(root,), (root, japanese, japanese),

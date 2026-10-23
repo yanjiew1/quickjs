@@ -153,7 +153,17 @@ int main(void)
         assert(preferences.traditional == QJS_INTL_NUMBERING_BLOCKED);
         assert(preferences.finance == QJS_INTL_NUMBERING_ABSENT);
     } else {
-        assert(owner.preferences.count == 1212);
+        uint32_t locale;
+        /* Formatter projection may be minimal, while numbering metadata keeps
+           every source locale. Validate all selected formatter bindings here;
+           the authenticated source audit checks the complete global registry. */
+        assert(owner.preferences.count >= data.locales.count);
+        for (locale = 0; locale < data.locales.count; locale++) {
+            QJSIntlBytes tag;
+            uint32_t parent;
+            assert(!qjs_intl_data_locale(&data, locale, &tag, &parent));
+            assert(!qjs_intl_numbering_preferences(&owner, tag, &preferences));
+        }
         assert(!qjs_intl_numbering_preferences(&owner, bytes("ar"), &preferences));
         assert(preferences.standard == latin);
         assert(!qjs_intl_numbering_system_at(&owner, preferences.native, &system));
