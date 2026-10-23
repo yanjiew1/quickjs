@@ -57,8 +57,25 @@ The JS binding shares this prepared input between Segments and their iterators,
 retaining the original string and UTF-16 storage. Backend teardown precedes
 release of that borrowed storage. Failed preparation leaves zero output, so the
 binding frees its local UTF-16 reference before wrapper cleanup. Iterator cursor
-commit still precedes JS result allocation. Native refinement, word classification
-and capability admission remain subsequent acceptance steps.
+commit still precedes JS result allocation. Native provider capability admission
+and JS selection remain subsequent acceptance steps.
+
+## Shared locale preparation
+
+`tools/intl/segment_catalog.py` binds the final selected shared locale inventory
+after formatter aliases have been completed. It resolves each kind through the
+segmentation component's parent graph, not main-data exceptional parents.
+Captured variable/rule streams are compiled once, then complete execution
+profiles are deduplicated. Source-stream receipts survive semantic sharing.
+Whole suppression lists share literal graphs while raw order and declaration
+origins remain separate, including absent versus explicit empty declarations.
+Program/list IDs follow first use in sorted shared-locale routes; the catalog
+does not create an independent locale numbering scheme or public capability.
+
+At most 128 distinct streams may be compiled in one catalog, independently of
+the 64 retained-program limit. This also bounds attempts that later deduplicate.
+At most 256 suppression source origins are prepared before graph deduplication.
+Existing compiler/property/graph and serialized binding budgets still apply.
 
 ## Native dictionary routing resources
 
