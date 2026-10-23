@@ -222,12 +222,12 @@ Profile identity includes granularity, rule roles, class context and unresolved
 requirements, in addition to base machine tables. Word requires dictionaries,
 word status and selected grapheme protection; sentence requires suppressions and
 grapheme protection. These prepared flags do not advertise executable native
-coverage. The future runtime must satisfy every requirement and retain endpoint
+coverage. The runtime must satisfy every requirement and retain endpoint
 and hard-boundary protections before exposing native locales.
 
 References reviewed 2026-10-23:
 
-- [CLDR source pin](https://github.com/unicode-org/cldr/tree/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2),
+- [CLDR 49 release source](https://github.com/unicode-org/cldr/tree/96e54b273d2da4ec6fbad350ba19ff23fa24a588),
   including `common/segments/root.xml` and `common/segments/ja.xml`.
 - [UTS #35 revision 79: Unicode sets](https://www.unicode.org/reports/tr35/tr35-79/tr35.html#Unicode_Sets).
 - [UAX #29 revision 49: replacing ignore rules](https://www.unicode.org/reports/tr29/tr29-49.html#Replacing_Ignore_Rules).
