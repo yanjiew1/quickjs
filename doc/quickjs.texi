@@ -870,8 +870,13 @@ general rule, C functions take constant @code{JSValue}s as parameters
 Exceptions: most C functions can return a Javascript exception. It
 must be explicitly tested and handled by the C code. The specific
 @code{JSValue} @code{JS_EXCEPTION} indicates that an exception
-occurred. The actual exception object is stored in the
-@code{JSContext} and can be retrieved with @code{JS_GetException()}.
+occurred. The thrown JavaScript value is kept separately and can be
+retrieved with @code{JS_GetException()}.
+
+@code{JS_EXCEPTION} is a return-status sentinel, not an ordinary JavaScript
+value. Test results with @code{JS_IsException()} before using them as values
+or arguments. Catch markers are private VM state and must not be returned
+by native callbacks.
 
 @subsection Script evaluation
 
