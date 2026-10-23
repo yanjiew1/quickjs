@@ -56,7 +56,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repository', type=Path, required=True)
     parser.add_argument('--sources', type=Path, required=True)
-    parser.add_argument('--source-pin', type=Path, default=Path(__file__).with_name('pin-git.json'))
+    parser.add_argument('--source-pin', type=Path,
+                        default=Path(__file__).resolve().parents[2] / 'data/intl/pin-git.json')
     args = parser.parse_args()
     pin = acquire.load_pin(args.source_pin)
     result = verify(args.repository, acquire.Sources(args.sources, pin))
