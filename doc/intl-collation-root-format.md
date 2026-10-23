@@ -6,7 +6,7 @@ by the engine. `tools/intl/collation_root_input.py` owns its writer and structur
 auditor; `tools/intl/collation-root-input.{h,c}` owns the C reader. Normal builds consume prepared runtime data rather than downloading
 CLDR or generating QJCR.
 
-The source is the authenticated CLDR 49 beta 4 `common/uca/FractionalUCA.txt`.
+The source is the authenticated CLDR 49 release `common/uca/FractionalUCA.txt`.
 The collector retains original keys and resolves explicit references before
 serializing logical root coordinates. Python does not normalize keys with its
 host Unicode version. Lookup input and tailoring text use pinned C Unicode NFD.
