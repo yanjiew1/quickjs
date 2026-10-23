@@ -8,8 +8,11 @@ from tables import validate
 import bundle
 
 
-def render(binary):
-    validate(binary)
+def render(binary, profile=None):
+    decoded = validate(binary)
+    if profile is not None and (profile not in bundle.PROFILES or
+                                decoded['envelope']['profile'] != bundle.PROFILES[profile]):
+        raise ValueError('prepared Intl pack does not match the selected build profile')
     lines = ['/* Generated native Intl data; do not edit.',
              ' * Derived from Unicode CLDR; Copyright Unicode, Inc.',
              ' * See data/intl/LICENSE-CLDR and the matching data manifest.',
@@ -35,9 +38,10 @@ def render(binary):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, required=True)
+    parser.add_argument('--profile', choices=tuple(bundle.PROFILES))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    atomic_write(args.output, render(args.input.read_bytes()).encode('ascii'))
+    atomic_write(args.output, render(args.input.read_bytes(), args.profile).encode('ascii'))
 
 
 if __name__ == '__main__':
