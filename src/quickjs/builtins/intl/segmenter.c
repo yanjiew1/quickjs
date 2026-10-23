@@ -5,6 +5,9 @@
 #include "../../internal/atom.h"
 #include "../../internal/object.h"
 #include "../../internal/number.h"
+#ifdef CONFIG_INTL_SEGMENT_MINIMAL
+#include "../../../intl/segment/minimal-inline.h"
+#endif
 
 static const char *const granularities[] = {"grapheme", "word", "sentence"};
 
@@ -20,7 +23,7 @@ typedef struct JSIntlSegmenter {
 typedef struct JSIntlSegmentInput {
     size_t references;
     JSValue input;
-    QJSIntlUTF16 text;
+    QJSIntlSegmentInput prepared;
 } JSIntlSegmentInput;
 
 typedef struct JSIntlSegments {
@@ -55,7 +58,10 @@ static void segmenter_finalizer(JSRuntime *rt, JSValue value)
 static void input_release(JSRuntime *rt, JSIntlSegmentInput *input)
 {
     if (input && !--input->references) {
-        JS_FreeCStringRT_UTF16(rt, input->text.data);
+        const uint16_t *units = input->prepared.text.data;
+        /* Backend teardown precedes release of its borrowed UTF-16 storage. */
+        qjs_intl_segment_input_clear(&input->prepared);
+        JS_FreeCStringRT_UTF16(rt, units);
         JS_FreeValueRT(rt, input->input);
         js_free_rt(rt, input);
     }
@@ -173,6 +179,7 @@ static JSValue segmenter_segment(JSContext *ctx, JSValueConst this_val, int argc
     JSIntlSegmenter *segmenter = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_SEGMENTER);
     JSIntlSegments *state;
     JSIntlSegmentInput *input;
+    QJSIntlUTF16 text = {0};
     JSValue object, string;
     if (!segmenter)
         return JS_EXCEPTION;
@@ -196,9 +203,16 @@ static JSValue segmenter_segment(JSContext *ctx, JSValueConst this_val, int argc
     input->input = string;
     string = JS_UNDEFINED;
     state->input = input;
-    input->text.data = JS_ToCStringLenUTF16(ctx, &input->text.length, input->input);
-    if (!input->text.data)
+    text.data = JS_ToCStringLenUTF16(ctx, &text.length, input->input);
+    if (!text.data)
         goto fail;
+    if (js_intl_error(ctx, qjs_intl_segment_input_prepare(segmenter->handle, &text, &input->prepared),
+                      "segment input preparation")) {
+        /* Failed preparation resets its output; release the local UTF-16
+           reference here before the surrounding wrapper cleanup. */
+        JS_FreeCStringUTF16(ctx, text.data);
+        goto fail;
+    }
     return object;
 fail:
     JS_FreeValue(ctx, string);
@@ -209,11 +223,10 @@ fail:
 static JSValue segment_data(JSContext *ctx, const JSIntlSegments *state,
                             const QJSIntlSegment *segment)
 {
-    JSIntlSegmenter *segmenter = JS_GetOpaque(state->segmenter, JS_CLASS_INTL_SEGMENTER);
     JSValue result = JS_NewObject(ctx), value;
     if (JS_IsException(result))
         return result;
-    value = JS_NewStringUTF16(ctx, state->input->text.data + segment->start,
+    value = JS_NewStringUTF16(ctx, state->input->prepared.text.data + segment->start,
                              segment->end - segment->start);
     if (JS_IsException(value) || JS_DefinePropertyValueStr(ctx, result, "segment", value,
                                                           JS_PROP_C_W_E | JS_PROP_THROW) < 0)
@@ -223,7 +236,7 @@ static JSValue segment_data(JSContext *ctx, const JSIntlSegments *state,
         JS_DefinePropertyValueStr(ctx, result, "input", JS_DupValue(ctx, state->input->input),
                                   JS_PROP_C_W_E | JS_PROP_THROW) < 0)
         goto fail;
-    if (segmenter->granularity == QJS_INTL_SEGMENT_WORD &&
+    if (state->input->prepared.granularity == QJS_INTL_SEGMENT_WORD &&
         JS_DefinePropertyValueStr(ctx, result, "isWordLike", JS_NewBool(ctx, segment->is_word_like),
                                   JS_PROP_C_W_E | JS_PROP_THROW) < 0)
         goto fail;
@@ -237,7 +250,6 @@ static JSValue segments_containing(JSContext *ctx, JSValueConst this_val, int ar
                                    JSValueConst *argv)
 {
     JSIntlSegments *state = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_SEGMENTS);
-    JSIntlSegmenter *segmenter;
     JSValue integer;
     QJSIntlSegment segment;
     double index;
@@ -249,11 +261,10 @@ static JSValue segments_containing(JSContext *ctx, JSValueConst this_val, int ar
         return integer;
     JS_ToFloat64(ctx, &index, integer);
     JS_FreeValue(ctx, integer);
-    if (index < 0 || index >= state->input->text.length)
+    if (index < 0 || index >= state->input->prepared.text.length)
         return JS_UNDEFINED;
-    segmenter = JS_GetOpaque(state->segmenter, JS_CLASS_INTL_SEGMENTER);
-    if (js_intl_error(ctx, qjs_intl_segment_containing(segmenter->handle, &state->input->text,
-                                                      (size_t)index, &segment), "segment lookup"))
+    if (js_intl_error(ctx, qjs_intl_segment_containing(&state->input->prepared,
+                                                    (size_t)index, &segment), "segment lookup"))
         return JS_EXCEPTION;
     return segment_data(ctx, state, &segment);
 }
@@ -287,18 +298,16 @@ static JSValue segment_iterator_next(JSContext *ctx, JSValueConst this_val, int 
                                      JSValueConst *argv, BOOL *done, int magic)
 {
     JSIntlSegments *state = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_SEGMENT_ITERATOR);
-    JSIntlSegmenter *segmenter;
     QJSIntlSegment segment;
     *done = FALSE;
     if (!state)
         return JS_EXCEPTION;
-    if (state->next_index == state->input->text.length) {
+    if (state->next_index == state->input->prepared.text.length) {
         *done = TRUE;
         return JS_UNDEFINED;
     }
-    segmenter = JS_GetOpaque(state->segmenter, JS_CLASS_INTL_SEGMENTER);
-    if (js_intl_error(ctx, qjs_intl_segment_next(segmenter->handle, &state->input->text,
-                                                state->next_index, &segment), "segment iteration"))
+    if (js_intl_error(ctx, qjs_intl_segment_next(&state->input->prepared,
+                                              state->next_index, &segment), "segment iteration"))
         return JS_EXCEPTION;
     /* The specification commits the cursor before creating the result objects;
        an allocation failure must not rewind an otherwise completed step. */
