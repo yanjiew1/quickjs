@@ -89,14 +89,22 @@ owns those decisions; native admission remains separate work.
 
 `segment/native-input.[ch]` connects decoding, compiled rule scans, literal
 sentence suppression and native grapheme protection into final boundary vectors.
-The private pipeline currently accepts grapheme and sentence programs; dictionary
-word refinement and public native provider admission remain unfinished.
+The private pipeline connects grapheme, word and sentence preparation.
+Public native provider admission remains
+unfinished until production data and complete locale capability are validated.
 
 Selected and grapheme scans share one decoded scalar/UTF-16 owner during
 preparation. For sentence input, remove approved suppression cuts, then
 intersect with the native grapheme decisions. Only after every fallible stage
 succeeds are final UTF-16 indexes copied into one retained allocation. Temporary
 text, scans and matcher scratch are all released, including on OOM.
+
+Word input uses the same decoded owner and native grapheme scan, refines through
+the selected dictionaries/routing cache, then applies final grapheme protection.
+One monotonic pass classifies final spans by Letter or decimal-digit membership.
+Word status is stored with the final vectors, so queries never rescan text.
+The borrowed rule configuration names selected/grapheme programs and required
+refinement views; it is not retained or silently replaced with fallback data.
 
 The result borrows no program, list, text or service pointer. Binary-search
 `next` and `containing` queries allocate nothing and carry no mutable traversal

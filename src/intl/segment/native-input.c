@@ -1,5 +1,7 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "native-input.h"
+#include "../../cutils/cutils.h"
+#include "../../unicode/libunicode.h"
 #include <string.h>
 
 struct QJSIntlSegmentNativeInput {
@@ -10,36 +12,40 @@ struct QJSIntlSegmentNativeInput {
 };
 
 QJSIntlStatus qjs_intl_segment_native_input_prepare(const QJSIntlAllocator *allocator,
-                                                     const QJSIntlSegmentProgram *selected,
-                                                     const QJSIntlSegmentProgram *grapheme,
-                                                     const QJSIntlSegmentLiteralGraph *suppressions,
-                                                     const QJSIntlUTF16 *source,
-                                                     QJSIntlSegmentNativeInput **out)
+                                                    const QJSIntlSegmentNativeRules *rules,
+                                                    const QJSIntlUTF16 *source,
+                                                    QJSIntlSegmentNativeInput **out)
 {
     QJSIntlSegmentText text = {0};
     QJSIntlSegmentScan scan = {0}, clusters = {0};
     QJSIntlSegmentNativeInput *result;
+    const QJSIntlSegmentProgram *selected;
     QJSIntlStatus status;
     size_t i, count = 1, bytes, at = 0;
     if (out)
         *out = NULL;
-    if (!out || !allocator || !allocator->malloc || !allocator->free || !source || !selected ||
-        selected->kind > QJS_INTL_SEGMENT_SENTENCE)
+    if (!out || !allocator || !allocator->malloc || !allocator->free || !source || !rules ||
+        !rules->selected || rules->selected->kind > QJS_INTL_SEGMENT_SENTENCE)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (selected->kind == QJS_INTL_SEGMENT_WORD)
-        return QJS_INTL_UNSUPPORTED;
-    if (selected->kind == QJS_INTL_SEGMENT_SENTENCE &&
-        (!grapheme || grapheme->kind != QJS_INTL_SEGMENT_GRAPHEME || !suppressions))
+    selected = rules->selected;
+    if (selected->kind != QJS_INTL_SEGMENT_GRAPHEME &&
+        (!rules->grapheme || rules->grapheme->kind != QJS_INTL_SEGMENT_GRAPHEME ||
+         (selected->kind == QJS_INTL_SEGMENT_SENTENCE && !rules->suppressions) ||
+         (selected->kind == QJS_INTL_SEGMENT_WORD && (!rules->dictionaries || !rules->routing))))
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_segment_text_prepare(allocator, source, &text);
     if (!status)
         status = qjs_intl_segment_scan_prepare(allocator, selected, &text, &scan);
     if (status)
         goto done;
-    if (selected->kind == QJS_INTL_SEGMENT_SENTENCE) {
-        status = qjs_intl_segment_suppression_apply(allocator, selected, suppressions, &text, &scan);
+    if (selected->kind != QJS_INTL_SEGMENT_GRAPHEME) {
+        if (selected->kind == QJS_INTL_SEGMENT_SENTENCE)
+            status = qjs_intl_segment_suppression_apply(allocator, selected, rules->suppressions, &text, &scan);
         if (!status)
-            status = qjs_intl_segment_scan_prepare(allocator, grapheme, &text, &clusters);
+            status = qjs_intl_segment_scan_prepare(allocator, rules->grapheme, &text, &clusters);
+        if (!status && selected->kind == QJS_INTL_SEGMENT_WORD)
+            status = qjs_intl_segment_dictionary_refine(allocator, selected, &text, &clusters,
+                                                        rules->dictionaries, rules->routing, &scan);
         if (status)
             goto done;
         /* Refinement cannot introduce a boundary inside a native cluster. */
@@ -70,11 +76,21 @@ QJSIntlStatus qjs_intl_segment_native_input_prepare(const QJSIntlAllocator *allo
     result->boundaries = (size_t *)(result + 1);
     result->word_like = (uint8_t *)(result->boundaries + count);
     result->boundaries[at++] = 0;
-    for (i = 1; i <= text.count; i++)
-        if (scan.breaks[i])
-            result->boundaries[at++] = text.offsets[i];
-    if (count > 1)
-        memset(result->word_like, 0, count - 1);
+    {
+        int word_like = 0;
+        /* Classify each final span once. Neither containing nor an independent
+           iterator needs to rescan original text for Letter/Nd membership. */
+        for (i = 0; i < text.count; i++) {
+            if (selected->kind == QJS_INTL_SEGMENT_WORD && !word_like &&
+                (lre_is_letter(text.scalars[i]) || lre_is_decimal_digit(text.scalars[i])))
+                word_like = 1;
+            if (scan.breaks[i + 1]) {
+                result->word_like[at - 1] = word_like;
+                result->boundaries[at++] = text.offsets[i + 1];
+                word_like = 0;
+            }
+        }
+    }
     *out = result;
     status = QJS_INTL_OK;
 done:
