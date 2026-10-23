@@ -4174,6 +4174,7 @@ if intl_enabled
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
     'intl-supported-values': ['-m', 'tests/test_intl_supported_values.js', get_option('calendars'), get_option('timezone_backend')],
     'intl-string-case': ['-m', 'tests/test_intl_string_case.js'],
+    'intl-to-locale-string': ['-m', 'tests/test_intl_to_locale_string.js'],
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
