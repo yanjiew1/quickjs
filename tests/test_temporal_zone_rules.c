@@ -85,6 +85,17 @@ int qjs_timezone_backend_info(const QJSTimeZoneRules *zone, int64_t seconds,
     return 0;
 }
 
+int qjs_timezone_backend_info_is_constant(const QJSTimeZoneRules *zone, int64_t first,
+                                          int64_t last, int *constant)
+{
+    int64_t a = zone->triple ? 0 : -3600, b = zone->triple ? 1800 : 0;
+    assert(zone == &gap_rules || zone == &triple_rules);
+    if (first > last)
+        return QJS_TZ_RANGE;
+    *constant = !((first < a && a <= last) || (first < b && b <= last));
+    return 0;
+}
+
 int qjs_timezone_backend_candidates(const QJSTimeZoneRules *zone, int64_t local,
                                     QJSTimeZoneVisit *visit, void *opaque,
                                     size_t *count, int32_t *before,
