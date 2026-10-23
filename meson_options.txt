@@ -83,6 +83,12 @@ option(
   description: 'Intl support: disabled, minimal English data, or native locale data',
 )
 option(
+  'intl_data_file',
+  type: 'string',
+  value: '',
+  description: 'Prepared Intl pack to embed for the selected profile; empty uses bundled data',
+)
+option(
   'temporal',
   type: 'boolean',
   value: true,
