@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_SEGMENT_DICTIONARY_H
 #define QJS_INTL_SEGMENT_DICTIONARY_H
 #include "../native/pack.h"
+#include "literal-graph.h"
 
 typedef enum QJSIntlSegmentDictionaryFamily {
     QJS_INTL_DICTIONARY_CJK,
@@ -14,9 +15,7 @@ typedef enum QJSIntlSegmentDictionaryFamily {
 } QJSIntlSegmentDictionaryFamily;
 
 typedef struct QJSIntlSegmentDictionary {
-    const uint8_t *alphabet, *values, *starts, *terminals, *labels, *targets;
-    uint32_t alphabet_count, value_count, state_count, edge_count;
-    uint32_t root, words, max_scalars, max_utf16;
+    QJSIntlSegmentLiteralGraph graph;
     unsigned int valued;
 } QJSIntlSegmentDictionary;
 
