@@ -4792,6 +4792,73 @@ if get_option('intl') == 'native'
       'timeout': 30,
     },
   }]
+endif
+
+# Compile the provider once; small independent packs exercise admission without
+# a test-only mutable global data source or production dictionary OOM sweeps.
+if get_option('intl') == 'native'
+  intl_segment_native_fixture = custom_target(
+    'intl-segment-native-fixture',
+    output: 'intl-segment-native-fixture.c',
+    command: [python, files('intl_segment_native_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'intl_segment_language_fixture.py',
+      'test_intl_segment_program_tables.py',
+    ),
+  )
+  intl_segment_native_runtime = static_library(
+    'intl-segment-native-fixture-runtime',
+    files(
+      '../src/intl/segment/native.c',
+      '../src/intl/segment/native-input.c',
+      '../src/intl/segment/dictionary-refine.c',
+      '../src/intl/segment/dictionary.c',
+      '../src/intl/segment/routing.c',
+      '../src/intl/segment/suppression.c',
+      '../src/intl/segment/suppression-data.c',
+      '../src/intl/segment/literal-graph.c',
+      '../src/intl/segment/scan.c',
+      '../src/intl/segment/program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/unicode/libunicode.c',
+      '../src/unicode/category.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables,
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  foreach label, case : {
+    'complete': 0,
+    'fingerprint': 1,
+    'program-coverage': 2,
+    'dictionaries': 3,
+    'root': 4,
+    'profile': 5,
+    'list-coverage': 6,
+  }
+    native_segment_test = {
+      'name': ('test_intl_segment_native_' + label),
+      'sources': files(
+        'test_intl_segment_native.c',
+      ) + [intl_segment_native_fixture],
+      'c_args': (host_args + [
+        ('-DQJS_INTL_TEST_SEGMENT_CASE=' + case.to_string())
+      ]),
+      'link_with': intl_segment_native_runtime,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': native_segment_test,
+      'name': ('intl-segment-native-' + label),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+  endforeach
 
   intl_segment_dictionary_refine_test = {
     'name': 'test_intl_segment_dictionary_refine',
