@@ -187,20 +187,14 @@
       "role": "PMO daily publication; PDF page 3 January 1900 supplies the preceding lunar M12",
       "vendored": false
     },
-    "cldr-calendarData.json": {
-      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/cldr-json/cldr-core/supplemental/calendarData.json",
-      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
-      "release": "48.2.3",
-      "role": "Released CLDR Japanese era codes and Gregorian start dates; pre-1873 eras remain Gregorian under ECMA-402",
-      "vendored": true,
-      "sha256": "c65445d268975fabb15c0a356d2a22dbe0e80c123979408583903f5b2afd386d"
-    },
     "LICENSE-CLDR": {
-      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/LICENSE",
-      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
-      "role": "Unicode License V3 for CLDR source and derived era data",
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip",
+      "archive_sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "path": "LICENSE",
+      "revision": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+      "role": "Unicode license from the official CLDR 49 common release",
       "vendored": true,
-      "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b"
+      "sha256": "65eb33419e22a297550a811b5b535f5e532f9a7e0114b516c0ea18afd53c3804"
     },
     "icu4x-korea-data.rs": {
       "url": "https://raw.githubusercontent.com/unicode-org/icu4x/e078031999870d4f263635c319a79cb19543ccfc/components/calendar/src/cal/east_asian_traditional/korea_data.rs",
@@ -208,6 +202,16 @@
       "role": "ICU4X precomputed Korean calendar years; supplement after KASI coverage through 2100, not an official KASI publication",
       "vendored": true,
       "sha256": "109acbffe1cf64ce20bf483752f5c1d2f6b8cae07b6a75e17e79e0f2a20eb69f"
+    },
+    "cldr-calendarData.xml": {
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip",
+      "archive_sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "path": "common/supplemental/supplementalData.xml",
+      "revision": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+      "release": "49",
+      "role": "Official common-release Japanese era codes and Gregorian start dates; 1873 ECMA boundary retained",
+      "vendored": true,
+      "sha256": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a"
     }
   },
   "normalized": {
@@ -237,7 +241,7 @@
       "page": 3
     }
   ],
-  "binary_sha256": "82c17d2bb9129a5dc8fefd1d12f6918447f443e20166b7c065ace28a1bd4ed0d",
+  "binary_sha256": "b6d5333198cf06d8e02070aefba25933118c5a6678f5ff06cc4049c6ab7392b9",
   "binary_size": 12576,
   "calendars": [
     {
@@ -274,7 +278,7 @@
     },
     {
       "calendar": "japanese",
-      "version": "cldr-91c267402229a59e3ef2774544f001bf959e8809",
+      "version": "cldr-96e54b273d2da4ec6fbad350ba19ff23fa24a588",
       "era_count": 5,
       "eras": [
         {
