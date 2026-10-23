@@ -75,7 +75,6 @@ if intl_enabled
   if get_option('intl') == 'minimal'
     common_args += '-DCONFIG_INTL_SEGMENT_MINIMAL'
   endif
-  warning('Intl is under development; only the documented completed APIs are available')
 endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
