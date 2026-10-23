@@ -297,6 +297,9 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['locales'], len(view['locales']))
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
+            sections = view['envelope']['sections']
+            for key in (bundle.SEGMENT_DICTIONARIES, bundle.SEGMENT_PROGRAMS, bundle.SEGMENT_SUPPRESSIONS):
+                self.assertEqual(key in sections, profile == 'native')
             date_fields = view['date_field_names']
             styles = view['date_styles']
             self.assertIsNotNone(styles)
