@@ -70,6 +70,7 @@ intl_tool_dependencies = files(
   'scalar_trie.py',
   'scalar_trie_tables.py',
   'segment_alphabet.py',
+  'segment_catalog.py',
   'segment_dfa.py',
   'segment_dictionary.py',
   'segment_dictionary_sources.py',
