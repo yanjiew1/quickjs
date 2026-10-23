@@ -101,49 +101,64 @@ int main(void)
     calls = state.calls;
     assert(!qjs_intl_segment_dictionary_at(&data, QJS_INTL_DICTIONARY_CJK, &cjk));
     assert(!qjs_intl_segment_dictionary_at(&data, QJS_INTL_DICTIONARY_THAI, &thai));
-    assert(cjk->valued && cjk->words == 5 && cjk->max_scalars == 4 && cjk->max_utf16 == 6);
-    assert(!thai->valued && thai->words == 3);
+    assert(cjk->valued && cjk->graph.words == 5 && cjk->graph.max_scalars == 4 && cjk->graph.max_utf16 == 6);
+    assert(!thai->valued && thai->graph.words == 3);
     assert(qjs_intl_segment_dictionary_at(&data, QJS_INTL_DICTIONARY_KHMER, &missing) == QJS_INTL_UNSUPPORTED);
     assert(!missing);
-    assert(!qjs_intl_segment_dictionary_step(cjk, cjk->root, 'a', &at));
+    assert(!qjs_intl_segment_dictionary_step(cjk, cjk->graph.root, 'a', &at));
     assert(!qjs_intl_segment_dictionary_value(cjk, at, &value) && value == 0);
     assert(!qjs_intl_segment_dictionary_step(cjk, at, 'b', &next));
     assert(!qjs_intl_segment_dictionary_value(cjk, next, &value) && value == UINT32_MAX);
     assert(!qjs_intl_segment_dictionary_step(cjk, next, 'c', &at));
     assert(!qjs_intl_segment_dictionary_step(cjk, at, 'd', &next));
     assert(!qjs_intl_segment_dictionary_value(cjk, next, &value) && value == 20);
-    at = cjk->root;
+    at = cjk->graph.root;
     for (i = 0; i < 3; i++) {
         assert(!qjs_intl_segment_dictionary_step(cjk, at, 0x20000 + i, &next));
         at = next;
     }
     assert(!qjs_intl_segment_dictionary_value(cjk, at, &value) && value == 30);
     assert(qjs_intl_segment_dictionary_step(cjk, at, 'a', &next) == QJS_INTL_UNSUPPORTED && !next);
-    assert(qjs_intl_segment_dictionary_step(cjk, cjk->root, 0xd800, &next) == QJS_INTL_UNSUPPORTED);
-    assert(qjs_intl_segment_dictionary_value(cjk, cjk->root, &value) == QJS_INTL_UNSUPPORTED && !value);
-    assert(qjs_intl_segment_dictionary_step(cjk, cjk->state_count, 'a', &next) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_segment_dictionary_step(cjk, cjk->graph.root, 0xd800, &next) == QJS_INTL_UNSUPPORTED);
+    assert(qjs_intl_segment_dictionary_value(cjk, cjk->graph.root, &value) == QJS_INTL_UNSUPPORTED && !value);
+    assert(qjs_intl_segment_dictionary_step(cjk, cjk->graph.state_count, 'a', &next) == QJS_INTL_INVALID_ARGUMENT);
     assert(state.calls == calls && !state.live); /* Traversal allocates nothing. */
     assert(!qjs_intl_pack_section(&pack, QJS_INTL_SECTION_SEGMENT_DICTIONARIES, &section));
     base = (size_t)(section.bytes - (unaligned + 1));
     record = base + 16;
-    padding = (size_t)(thai->terminals + thai->state_count * 2 - (unaligned + 1));
-    assert(thai->labels > thai->terminals + thai->state_count * 2);
-    alphabet = (size_t)(cjk->alphabet - (unaligned + 1));
-    values = (size_t)(cjk->values - (unaligned + 1));
-    starts = (size_t)(cjk->starts - (unaligned + 1));
-    terminals = (size_t)(cjk->terminals - (unaligned + 1));
-    labels = (size_t)(cjk->labels - (unaligned + 1));
-    targets = (size_t)(cjk->targets - (unaligned + 1));
-    states = cjk->state_count;
-    edges = cjk->edge_count;
-    root = cjk->root;
-    first = read32(cjk->starts + root * 4);
-    assert(read32(cjk->starts + (root + 1) * 4) >= first + 2);
-    first_label = (uint32_t)cjk->labels[first * 2] | (uint32_t)cjk->labels[first * 2 + 1] << 8;
+    padding = (size_t)(thai->graph.terminals + thai->graph.state_count * 2 - (unaligned + 1));
+    assert(thai->graph.labels > thai->graph.terminals + thai->graph.state_count * 2);
+    alphabet = (size_t)(cjk->graph.alphabet - (unaligned + 1));
+    values = (size_t)(cjk->graph.values - (unaligned + 1));
+    starts = (size_t)(cjk->graph.starts - (unaligned + 1));
+    terminals = (size_t)(cjk->graph.terminals - (unaligned + 1));
+    labels = (size_t)(cjk->graph.labels - (unaligned + 1));
+    targets = (size_t)(cjk->graph.targets - (unaligned + 1));
+    states = cjk->graph.state_count;
+    edges = cjk->graph.edge_count;
+    root = cjk->graph.root;
+    first = read32(cjk->graph.starts + root * 4);
+    assert(read32(cjk->graph.starts + (root + 1) * 4) >= first + 2);
+    first_label = (uint32_t)cjk->graph.labels[first * 2] | (uint32_t)cjk->graph.labels[first * 2 + 1] << 8;
     saved = *thai;
     memset(&data, 0, sizeof(data));
-    assert(!qjs_intl_segment_dictionary_step(&saved, saved.root, 0xe01, &at));
+    assert(!qjs_intl_segment_dictionary_step(&saved, saved.graph.root, 0xe01, &at));
     assert(!qjs_intl_segment_dictionary_value(&saved, at, &value) && !value);
+    {
+        uint8_t *raw = malloc(qjs_intl_dictionary_fixture_length);
+        size_t member_value = (size_t)(saved.graph.values - (unaligned + 1));
+        assert(raw);
+        memcpy(raw, qjs_intl_dictionary_fixture_bytes, qjs_intl_dictionary_fixture_length);
+        put32(raw + member_value, 7);
+        /* The first graph allocates normally. Malformed membership payloads
+           must be rejected before attempting the second scratch allocation. */
+        state.calls = 0;
+        state.fail_at = 2;
+        reject(&allocator, raw, qjs_intl_dictionary_fixture_length, QJS_INTL_DATA_ERROR);
+        assert(state.calls == 1);
+        state.fail_at = 0;
+        free(raw);
+    }
     free(unaligned);
 
     /* Fail each temporary validation allocation, then prove retry succeeds. */

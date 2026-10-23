@@ -4680,6 +4680,7 @@ intl_segment_dictionary_test = executable(
   files(
     'test_intl_segment_dictionary.c',
     '../src/intl/segment/dictionary.c',
+    '../src/intl/segment/literal-graph.c',
     '../src/intl/native/pack.c',
   ) + [intl_segment_dictionary_fixture],
   c_args: host_args,
