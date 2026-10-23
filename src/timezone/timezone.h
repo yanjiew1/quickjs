@@ -46,6 +46,13 @@ int qjs_timezone_offset(const QJSTimeZone *zone, int64_t epoch_seconds,
 int qjs_timezone_info(const QJSTimeZone *zone, int64_t epoch_seconds,
                       QJSTimeZoneInfo *result);
 
+/* Prove the offset AND raw DST designation are constant on [first, last].
+   Query actual boundaries, not endpoint samples; equal endpoint records can
+   surround changes. Abbreviation-only changes are irrelevant. The selected
+   backend can reject an unsupported range; preserve output on every error. */
+int qjs_timezone_info_is_constant(const QJSTimeZone *zone, int64_t first,
+                                  int64_t last, int *constant);
+
 /* Visit every candidate in ascending epoch order, without assuming at most
    two. Local seconds retain the caller's fractional nanoseconds. For a gap,
    return zero candidates, offsets immediately before and after the gap,
