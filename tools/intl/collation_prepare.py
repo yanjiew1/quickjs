@@ -35,11 +35,13 @@ def prepare(sources, profile, compiler, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
+    parser.add_argument('--source-pin', type=Path,
+                        help='explicit alternate source pin for release/Git comparison')
     parser.add_argument('--profile', choices=('minimal', 'native'), required=True)
     parser.add_argument('--compiler', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    print(json.dumps(prepare(acquire.Sources(args.sources), args.profile, args.compiler, args.output),
+    print(json.dumps(prepare(acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), args.profile, args.compiler, args.output),
                      sort_keys=True, indent=2))
 
 
