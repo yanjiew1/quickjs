@@ -70,6 +70,24 @@ static int inspect_regexp_exec(uint8_t **capture, const uint8_t *bytecode,
     return result;
 }
 
+static void test_allocator_frees(void)
+{
+    static const uint8_t malformed[] = { '[', '+', 0, '!', 'a', 'a' };
+    void *ptr;
+
+    /* Freeing an empty range must not allocate via realloc(NULL, 0). */
+    assert(lre_realloc(NULL, NULL, 0) == NULL);
+    ptr = lre_realloc(NULL, NULL, 8);
+    assert(ptr);
+    memset(ptr, 0x5a, 8);
+    ptr = lre_realloc(NULL, ptr, 16);
+    assert(ptr && ((unsigned char *)ptr)[0] == 0x5a);
+    assert(lre_realloc(NULL, ptr, 0) == NULL);
+
+    /* Failed parsing releases empty string lists and character ranges. */
+    assert(fuzz_regexp_timeout_input(malformed, sizeof(malformed)) == 0);
+}
+
 int main(void)
 {
     static const uint8_t input[] = { 'a', 0, 'a' };
@@ -88,5 +106,6 @@ int main(void)
     exhaust_actual_timeout(NULL);
     assert(fuzz_regexp_timeout_input(input, 0) == 0);
     assert(exec_calls == 2 && lre_check_timeout(NULL) == 0);
+    test_allocator_frees();
     return 0;
 }
