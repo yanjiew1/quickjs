@@ -56,6 +56,12 @@ option(
   description: 'Incomplete development Intl implementation: disabled or native algorithms with minimal/full locale data',
 )
 option(
+  'intl_data_file',
+  type: 'string',
+  value: '',
+  description: 'Optional prepared Intl pack for the selected profile (for example full Git locale data)',
+)
+option(
   'temporal',
   type: 'boolean',
   value: true,
