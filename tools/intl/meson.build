@@ -86,6 +86,7 @@ intl_tool_dependencies = files(
   'segment_sets.py',
   'segment_sources.py',
   'segment_suppressions.py',
+  'segment_suppression_tables.py',
   'tables.py',
   'timezone_name_tables.py',
   'timezone_names.py',
