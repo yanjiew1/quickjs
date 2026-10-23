@@ -8,6 +8,7 @@ from segment_sources import KINDS, RULE
 Binding = namedtuple('Binding', 'identifier expression locale source environment')
 VariableEnvironment = namedtuple('VariableEnvironment', 'bindings visible')
 InheritedRule = namedtuple('InheritedRule', 'identifier expression locale source')
+SuppressionEnvironment = namedtuple('SuppressionEnvironment', 'entries locale source')
 
 
 def _groups(records, graph, locale, kind):
@@ -81,3 +82,17 @@ def ordered_rules(records, graph, locale, kind):
                 selected[key] = InheritedRule(definition.identifier, definition.expression,
                                               row.locale, row.source)
     return tuple(selected[key] for key in sorted(selected))
+
+
+def capture_suppressions(records, graph, locale):
+    """Select the nearest whole sentence list; an explicit empty masks parents.
+
+    This is list inheritance, not rule-ID overlay or variable append semantics.
+    Preserve raw order and declaration origin for the matching compiler receipt.
+    """
+    groups = _groups(records, graph, locale, 'SentenceBreak')
+    for source in graph.chain(locale, 'segmentations'):
+        row = groups.get((source, 'SentenceBreak'))
+        if row is not None and row.suppressions is not None:
+            return SuppressionEnvironment(row.suppressions, row.locale, row.source)
+    return SuppressionEnvironment((), None, None)
