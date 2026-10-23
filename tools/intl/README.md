@@ -27,14 +27,30 @@ python3 tools/intl/acquire.py --cache /path/to/intl-cache
 python3 tools/intl/acquire.py --cache /path/to/intl-cache --offline
 ```
 
-`pin.json` identifies the CLDR 49 production common ZIP by release tag,
-commit, archive SHA-256 and the SHA-256 of its source manifest. The separate
-`pin-git.json` selects the full Git release source for additional locales.
-An upgrade must replace the pins and regenerate and validate the data; the
-tool never follows a development branch or `latest`.
+`pin.json` identifies CLDR 49's official common release ZIP by release tag,
+commit, archive SHA-256 and complete logical-manifest SHA-256. Its production
+filtering deliberately excludes lower-coverage locale data. Normal builds use
+this prepared distribution; tools never follow `main` or `latest`.
 
-The default common archive and license are materialized under `cldr-49` in
-the cache. No source programs in the alternate Git archive are executed.
+`pin-git.json` separately pins the complete `common/` tree from the matching
+release commit. Choose it explicitly when generating data with all Git-source
+locales. The source inventories remain separate; missing production records are
+not silently filled from Git. Neither source's Java/tooling programs are executed
+or installed.
+
+Common data is materialized under `cldr-49`; Git data uses `cldr-49-git`, so both
+can coexist under one cache directory:
+
+```sh
+python3 tools/intl/acquire.py --cache /path/to/intl-cache \
+  --source-pin tools/intl/pin-git.json
+```
+
+Pass the same `--source-pin` to `collation_prepare.py`, `segment_prepare.py` and
+`generate.py`, with `/path/to/intl-cache/cldr-49-git` as `--sources`. It determines
+the complete selected registry before assigning compiled locale IDs. Dictionary
+release/Unicode pins remain independent. Regenerate and validate both profiles
+after source upgrades instead of relabeling existing bytes.
 
 Acquisition verifies the archive and the complete file inventory before writing
 source files. Existing correct files are retained; missing or modified cache
@@ -1857,6 +1873,20 @@ Minimal generation requires its own minimal collation archive and omits
 `--compiled-segmentation`, retaining no unused dictionaries. Preserve the emitted
 dictionary license and source notices with the final native data.
 
+To build with a separately generated full-Git native pack, choose its source
+pin/cache in the preparation commands above and write the final output outside
+the repository, then select it explicitly:
+
+```sh
+meson setup build-git -Dintl=native -Dintl_data_file=/path/to/native-git.bin
+```
+
+`intl_data_file` selects prepared data, not another backend or runtime loader.
+The build checks the pack's minimal/native profile before emitting its single C
+owner. The committed production binaries and manifests remain common-source.
+Relative data paths are resolved from the source directory; absolute paths also
+work with an independent build directory.
+
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
 locale identity metadata, regional/script preferences, and deduplicated sets
 of resolved list templates. Both profiles retain all identity and preference
@@ -2046,7 +2076,7 @@ empty values remain distinct; unsupported scopes or structural aliases fail.
 
 The collector preserves raw LDML text. It does not yet select DurationFormat
 locales or project patterns into the service's two separator fields and hour
-padding preference. CLDR 49 common includes `h.mm:ss`, `hh:mm:ss`, quoted
+padding preference. CLDR 49 includes `h.mm:ss`, `hh:mm:ss`, quoted
 prefixes and unquoted text around fields; requiring one identical separator or
 discarding those distinctions during collection would lose source information.
 Textual unit forms remain owned by `unit_patterns.py`.
