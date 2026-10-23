@@ -3303,6 +3303,13 @@ standalone = {
     unicode_tables,
   ],
   'test_intl_segment_property': files('test_intl_segment_property.c') + segment_property_sources,
+  'test_intl_segment_routing': [
+    'test_intl_segment_routing.c',
+    '../src/intl/segment/routing.c',
+    '../src/unicode/libunicode.c',
+    '../src/cutils/cutils.c',
+    unicode_tables,
+  ],
   'test_intl_collation_compare': [
     'test_intl_collation_compare.c',
     '../src/intl/collation/compare.c',

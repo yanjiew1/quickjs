@@ -247,6 +247,7 @@ if intl_enabled
     'intl/segment/dictionary.c',
     'intl/segment/literal-graph.c',
     'intl/segment/program.c',
+    'intl/segment/routing.c',
     'intl/segment/scan.c',
     'intl/segment/suppression-data.c',
     'intl/segment/suppression.c',

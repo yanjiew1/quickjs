@@ -59,3 +59,25 @@ release of that borrowed storage. Failed preparation leaves zero output, so the
 binding frees its local UTF-16 reference before wrapper cleanup. Iterator cursor
 commit still precedes JS result allocation. Native refinement, word classification
 and capability admission remain subsequent acceptance steps.
+
+## Native dictionary routing resources
+
+`segment/routing.[ch]` prepares immutable Script and Script_Extensions interval
+caches through the Unicode owner's existing `unicode_script` API. Han, Hiragana
+and Katakana map to the CJK family; Khmer, Lao, Myanmar and Thai map to their
+respective dictionaries. No second script database is generated for Intl.
+
+The cache owns a copy of the allocator in heap-stable storage. Unicode range
+callbacks point there, not at a temporary stack allocator; zero-sized Unicode
+release requests translate to Intl `free`. Partial initialization releases every
+completed or partially built range. Queries use binary interval lookup without
+allocation or shared traversal state. A future shared native configuration owner
+must retain the cache until its last segmenter is gone; this helper introduces
+no separate reference count.
+
+Returned masks are candidates, not dictionary-core or boundary decisions.
+Script_Extensions can include punctuation; the refinement owner must also check
+character category, attachment to a surrounding script run, and protected base
+and grapheme decisions. This native routing policy does not claim exact
+Line_Break=SA classification. Dictionary refinement and native admission remain
+separate work.
