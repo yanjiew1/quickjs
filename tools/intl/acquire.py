@@ -287,7 +287,8 @@ def materialize(archive, root, pin):
 
 
 def load_pin(path=None):
-    path = Path(__file__).with_name('pin.json') if path is None else Path(path)
+    path = (Path(__file__).resolve().parents[2] / 'data/intl/pin.json'
+            if path is None else Path(path))
     return json.loads(path.read_text())['cldr']
 
 
