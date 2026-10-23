@@ -1205,7 +1205,7 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
             if (JS_IsException(el))
                 goto fail;
             if (toLocaleString) {
-                el = JS_ToLocaleStringFree(ctx, el);
+                el = JS_ToLocaleStringFree(ctx, el, argc, argv);
             }
             if (string_buffer_concat_value_free(b, el))
                 goto fail;
