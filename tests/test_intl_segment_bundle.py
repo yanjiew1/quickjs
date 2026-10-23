@@ -222,6 +222,9 @@ class SegmentBundleTests(unittest.TestCase):
         self.assertNotEqual(envelope['sections'][bundle.STRINGS], parts[bundle.STRINGS])
         self.assertEqual(manifest['inputs']['segmentation'], inputs)
         self.assertIn('NOTICE-SEGMENT-DICTIONARIES', embed.render(binary))
+        self.assertEqual(embed.render(binary, 'native'), embed.render(binary))
+        with self.assertRaisesRegex(ValueError, 'selected build profile'):
+            embed.render(binary, 'minimal')
         with self.assertRaisesRegex(ValueError, 'native profile'):
             generate.generate(source, 'minimal', compiled_segmentation=archive)
 
