@@ -177,8 +177,9 @@ whether a public name is semantically supported by a particular tailoring.
 
 The source fingerprint must match when attaching these records. Bindings do
 not alter root/program bytes and do not imply the comparator has been enabled.
-Locale matching and ResolveLocale consume them through the future service
-interface; the low-level binding getter performs no locale fallback.
+Locale matching and ResolveLocale consume them through the Collator service
+availability/default/type interfaces; the low-level binding getter performs no
+locale fallback.
 
 ## Production and publication
 
