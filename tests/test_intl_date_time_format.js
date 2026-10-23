@@ -474,6 +474,50 @@ if (typeof Temporal !== 'undefined') {
     assert(longName !== shortName);
     assert(zoned.toLocaleString('en') !== noName);
     assertThrows(TypeError, () => zoned.toLocaleString('en', {timeZone: {toString() {throw 0;}}}));
+
+    if (DTF.supportedLocalesOf('de-AT', {localeMatcher: 'lookup'}).length === 0) {
+        // Unsupported requests use the default locale's hour policy. Each
+        // Temporal wrapper must agree with that formatter, including overrides.
+        for (const value of [instant, plain, new Temporal.PlainTime(13, 24, 35)]) {
+            for (const options of [{...utc, localeMatcher: 'lookup'},
+                {...utc, localeMatcher: 'lookup', hour: 'numeric', hourCycle: 'h23'}]) {
+                const fallback = new DTF([], options);
+                const requested = new DTF('de-AT', options);
+                assert(requested.resolvedOptions().locale, fallback.resolvedOptions().locale);
+                assert(value.toLocaleString('de-AT', options), fallback.format(value));
+            }
+        }
+    }
+
+    if (DTF.supportedLocalesOf('ar-EG', {localeMatcher: 'lookup'}).length === 0) {
+        // Locale fallback also selects the default digits. Boundary PlainDates
+        // must retain their actual day instead of passing through Date TimeClip.
+        const options = {...utc, localeMatcher: 'lookup', calendar: 'iso8601',
+            year: 'numeric', month: 'numeric', day: 'numeric'};
+        const fallback = new DTF([], options);
+        const requested = new DTF('ar-EG', options);
+        assert(requested.resolvedOptions().locale, fallback.resolvedOptions().locale);
+        assert(requested.resolvedOptions().numberingSystem, 'latn');
+        for (const value of [new Temporal.PlainDate(275760, 9, 13),
+            new Temporal.PlainDate(-271821, 4, 19)]) {
+            assert(requested.format(value), fallback.format(value));
+            assert(requested.formatToParts(value).find(part => part.type === 'day').value,
+                String(value.day));
+        }
+    }
+
+    // Exercise non-Latin boundary days even in the English-only profile:
+    // numbering-system support is independent of Arabic locale availability.
+    const arabic = new DTF('en', {...utc, calendar: 'iso8601', numberingSystem: 'arab',
+        year: 'numeric', month: 'numeric', day: 'numeric'});
+    assert(arabic.resolvedOptions().numberingSystem, 'arab');
+    for (const [value, day, month] of [[new Temporal.PlainDate(275760, 9, 13), '١٣', '٩'],
+        [new Temporal.PlainDate(-271821, 4, 19), '١٩', '٤']]) {
+        const parts = arabic.formatToParts(value);
+        assert(parts.find(part => part.type === 'day').value, day);
+        assert(parts.find(part => part.type === 'month').value.includes(month));
+        assert(arabic.format(value), parts.map(part => part.value).join(''));
+    }
 }
 
 // Fixed zero offsets have GMT's names; numeric offset styles still use their
