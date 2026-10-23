@@ -9,10 +9,16 @@ import hashlib
 from cldr_xml import DataError
 from segment_sources import Definition
 
-PIN = '7cdeb9e7fac52c59f22fc7248b05f989ee5689c2'
+PIN = '96e54b273d2da4ec6fbad350ba19ff23fa24a588'
 ROOT = 'common/segments/root.xml'
 JAPANESE = 'common/segments/ja.xml'
 HASHES = {
+    ROOT: 'e3e778feaeee9e6aa8173722898c482bd79ef3074fd529f3b7ebda279d522a3d',
+    JAPANESE: 'e5cb9d23eb3976c42227c4832e95d9ba0e976dc8e726405d9063838702756493',
+}
+# Published common and complete Git files have different headers/whitespace.
+# Both reviewed distributions retain the same missing-FE declaration defect.
+GIT_HASHES = {
     ROOT: '1f9130f21b3e72ff14d73100bb12297abebd248df6c1d292aa275c0aea60317c',
     JAPANESE: 'df79236c2d1dafe54c61880a2954fa715b736af1edd6e98ac50154f49bd2063d',
 }
@@ -45,7 +51,11 @@ def japanese_word_fe(sources, records):
     """
     if sources.pin['commit'] != PIN:
         raise DataError('unreviewed CLDR segmentation correction source pin')
-    for name, expected in HASHES.items():
+    distribution = sources.pin.get('distribution', 'common')
+    if distribution not in ('common', 'git'):
+        raise DataError('unreviewed CLDR segmentation source distribution')
+    hashes = HASHES if distribution == 'common' else GIT_HASHES
+    for name, expected in hashes.items():
         if hashlib.sha256(sources.read(name)).hexdigest() != expected:
             raise DataError('changed segmentation correction source: ' + name)
     selected = [index for index, row in enumerate(records)
@@ -68,7 +78,7 @@ def japanese_word_fe(sources, records):
     # capture_variables will retain the same previous self-binding semantics.
     changed = row._replace(variables=row.variables[:1] + (HISTORICAL_FE,) + row.variables[1:])
     result = tuple(changed if position == index else item for position, item in enumerate(records))
-    receipt = Correction('japanese-word-fe', PIN, JAPANESE, HASHES[ROOT], HASHES[JAPANESE],
+    receipt = Correction('japanese-word-fe', PIN, JAPANESE, hashes[ROOT], hashes[JAPANESE],
                          1, HISTORICAL_FE.identifier, HISTORICAL_FE.expression,
                          '56a2de16366cd5bfe18628e941ea84849cfd4153')
     return CorrectedSources(result, (receipt,))
