@@ -304,6 +304,34 @@ if (typeof Temporal !== 'undefined') {
     assertThrows(TypeError, () => zoned.toLocaleString('en', {timeZone: {toString() {throw 0;}}}));
 }
 
+// Fixed zero offsets have GMT's names; numeric offset styles still use their
+// localized wrapper. Neither name selection nor formatting changes the ID.
+{
+    const zonePart = (locale, timeZone, timeZoneName) => new DTF(locale, {
+        timeZone, timeZoneName
+    }).formatToParts(0).find(part => part.type === 'timeZoneName').value;
+    assert(zonePart('en', '+00:00', 'short'), 'GMT');
+    assert(zonePart('en', '+00:00', 'long'), 'Greenwich Mean Time');
+    assert(zonePart('en', '+00:00', 'shortGeneric'), 'GMT');
+    assert(zonePart('en', '+00:00', 'shortOffset'), 'GMT+0');
+    assert(zonePart('en', '+00:00', 'longOffset'), 'GMT+00:00');
+    assert(zonePart('en', '+01:00', 'short'), 'GMT+1');
+    assert(zonePart('en', '-01:00', 'short'), 'GMT-1');
+    assert(new DTF('en', {timeZone: '+00:00'}).resolvedOptions().timeZone, '+00:00');
+    if (DTF.supportedLocalesOf('fr').length) {
+        assert(zonePart('fr', '+00:00', 'short'), 'GMT');
+        assert(zonePart('fr', '+00:00', 'shortOffset'), 'UTC+0');
+    }
+    if (typeof Temporal === 'object') {
+        const fixed = new Temporal.ZonedDateTime(0n, '+00:00');
+        assert(fixed.toLocaleString('en').includes('GMT'));
+        assert(!fixed.toLocaleString('en').includes('+'));
+        assert(fixed.timeZoneId, '+00:00');
+        assert(new Temporal.ZonedDateTime(0n, '+01:00').toLocaleString('en').includes('GMT+1'));
+        assert(new Temporal.ZonedDateTime(0n, '-01:00').toLocaleString('en').includes('GMT-1'));
+    }
+}
+
 // Match the staging String/internalUsage witness on a supported locale. Its
 // German exact-output variant remains part of the full native Test262 run.
 {
