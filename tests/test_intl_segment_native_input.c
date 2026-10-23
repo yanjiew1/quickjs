@@ -201,10 +201,12 @@ int main(void)
     assert(!prepare_input(&allocator, &sentence, &grapheme, &list, &source, &input));
     calls = state.calls;
     assert(state.live == 1);
-    /* Suppression removes the first three soft cuts; grapheme protection
-       removes a|b. Neither stage alone would produce this final span. */
+    /* Suppression removes the first three soft cuts. Keep the remaining
+       base sentence boundary even when the grapheme program has none. */
     assert(!qjs_intl_segment_native_input_next(input, 0, &segment));
-    assert(segment.start == 0 && segment.end == 5 && segment.present);
+    assert(segment.start == 0 && segment.end == 4 && segment.present);
+    assert(!qjs_intl_segment_native_input_next(input, 4, &segment));
+    assert(segment.start == 4 && segment.end == 5 && segment.present);
     qjs_intl_segment_native_input_close(input);
     for (i = 1; i <= calls; i++) {
         state.calls = 0;
