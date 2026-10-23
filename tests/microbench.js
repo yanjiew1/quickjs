@@ -1714,6 +1714,72 @@ function intl_date_temporal(n)
     return n * 100;
 }
 
+/* Separate input preparation from reuse. Cached Segments make iteration and
+   containing() measure traversal/result creation rather than preparation. */
+function intl_segment_construct(n)
+{
+    var options = { granularity: "word" };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.Segmenter("en", options);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_segment_prepare(n)
+{
+    var segmenter = intl_segment_prepare.segmenter ||
+        (intl_segment_prepare.segmenter = new Intl.Segmenter("en", { granularity: "word" }));
+    var source = intl_segment_prepare.source ||
+        (intl_segment_prepare.source = "ab 12.3 a\u0301 😀. Hi! ".repeat(4));
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = segmenter.segment(source);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_segment_iterate(n)
+{
+    var segments = intl_segment_iterate.segments;
+    if (!segments) {
+        segments = new Intl.Segmenter("en", { granularity: "word" })
+            .segment("ab 12.3 a\u0301 😀. Hi! ".repeat(4));
+        intl_segment_iterate.segments = segments;
+    }
+    var i, j, part, sum = 0;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++) {
+            for (part of segments)
+                sum += part.index + part.segment.length + part.isWordLike;
+        }
+    }
+    global_res = sum;
+    return n * 100;
+}
+
+function intl_segment_containing(n)
+{
+    var segments = intl_segment_containing.segments;
+    var source = intl_segment_containing.source ||
+        (intl_segment_containing.source = "ab 12.3 a\u0301 😀. Hi! ".repeat(16));
+    if (!segments) {
+        segments = new Intl.Segmenter("en", { granularity: "word" }).segment(source);
+        intl_segment_containing.segments = segments;
+    }
+    var index = Math.floor(source.length / 2), i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = segments.containing(index + (i & 1));
+        global_res = result;
+    }
+    return n * 100;
+}
+
 function string_length(n)
 {
     var str, sum, j;
@@ -2425,6 +2491,12 @@ function main(argc, argv, g)
         test_list.push(intl_date_locale);
         if (typeof Temporal === "object" && typeof Temporal.PlainDateTime === "function")
             test_list.push(intl_date_temporal);
+    }
+    if (typeof Intl === "object" && typeof Intl.Segmenter === "function") {
+        test_list.push(intl_segment_construct);
+        test_list.push(intl_segment_prepare);
+        test_list.push(intl_segment_iterate);
+        test_list.push(intl_segment_containing);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
