@@ -4540,6 +4540,14 @@ test(
 )
 
 test(
+  'intl-segment-program-tables',
+  python,
+  args: files('test_intl_segment_program_tables.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-profile',
   python,
   args: files('test_intl_segment_profile.py'),
