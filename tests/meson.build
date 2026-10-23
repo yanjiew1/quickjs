@@ -2279,9 +2279,14 @@ if intl_enabled
   ) + unicode_tables
 
   foreach profile : [get_option('intl')]
+    fixture_input = files('../data/intl/' + profile + '.bin')
+    # Audit the selected pack, including an explicitly supplied full-Git pack.
+    if get_option('intl_data_file') != ''
+      fixture_input = intl_data_input
+    endif
     intl_fixture = custom_target(
       'intl-prepared-' + profile,
-      input: files('../data/intl/' + profile + '.bin'),
+      input: fixture_input,
       output: 'intl-prepared-' + profile + '.c',
       command: [
         python,
@@ -5393,6 +5398,14 @@ if intl_enabled
     python,
     args: files('test_intl_sources.py'),
     suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-git-source',
+    python,
+    args: files('test_intl_git_source.py'),
+    suite: ['repo', 'generator', 'unit'],
     timeout: 30,
   )
 endif

@@ -400,9 +400,10 @@ if intl_enabled
   if intl_data_path == ''
     intl_data_path = 'data/intl/' + get_option('intl') + '.bin'
   endif
+  intl_data_input = files(intl_data_path)
   intl_data = custom_target(
     'native-intl-data',
-    input: files(intl_data_path),
+    input: intl_data_input,
     output: 'intl-data.c',
     command: [
       python,
