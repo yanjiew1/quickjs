@@ -2,8 +2,6 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #include "time-zone.h"
-#include "parse.h"
-#include "format.h"
 #include <string.h>
 
 static int zone_error(int error)
@@ -49,35 +47,7 @@ static int epoch_from_seconds(QJSTemporalEpochNs *result, int64_t seconds,
 int qjs_temporal_zone_parse(QJSTemporalZone *result,
                             const char *identifier, size_t length)
 {
-    QJSTemporalZone zone = { 0 };
-    QJSTemporalUTCOffset offset;
-    const char *canonical;
-    size_t consumed;
-    int error;
-
-    if (!length || length >= sizeof(zone.identifier) ||
-        memchr(identifier, 0, length))
-        return QJS_TEMPORAL_ERROR_RANGE;
-    if (identifier[0] == '+' || identifier[0] == '-') {
-        if (qjs_temporal_parse_utc_offset_prefix(&offset, &consumed,
-                identifier, length, 0) || consumed != length)
-            return QJS_TEMPORAL_ERROR_RANGE;
-        zone.is_offset = 1;
-        zone.offset_nanoseconds = offset.nanoseconds;
-        if (qjs_temporal_format_utc_offset(zone.identifier,
-                sizeof(zone.identifier), offset.nanoseconds, 0) < 0)
-            return QJS_TEMPORAL_ERROR_RANGE;
-    } else {
-        error = zone_error(qjs_timezone_lookup(&zone.named, identifier, length));
-        if (error)
-            return error;
-        canonical = qjs_timezone_identifier(zone.named);
-        if (strlen(canonical) >= sizeof(zone.identifier))
-            return QJS_TEMPORAL_ERROR_BACKEND;
-        strcpy(zone.identifier, canonical);
-    }
-    *result = zone;
-    return 0;
+    return zone_error(qjs_timezone_parse_identifier(result, identifier, length));
 }
 
 int qjs_temporal_zone_offset(const QJSTemporalZone *zone,
