@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import unicodedata
+import xml.etree.ElementTree as ET
 
 from acquire import SOURCES, atomic_write, checked_sources, digest
 
@@ -16,7 +17,21 @@ EPOCH = datetime.date(1970, 1, 1)
 
 def japanese_eras(text):
     """Keep the current and future modern eras; 1873 is an ECMA boundary."""
-    eras = json.loads(text)['supplemental']['calendarData']['japanese']['eras']
+    if text.lstrip().startswith('<'):
+        root = ET.fromstring(text)
+        entries = root.find("./calendarData/calendar[@type='japanese']/eras")
+        if root.tag != 'supplementalData' or entries is None:
+            raise ValueError('missing CLDR Japanese era data')
+        eras = {}
+        for item in entries:
+            identity = item.get('type')
+            if (item.tag != 'era' or not identity or identity in eras or list(item) or
+                    set(item.attrib) - {'type', 'start', 'code'} or not item.get('start')):
+                raise ValueError('invalid CLDR Japanese era record')
+            eras[identity] = {'_start': item.get('start'), '_code': item.get('code')}
+    else:
+        # Keep authored JSON inputs useful; shipped era data comes from release XML.
+        eras = json.loads(text)['supplemental']['calendarData']['japanese']['eras']
     cutoff = datetime.date(1873, 1, 1)
     starts = []
     for era in eras.values():
@@ -147,7 +162,7 @@ def main():
         text = json.dumps(data, indent=2)[:-2] + ',\n  "rows": [\n'
         text += ',\n'.join('    ' + json.dumps(row) for row in rows) + '\n  ]\n}\n'
         atomic_write(args.output_dir / (data['calendar'] + '.json'), text.encode('ascii'))
-    eras = japanese_eras((SOURCES / 'cldr-calendarData.json').read_text(encoding='utf-8'))
+    eras = japanese_eras((SOURCES / 'cldr-calendarData.xml').read_text(encoding='utf-8'))
     atomic_write(args.output_dir / 'japanese.json',
                  (json.dumps(eras, indent=2) + '\n').encode('ascii'))
 
