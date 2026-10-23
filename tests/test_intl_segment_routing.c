@@ -74,6 +74,9 @@ static void check_masks(const QJSIntlSegmentRouting *routing)
     assert(!qjs_intl_segment_routing_mask(routing, 0x30fc, 0));
     assert(qjs_intl_segment_routing_mask(routing, 0x30fc, 1) & (1u << QJS_INTL_DICTIONARY_CJK));
     assert(qjs_intl_segment_routing_mask(routing, 0x3001, 1) & (1u << QJS_INTL_DICTIONARY_CJK));
+    assert(qjs_intl_segment_routing_inherited(routing, 0x34f));
+    assert(!qjs_intl_segment_routing_inherited(routing, 0x93e));
+    assert(!qjs_intl_segment_routing_inherited(routing, 0x1037));
 }
 
 int main(void)

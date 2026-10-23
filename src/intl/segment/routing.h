@@ -25,4 +25,9 @@ void qjs_intl_segment_routing_close(QJSIntlSegmentRouting *);
 unsigned int qjs_intl_segment_routing_mask(const QJSIntlSegmentRouting *, uint32_t scalar,
                                             int extensions);
 
+/* True only when Script_Extensions contains Inherited. A zero family mask
+   also describes uncached foreign scripts and is not evidence of neutrality.
+   The caller separately checks that the scalar is a Mark before attachment. */
+int qjs_intl_segment_routing_inherited(const QJSIntlSegmentRouting *, uint32_t scalar);
+
 #endif

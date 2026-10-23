@@ -75,12 +75,15 @@ allocation or shared traversal state. A future shared native configuration owner
 must retain the cache until its last segmenter is gone; this helper introduces
 no separate reference count.
 
+The cache also retains Script_Extensions=Inherited for neutral mark attachment.
+A zero family mask alone cannot distinguish neutral marks from foreign scripts.
+
 Returned masks are candidates, not dictionary-core or boundary decisions.
 Script_Extensions can include punctuation; the refinement owner must also check
 character category, attachment to a surrounding script run, and protected base
 and grapheme decisions. This native routing policy does not claim exact
-Line_Break=SA classification. Dictionary refinement and native admission remain
-separate work.
+Line_Break=SA classification. [Word refinement](intl-segment-word-refinement.md)
+owns those decisions; native admission remains separate work.
 
 ## Final native input owner
 
