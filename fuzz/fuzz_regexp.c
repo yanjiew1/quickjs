@@ -22,6 +22,11 @@ int lre_check_stack_overflow(void *opaque, size_t alloca_size) { return 0; }
 
 void *lre_realloc(void *opaque, void *ptr, size_t size)
 {
+    /* The RegExp allocator uses size zero to free even an empty range. */
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
     return realloc(ptr, size);
 }
 
