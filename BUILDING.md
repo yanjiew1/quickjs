@@ -84,7 +84,11 @@ into the interpreter used by runtime tests.
 
 ## Intl profiles
 
-Intl is disabled by default. `-Dintl=minimal` enables English/root locale data;
+For version upgrades, alternate data sources and candidate-pin generation, see
+the [data maintenance guide](doc/data-updates.md).
+
+Intl is disabled by default. `-Dintl=minimal` offers `en` and `en-US`, with
+internal root data for inheritance;
 `-Dintl=native` enables the locale data in CLDR 49's official common release.
 Both profiles use native C algorithms, without an ICU dependency, source-data
 download or runtime XML parser. Prepared data is embedded in one compilation
@@ -240,7 +244,7 @@ The optional `cosmo_binary` mode remains outside CI coverage.
 ### Alternate Intl data
 
 The committed Intl packs use the official CLDR common production release.
-`tools/intl/pin-git.json` supports explicit generation from the complete matching
+`data/intl/pin-git.json` supports explicit generation from the complete matching
 Git source snapshot, including its additional locale data. Follow the generation
 commands in [tools/intl/README.md](tools/intl/README.md), then select the resulting
 pack without replacing the committed production data:
