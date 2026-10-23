@@ -3,6 +3,8 @@
 #include <stdlib.h>
 
 #ifdef CONFIG_INTL
+#include "pool-padding.h"
+
 static void check_default(JSContext *ctx, const char *expected)
 {
     JSValue value = JS_GetIntlDefaultLocale(ctx);
@@ -22,13 +24,17 @@ static void test_set_failures(void)
         JSRuntime *rt = oom_test_runtime(&allocator);
         JSContext *ctx = JS_NewContextRaw(rt);
         char *old;
+        void *padding;
         int status;
         assert(ctx && !JS_AddIntrinsicBaseObjects(ctx));
         assert(!JS_SetIntlDefaultLocale(ctx, "en"));
         old = rt->intl_default_locale;
+        /* Drain pooled blocks so every sample reaches the host allocator. */
+        padding = test_pool_padding(rt);
         oom_test_begin(&allocator, step);
         status = JS_SetIntlDefaultLocale(ctx, "EN-u-nu-arab");
         oom_test_end(&allocator);
+        test_pool_padding_free(rt, padding);
         if (!step) {
             calls = allocator.calls;
             assert(calls && calls < 256 && !status);
@@ -53,14 +59,17 @@ static void test_get_failures(void)
         JSRuntime *rt = oom_test_runtime(&allocator);
         JSContext *ctx = JS_NewContextRaw(rt);
         JSValue result;
+        void *padding;
         assert(ctx && !JS_AddIntrinsicBaseObjects(ctx));
         /* Exhaust the policy/string path with locale metadata already open;
            its independent C tests exhaust cold data-reader allocations. */
         assert(!JS_SetIntlDefaultLocale(ctx, "en"));
         assert(!JS_SetIntlDefaultLocale(ctx, NULL));
+        padding = test_pool_padding(rt);
         oom_test_begin(&allocator, step);
         result = JS_GetIntlDefaultLocale(ctx);
         oom_test_end(&allocator);
+        test_pool_padding_free(rt, padding);
         if (!step) {
             calls = allocator.calls;
             assert(calls && calls < 256 && !JS_IsException(result));
