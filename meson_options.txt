@@ -53,7 +53,7 @@ option(
   type: 'combo',
   choices: ['disabled', 'minimal', 'native'],
   value: 'disabled',
-  description: 'Incomplete development Intl implementation: disabled or native algorithms with minimal/full locale data',
+  description: 'Intl: disabled or native algorithms with minimal/common-release locale data',
 )
 option(
   'intl_data_file',
