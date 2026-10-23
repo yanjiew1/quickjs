@@ -208,14 +208,18 @@ Temporal's observable coercion and overflow processing retain their specified
 order. Keep intermediate bounds distinct from final Temporal range checks.
 Advertise only fully implemented and validated capabilities.
 
-| Calendar | Authoritative data and range | Outside that range |
+| Calendar | Designated data sources and reviewed range | Outside that range |
 | --- | --- | --- |
 | chinese | PMO publication, Gregorian 1900 through 2100 | Documented approximation |
-| dangi | KASI publication, Gregorian 1900 through 2050 | Documented approximation |
+| dangi | KASI publication, Gregorian 1900 through 2050; separate ICU4X precomputation for lunar 2051 through 2100 | Documented approximation |
 | persian | Iranian calendar authority, 1206 through 1498 AP | Documented approximation |
 | islamic-umalqura | KACST month data, 1300 through 1600 AH | islamic-civil |
 | japanese | Pinned released CLDR era data, reviewed against government/ECMA era semantics | Follow the specified proleptic model |
 | Other standard calendars | Specified arithmetic, epochs and era rules | Specified proleptic model |
+
+Dangi keeps the KASI publication and later ICU4X precomputed records separately
+identified. The latter are extended calculation data, not additional KASI
+publication. Boundary records include the end of lunar 2100.
 
 Chinese and Dangi publication coverage must include calendar-year boundary
 information needed for complete fields and arithmetic. Label derived successor
