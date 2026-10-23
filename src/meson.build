@@ -270,6 +270,8 @@ if intl_enabled
     'intl/relative/format.c',
     'intl/relative/native.c',
     'intl/segment/dictionary.c',
+    'intl/segment/literal-graph.c',
+    'intl/segment/suppression-data.c',
     'intl/unit/identifier.c',
     'intl/unit/data.c',
     'intl/unit/format.c',
