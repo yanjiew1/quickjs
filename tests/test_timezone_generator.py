@@ -173,6 +173,16 @@ class EmbeddingTests(unittest.TestCase):
 
 
 class WindowsMappingTests(unittest.TestCase):
+
+    def test_release_xml_matches_authored_json(self):
+        rows = [{'mapZone': {'_other': 'Example Standard Time', '_territory': '001', '_type': 'Area/A'}}]
+        xml = b'<supplementalData><windowsZones><mapTimezones><mapZone other="Example Standard Time" territory="001" type="Area/A"/></mapTimezones></windowsZones></supplementalData>'
+        self.assertEqual(windows.pack(xml, {'Area/A'}), windows.pack(json.dumps({'supplemental': {
+            'windowsZones': {'mapTimezones': rows}}}).encode(), {'Area/A'}))
+        with self.assertRaisesRegex(ValueError, 'mapping record'):
+            windows.pack(xml.replace(b'territory="001"', b'unknown="001"'))
+
+
     def source(self, rows):
         return json.dumps({'supplemental': {'windowsZones': {'mapTimezones': [
             {'mapZone': {'_other': key, '_territory': country, '_type': targets}}
@@ -253,6 +263,12 @@ class PrimaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'ambiguous CLDR alias territory'):
             primary.cldr_countries(data, {'Area/A': 'AA', 'Area/B': 'BB'})
 
+    def test_release_xml_aliases(self):
+        raw = b'<ldmlBCP47><keyword><key name="tz"><type name="aax" alias="Old/A Area/B" region="BB"/></key></keyword></ldmlBCP47>'
+        self.assertEqual(primary.cldr_countries(raw, {'Area/B': 'BB'})['Old/A'], 'BB')
+        with self.assertRaisesRegex(ValueError, 'keyword record'):
+            primary.cldr_countries(raw.replace(b'</key>', b'<type name="aax"/></key>'), {})
+
     def test_invalid_graphs_and_duplicate_history(self):
         with self.assertRaisesRegex(ValueError, 'link cycle'):
             primary.resolve_zone('A', set(), {'A': 'B', 'B': 'A'})
@@ -262,7 +278,7 @@ class PrimaryTests(unittest.TestCase):
             primary.backzone_links('Link A B\n#PACKRATLIST zone.tab Link C B\n')
 
     def test_released_country_aliases(self):
-        source = ROOT / 'data' / 'timezone' / 'sources' / 'cldr' / 'timezone.json'
+        source = ROOT / 'data' / 'timezone' / 'sources' / 'cldr' / 'timezone.xml'
         countries = primary.cldr_countries(source.read_bytes(), {
             'Pacific/Chuuk': 'FM', 'Pacific/Pohnpei': 'FM',
             'Arctic/Longyearbyen': 'SJ', 'Europe/Mariehamn': 'AX',
