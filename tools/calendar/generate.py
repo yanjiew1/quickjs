@@ -62,7 +62,7 @@ def datasets():
         result.append({'calendar': name, 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'years': years,
                        'version': version})
-    eras = japanese_eras((SOURCES / 'cldr-calendarData.json').read_text(encoding='utf-8'))
+    eras = japanese_eras((SOURCES / 'cldr-calendarData.xml').read_text(encoding='utf-8'))
     if json.loads((SOURCES.parent / 'japanese.json').read_text()) != eras:
         raise ValueError('normalized Japanese eras differ from source')
     rows = []
@@ -70,7 +70,7 @@ def datasets():
         day = (datetime.date(*map(int, date.split('-'))) - EPOCH).days
         rows.append((day, offset, name))
     result.append({'calendar': 'japanese', 'version':
-                   'cldr-' + pin['sources']['cldr-calendarData.json']['revision'],
+                   'cldr-' + pin['sources']['cldr-calendarData.xml']['revision'],
                    'eras': rows})
     return result, pin
 
