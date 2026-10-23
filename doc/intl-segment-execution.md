@@ -88,9 +88,9 @@ The cache owns a copy of the allocator in heap-stable storage. Unicode range
 callbacks point there, not at a temporary stack allocator; zero-sized Unicode
 release requests translate to Intl `free`. Partial initialization releases every
 completed or partially built range. Queries use binary interval lookup without
-allocation or shared traversal state. A future shared native configuration owner
-must retain the cache until its last segmenter is gone; this helper introduces
-no separate reference count.
+allocation or shared traversal state. The shared native service/configuration
+owner retains the cache until its last segmenter is gone; the routing helper
+introduces no separate reference count.
 
 The cache also retains Script_Extensions=Inherited for neutral mark attachment.
 A zero family mask alone cannot distinguish neutral marks from foreign scripts.
@@ -128,3 +128,25 @@ The result borrows no program, list, text or service pointer. Binary-search
 cursor, so several clients may query the same prepared input independently.
 The common service wrapper can retain the original JS string separately for
 segment text extraction; its data is not needed to query these vectors.
+
+## Native provider lifetime and admission
+
+`segment/native.c` implements the common service contract using one reference-
+counted configuration. Service close releases its initial reference; segmenters
+retain configuration until their own close. Prepared inputs do not retain it.
+The caller's allocator opaque owner must still outlive all allocations, including
+final vectors. This does not promise concurrent close/query synchronization.
+
+Admission validates the native profile, all five dictionary families, matching
+rule/list recipe fingerprints, and all three programs plus a whole suppression
+policy for every shared locale. The outer pack generation identifies the whole
+Intl pack and therefore differs from the segmentation recipe fingerprints.
+The public inventory excludes source root and maps remaining indexes back to
+original shared locale IDs, including when root is inside the sorted inventory.
+Partial initialization is never published and releases all temporary owners.
+
+Authored complete/malformed packs exercise this provider through the same C
+interface, with physical allocation failure sweeps and queries after service
+and segmenter teardown. Production data/compile-time selection and JavaScript
+API admission remain a separate integration step; these tests do not establish
+complete source-language conformance or public native Segmenter availability.
