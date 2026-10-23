@@ -29,6 +29,7 @@ class _Lowerer:
         self.cache, self.polarity = {}, {}
         self.nodes = self.edges = self.visits = 0
         self.ignored = None
+        self.ignore_excluded = None
 
     def visit(self):
         self.visits += 1
@@ -98,7 +99,18 @@ class _Lowerer:
                     negative = self.negative(node)
                     result = self.node('char', character=Character(ranges, negative, node))
                     if phase and not negative:
-                        result = self.node('concat', (result, self.ignored))
+                        # Do not let later rules span an earlier hard break.
+                        allowed = self.evaluator.difference(ranges, self.ignore_excluded)
+                        if allowed == ranges:
+                            result = self.node('concat', (result, self.ignored))
+                        elif allowed:
+                            excluded = self.evaluator.difference(ranges, allowed)
+                            self.evaluator.retain(allowed)
+                            self.evaluator.retain(excluded)
+                            excluded_char = self.node('char', character=Character(excluded, False, node))
+                            allowed_char = self.node('char', character=Character(allowed, False, node))
+                            padded = self.node('concat', (allowed_char, self.ignored))
+                            result = self.node('alt', (excluded_char, padded))
                     self.cache[key] = result
                     continue
                 children = node.children
@@ -124,6 +136,7 @@ class _Lowerer:
         if self.ignored is not None:
             raise DataError('repeated segmentation ignore phase')
         excluded = self.evaluator.evaluate(rule.excluded)
+        self.ignore_excluded = excluded
         ignored = self.evaluator.evaluate(rule.ignored)
         before = self.evaluator.difference(((0, DOMAIN_END),), excluded)
         self.evaluator.retain(before)
