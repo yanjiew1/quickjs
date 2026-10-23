@@ -241,6 +241,8 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
+    parser.add_argument('--source-pin', type=Path,
+                        help='explicit alternate source pin for release/Git comparison')
     parser.add_argument('--profile', choices=tuple(bundle.PROFILES), required=True)
     parser.add_argument('--compiled-collation', type=Path, required=True)
     parser.add_argument('--compiled-segmentation', type=Path)
@@ -251,7 +253,7 @@ def main():
         parser.error('--compiled-segmentation is required for the native profile')
     if args.profile != 'native' and args.compiled_segmentation is not None:
         parser.error('--compiled-segmentation applies only to the native profile')
-    binary, manifest = generate(acquire.Sources(args.sources), args.profile,
+    binary, manifest = generate(acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), args.profile,
                                 args.compiled_collation.read_bytes(),
                                 args.compiled_segmentation.read_bytes()
                                 if args.compiled_segmentation is not None else None)
