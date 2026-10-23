@@ -40,7 +40,7 @@ void qjs_intl_segment_text_clear(QJSIntlSegmentText *);
    from original EOF; left machines run forward once from original BOS. Keep
    the first matching rule at each scalar boundary. No arbitrary context cutoff
    or per-candidate rescanning. Scratch is released before publication.
-   These are BASE decisions: dictionaries/suppressions/grapheme protection and
+   These are BASE decisions: dictionary refinement, sentence suppressions and
    native locale capability remain separate. Later refinement may edit breaks. */
 QJSIntlStatus qjs_intl_segment_scan_prepare(const QJSIntlAllocator *, const QJSIntlSegmentProgram *,
                                             const QJSIntlSegmentText *, QJSIntlSegmentScan *out);
