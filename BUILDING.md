@@ -55,34 +55,41 @@ meson compile -C build-value-check quickjs-value-check
 This separate representation is checked at compile time; it is never linked
 into the interpreter used by runtime tests.
 
-## Intl development profiles
+## Intl profiles
 
-Intl is currently incomplete and disabled by default. `-Dintl=minimal` and
-`-Dintl=native` enable the native implementation with English/root or full
-CLDR locale-data profiles. Delivered formatting services share algorithms and
-complete locale identity metadata. They require no ICU, source-data download or runtime XML
-parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
+Intl is disabled by default. `-Dintl=minimal` enables English/root locale data;
+`-Dintl=native` enables the locale data in CLDR 49's official common release.
+Both profiles use native C algorithms, without an ICU dependency, source-data
+download or runtime XML parser. Prepared data is embedded in one compilation
+unit. Generated data objects remain outside LTO.
 
-Current JavaScript APIs include `Intl.getCanonicalLocales()`,
-`Intl.supportedValuesOf()` and `Intl.Locale`
-construction, getters, `toString()`, `maximize()`, `minimize()`, `getWeekInfo()`,
-`getTextInfo()`, `getHourCycles()`, `getNumberingSystems()`, `getCalendars()` and
-`getTimeZones()`. Inventories reflect the selected services and data profile;
-the collation inventory is empty until Collator is delivered.
-The delivered formatting APIs are `Intl.ListFormat`, `Intl.PluralRules`, `Intl.NumberFormat`,
-`Intl.RelativeTimeFormat`, `Intl.DurationFormat` and `Intl.DisplayNames`, including
-their standard methods. Number and BigInt locale formatting uses the intrinsic
-NumberFormat; Temporal.Duration locale formatting uses the intrinsic DurationFormat when
-Temporal is enabled. String locale case conversion validates locale requests and
-implements Unicode's Turkish, Azeri and Lithuanian context-sensitive rules.
-DateTimeFormat, its range methods and Date/Temporal locale
-bridges are implemented, with acceptance testing still in progress. The minimal
-profile also provides `Intl.Segmenter` for `en`/`en-US`, using Unicode 18 default
-grapheme/word/sentence boundaries. Native CLDR/dictionary segmentation and
-Collator remain in development. Setup warns about this status; these options
-do not imply complete Intl conformance.
-Intl can be enabled independently of `-Dtemporal=false`. The embedding entry
-point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
+Both profiles provide `Intl.getCanonicalLocales()`, `Intl.supportedValuesOf()`,
+`Intl.Locale`, `Intl.Collator`, `Intl.ListFormat`, `Intl.PluralRules`,
+`Intl.NumberFormat`, `Intl.RelativeTimeFormat`, `Intl.DurationFormat`,
+`Intl.DisplayNames`, `Intl.DateTimeFormat` and `Intl.Segmenter`, including their
+standard methods. Locale inventories and supported values reflect the selected
+module, data profile and calendar/timezone configuration.
+
+Native segmentation uses compiled CLDR rules and dictionaries for scripts that
+require word dictionaries. Minimal segmentation supports `en`/`en-US` with
+Unicode 18 default grapheme, word and sentence boundaries. String locale case
+conversion implements Unicode's Turkish, Azeri and Lithuanian context-sensitive
+rules. Number and BigInt locale methods use the intrinsic NumberFormat;
+Array/TypedArray locale methods forward locale arguments to each element's
+observable `toLocaleString()` method. Date and enabled Temporal types use their
+date/time or duration formatters.
+
+The production common archive intentionally omits lower-coverage locale data.
+To generate a pack from all locales in the matching CLDR Git release, follow
+[the data tools guide](tools/intl/README.md), then configure
+`-Dintl_data_file=/absolute/path/to/prepared-pack.bin`. The pack must match the
+selected minimal/native profile. Missing common-release records are never
+silently filled from Git. Source pins, binary layouts and compatibility policies
+are documented in the [Intl design](doc/intl-design.md) and
+[data format guide](doc/intl-data-format.md).
+
+Intl can be enabled independently of Temporal (`-Dtemporal=false`). The embedding
+entry point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
 after base objects are initialized. It is idempotent, reports exceptions on
 failure and throws TypeError in a disabled build. Normal `JS_NewContext()`
 contexts initialize the compiled feature automatically.
