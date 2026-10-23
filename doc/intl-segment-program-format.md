@@ -110,3 +110,13 @@ host tables. Program compiler resource limits remain additional gates.
 NFA, subset and construction-work records. Wire decoding does not invent proof
 records. The reader proves bounds, complete graphs and policy domains; source
 equivalence, UTF-16 execution, refinement and locale admission are separate.
+
+`src/intl/segment/program.[ch]` checks the entire optional section without
+allocating. It requires an unchanged validated shared `QJSIntlData` view for
+locale references, then retains only fixed borrowed views of the immutable pack
+bytes. The original shared descriptor can leave scope; the bytes must remain
+alive. Queries allocate nothing, preserve independent traversal state and reset
+outputs on failure. Missing sections/routes and unsupported versions, Unicode
+versions or semantic profiles return `UNSUPPORTED`; bad magic and malformed
+known-format records return `DATA_ERROR`. No source-language equivalence or
+native locale capability is inferred from a successful open.

@@ -4547,6 +4547,35 @@ test(
   timeout: 30,
 )
 
+intl_segment_program_fixture = custom_target(
+  'intl-segment-program-authored-fixture',
+  output: 'intl-segment-program-authored-fixture.c',
+  command: [python, files('intl_segment_program_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_segment_program_tables.py',
+    'intl_segment_language_fixture.py',
+  ),
+)
+intl_segment_program_test = executable(
+  'test_intl_segment_program',
+  files(
+    'test_intl_segment_program.c',
+    '../src/intl/segment/program.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_segment_program_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-segment-program-reader',
+  intl_segment_program_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 test(
   'intl-segment-profile',
   python,

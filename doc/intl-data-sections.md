@@ -817,3 +817,5 @@ and grapheme requirements remain explicit. Production profiles do not yet
 include it. See the [program format](intl-segment-program-format.md) for the
 versioned layout, canonical numbering, resource gates and validation contract.
 Source: `tools/intl/segment_program_tables.py`.
+The private C owner `src/intl/segment/program.[ch]` validates these arrays
+against the shared-data locale inventory before publishing borrowed views.
