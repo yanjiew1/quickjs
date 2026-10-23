@@ -104,6 +104,16 @@ static void compute_value_size(JSValueConst val, JSMemoryUsage_helper *hp)
     case JS_TAG_STRING:
         compute_jsstring_size(JS_VALUE_GET_STRING(val), hp);
         break;
+    case JS_TAG_STRING_ROPE:
+        {
+            JSStringRope *rope = JS_VALUE_GET_STRING_ROPE(val);
+            double ref_count = js_rc(rope)->ref_count;
+
+            /* Count this node without expanding a potentially shared DAG. */
+            hp->str_count += 1 / ref_count;
+            hp->str_size += sizeof(*rope) / ref_count;
+        }
+        break;
     case JS_TAG_BIG_INT:
         /* should track JSBigInt usage */
         break;
