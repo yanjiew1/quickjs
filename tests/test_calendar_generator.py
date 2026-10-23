@@ -3,6 +3,7 @@
 import importlib.util
 import io
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 import sys
 import tempfile
@@ -135,10 +136,10 @@ class NormalizationTests(unittest.TestCase):
 
 class BinaryTests(unittest.TestCase):
     def test_future_japanese_era_needs_no_generator_code_change(self):
-        raw = json.loads((ROOT / 'data/calendar/sources/cldr-calendarData.json').read_text())
-        eras = raw['supplemental']['calendarData']['japanese']['eras']
-        eras['999'] = {'_code': 'future', '_start': '2035-02-03'}
-        data = normalize.japanese_eras(json.dumps(raw))
+        raw = ET.fromstring((ROOT / 'data/calendar/sources/cldr-calendarData.xml').read_bytes())
+        eras = raw.find("./calendarData/calendar[@type='japanese']/eras")
+        future = ET.SubElement(eras, 'era', {'type': '999', 'code': 'future', 'start': '2035-02-03'})
+        data = normalize.japanese_eras(ET.tostring(raw, encoding='unicode'))
         self.assertEqual(len(data['eras']), 6)
         self.assertEqual(data['eras'][-1], ['future', '2035-02-03', 2034])
         day = (normalize.datetime.date(2035, 2, 3) - normalize.EPOCH).days
@@ -148,9 +149,15 @@ class BinaryTests(unittest.TestCase):
         for bad in ({'_start': '2035-02-03'},
                     {'_code': 'reiwa', '_start': '2035-02-03'},
                     {'_code': 'future', '_start': '2035-02-30'}):
-            eras['999'] = bad
+            future.attrib.clear()
+            future.attrib.update({'type': '999', **{key[1:]: value for key, value in bad.items()}})
             with self.assertRaises(ValueError):
-                normalize.japanese_eras(json.dumps(raw))
+                normalize.japanese_eras(ET.tostring(raw, encoding='unicode'))
+            authored = {item.get('type'): {'_' + key: value for key, value in item.attrib.items() if key != 'type'}
+                        for item in eras}
+            with self.assertRaises(ValueError):
+                normalize.japanese_eras(json.dumps({'supplemental': {'calendarData': {
+                    'japanese': {'eras': authored}}}}))
 
     def test_japanese_pack_rejects_invalid_era_records(self):
         valid = [(0, 1969, 'one'), (1, 1970, 'two')]
