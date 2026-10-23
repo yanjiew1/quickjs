@@ -17,7 +17,7 @@ on:
 
 jobs:
   intl-locale:
-    name: Native Intl APIs (${{ matrix.profile }})
+    name: Native Intl APIs (${{ matrix.profile }}, Temporal ${{ matrix.temporal }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -31,6 +31,10 @@ jobs:
             temporal: 'false'
           - profile: native
             temporal: 'true'
+          - profile: minimal
+            temporal: 'true'
+          - profile: native
+            temporal: 'false'
     steps:
       - uses: actions/checkout@v7
       - name: Install build tools
@@ -77,7 +81,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-intl-locale-${{ matrix.profile }}
+          name: test262-intl-locale-${{ matrix.profile }}-temporal-${{ matrix.temporal }}
           path: |
             test262_intl_timings.jsonl
             test262_intl_timings.csv
