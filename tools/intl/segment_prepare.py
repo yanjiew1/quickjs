@@ -121,6 +121,8 @@ def prepare(sources, dictionaries, resolver):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
+    parser.add_argument('--source-pin', type=Path,
+                        help='explicit alternate source pin for release/Git comparison')
     parser.add_argument('--dictionaries', type=Path, required=True)
     parser.add_argument('--property-tool', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
@@ -129,7 +131,7 @@ def main():
     parser.add_argument('--notices', type=Path, required=True)
     args = parser.parse_args()
     binary, manifest, license_bytes, notices = prepare(
-        acquire.Sources(args.sources), segment_dictionary_sources.Sources(args.dictionaries),
+        acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), segment_dictionary_sources.Sources(args.dictionaries),
         PropertyResolver(args.property_tool))
     for path, contents in ((args.output, binary), (args.manifest, acquire.json_bytes(manifest)),
                             (args.license, license_bytes), (args.notices, notices)):
