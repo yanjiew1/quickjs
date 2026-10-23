@@ -18,6 +18,10 @@ MAX_BINDINGS = 1024
 MAX_RULES = 1024
 MAX_NODES = 65536
 WS = '[' + re.escape(''.join(sorted(SPACE))) + ']*'
+RI_PAIR = r'\(' + WS + r'\$RI' + WS + r'\$RI' + WS + r'\)' + WS + r'\*'
+RI_SUFFIX = WS + r'\$RI' + WS + r'×' + WS + r'\$RI' + WS
+WORD_RI_START = re.compile(WS + r'\^' + WS + RI_PAIR + RI_SUFFIX)
+WORD_RI_PRECEDING = re.compile(WS + r'\[\^' + WS + r'\$RI' + WS + r'\]' + WS + RI_PAIR + RI_SUFFIX)
 
 
 def _ignore_pattern(excluded, ignored):
@@ -114,7 +118,17 @@ def prepare_rule(source, variables, kind, limits=DEFAULT_LIMITS):
     if kind not in KINDS:
         raise DataError('unsupported segmentation kind')
     position, operator = _operator(source.expression, source, limits)
-    left, right = source.expression[:position], source.expression[position + 1:]
+    expression = source.expression
+    # The RI parity sentinel must not restart a run at an ignored character.
+    # Keep this lowering specific to the reviewed default rule shapes.
+    if kind == 'WordBreak' and source.source == 'common/segments/root.xml':
+        if source.identifier == '15' and WORD_RI_START.fullmatch(source.expression):
+            expression = '^ ($Extend | $Format | $ZWJ)* ($RI $RI)* $RI × $RI'
+        elif source.identifier == '16' and WORD_RI_PRECEDING.fullmatch(source.expression):
+            expression = ('[^$RI $Extend $Format $ZWJ] '
+                          '($Extend | $Format | $ZWJ)* ($RI $RI)* $RI × $RI')
+    derived_position = expression.index(operator) if expression != source.expression else position
+    left, right = expression[:derived_position], expression[derived_position + 1:]
     if operator != '\u2192':
         before = _parse(left, variables.visible, variables.arena, limits, source)
         after = _parse(right, variables.visible, variables.arena, limits, source, position + 1)

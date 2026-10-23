@@ -102,10 +102,6 @@ def main():
                     name.endswith('/core.c')}
         if not options['temporal']:
             expected.discard('src/quickjs/builtins/duration-value.c')
-    if options['intl'] != 'minimal':
-        # The initial Unicode-default Segmenter is a minimal-profile service;
-        # native will compile its binding once CLDR/dictionary coverage lands.
-        expected.discard('src/quickjs/builtins/intl/segmenter.c')
     expected.update('tools/' + name + '.c' for name in ['qjs', 'qjsc', 'run-test262'])
     if options['check_jsvalue']:
         assert expected <= checked, 'Missing JSValue checks: ' + repr(sorted(expected - checked))
