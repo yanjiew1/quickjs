@@ -4701,6 +4701,36 @@ if get_option('intl') == 'native'
     },
   }]
 
+  intl_segment_suppression_runtime_fixture = custom_target(
+    'intl-segment-suppression-runtime-fixture',
+    output: 'intl-segment-suppression-runtime-fixture.c',
+    command: [python, files('intl_segment_suppression_runtime_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files('intl_segment_language_fixture.py'),
+  )
+  intl_segment_suppression_runtime_test = {
+    'name': 'test_intl_segment_suppression_runtime',
+    'sources': files(
+      'test_intl_segment_suppression_runtime.c',
+      '../src/intl/segment/suppression.c',
+      '../src/intl/segment/suppression-data.c',
+      '../src/intl/segment/literal-graph.c',
+      '../src/intl/segment/scan.c',
+      '../src/intl/segment/program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_segment_suppression_runtime_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_segment_suppression_runtime_test,
+    'name': 'intl-segment-suppression-runtime',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   test(
     'intl-segment-property-tool',
     python,
