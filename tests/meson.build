@@ -35,6 +35,51 @@ if shared_modules
   test_deps += [bjson_module, point_module]
 endif
 
+default_time_zone_api_test = executable(
+  'test_default_time_zone_api',
+  'test_default_time_zone_api.c',
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'default-time-zone-api',
+  default_time_zone_api_test,
+  suite: ['repo', 'embedding'],
+  timeout: 30,
+)
+foreach backend : ['minimal', 'native']
+  identifier_sources = files(
+    'test_timezone_identifier.c',
+    '../src/timezone/identifier.c',
+    '../src/timezone/timezone.c',
+  )
+  if backend == 'native'
+    identifier_sources += files(
+      '../src/calendar/iso.c',
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [timezone_data]
+  else
+    identifier_sources += files('../src/timezone/timezone-minimal.c')
+  endif
+  identifier_test = executable(
+    'test_timezone_identifier_' + backend,
+    identifier_sources,
+    c_args: host_args + (backend == 'native' ? ['-DTEST_NATIVE_ZONE'] : []),
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'timezone-identifier-' + backend,
+    identifier_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+endforeach
+
 temporal_api_test = executable(
   'test_temporal_api',
   'test_temporal_api.c',
@@ -326,6 +371,7 @@ standalone = {
     '../src/temporal/parse.c',
     '../src/temporal/format.c',
     '../src/temporal/time-zone.c',
+    '../src/timezone/identifier.c',
     '../src/timezone/timezone.c',
   ],
   'test_temporal_relative': [
@@ -345,6 +391,7 @@ standalone = {
     '../src/temporal/parse.c',
     '../src/temporal/format.c',
     '../src/temporal/time-zone.c',
+    '../src/timezone/identifier.c',
     '../src/timezone/timezone.c',
     '../src/timezone/timezone-minimal.c',
   ],
@@ -356,6 +403,7 @@ standalone = {
     '../src/temporal/parse.c',
     '../src/temporal/format.c',
     '../src/temporal/time-zone.c',
+    '../src/timezone/identifier.c',
     '../src/timezone/timezone.c',
     '../src/timezone/timezone-minimal.c',
   ],
