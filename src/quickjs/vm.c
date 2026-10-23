@@ -55,12 +55,11 @@
 #endif
 
 
-/* For internal diagnostics and VM cleanup assertions. Unlike a result-status
-   predicate, this identifies the exact sentinel representation. */
-static inline BOOL js_is_exception_sentinel(JSValueConst v)
+/* Catch markers belong to the VM; offset zero closes an iterator. */
+static inline JSValue js_new_catch_offset(uint32_t offset)
 {
-    return JS_VALUE_GET_TAG(v) == JS_TAG_EXCEPTION &&
-           (uint32_t)JS_VALUE_GET_INT(v) == 0;
+    assert(offset <= INT32_MAX);
+    return JS_MKVAL(JS_TAG_CATCH_OFFSET, offset);
 }
 
 static inline BOOL is_strict_mode_sf(const JSStackFrame *sf)
@@ -1909,7 +1908,7 @@ static __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp)
     JS_FreeValue(ctx, obj);
     /* put again the catch offset so that exceptions close the
        iterator */
-    sp[-2] = JS_NewCatchOffset(ctx, 0);
+    sp[-2] = js_new_catch_offset(0);
     sp[-1] = value;
     sp[0] = JS_NewBool(ctx, done);
     return 0;
@@ -3752,7 +3751,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 int32_t diff;
                 diff = get_u32(pc);
-                sp[0] = JS_NewCatchOffset(ctx, pc + diff - b->byte_code_buf);
+                sp[0] = js_new_catch_offset(pc + diff - b->byte_code_buf);
                 sp++;
                 pc += 4;
             }
@@ -3801,7 +3800,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             if (js_for_of_start(ctx, sp, FALSE))
                 goto exception;
             sp += 1;
-            *sp++ = JS_NewCatchOffset(ctx, 0);
+            *sp++ = js_new_catch_offset(0);
             BREAK;
         CASE(OP_for_of_next):
             {
@@ -3824,7 +3823,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             if (js_for_of_start(ctx, sp, TRUE))
                 goto exception;
             sp += 1;
-            *sp++ = JS_NewCatchOffset(ctx, 0);
+            *sp++ = js_new_catch_offset(0);
             BREAK;
         CASE(OP_iterator_get_value_done):
             sf->cur_pc = pc;
@@ -5642,13 +5641,13 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     if (rt->current_exception_is_uncatchable) {
         /* These values can remain in a suspended generator frame. */
         for (pval = stack_buf; pval < sp; pval++)
-            assert(!js_is_exception_sentinel(*pval));
+            assert(!JS_IsException(*pval));
     }
 #endif
     if (!rt->current_exception_is_uncatchable) {
         while (sp > stack_buf) {
             JSValue val = *--sp;
-            assert(!js_is_exception_sentinel(val));
+            assert(!JS_IsException(val));
             JS_FreeValue(ctx, val);
             if (JS_VALUE_GET_TAG(val) == JS_TAG_CATCH_OFFSET) {
                 uint32_t pos = JS_VALUE_GET_INT(val);
@@ -5682,7 +5681,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         }
         /* free the local variables and stack */
         for(pval = local_buf; pval < sp; pval++) {
-            assert(!js_is_exception_sentinel(*pval));
+            assert(!JS_IsException(*pval));
             JS_FreeValue(ctx, *pval);
         }
     }
