@@ -18,7 +18,10 @@ int main(void)
     char saved[16] = "unchanged";
 
     mapping("Pacific Standard Time", "US", "America/Los_Angeles");
-    mapping("pacific standard time", "CA", "America/Vancouver");
+    mapping("pacific standard time", "CA", "America/Los_Angeles");
+    mapping("British Columbia Standard Time", "CA", "America/Vancouver");
+    mapping("Alberta Standard Time", "CA", "America/Edmonton");
+    mapping("Manitoba Standard Time", "CA", "America/Winnipeg");
     mapping("Pacific Standard Time", "TW", "America/Los_Angeles");
     mapping("Pacific Standard Time", NULL, "America/Los_Angeles");
     mapping("Pacific Standard Time", "001", "America/Los_Angeles");
