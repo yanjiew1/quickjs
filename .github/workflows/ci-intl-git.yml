@@ -1,0 +1,189 @@
+name: ci-intl-git
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['*']
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tools/intl/**'
+      - 'tools/build/**'
+      - 'data/**'
+      - 'tests/**'
+      - 'meson.build'
+      - 'meson_options.txt'
+      - '.github/workflows/ci-intl-git.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tools/intl/**'
+      - 'tools/build/**'
+      - 'data/**'
+      - 'tests/**'
+      - 'meson.build'
+      - 'meson_options.txt'
+      - '.github/workflows/ci-intl-git.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    name: Prepare full Git locale data
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install host build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
+      - name: Acquire and compare the actual release checkout
+        run: |
+          timeout --kill-after=15s 240s git clone --depth 1 --single-branch \
+            --branch release-49 -c core.autocrlf=false \
+            https://github.com/unicode-org/cldr.git "$RUNNER_TEMP/cldr-git"
+          timeout --kill-after=15s 180s python3 tools/intl/acquire.py \
+            --cache "$RUNNER_TEMP/intl-cache" --source-pin tools/intl/pin-git.json
+          python3 tools/intl/check_git.py --repository "$RUNNER_TEMP/cldr-git" \
+            --sources "$RUNNER_TEMP/intl-cache/cldr-49-git"
+          timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
+            --cache "$RUNNER_TEMP/intl-cache"
+      - name: Configure build-machine data tools
+        run: |
+          meson setup host-tools -Dwerror=true -Ddocumentation=disabled \
+            -Dtests=false -Dexamples=false -Dtemporal=false
+      - name: Compile build-machine data tools
+        run: |
+          meson compile -C host-tools -j "$(getconf _NPROCESSORS_ONLN)" \
+            intl-collation-compile intl-segment-property
+      - name: Prepare the full native Git profile
+        run: |
+          source_root="$RUNNER_TEMP/intl-cache/cldr-49-git"
+          timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
+            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --profile native --compiler host-tools/intl-collation-compile \
+            --output "$RUNNER_TEMP/git-collation.qjcl"
+          timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
+            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
+            --property-tool host-tools/intl-segment-property \
+            --output "$RUNNER_TEMP/git-segmentation.qjin" \
+            --manifest "$RUNNER_TEMP/git-segmentation.json" \
+            --license "$RUNNER_TEMP/git-dictionary-license.txt" \
+            --notices "$RUNNER_TEMP/git-dictionary-notices.txt"
+          timeout --kill-after=30s 600s python3 tools/intl/generate.py \
+            --sources "$source_root" --source-pin tools/intl/pin-git.json \
+            --profile native --compiled-collation "$RUNNER_TEMP/git-collation.qjcl" \
+            --compiled-segmentation "$RUNNER_TEMP/git-segmentation.qjin" \
+            --output "$RUNNER_TEMP/native-git.bin" \
+            --manifest "$RUNNER_TEMP/native-git-manifest.json"
+          python3 tools/intl/check_data.py --sources "$source_root" \
+            --source-pin tools/intl/pin-git.json \
+            --input "$RUNNER_TEMP/native-git.bin" \
+            --manifest "$RUNNER_TEMP/native-git-manifest.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: full-git-intl-data
+          path: |
+            ${{ runner.temp }}/native-git.bin
+            ${{ runner.temp }}/native-git-manifest.json
+          if-no-files-found: error
+
+  verify:
+    name: Full Git locale API validation
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: full-git-intl-data
+          path: ${{ runner.temp }}/full-git-intl
+      - name: Verify transferred pack identity
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'full-git-intl'
+          manifest = json.loads((root / 'native-git-manifest.json').read_text())
+          pin = json.loads(Path('tools/intl/pin-git.json').read_text())['cldr']
+          assert manifest['inputs']['cldr'] == pin
+          assert manifest['sha256'] == hashlib.sha256((root / 'native-git.bin').read_bytes()).hexdigest()
+          PYTHON
+      - name: Install target build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang meson ninja-build
+      - name: Configure the selected full Git data
+        env:
+          CC: clang
+        run: |
+          meson setup build -Dwerror=true -Ddocumentation=disabled \
+            -Dintl=native -Dtemporal=true -Ddefault_library=both \
+            -Dcalendars=native -Dtimezone_backend=native -Dsystem_timezone_policy=utc \
+            -Dintl_data_file="$RUNNER_TEMP/full-git-intl/native-git.bin" \
+            -Db_sanitize=address,undefined
+      - name: Compile selected targets
+        id: compile
+        run: meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+      - name: Run repository unit tests
+        run: |
+          meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Run repository integration tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: |
+          meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+            --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Audit every full Git DateTimeFormat locale and calendar
+        run: |
+          python3 tools/ci/audit_intl_datetime.py \
+            build/tests/test_intl_date_service_native \
+            --threads "$(getconf _NPROCESSORS_ONLN)"
+      - name: Install pinned Test262
+        run: python3 tools/build/test262.py bootstrap
+      - name: Check every Intl entry point with full Git locale coverage
+        run: |
+          timeout --kill-after=30s 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+            -t -m -c tests/intl-locale-test262.conf \
+            --timing-log test262_intl_timings.jsonl \
+            --progress-log test262_intl_progress.jsonl
+      - name: Report repository test results
+        if: always()
+        run: |
+          for stage in repo-unit repo-integration; do
+            log="build/meson-logs/$stage.txt"
+            if test -f "$log"; then
+              printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+              tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+      - name: Report per-test timings
+        if: always()
+        run: |
+          if test -f test262_intl_timings.jsonl; then
+            python3 tools/ci/report_test262_timings.py test262_intl_timings.jsonl \
+              --csv test262_intl_timings.csv --markdown test262_intl_timings.md
+            cat test262_intl_timings.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test262-intl-full-git
+          path: |
+            test262_intl_timings.jsonl
+            test262_intl_timings.csv
+            test262_intl_timings.md
+            test262_intl_progress.jsonl
+            build/meson-logs/repo-unit.*
+            build/meson-logs/repo-integration.*
+          if-no-files-found: ignore
