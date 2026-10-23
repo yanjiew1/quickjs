@@ -40,7 +40,7 @@ def generate(cache, output, manifest, host_cc, awk):
     pin = json.loads((TOOLS / 'pin.json').read_text())
     source, cldr = checked_sources(cache, pin)
     table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
-    countries = cldr_countries((cldr / 'timezone.json').read_bytes(), table_countries)
+    countries = cldr_countries((cldr / 'timezone.xml').read_bytes(), table_countries)
     historical = backzone_links((source / 'backzone').read_text())
     environment = dict(os.environ, LC_ALL='C', TZ='UTC')
     with tempfile.TemporaryDirectory(prefix='generate-', dir=str(cache)) as directory:
