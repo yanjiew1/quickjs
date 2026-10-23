@@ -1831,14 +1831,33 @@ the contents; source acquisition and prepared-pack manifests provide hashes.
 ## Prepare typed records
 
 ```sh
-meson compile -C build intl-collation-compile
+meson compile -C build intl-collation-compile intl-segment-property
 python3 tools/intl/collation_prepare.py \
   --sources /path/to/intl-cache/cldr-49-beta4 --profile native \
   --compiler build/intl-collation-compile --output /path/to/native.qjcl
+python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
+python3 tools/intl/segment_prepare.py \
+  --sources /path/to/intl-cache/cldr-49-beta4 \
+  --dictionaries /path/to/intl-cache/icu-dictionaries-79.1 \
+  --property-tool build/intl-segment-property \
+  --output /path/to/native-segmentation.qjin \
+  --manifest /path/to/native-segmentation.json \
+  --license /path/to/LICENSE-SEGMENT-DICTIONARIES \
+  --notices /path/to/NOTICE-SEGMENT-DICTIONARIES
 python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
   --profile native --compiled-collation /path/to/native.qjcl \
+  --compiled-segmentation /path/to/native-segmentation.qjin \
   --output /path/to/native.bin --manifest /path/to/native.json
 ```
+
+The CLDR cache is authenticated by `acquire.py`; dictionary acquisition above
+separately verifies the pinned ICU release text and licenses. Preparation uses
+a build-machine Unicode property tool, including for cross builds. The
+[segmentation archive](../../doc/intl-segment-archive.md) is an intermediate
+artifact: only its dictionary/rule/list sections enter the final native pack.
+Minimal generation requires its own minimal collation archive and omits
+`--compiled-segmentation`, retaining no unused dictionaries. Preserve the emitted
+dictionary license and source notices with the final native data.
 
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
 locale identity metadata, regional/script preferences, and deduplicated sets
