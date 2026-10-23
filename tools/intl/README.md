@@ -1,5 +1,8 @@
 # Native Intl data tools
 
+For automated candidate pins, source replacement and the end-to-end generation
+command, see [updating generated data](../../doc/data-updates.md).
+
 Architecture uses **functional modules** and **shared modules** for code ownership
 and dependencies. A module can expose initialized runtime state named a
 `*Service`, plus resolved operation handles; stateless modules need no service
