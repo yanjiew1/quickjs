@@ -839,7 +839,7 @@ silently. Reuse the binding's original UTF-16 positions and independent cursors.
 
 References: [ECMA-402 Segmenter internal slots](https://tc39.es/ecma402/#sec-intl.segmenter-internal-slots),
 [Unicode 18 text segmentation](https://www.unicode.org/reports/tr29/tr29-49.html),
-and the pinned [CLDR segmentation specification](https://github.com/unicode-org/cldr/blob/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2/docs/ldml/tr35-general.md#segmentations).
+and the pinned [CLDR segmentation specification](https://github.com/unicode-org/cldr/blob/96e54b273d2da4ec6fbad350ba19ff23fa24a588/docs/ldml/tr35-general.md#segmentations).
 
 DateTimeFormat preparation starts with `tools/intl/date_pattern_syntax.py`, a
 host-side TR35 date-pattern tokenizer. It preserves field symbols/run lengths
