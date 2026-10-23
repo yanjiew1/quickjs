@@ -87,4 +87,6 @@ support_sources = files(
   'quickjs-libc/worker.c',
 )
 
-support_sources += unicode_tables
+# Immutable generated tables have one object owner outside LTO.
+data_sources = []
+data_sources += unicode_tables
