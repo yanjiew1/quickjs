@@ -57,6 +57,7 @@ if calendar_enabled
   endif
   timezone_test_sources = files(
     '../src/timezone/timezone.c',
+    '../src/timezone/identifier.c',
   )
   if native_timezones
     timezone_test_sources += files(
@@ -129,6 +130,55 @@ public_native_test_names = [
   'test_promise_oom',
   'test_qjsc_json_preload',
 ]
+default_time_zone_api_test = executable(
+  'test_default_time_zone_api',
+  'test_default_time_zone_api.c',
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'default-time-zone-api',
+  default_time_zone_api_test,
+  suite: ['repo', 'embedding', 'integration'],
+  timeout: 30,
+)
+if calendar_enabled
+  foreach backend : [get_option('timezone_backend')]
+    identifier_sources = files(
+      'test_timezone_identifier.c',
+      '../src/timezone/identifier.c',
+      '../src/timezone/timezone.c',
+    )
+    if backend == 'native'
+      identifier_sources += files(
+        '../src/calendar/iso.c',
+        '../src/timezone/timezone-native.c',
+        '../src/timezone/tzif.c',
+      ) + [timezone_data]
+    else
+      identifier_sources += files(
+        '../src/timezone/timezone-minimal.c',
+      )
+    endif
+    identifier_test = {
+      'name': ('test_timezone_identifier_' + backend),
+      'sources': identifier_sources,
+      'c_args': (host_args + ((backend == 'native') ? ['-DTEST_NATIVE_ZONE'] : [])),
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': identifier_test,
+      'name': ('timezone-identifier-' + backend),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+  endforeach
+endif
+
 temporal_api_test = executable(
   'test_temporal_api',
   'test_temporal_api.c',
@@ -501,6 +551,7 @@ if get_option('temporal')
       '../src/temporal/parse.c',
       '../src/temporal/format.c',
       '../src/temporal/time-zone.c',
+      '../src/timezone/identifier.c',
       '../src/timezone/timezone.c',
     ),
     'test_temporal_relative': files(
@@ -581,6 +632,7 @@ if get_option('temporal') and not native_timezones
       '../src/temporal/parse.c',
       '../src/temporal/format.c',
       '../src/temporal/time-zone.c',
+      '../src/timezone/identifier.c',
       '../src/timezone/timezone.c',
       '../src/timezone/timezone-minimal.c',
     ),
