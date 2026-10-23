@@ -4447,6 +4447,34 @@ if get_option('intl') == 'native'
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
+endif
+
+if intl_enabled
+  test(
+    'intl-scalar-trie',
+    python,
+    args: files('test_intl_scalar_trie.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+endif
+
+if get_option('intl') == 'native'
+  test(
+    'intl-segment-suppressions',
+    python,
+    args: files('test_intl_segment_suppressions.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-suppression-tables',
+    python,
+    args: files('test_intl_segment_suppression_tables.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
 
   test(
     'intl-segment-expression',
@@ -4629,6 +4657,7 @@ if get_option('intl') == 'native'
     'sources': files(
       'test_intl_segment_dictionary.c',
       '../src/intl/segment/dictionary.c',
+      '../src/intl/segment/literal-graph.c',
       '../src/intl/native/pack.c',
     ) + [intl_segment_dictionary_fixture],
     'c_args': host_args,
@@ -4637,6 +4666,33 @@ if get_option('intl') == 'native'
   component_test_specs += [{
     'target': intl_segment_dictionary_test,
     'name': 'intl-segment-dictionary',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_segment_suppression_fixture = custom_target(
+    'intl-segment-suppression-authored-fixture',
+    output: 'intl-segment-suppression-authored-fixture.c',
+    command: [python, files('intl_segment_suppression_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files('test_intl_segment_suppression_tables.py'),
+  )
+  intl_segment_suppression_test = {
+    'name': 'test_intl_segment_suppression',
+    'sources': files(
+      'test_intl_segment_suppression.c',
+      '../src/intl/segment/suppression-data.c',
+      '../src/intl/segment/literal-graph.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_segment_suppression_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_segment_suppression_test,
+    'name': 'intl-segment-suppression-reader',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
