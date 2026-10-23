@@ -46,11 +46,11 @@ jobs:
           timeout --kill-after=15s 240s git clone --depth 1 --single-branch \
             --branch release-49 -c core.autocrlf=false \
             https://github.com/unicode-org/cldr.git "$RUNNER_TEMP/cldr-git"
-          timeout --kill-after=15s 180s python3 tools/intl/acquire.py \
+          timeout --kill-after=15s 180s python3 tools/data/acquire.py cldr \
             --cache "$RUNNER_TEMP/intl-cache" --source-pin data/intl/pin-git.json
           python3 tools/intl/check_git.py --repository "$RUNNER_TEMP/cldr-git" \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-git"
-          timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
+          timeout --kill-after=15s 180s python3 tools/data/acquire.py dictionaries \
             --cache "$RUNNER_TEMP/intl-cache"
       - name: Configure build-machine data tools
         run: |
