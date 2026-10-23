@@ -4476,6 +4476,22 @@ test(
 )
 
 test(
+  'intl-scalar-trie',
+  python,
+  args: files('test_intl_scalar_trie.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
+  'intl-segment-suppressions',
+  python,
+  args: files('test_intl_segment_suppressions.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-expression',
   python,
   args: files('test_intl_segment_expression.py'),
