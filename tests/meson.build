@@ -2017,9 +2017,15 @@ intl_number_service_sources = [
 ]
 
 foreach profile : ['minimal', 'native']
+  fixture_input = files('../data/intl/' + profile + '.bin')
+  # Component audits exercise the configured pack as well as the unselected
+  # bundled profile; a full-Git engine must not audit only production data.
+  if intl_enabled and profile == get_option('intl') and get_option('intl_data_file') != ''
+    fixture_input = intl_data_input
+  endif
   intl_fixture = custom_target(
     'intl-prepared-' + profile,
-    input: files('../data/intl/' + profile + '.bin'),
+    input: fixture_input,
     output: 'intl-prepared-' + profile + '.c',
     command: [
       python,
@@ -5412,6 +5418,14 @@ test(
   python,
   args: files('test_intl_sources.py'),
   suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-git-source',
+  python,
+  args: files('test_intl_git_source.py'),
+  suite: ['repo', 'generator'],
   timeout: 30,
 )
 
