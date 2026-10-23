@@ -248,7 +248,7 @@ native_test_names = [
   'test_qjsc_json_preload',
 ]
 foreach name : native_test_names
-  if name.startswith('test_intl_') and name != 'test_intl_api' and not intl_enabled
+  if name.startswith('test_intl_') and name not in ['test_intl_api', 'test_intl_defaults'] and not intl_enabled
     continue
   endif
   if name == 'test_temporal_oom' and not get_option('temporal')

@@ -38,7 +38,7 @@ def main():
         # no-op feature OOM executables must not create extra configurations.
         assert not {name for name in names if name.startswith('intl-')}, names
         assert not {name for name in names if name.startswith('test_intl_')
-                    and name != 'test_intl_api'}, names
+                    and name not in ('test_intl_api', 'test_intl_defaults')}, names
     if not temporal:
         assert not {name for name in names if name.startswith('test_temporal_')}, names
 
