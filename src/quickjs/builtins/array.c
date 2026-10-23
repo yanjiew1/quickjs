@@ -1135,7 +1135,7 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
             goto fail;
         if (!JS_IsNull(el) && !JS_IsUndefined(el)) {
             if (toLocaleString) {
-                el = JS_ToLocaleStringFree(ctx, el);
+                el = JS_ToLocaleStringFree(ctx, el, argc, argv);
             }
             if (string_buffer_concat_value_free(b, el))
                 goto fail;
