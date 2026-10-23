@@ -143,6 +143,21 @@ class DownloadTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
+    def test_manifest_identity_must_match_its_pin(self):
+        archive, pin = zip_fixture()
+        for field in ('release', 'archive_sha256'):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / 'sources'
+                acquire.materialize(archive, root, pin)
+                path = root / 'source-manifest.json'
+                manifest = json.loads(path.read_text())
+                manifest[field] = 'different'
+                encoded = acquire.json_bytes(manifest)
+                path.write_bytes(encoded)
+                changed = dict(pin, manifest_sha256=digest(encoded))
+                with self.assertRaisesRegex(ValueError, 'release/archive identity'):
+                    acquire.Sources(root, changed)
+
     def test_distribution_cache_owners_coexist(self):
         archive, common = zip_fixture()
         git_archive, git = fixture()
