@@ -27,16 +27,30 @@ python3 tools/intl/acquire.py --cache /path/to/intl-cache
 python3 tools/intl/acquire.py --cache /path/to/intl-cache --offline
 ```
 
-`pin.json` identifies CLDR 49 beta 4 by release tag, commit, archive SHA-256 and
-the SHA-256 of its complete source manifest. This prerelease was deliberately
-selected for Unicode 18 support. An upgrade must replace the pins and regenerate
-and validate the data; the tool never follows a development branch or `latest`.
+`pin.json` identifies CLDR 49's official common release ZIP by release tag,
+commit, archive SHA-256 and complete logical-manifest SHA-256. Its production
+filtering deliberately excludes lower-coverage locale data. Normal builds use
+this prepared distribution; tools never follow `main` or `latest`.
 
-The archive comes from the complete release source tree. Its `common/` files
-and license are materialized under `cldr-49-beta4` in the cache. The generator
-can therefore apply explicit draft/alternate selection instead of inheriting
-the production ZIP's filtering. Java source and other programs in the archive
-are not executed or installed.
+`pin-git.json` separately pins the complete `common/` tree from the matching
+release commit. Choose it explicitly when generating data with all Git-source
+locales. The source inventories remain separate; missing production records are
+not silently filled from Git. Neither source's Java/tooling programs are executed
+or installed.
+
+Common data is materialized under `cldr-49`; Git data uses `cldr-49-git`, so both
+can coexist under one cache directory:
+
+```sh
+python3 tools/intl/acquire.py --cache /path/to/intl-cache \
+  --source-pin tools/intl/pin-git.json
+```
+
+Pass the same `--source-pin` to `collation_prepare.py`, `segment_prepare.py` and
+`generate.py`, with `/path/to/intl-cache/cldr-49-git` as `--sources`. It determines
+the complete selected registry before assigning compiled locale IDs. Dictionary
+release/Unicode pins remain independent. Regenerate and validate both profiles
+after source upgrades instead of relabeling existing bytes.
 
 Acquisition verifies the archive and the complete file inventory before writing
 source files. Existing correct files are retained; missing or modified cache
@@ -116,7 +130,7 @@ start/end/default rules or compile boundary expressions.
 Audit the authenticated source inventory with:
 
 ```sh
-python3 tools/intl/segment_sources.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/segment_sources.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The host `intl-segment-property` tool queries the project's pinned C Unicode
@@ -247,7 +261,7 @@ target closure without compiling it.
 
 ```sh
 python3 tools/intl/collation_prepare.py \
-  --sources build/intl-cache/cldr-49-beta4 --profile minimal \
+  --sources build/intl-cache/cldr-49 --profile minimal \
   --compiler build/intl-collation-compile \
   --output build/collation-minimal.qjcl
 ```
@@ -561,7 +575,7 @@ repository tests retain their small authored fixtures.
 python3 tools/intl/collation_archive.py \
   --compiler build/intl-collation-compile \
   --root-input build/root.qjcr --program-input build/programs.qjci \
-  --sources build/intl-cache/cldr-49-beta4 --profile native \
+  --sources build/intl-cache/cldr-49 --profile native \
   --output build/collation-runtime.qjcl
 ```
 
@@ -612,7 +626,7 @@ reintroduce contexts. Tests cover allocation failure, retained sequences, long
 prefix/suffix trees, matcher integration and a 102,038-entry starred shape.
 Frozen executable storage and full instruction execution remain subsequent work.
 
-Collectors use `acquire.Sources` with the cache's `cldr-49-beta4` directory.
+Collectors use `acquire.Sources` with the cache's `cldr-49` directory.
 The reader authenticates the manifest before use, verifies each consumed file,
 and tracks logical input paths for generated provenance. Cache paths and file
 timestamps are not provenance. The XML interpretation, inheritance resolution
@@ -626,7 +640,7 @@ source reproducibility; they do not establish formatter or locale coverage.
 ## XML and attribute schema audit
 
 ```sh
-python3 tools/intl/cldr_xml.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/cldr_xml.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The shared XML layer accepts UTF-8, preserves element text and child order,
@@ -649,7 +663,7 @@ coverage. `tests/test_intl_xml.py` exercises authored schema/XML fixtures.
 ## Locale inheritance graph
 
 ```sh
-python3 tools/intl/parents.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/parents.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The shared graph retains source locale identities, default-content locales,
@@ -666,7 +680,7 @@ component independence and rules outside the listed migration examples.
 ## Typed fields and list templates
 
 ```sh
-python3 tools/intl/list_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/list_patterns.py --sources /path/to/intl-cache/cldr-49
 ```
 
 `resolve.Records` resolves a finite inventory of typed fields, including explicit
@@ -689,8 +703,8 @@ context-sensitive list behavior or install a JavaScript formatter.
 ```sh
 python3 tools/intl/date_pattern_syntax.py --pattern "yyyy-MM-dd 'at' HH:mm"
 python3 tools/intl/date_pattern_syntax.py --combination "{1} 'at' {0}"
-python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4
-python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4 --combinations
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49 --combinations
 ```
 
 The DateTimeFormat data compiler's lexical prerequisite decodes TR35 apostrophe
@@ -720,7 +734,7 @@ Alias resolution, style selection and placeholder substitution have later owners
 ## Date/time style source records
 
 ```sh
-python3 tools/intl/date_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/date_patterns.py --sources /path/to/intl-cache/cldr-49
 ```
 
 This typed collector resolves full/long/medium/short date and time styles for
@@ -770,7 +784,7 @@ unaligned input, corrupt records/dimensions and allocation failure with retry.
 ## Date/time combination source records
 
 ```sh
-python3 tools/intl/date_combinations.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/date_combinations.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The typed connector collector retains standard, atTime and relative forms at
@@ -807,7 +821,7 @@ exercise every selector and representative English connector forms.
 ## Relative-time source records
 
 ```sh
-python3 tools/intl/relative_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/relative_patterns.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The collector resolves the eight RelativeTimeFormat units in long, short and
@@ -883,7 +897,7 @@ coercion, options or branding. Those belong to the engine binding described belo
 ## Region and script preferences
 
 ```sh
-python3 tools/intl/preferences.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/preferences.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The preference collector reads regional week boundaries, calendar orders,
@@ -902,7 +916,7 @@ network access.
 ## Numbering metadata
 
 ```sh
-python3 tools/intl/numbering.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/numbering.py --sources /path/to/intl-cache/cldr-49
 ```
 
 The numbering collector checks numeric systems as ten distinct Unicode scalar
@@ -1833,18 +1847,18 @@ the contents; source acquisition and prepared-pack manifests provide hashes.
 ```sh
 meson compile -C build intl-collation-compile intl-segment-property
 python3 tools/intl/collation_prepare.py \
-  --sources /path/to/intl-cache/cldr-49-beta4 --profile native \
+  --sources /path/to/intl-cache/cldr-49 --profile native \
   --compiler build/intl-collation-compile --output /path/to/native.qjcl
 python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
 python3 tools/intl/segment_prepare.py \
-  --sources /path/to/intl-cache/cldr-49-beta4 \
+  --sources /path/to/intl-cache/cldr-49 \
   --dictionaries /path/to/intl-cache/icu-dictionaries-79.1 \
   --property-tool build/intl-segment-property \
   --output /path/to/native-segmentation.qjin \
   --manifest /path/to/native-segmentation.json \
   --license /path/to/LICENSE-SEGMENT-DICTIONARIES \
   --notices /path/to/NOTICE-SEGMENT-DICTIONARIES
-python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
+python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49 \
   --profile native --compiled-collation /path/to/native.qjcl \
   --compiled-segmentation /path/to/native-segmentation.qjin \
   --output /path/to/native.bin --manifest /path/to/native.json
@@ -1858,6 +1872,20 @@ artifact: only its dictionary/rule/list sections enter the final native pack.
 Minimal generation requires its own minimal collation archive and omits
 `--compiled-segmentation`, retaining no unused dictionaries. Preserve the emitted
 dictionary license and source notices with the final native data.
+
+To build with a separately generated full-Git native pack, choose its source
+pin/cache in the preparation commands above and write the final output outside
+the repository, then select it explicitly:
+
+```sh
+meson setup build-git -Dintl=native -Dintl_data_file=/path/to/native-git.bin
+```
+
+`intl_data_file` selects prepared data, not another backend or runtime loader.
+The build checks the pack's minimal/native profile before emitting its single C
+owner. The committed production binaries and manifests remain common-source.
+Relative data paths are resolved from the source directory; absolute paths also
+work with an independent build directory.
 
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
 locale identity metadata, regional/script preferences, and deduplicated sets
@@ -1932,7 +1960,7 @@ objects in the method's realm; it does not expose native wire views.
 ## Locale metadata audit
 
 ```sh
-python3 tools/intl/locale_metadata.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/locale_metadata.py --sources /path/to/intl-cache/cldr-49
 ```
 
 Collect language, script, territory, variant and subdivision aliases, preserving
@@ -2048,7 +2076,7 @@ empty values remain distinct; unsupported scopes or structural aliases fail.
 
 The collector preserves raw LDML text. It does not yet select DurationFormat
 locales or project patterns into the service's two separator fields and hour
-padding preference. CLDR 49 beta 4 includes `h.mm:ss`, `hh:mm:ss`, quoted
+padding preference. CLDR 49 includes `h.mm:ss`, `hh:mm:ss`, quoted
 prefixes and unquoted text around fields; requiring one identical separator or
 discarding those distinctions during collection would lose source information.
 Textual unit forms remain owned by `unit_patterns.py`.
@@ -2056,7 +2084,7 @@ Textual unit forms remain owned by `unit_patterns.py`.
 Inspect a verified source cache without changing prepared packs:
 
 ```sh
-python3 tools/intl/duration_patterns.py --sources path/to/cldr-49-beta4
+python3 tools/intl/duration_patterns.py --sources path/to/cldr-49
 ```
 
 Section 24, schema 1, stores these raw resolved records. Its three little-endian
