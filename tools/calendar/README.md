@@ -40,8 +40,9 @@ the required Islamic civil fallback continuously.
 
 ## Japanese eras
 
-`sources/cldr-calendarData.json` is the released CLDR 48.2.3 calendar data,
-pinned to `91c267402229a59e3ef2774544f001bf959e8809`. Its modern era codes and
+`sources/cldr-calendarData.xml` is raw supplemental data from the official
+CLDR 49 common archive, pinned to release commit
+`96e54b273d2da4ec6fbad350ba19ff23fa24a588`. Its modern era codes and
 Gregorian start dates agree with ECMA-402's Japanese government era rules.
 The Unicode License V3 receipt is `sources/LICENSE-CLDR`.
 
