@@ -23,6 +23,9 @@ typedef struct QJSIntlDateZoneData {
    immutable and valid for this allocator during the call. Locale indexes belong
    to their own catalogs. The rule handle is borrowed for the process lifetime.
    NULL selects a fixed minute offset (-1440,1440); named requires minutes=0.
+   For fixed zero offsets, name styles try locale-backed Etc/GMT/GMT names;
+   explicit offset styles remain numeric. Missing or unusable names retain
+   localized numeric fallback. The original timezone identity is not changed.
    Epoch seconds are mathematical floor, with input coercion/range policy owned
    by the frontend. No host default lookup or locale matching occurs here.
 
