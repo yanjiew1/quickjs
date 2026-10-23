@@ -33,12 +33,7 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
-#ifdef CONFIG_TEMPORAL
-#include "../../temporal/time-zone.h"
-#endif
-#ifdef CONFIG_TEMPORAL
 #include "../internal/default-time-zone.h"
-#endif
 #ifdef CONFIG_TEMPORAL
 #include "temporal/temporal-internal.h"
 #endif
@@ -46,8 +41,8 @@
 /* Date */
 
 #ifdef CONFIG_TEMPORAL
-/* Date and Temporal share the runtime host clock and time-zone policy. */
-static int date_system_zone(JSContext *ctx, QJSTemporalZone *result)
+/* Date, Temporal and Intl share runtime time-zone policy and rule data. */
+static int date_system_zone(JSContext *ctx, QJSTimeZoneIdentifier *result)
 {
     return js_default_time_zone_get(ctx, result);
 }
@@ -55,9 +50,9 @@ static __exception int date_backend_error(JSContext *ctx, int error)
 {
     if (!error)
         return 0;
-    if (error == QJS_TEMPORAL_ERROR_MEMORY)
+    if (error == QJS_TZ_MEMORY)
         JS_ThrowOutOfMemory(ctx);
-    else if (error == QJS_TEMPORAL_ERROR_BACKEND)
+    else if (error == QJS_TZ_DATA)
         JS_ThrowInternalError(ctx, "Date time-zone backend failed");
     else
         JS_ThrowRangeError(ctx, "invalid Date time-zone value");
@@ -66,54 +61,53 @@ static __exception int date_backend_error(JSContext *ctx, int error)
 static __exception int date_local_offset(JSContext *ctx, int64_t milliseconds,
                                          int64_t *result)
 {
-    QJSTemporalZone zone;
-    QJSTemporalEpochNs epoch;
-    int64_t offset;
+    QJSTimeZoneIdentifier zone;
+    int64_t seconds = milliseconds / 1000;
+    int32_t offset;
     int error;
+    if (milliseconds % 1000 < 0)
+        seconds--;
     if (date_backend_error(ctx, date_system_zone(ctx, &zone)))
         return -1;
-    error = qjs_temporal_epoch_ns_from_milliseconds(&epoch, (double)milliseconds);
-    if (date_backend_error(ctx, error ? QJS_TEMPORAL_ERROR_RANGE :
-                                        qjs_temporal_zone_offset(&zone, epoch, &offset)))
+    error = qjs_timezone_identifier_offset(&zone, seconds, &offset);
+    if (date_backend_error(ctx, error))
         return -1;
-    *result = offset / 1000000;
+    *result = (int64_t)offset * 1000;
     return 0;
 }
 static __exception int date_utc(JSContext *ctx, double milliseconds,
                                 double *result)
 {
-    QJSTemporalZone zone;
-    QJSTemporalEpochNs wall, epoch;
-    QJSTemporalISODateTime local;
-    int64_t value;
+    QJSTimeZoneIdentifier zone;
+    int64_t wall, seconds, fraction, epoch;
     int error;
-    /* UTC(t) accepts a wall clock just outside the Instant domain. A zone
-       offset can bring it back inside before TimeClip. Larger values cannot
-       survive TimeClip because every supported offset is less than one day. */
+    /* A zone offset can bring a wall clock just outside the Instant domain
+       back inside before TimeClip. Every supported offset is below one day. */
     if (!isfinite(milliseconds) || fabs(milliseconds) > 8640000086400000.0) {
         *result = NAN;
         return 0;
     }
     if (date_backend_error(ctx, date_system_zone(ctx, &zone)))
         return -1;
-    wall = qjs_temporal_epoch_ns_from_int64((int64_t)trunc(milliseconds));
-    if (qjs_temporal_epoch_ns_multiply(&wall, wall, 1000000) ||
-        qjs_temporal_iso_datetime_from_epoch_ns(&local, wall)) {
-        *result = NAN;
-        return 0;
+    wall = (int64_t)trunc(milliseconds);
+    seconds = wall / 1000;
+    fraction = wall % 1000;
+    if (fraction < 0) {
+        seconds--;
+        fraction += 1000;
     }
-    error = qjs_temporal_zone_epoch(&zone, local, QJS_TEMPORAL_COMPATIBLE, &epoch);
-    if (error == QJS_TEMPORAL_ERROR_RANGE) {
+    error = qjs_timezone_identifier_compatible(&zone, seconds, &epoch);
+    if (error == QJS_TZ_RANGE) {
         *result = NAN;
         return 0;
     }
     if (date_backend_error(ctx, error))
         return -1;
-    if (date_backend_error(ctx,
-            qjs_temporal_epoch_ns_to_milliseconds(&value, epoch) ?
-            QJS_TEMPORAL_ERROR_RANGE : 0))
-        return -1;
-    *result = (double)value;
+    if (epoch < -INT64_C(8640000000000) || epoch > INT64_C(8640000000000) ||
+        (epoch == INT64_C(8640000000000) && fraction))
+        *result = NAN;
+    else
+        *result = (double)(epoch * 1000 + fraction);
     return 0;
 }
 #else
@@ -688,7 +682,8 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
 /* Floor and clamp the shared host clock directly to milliseconds. */
 static __exception int date_now(JSContext *ctx, int64_t *result)
 {
-    return date_backend_error(ctx, qjs_temporal_system_milliseconds(result));
+    int error = qjs_temporal_system_milliseconds(result);
+    return date_backend_error(ctx, error ? QJS_TZ_DATA : 0);
 }
 #else
 /* OS dependent: return the UTC time in ms since 1970. */
