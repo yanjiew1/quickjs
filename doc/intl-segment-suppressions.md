@@ -76,8 +76,8 @@ break vector changes only after the whole pass succeeds; OOM or invalid input
 cannot publish partial removals. No state or allocation is retained by the
 filter, and original UTF-16 mapping stays with the decoded text owner.
 
-Sources reviewed 2026-10-23: CLDR 49 beta4 commit
-`7cdeb9e7fac52c59f22fc7248b05f989ee5689c2`, `common/segments/*.xml`, and
+Sources reviewed 2026-10-23: CLDR 49 common release and matching Git commit
+`96e54b273d2da4ec6fbad350ba19ff23fa24a588`, `common/segments/*.xml`, and
 [UAX #29 revision 49: sentence boundaries](https://www.unicode.org/reports/tr29/tr29-49.html#Sentence_Boundaries).
 CLDR's literal-list role is described in
 [TR35 segmentation suppressions](https://unicode.org/reports/tr35/tr35-general.html#Segmentation_Suppressions).
