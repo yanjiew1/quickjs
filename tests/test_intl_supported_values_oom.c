@@ -25,7 +25,9 @@ static void test_inventory(JSRuntime *rt, OOMTestAllocator *allocator, const cha
     JS_FreeValue(ctx, result);
     for (step = 0; step <= samples; step++) {
         void *padding = test_pool_padding(rt);
-        size_t fail_at = step ? 1 + (calls - 1) * (step - 1) / (samples - 1) : 0;
+        /* A reduced inventory may need just one real allocation. */
+        size_t fail_at = !step ? 0 : samples == 1 ? 1 :
+                        1 + (calls - 1) * (step - 1) / (samples - 1);
 
         oom_test_begin(allocator, fail_at);
         result = JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
@@ -34,7 +36,7 @@ static void test_inventory(JSRuntime *rt, OOMTestAllocator *allocator, const cha
         if (!step) {
             assert(!JS_IsException(result));
             calls = allocator->calls;
-            assert(calls > 1 && calls < 4096);
+            assert(calls && calls < 4096);
             /* Large catalogs repeat the same append operation hundreds of
                times. Sample across the entire array, including its last step. */
             samples = calls > 16 ? 16 : calls;
