@@ -73,8 +73,8 @@ def fetch(path, source, offline=False):
     return data
 
 
-def extract_sources(archive, destination, release, names):
-    """Materialize only required regular files from authenticated archive bytes."""
+def archive_sources(archive, release, names):
+    """Read the complete bounded regular-file set without publishing paths."""
     prefix = 'tz-' + release + '/'
     wanted = {}
     for name in names:
@@ -102,8 +102,12 @@ def extract_sources(archive, destination, release, names):
             staged[name] = data
     if len(staged) != len(wanted):
         raise ValueError('timezone archive is missing required sources')
-    # Validate the complete set before publishing any path, ignoring archive paths.
-    for name, data in staged.items():
+    return staged
+
+
+def extract_sources(archive, destination, release, names):
+    """Materialize verified source members only after validating the full set."""
+    for name, data in archive_sources(archive, release, names).items():
         atomic_write(destination / name, data)
 
 
