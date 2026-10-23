@@ -66,6 +66,15 @@ typedef struct namelist_t {
     int size;
 } namelist_t;
 
+typedef struct PathRequirement {
+    struct PathRequirement *next;
+    char *path;
+    size_t length;
+    namelist_t features;
+} PathRequirement;
+
+static PathRequirement *path_requirements;
+
 /* per execution thread context */
 typedef struct {
     pthread_mutex_t agent_mutex;
@@ -1342,6 +1351,181 @@ char *find_word(const char *str, const char *word)
     return NULL;
 }
 
+static BOOL automatic_feature(const char *name)
+{
+#ifdef CONFIG_TEMPORAL
+    if (str_equal(name, "Temporal"))
+        return TRUE;
+#endif
+#ifdef CONFIG_CALENDAR_NATIVE
+    if (str_equal(name, "Intl.Era-monthcode"))
+        return TRUE;
+#endif
+#ifdef CONFIG_TIMEZONE_NATIVE
+    if (str_equal(name, "canonical-tz"))
+        return TRUE;
+#endif
+    (void)name;
+    return FALSE;
+}
+
+/* Absolute lexical paths make ./config plus relative tests equivalent to
+   config plus absolute tests. No rule needs to exist on the filesystem. */
+static char *requirement_path(const char *path, BOOL directory)
+{
+    char *value;
+    size_t length;
+
+#ifdef _WIN32
+    char *p;
+
+    value = _fullpath(NULL, path, 0);
+    if (!value)
+        perror_exit(1, path);
+    for (p = value; *p; p++) {
+        if (*p == '\\')
+            *p = '/';
+        else if (*p >= 'A' && *p <= 'Z')
+            *p += 'a' - 'A';
+    }
+    length = strlen(value);
+#else
+    char *absolute, *cwd = NULL;
+    const char *p;
+
+    if (*path != '/') {
+        cwd = getcwd(NULL, 0);
+        if (!cwd)
+            perror_exit(1, "getcwd");
+    }
+    absolute = compose_path(cwd, path);
+    free(cwd);
+    if (!absolute)
+        fatal(1, "out of memory");
+    value = malloc(strlen(absolute) + 2);
+    if (!value)
+        fatal(1, "out of memory");
+    value[0] = '/';
+    length = 1;
+    p = absolute;
+    while (*p) {
+        size_t part;
+
+        p += strspn(p, "/");
+        part = strcspn(p, "/");
+        if (!part)
+            break;
+        if (part == 2 && p[0] == '.' && p[1] == '.') {
+            while (length > 1 && value[length - 1] != '/')
+                length--;
+            if (length > 1)
+                length--;
+        } else if (!(part == 1 && *p == '.')) {
+            if (length > 1)
+                value[length++] = '/';
+            memcpy(value + length, p, part);
+            length += part;
+        }
+        p += part;
+    }
+    value[length] = 0;
+    free(absolute);
+#endif
+    if (directory && value[length - 1] != '/') {
+        char *extended = realloc(value, length + 2);
+
+        if (!extended)
+            fatal(1, "out of memory");
+        value = extended;
+        value[length++] = '/';
+        value[length] = 0;
+    }
+    return value;
+}
+
+static void add_path_requirement(const char *base, const char *path,
+                                  const char *features)
+{
+    PathRequirement *rule = calloc(1, sizeof(*rule));
+    const char *p = features;
+    char *composed;
+
+    if (!rule)
+        fatal(1, "out of memory");
+#ifdef _WIN32
+    if (*path == '\\' || (isalpha((unsigned char)path[0]) && path[1] == ':'))
+        base = NULL;
+#endif
+    composed = compose_path(base, path);
+    if (!composed)
+        fatal(1, "out of memory");
+    rule->path = requirement_path(composed, path[strlen(path) - 1] == '/');
+    free(composed);
+    rule->length = strlen(rule->path);
+    while (*p) {
+        size_t length;
+        char *name;
+
+        p += strspn(p, " \t");
+        length = strcspn(p, " \t");
+        if (!length)
+            break;
+        name = malloc(length + 1);
+        if (!name)
+            fatal(1, "out of memory");
+        memcpy(name, p, length);
+        name[length] = 0;
+        namelist_add(&rule->features, NULL, name);
+        free(name);
+        p += length;
+    }
+    rule->next = path_requirements;
+    path_requirements = rule;
+}
+
+static void validate_path_requirements(void)
+{
+    PathRequirement *rule;
+    int i;
+
+    for (rule = path_requirements; rule; rule = rule->next) {
+        for (i = 0; i < rule->features.count; i++) {
+            const char *feature = rule->features.array[i];
+
+            if (!find_word(harness_features, feature) &&
+                !find_word(harness_skip_features, feature))
+                fatal(2, "unknown required feature %s for %s", feature, rule->path);
+        }
+    }
+}
+
+static BOOL path_requirements_satisfied(const char *filename)
+{
+    const PathRequirement *rule, *best = NULL;
+    char *normalized;
+    int i;
+
+    if (!path_requirements)
+        return TRUE;
+    normalized = requirement_path(filename, FALSE);
+    /* The most specific rule replaces its parent. Equal-length duplicates
+       prefer the last configured rule, which was prepended to the list. */
+    for (rule = path_requirements; rule; rule = rule->next) {
+        if ((!best || rule->length > best->length) &&
+            !strncmp(normalized, rule->path, rule->length) &&
+            (rule->path[rule->length - 1] == '/' || !normalized[rule->length]))
+            best = rule;
+    }
+    free(normalized);
+    if (!best)
+        return TRUE;
+    for (i = 0; i < best->features.count; i++) {
+        if (!find_word(harness_features, best->features.array[i]))
+            return FALSE;
+    }
+    return TRUE;
+}
+
 /* handle exclude directories */
 void update_exclude_dirs(void)
 {
@@ -1393,6 +1577,7 @@ void load_config(const char *filename, const char *ignore)
         SECTION_CONFIG,
         SECTION_EXCLUDE,
         SECTION_FEATURES,
+        SECTION_REQUIREMENTS,
         SECTION_TESTS,
     } section = SECTION_NONE;
     int lineno = 0;
@@ -1420,6 +1605,8 @@ void load_config(const char *filename, const char *ignore)
                 section = SECTION_EXCLUDE;
             else if (str_equal(p, "features"))
                 section = SECTION_FEATURES;
+            else if (str_equal(p, "requirements"))
+                section = SECTION_REQUIREMENTS;
             else if (str_equal(p, "tests"))
                 section = SECTION_TESTS;
             else
@@ -1430,6 +1617,7 @@ void load_config(const char *filename, const char *ignore)
         if (q) {
             /* setting: name=value */
             *q++ = '\0';
+            p = str_strip(p);
             q = str_strip(q);
         }
         switch (section) {
@@ -1526,10 +1714,20 @@ void load_config(const char *filename, const char *ignore)
             namelist_add(&exclude_list, base_name, p);
             break;
         case SECTION_FEATURES:
-            if (!q || str_equal(q, "yes"))
-                str_append(&harness_features, " ", p);
-            else
-                str_append(&harness_skip_features, " ", p);
+            {
+                BOOL enabled = !q || str_equal(q, "yes");
+                if (q && str_equal(q, "auto"))
+                    enabled = automatic_feature(p);
+                if (enabled)
+                    str_append(&harness_features, " ", p);
+                else
+                    str_append(&harness_skip_features, " ", p);
+            }
+            break;
+        case SECTION_REQUIREMENTS:
+            if (!*p || !q || !*q)
+                fatal(2, "%s:%d: expected path=required-features", filename, lineno);
+            add_path_requirement(base_name, p, q);
             break;
         case SECTION_TESTS:
             namelist_add(&test_list, base_name, p);
@@ -1890,6 +2088,7 @@ static int eval_file(JSContext *ctx, const char *base, const char *p,
     char *filename = compose_path(base, p);
 
     buf = load_file(filename, &buf_len);
+
     if (!buf) {
         warning("cannot load %s", filename);
         goto fail;
@@ -2108,6 +2307,8 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
     can_block = TRUE;
     error_type = NULL;
     buf = load_file(filename, &buf_len);
+
+    skip = !path_requirements_satisfied(filename);
 
     harness = harness_dir;
 
@@ -2710,6 +2911,8 @@ int main(int argc, char **argv)
     if (optind >= argc && !test_list.count)
         help();
 
+    validate_path_requirements();
+
     if (is_test262_harness) {
         return run_test262_harness_test(tls, argv[optind], is_module, can_block);
     }
@@ -2960,6 +3163,14 @@ int main(int argc, char **argv)
     free(error_file);
     free(error_filename);
     free(report_filename);
+    while (path_requirements) {
+        PathRequirement *next = path_requirements->next;
+
+        free(path_requirements->path);
+        namelist_free(&path_requirements->features);
+        free(path_requirements);
+        path_requirements = next;
+    }
 
     /* Signal that the error file is out of date. */
     if (update_errors) {
