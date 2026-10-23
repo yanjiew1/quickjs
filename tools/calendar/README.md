@@ -97,8 +97,8 @@ embedded snapshot; runtime data loading is not introduced.
 Download the hash-pinned publications into a selected cache:
 
 ```sh
-python3 tools/calendar/acquire.py --cache /path/to/calendar-cache
-python3 tools/calendar/acquire.py --cache /path/to/calendar-cache --offline
+python3 tools/data/acquire.py calendar --cache /path/to/calendar-cache
+python3 tools/data/acquire.py calendar --cache /path/to/calendar-cache --offline
 ```
 
 Reproduce normalized records offline, then compare them with the repository:
@@ -113,7 +113,7 @@ To update the ICU4X facts, acquire only the original source receipts, then
 import into a separate candidate directory:
 
 ```sh
-python3 tools/calendar/acquire.py --cache /path/to/calendar-cache \
+python3 tools/data/acquire.py calendar --cache /path/to/calendar-cache \
   --source ummalqura_data.rs --source icu4x-korea-data.rs
 python3 tools/calendar/import_icu4x.py --cache /path/to/calendar-cache \
   --output-dir /path/to/build/calendar-facts
@@ -232,7 +232,7 @@ required. The four year datasets and Japanese era dataset share this single
 pack; the manifest records its exact size and hash.
 
 ```sh
-python3 tools/calendar/generate.py \
+python3 tools/data/generate.py calendar \
   --output /path/to/build/calendar-data.bin \
   --manifest /path/to/build/calendar-data-manifest.json
 cmp data/calendar/calendar-data.bin /path/to/build/calendar-data.bin
@@ -245,7 +245,7 @@ Generate from a separate directory containing the maintained JSON filenames;
 original transcription, XML and Rust files are not needed:
 
 ```sh
-python3 tools/calendar/generate.py --data-dir /path/to/calendar-facts \
+python3 tools/data/generate.py calendar --data-dir /path/to/calendar-facts \
   --output /path/to/build/calendar-data.bin \
   --manifest /path/to/build/calendar-data-manifest.json
 ```
