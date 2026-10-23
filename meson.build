@@ -328,6 +328,24 @@ foreach variant : variants
     gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
+  # Tables have no engine instructions to optimize at each LTO link. Keep
+  # their architecture, instrumentation, visibility and PIC with this variant.
+  data_overrides = ['b_lto=false']
+  if native
+    data_overrides += ['b_sanitize=none', 'b_pie=false']
+  endif
+  data_objects = static_library(
+    'quickjs-data-' + tag,
+    data_sources,
+    native: native,
+    c_args: args,
+    include_directories: inc,
+    dependencies: deps,
+    pic: tag == 'shared',
+    build_by_default: false,
+    gnu_symbol_visibility: 'hidden',
+    override_options: data_overrides,
+  )
   objects = [
     core_objects.extract_all_objects(
       recursive: false,
@@ -339,6 +357,9 @@ foreach variant : variants
       recursive: false,
     ),
     support_objects.extract_all_objects(
+      recursive: false,
+    ),
+    data_objects.extract_all_objects(
       recursive: false,
     ),
   ]
