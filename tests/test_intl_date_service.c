@@ -178,7 +178,7 @@ static void part(const QJSIntlFormatted *result, QJSIntlPartType type, const cha
 /* Keep the same July wall-clock witness with either named-zone provider. */
 static const char *test_zone(void)
 {
-    return qjs_timezone_count() ? "US/Eastern" : "-04:00";
+    return qjs_timezone_count() > 1 ? "US/Eastern" : "-04:00";
 }
 
 static QJSIntlDateTimeFormatter *open_formatter(const QJSIntlDateTimeService *service, size_t locale,

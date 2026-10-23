@@ -34,7 +34,7 @@ int main(void)
     parsed(":UTC-5:30:00", "+05:30");
     parsed("<+0530>-5:30", "+05:30");
     parsed("UTC+23:59", "-23:59");
-    if (qjs_timezone_count()) {
+    if (qjs_timezone_count() > 1) {
         parsed("America/New_York", "America/New_York");
     } else {
         assert(qjs_timezone_parse_environment(result, sizeof(result),

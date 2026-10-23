@@ -136,7 +136,7 @@ static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateFormat
     QJSIntlFormatted result, zero = {0};
     Allocation *state = allocator->opaque;
     size_t baseline, calls, limit, i;
-    const char *zone_name = qjs_timezone_count() ? "America/New_York" : "-04:00";
+    const char *zone_name = qjs_timezone_count() > 1 ? "America/New_York" : "-04:00";
 
     assert(!qjs_intl_date_pattern_compile(allocator, bytes(source), &pattern));
     assert(!qjs_timezone_parse_identifier(&zone, zone_name, strlen(zone_name)));
@@ -146,7 +146,7 @@ static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateFormat
                                 QJS_INTL_DATE_H12, numbers, data, &zone, 1000, &result));
     calls = state->calls;
     limit = result.length;
-    expected(&result, qjs_timezone_count() ?
+    expected(&result, qjs_timezone_count() > 1 ?
              "Monday, July 1, 2024 at 8:00:00.123 AM Eastern Daylight Time end" :
              "Monday, July 1, 2024 at 8:00:00.123 AM GMT-04:00 end");
     assert(result.part_count == sizeof(parts) / sizeof(*parts));
@@ -232,7 +232,7 @@ int main(void)
     assert(en < count);
     numbers = open_numbers(service, en, "latn");
     ownership(&allocator, &data, &numbers);
-    if (qjs_timezone_count()) {
+    if (qjs_timezone_count() > 1) {
         result = render(&allocator, &data, &numbers, "y-MM-dd HH:mm:ss.SSS OOOO", "Africa/Monrovia",
                         0, 0, QJS_INTL_DATE_H23, "1969-12-31 23:15:30.000 GMT-00:44:30");
         qjs_intl_formatted_clear(&allocator, &result);
@@ -243,7 +243,7 @@ int main(void)
     result = render(&allocator, &data, &numbers, "y-MM-dd HH:mm:ss.SSS", "UTC",
                     -1, 999999999, QJS_INTL_DATE_H23, "1969-12-31 23:59:59.999");
     qjs_intl_formatted_clear(&allocator, &result);
-    if (qjs_timezone_count()) {
+    if (qjs_timezone_count() > 1) {
         result = render(&allocator, &data, &numbers, "zzzz", "America/New_York",
                         1719835200, 0, QJS_INTL_DATE_H23, "Eastern Daylight Time");
         qjs_intl_formatted_clear(&allocator, &result);

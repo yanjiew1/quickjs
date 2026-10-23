@@ -1,7 +1,9 @@
 /* Native zone names, source identity, territory and conservative fallback.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/datetime/zone-name.h"
+#ifdef CONFIG_TIMEZONE_NATIVE
 #include "../src/timezone/timezone-native.h"
+#endif
 #include "../src/cutils/cutils.h"
 #include <assert.h>
 #include <limits.h>
@@ -189,6 +191,8 @@ static void check(const QJSIntlAllocator *allocator, const QJSIntlDateZoneData *
     qjs_intl_formatted_clear(allocator, &result);
 }
 
+#ifdef CONFIG_TIMEZONE_NATIVE
+/* These witnesses use actual named rules and an authored TZif descriptor. */
 static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetadata *metadata,
                       const QJSIntlDateNumberFormats *numbers)
 {
@@ -305,6 +309,7 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetad
     expected(&result, "CA — Pacific");
     qjs_intl_formatted_clear(allocator, &result);
 }
+#endif
 
 static void fixed_zero_sources(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers)
 {
@@ -358,8 +363,9 @@ int main(void)
             break;
     assert(en < count);
     numbers = open_numbers(service, en, bytes("latn"));
-    if (qjs_timezone_count())
-        authored(&allocator, &metadata, &numbers);
+#ifdef CONFIG_TIMEZONE_NATIVE
+    authored(&allocator, &metadata, &numbers);
+#endif
     fixed_zero_sources(&allocator, &numbers);
     assert(!qjs_intl_timezone_name_data_open(&pack, &allocator, &names));
     assert(!qjs_intl_timezone_presentation_data_open(&pack, &allocator, &presentation));
@@ -383,18 +389,18 @@ int main(void)
     check(&allocator, NULL, &offset, &numbers, NULL, 0, QJS_INTL_DATETIME_ZONE_SHORT, "GMT+0");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "UTC");
     check(&allocator, &data, &offset, &numbers, "UTC", 1704110400, QJS_INTL_DATETIME_ZONE_LONG, "Coordinated Universal Time");
-    if (qjs_timezone_count()) {
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "EST");
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG, "Eastern Daylight Time");
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, "ET");
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Eastern Time");
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_OFFSET, "GMT-4");
-        check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT-04:00");
-        check(&allocator, &data, &offset, &numbers, "America/Vancouver", 1719835200,
-              QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Pacific Time (Canada)");
-        check(&allocator, &data, &offset, &numbers, "Africa/Casablanca", 1719835200,
-              QJS_INTL_DATETIME_ZONE_LONG, "GMT+01:00");
-    }
+#ifdef CONFIG_TIMEZONE_NATIVE
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1704110400, QJS_INTL_DATETIME_ZONE_SHORT, "EST");
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG, "Eastern Daylight Time");
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_GENERIC, "ET");
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Eastern Time");
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_SHORT_OFFSET, "GMT-4");
+    check(&allocator, &data, &offset, &numbers, "America/New_York", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_OFFSET, "GMT-04:00");
+    check(&allocator, &data, &offset, &numbers, "America/Vancouver", 1719835200,
+          QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Pacific Time (Canada)");
+    check(&allocator, &data, &offset, &numbers, "Africa/Casablanca", 1719835200,
+          QJS_INTL_DATETIME_ZONE_LONG, "GMT+01:00");
+#endif
     qjs_intl_date_offset_clear(&offset);
     close_numbers(&numbers);
     qjs_intl_number_close(service);
