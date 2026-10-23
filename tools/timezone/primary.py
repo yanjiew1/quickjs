@@ -7,6 +7,7 @@ from the group's authoritative zone.tab rows, with region consistency checked.
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
 import re
 import json
+import xml.etree.ElementTree as ET
 
 
 def zone_table(text):
@@ -26,8 +27,20 @@ def zone_table(text):
 
 
 def cldr_countries(data, table_countries):
-    """Join released CLDR JSON aliases to zone.tab, not to primary hints."""
-    groups = json.loads(data)['keyword']['u']['tz']
+    """Join released CLDR aliases to zone.tab, not to primary hints."""
+    if data.lstrip()[:1] in ('<', b'<'):
+        root = ET.fromstring(data)
+        keys = root.findall("./keyword/key[@name='tz']")
+        if root.tag != 'ldmlBCP47' or len(keys) != 1:
+            raise ValueError('invalid CLDR timezone keyword root')
+        groups = {}
+        for item in keys[0]:
+            name = item.get('name')
+            if item.tag != 'type' or not name or name in groups or list(item):
+                raise ValueError('invalid CLDR timezone keyword record')
+            groups[name] = {'_' + key: value for key, value in item.attrib.items() if key != 'name'}
+    else:
+        groups = json.loads(data)['keyword']['u']['tz']
     countries = {}
     for name, item in groups.items():
         if not isinstance(item, dict):
