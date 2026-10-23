@@ -7,6 +7,11 @@ needs no shared string or locale indexes. The host encoder and validator are
 `src/intl/segment/dictionary.[ch]`. Production packs do not include this section yet.
 Presence alone establishes no executable segmentation or locale capability.
 
+Common aligned arrays, graph validation and literal traversal belong to
+`scalar_trie_tables.py` on the host and `src/intl/segment/literal-graph.[ch]` in C.
+Dictionary containers own family identities and membership/weighted payload
+policy; the shared graph layer does not select segmentation boundaries.
+
 This is an internal format, independent of ICU's serialized tries. All integers
 are unsigned little-endian. Read bytes explicitly rather than casting a native
 C structure. The section inherits QJIN's 256 MiB size bound.
