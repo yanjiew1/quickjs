@@ -47,7 +47,15 @@ and decision vectors are linear in `n`. The temporary allocation is freed before
 publication, including error paths. A default-only program needs no machine
 scratch. Classification uses binary search in the prepared interval map.
 
-These vectors provide a basis for independent iterators and binary-search
-`containing()` without silently allocating in the old stateless traversal API.
-The final service input owner, refinement, word classification and JS binding
-integration remain separate acceptance steps.
+The service interface in `segment.h` explicitly prepares a `QJSIntlSegmentInput`
+before allocation-free `next`/`containing` queries. Minimal copies raw-input
+metadata without allocating. A native backend can own final vectors after
+refinement, enabling independent iterators and binary-search lookup. Its prepared
+state must not borrow service or segmenter handles: input can outlive both.
+
+The JS binding shares this prepared input between Segments and their iterators,
+retaining the original string and UTF-16 storage. Backend teardown precedes
+release of that borrowed storage. Failed preparation leaves zero output, so the
+binding frees its local UTF-16 reference before wrapper cleanup. Iterator cursor
+commit still precedes JS result allocation. Native refinement, word classification
+and capability admission remain subsequent acceptance steps.
