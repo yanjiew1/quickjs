@@ -4,10 +4,14 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
+import stat
+import struct
 from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +49,25 @@ def fixture(extra=()):
            'archive': {'url': 'https://example.invalid/cldr.tar.gz',
                        'sha256': digest(archive)}, 'manifest_sha256': digest(encoded)}
     return archive, pin
+
+
+def zip_fixture(extra=(), compression=zipfile.ZIP_STORED):
+    files = {'LICENSE': b'fixture license', 'common/dtd/ldml.dtd': b'fixture DTD',
+             'common/main/en.xml': b'<ldml><identity/></ldml>'}
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, 'w', compression=compression) as archive:
+        for name, data in sorted(files.items()):
+            archive.writestr(name, data)
+        for member, data in extra:
+            archive.writestr(member, data)
+    data = output.getvalue()
+    manifest = {'archive_sha256': digest(data), 'release': 'fixture',
+                'files': {name: digest(contents) for name, contents in files.items()}}
+    pin = {'commit': 'fixture', 'release': 'fixture',
+           'archive': {'format': 'zip', 'url': 'https://example.invalid/cldr.zip',
+                       'sha256': digest(data)},
+           'manifest_sha256': digest(acquire.json_bytes(manifest))}
+    return data, pin
 
 
 class DownloadTests(unittest.TestCase):
@@ -120,6 +143,29 @@ class DownloadTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
+    def test_distribution_cache_owners_coexist(self):
+        archive, common = zip_fixture()
+        git_archive, git = fixture()
+        common['distribution'], git['distribution'] = 'common', 'git'
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory)
+            release_root = acquire.cache_root(cache, common)
+            git_root = acquire.cache_root(cache, git)
+            self.assertNotEqual(release_root, git_root)
+            acquire.materialize(archive, release_root, common)
+            opened = acquire.Sources(release_root, common)
+            acquire.materialize(git_archive, git_root, git)
+            self.assertEqual(opened.read('common/main/en.xml'), b'<ldml><identity/></ldml>')
+            self.assertEqual(acquire.Sources(git_root, git).read('LICENSE'), b'fixture license')
+
+    def test_explicit_alternate_pin(self):
+        _, pin = zip_fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'alternate.json'
+            path.write_bytes(acquire.json_bytes({'cldr': pin}))
+            self.assertEqual(acquire.load_pin(path), pin)
+            self.assertEqual(acquire.load_pin(str(path)), pin)
+
     def test_authenticated_sources_and_repair(self):
         archive, pin = fixture()
         with tempfile.TemporaryDirectory() as directory:
@@ -191,6 +237,117 @@ class SourceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 acquire.materialize(archive, root, pin)
             self.assertEqual(list(outside.iterdir()), [])
+
+
+class ZipSourceTests(unittest.TestCase):
+    def test_deflated_release_members(self):
+        archive, pin = zip_fixture(compression=zipfile.ZIP_DEFLATED)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'sources'
+            acquire.materialize(archive, root, pin)
+            sources = acquire.Sources(root, pin)
+            self.assertEqual(sources.read('LICENSE'), b'fixture license')
+            self.assertEqual(sources.read('common/dtd/ldml.dtd'), b'fixture DTD')
+
+    def test_authenticated_sources_repair_and_unselected_files(self):
+        archive, pin = zip_fixture((('common/main/', b''), ('tool.c', b'not input data')))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'sources'
+            acquire.materialize(archive, root, pin)
+            sources = acquire.Sources(root, pin)
+            self.assertEqual(sources.paths('common/main/'), ('common/main/en.xml',))
+            self.assertFalse((root / 'tool.c').exists())
+            (root / 'common/main/en.xml').write_bytes(b'changed')
+            with self.assertRaises(ValueError):
+                sources.read('common/main/en.xml')
+            acquire.materialize(archive, root, pin)
+            self.assertEqual(sources.read('common/main/en.xml'), b'<ldml><identity/></ldml>')
+
+    def test_paths_links_types_and_casefold_duplicates(self):
+        for name in ('../escape', '/escape', 'common/../escape', 'common\\escape',
+                     'C:escape', 'common/main/EN.xml'):
+            archive, pin = zip_fixture(((name, b''),))
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                acquire.archive_files(archive, pin)
+        for kind in (stat.S_IFLNK, stat.S_IFIFO):
+            member = zipfile.ZipInfo('common/main/link.xml')
+            member.create_system = 3
+            member.external_attr = (kind | 0o777) << 16
+            archive, pin = zip_fixture(((member, b'outside'),))
+            with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, 'regular file'):
+                acquire.archive_files(archive, pin)
+
+    def test_original_name_retains_nul_for_path_validation(self):
+        archive, pin = zip_fixture()
+        archive = archive.replace(b'common/main/en.xml', b'common/main/e\0.xml')
+        pin['archive']['sha256'] = digest(archive)
+        with self.assertRaisesRegex(ValueError, 'unsafe source path'):
+            acquire.archive_files(archive, pin)
+
+    def test_encrypted_and_unsupported_compression_members(self):
+        for field, value in ((8, 1), (10, 99)):
+            archive, pin = zip_fixture()
+            raw = bytearray(archive)
+            end = raw.rfind(b'PK\x05\x06')
+            central = struct.unpack_from('<I', raw, end + 16)[0]
+            struct.pack_into('<H', raw, central + field, value)
+            pin['archive']['sha256'] = digest(raw)
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'unsupported ZIP source member'):
+                acquire.archive_files(bytes(raw), pin)
+
+    def test_limits_and_directory_counts_precede_zip_objects(self):
+        archive, pin = zip_fixture()
+        with mock.patch.object(acquire, 'MAX_MEMBERS', 1), \
+                mock.patch.object(acquire.zipfile, 'ZipFile') as parser:
+            with self.assertRaisesRegex(ValueError, 'too many'):
+                acquire.archive_files(archive, pin)
+            parser.assert_not_called()
+        raw = bytearray(archive)
+        end = raw.rfind(b'PK\x05\x06')
+        # A forged EOCD count must not hide the actual central-directory size.
+        struct.pack_into('<2H', raw, end + 8, 1, 1)
+        pin['archive']['sha256'] = digest(raw)
+        with mock.patch.object(acquire.zipfile, 'ZipFile') as parser:
+            with self.assertRaisesRegex(ValueError, 'member count mismatch'):
+                acquire.archive_files(bytes(raw), pin)
+            with mock.patch.object(acquire, 'MAX_MEMBERS', 2):
+                with self.assertRaisesRegex(ValueError, 'too many'):
+                    acquire.archive_files(bytes(raw), pin)
+            parser.assert_not_called()
+
+    def test_file_and_expansion_limits(self):
+        archive, pin = zip_fixture()
+        for bound in ('MAX_FILE', 'MAX_EXPANSION'):
+            with mock.patch.object(acquire, bound, 1), self.assertRaises(ValueError):
+                acquire.archive_files(archive, pin)
+
+    def test_crc_failure_precedes_cache_modification(self):
+        archive, pin = zip_fixture()
+        # Keep the central/local CRC unchanged while changing a stored payload.
+        archive = archive.replace(b'fixture DTD', b'Fixture DTD', 1)
+        pin['archive']['sha256'] = digest(archive)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'sources'
+            root.mkdir()
+            preserved = root / 'preserved'
+            preserved.write_bytes(b'previous')
+            with self.assertRaisesRegex(ValueError, 'CRC'):
+                acquire.materialize(archive, root, pin)
+            # MSYS2 directory iteration can spell separators differently from
+            # a joined Path. The contract is the unchanged filename inventory.
+            self.assertEqual(os.listdir(root), ['preserved'])
+            self.assertEqual(preserved.read_bytes(), b'previous')
+
+    def test_truncation_prefix_and_unknown_format_rejection(self):
+        archive, pin = zip_fixture()
+        for changed in (archive[:-1], b'prefix' + archive):
+            pin['archive']['sha256'] = digest(changed)
+            with self.assertRaises(ValueError):
+                acquire.archive_files(changed, pin)
+        pin['archive']['sha256'] = digest(archive)
+        pin['archive']['format'] = 'unknown'
+        with self.assertRaisesRegex(ValueError, 'unsupported source archive format'):
+            acquire.archive_files(archive, pin)
 
 
 if __name__ == '__main__':
