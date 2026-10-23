@@ -2,7 +2,7 @@
   "bytes": 65881820,
   "complete_services": [],
   "format": 1,
-  "generation": "1ab47197e464d724cfadb320f699dc7b6051cd6b3a8657ce6bdb59b6d20920ec",
+  "generation": "47f90561f93d86709aedd5d8505360c268b2b183874517c5dd118ddb85be9bb9",
   "inputs": {
     "cldr": {
       "archive": {
@@ -377,11 +377,11 @@
       },
       "40": {
         "count": 4,
-        "sha256": "4c15211bd33d0c4004255389f686ee51321fd8c6249f913bb0b44c2d41f134f4"
+        "sha256": "7f7a38950067ebaec3a5f757ac317aced1b92105a37890babc1dc9c5788f4dfb"
       },
       "41": {
         "count": 8,
-        "sha256": "bc9daedba3594ccda240b8f5545f31958b154664cf2a8e83166d915ccf9708b7"
+        "sha256": "803bc6569d3ea92484e5bd8a92b210a9efcdc8cdb4cad4ecd0fb4dcac66589a5"
       },
       "5": {
         "count": 37,
@@ -1682,7 +1682,7 @@
         "src/unicode/libunicode.c": "8cdcb2aa6f242c78f181fb6ff822aebbd87ea8401f1df417297291bb0d5e48fe",
         "src/unicode/libunicode.h": "97a4c56b7688d5c1767efe1185bbf3bc6e1b15ef95cf0d4cd3bf4884f31f5ac3",
         "src/unicode/unicode-encoding.h": "c1449e2ad1fa9360e06b731a24143a417aaba3105c73ad9edba617da15d6b320",
-        "tools/intl/acquire.py": "659088882243ad6899c164bf359686be7e68664e85c3b779c107e084bdab400b",
+        "tools/intl/acquire.py": "ebe6d91fb64148c4366f87692ab4f119e6691ed25c55b4592178ea180a029775",
         "tools/intl/availability.py": "41fe6951f8a52e9acc163b518386798729d82b963dbf494eb578b01947a1897f",
         "tools/intl/bundle.py": "1a3080cb9fc4fb288ffde11222e8cc3b01b2512a350545745b46c07fe5367c45",
         "tools/intl/cldr_xml.py": "3849a5278c08ed4aa3196e8e3288f6f135964faec2acc554edc7fb887d87bd85",
@@ -2837,6 +2837,6 @@
   },
   "locales": 1184,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, root UCA mappings, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "72b36825d3840ef4b8c0d3208f046751c2d94733fe49d13f4a8c9bc687a6b31d",
+  "sha256": "47856e67c206c0e9568df639c5d8611002ec69c3451cc1792182d040469c6ae1",
   "strings": 391196
 }
