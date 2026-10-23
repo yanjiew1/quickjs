@@ -94,7 +94,7 @@ support_sources = files(
   'quickjs-libc/worker.c',
 )
 
-# Immutable generated tables have one object owner outside LTO.
+# Immutable generated tables have their own object target without LTO.
 data_sources = []
 data_sources += unicode_tables
 windows_timezone_sources = []
@@ -333,11 +333,13 @@ if get_option('temporal') or intl_enabled
   endif
 endif
 
-if get_option('intl') == 'minimal'
+if intl_enabled
   engine_sources += files(
     'quickjs/builtins/intl/segmenter.c',
   )
-  support_sources += files(
-    'intl/segment/minimal.c',
-  )
+  if get_option('intl') == 'minimal'
+    support_sources += files('intl/segment/minimal.c')
+  else
+    support_sources += files('intl/segment/native.c')
+  endif
 endif
