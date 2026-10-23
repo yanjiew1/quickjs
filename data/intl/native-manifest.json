@@ -2,7 +2,7 @@
   "bytes": 65881820,
   "complete_services": [],
   "format": 1,
-  "generation": "d18811c7280423d24158245534f0708a73ebc24b2f2efab20a6178b4dcf8e174",
+  "generation": "1ab47197e464d724cfadb320f699dc7b6051cd6b3a8657ce6bdb59b6d20920ec",
   "inputs": {
     "cldr": {
       "archive": {
@@ -377,11 +377,11 @@
       },
       "40": {
         "count": 4,
-        "sha256": "c63bf19dbcb81930179391ec0033ea7e27bb8db4b35bd48ad4ae51dc33a85e87"
+        "sha256": "4c15211bd33d0c4004255389f686ee51321fd8c6249f913bb0b44c2d41f134f4"
       },
       "41": {
         "count": 8,
-        "sha256": "af16f1e05f2181e252c67a1e0fac40975ed482d8eb52bb6dd47b32877f8a025c"
+        "sha256": "bc9daedba3594ccda240b8f5545f31958b154664cf2a8e83166d915ccf9708b7"
       },
       "5": {
         "count": 37,
@@ -1705,7 +1705,7 @@
         "tools/intl/segment_inheritance.py": "8798a959c44a79ecbda95ebdbcef9b75d20db1e33f55243c7dd5ee1e01d878e7",
         "tools/intl/segment_lower.py": "c4ab0136c4f29372bdbddd3edf962deac989f080d9bb52d42bc10f4b8251e557",
         "tools/intl/segment_nfa.py": "394c920e86ab056fa9fb9510d21fac6deac4be3a20ff914b3f93b909584e5084",
-        "tools/intl/segment_prepare.py": "e2d690d15467316308846daf3219306066df65c265d931ad852103f06f52348d",
+        "tools/intl/segment_prepare.py": "b235b93757728c0afe93880f6773109308510f087fee108b2648338166cf5adf",
         "tools/intl/segment_profile.py": "79647d384efc4621a3ab3e2585f9b570945b0052b4880fd60b0fdb5abf6cced1",
         "tools/intl/segment_program.py": "9f28352416812b4e52bdf6c33318a4b865123aa82375f7e846b48862591e60b6",
         "tools/intl/segment_program_tables.py": "f0277d0512651806b71ad71da3e67c2f0f2183991e263a16b17cdf482ab45c1b",
@@ -2837,6 +2837,6 @@
   },
   "locales": 1184,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, root UCA mappings, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "b3676572fbb5c55dbc8ff5e93607355548e14491ae59e879e96a7779105b783e",
+  "sha256": "72b36825d3840ef4b8c0d3208f046751c2d94733fe49d13f4a8c9bc687a6b31d",
   "strings": 391196
 }
