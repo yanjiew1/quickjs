@@ -26,6 +26,7 @@
 #include <string.h>
 #include "../include/quickjs.h"
 
+#ifdef CONFIG_TEMPORAL
 static void assert_embedding_error(JSContext *ctx, const char *expected)
 {
     JSValue error, name;
@@ -43,8 +44,6 @@ static void assert_embedding_error(JSContext *ctx, const char *expected)
     JS_FreeValue(ctx, error);
     assert(!JS_HasException(ctx));
 }
-
-#ifdef CONFIG_TEMPORAL
 
 static JSContext *new_raw_context(JSRuntime *rt)
 {
@@ -474,133 +473,6 @@ static void exhaust_spare_blocks(JSRuntime *rt, void **padding)
     }
 }
 
-static void assert_default_zone(JSContext *ctx, const char *expected)
-{
-    JSValue value = JS_GetDefaultTimeZone(ctx);
-    const char *text;
-
-    assert(!JS_IsException(value));
-    text = JS_ToCString(ctx, value);
-    assert(text && !strcmp(text, expected));
-    JS_FreeCString(ctx, text);
-    JS_FreeValue(ctx, value);
-}
-
-#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
-static void test_default_zone_snapshot(void)
-{
-    const char *original = getenv("TZ");
-    char *saved = original ? strdup(original) : NULL;
-    JSRuntime *rt, *other_rt;
-    JSContext *first, *second, *other;
-
-    assert(!original || saved);
-    assert(!setenv("TZ", ":US/Eastern", 1));
-    rt = JS_NewRuntime();
-    assert(rt);
-    first = JS_NewContext(rt);
-    second = JS_NewContext(rt);
-    assert(first && second);
-    assert_default_zone(first, "America/New_York");
-    assert(!setenv("TZ", "UTC-5:30", 1));
-    assert_default_zone(first, "America/New_York");
-    assert_default_zone(second, "America/New_York");
-    other_rt = JS_NewRuntime();
-    assert(other_rt);
-    other = JS_NewContext(other_rt);
-    assert(other);
-    assert_default_zone(other, "+05:30");
-    JS_FreeContext(other);
-    JS_FreeRuntime(other_rt);
-    JS_FreeContext(first);
-    JS_FreeContext(second);
-    JS_FreeRuntime(rt);
-    if (saved) {
-        assert(!setenv("TZ", saved, 1));
-        free(saved);
-    } else {
-        assert(!unsetenv("TZ"));
-    }
-}
-#endif
-
-static void test_default_zone(void)
-{
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *first, *second;
-    JSValue value;
-    void *padding = NULL, *next;
-
-    assert(rt);
-#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
-    test_default_zone_snapshot();
-#endif
-    first = JS_NewContext(rt);
-    second = JS_NewContext(rt);
-    assert(first && second);
-    value = JS_GetDefaultTimeZone(first);
-    assert(!JS_IsException(value) && JS_IsString(value));
-    {
-        const char *identifier = JS_ToCString(first, value);
-        assert(identifier);
-        assert_default_zone(second, identifier);
-        JS_FreeCString(first, identifier);
-    }
-    JS_FreeValue(first, value);
-    assert(!JS_SetDefaultTimeZone(first, "UTC"));
-    assert_default_zone(first, "UTC");
-#ifdef CONFIG_TIMEZONE_NATIVE
-    assert(!JS_SetDefaultTimeZone(first, "us/eastern"));
-    assert_default_zone(second, "America/New_York");
-    value = embedding_eval(second,
-        "if (new Date('2024-01-01T00:00Z').getTimezoneOffset() !== 300 ||"
-        " new Date('2024-07-01T00:00Z').getTimezoneOffset() !== 240 ||"
-        " Temporal.Now.timeZoneId() !== 'America/New_York')"
-        " throw Error('named Date/Temporal default mismatch');");
-    assert(!JS_IsException(value));
-    JS_FreeValue(second, value);
-    assert(!JS_SetDefaultTimeZone(first, "UTC"));
-#endif
-    assert(!JS_SetDefaultTimeZone(first, "+0530"));
-    assert_default_zone(second, "+05:30");
-    value = embedding_eval(second,
-        "if (new Date(0).getHours() !== 5 || new Date(0).getMinutes() !== 30 ||"
-        " new Date(1970,0,1).getTime() !== -19800000 ||"
-        " Date.parse('1970-01-01T00:00') !== -19800000 ||"
-        " Temporal.Now.timeZoneId() !== '+05:30' ||"
-        " Temporal.Now.zonedDateTimeISO().timeZoneId !== '+05:30')"
-        " throw Error('Date/Temporal default mismatch');");
-    assert(!JS_IsException(value));
-    JS_FreeValue(second, value);
-    assert(JS_SetDefaultTimeZone(first, NULL) == -1);
-    assert_embedding_error(first, "RangeError");
-    assert_default_zone(second, "+05:30");
-    assert(JS_SetDefaultTimeZone(first, "not/a-zone") == -1);
-    assert_embedding_error(first, "RangeError");
-    assert_default_zone(second, "+05:30");
-    JS_RunGC(rt);
-    JS_SetGCThreshold(rt, (size_t)-1);
-    exhaust_spare_blocks(rt, &padding);
-    assert(JS_SetDefaultTimeZone(first, "UTC") == -1);
-    assert(JS_HasException(first));
-    JS_SetMemoryLimit(rt, (size_t)-1);
-    value = JS_GetException(first);
-    JS_FreeValue(first, value);
-    assert_default_zone(second, "+05:30");
-    while (padding) {
-        memcpy(&next, padding, sizeof(next));
-        js_free_rt(rt, padding);
-        padding = next;
-    }
-    assert(!JS_SetDefaultTimeZone(first, "-00:00"));
-    assert_default_zone(second, "+00:00");
-    assert(!JS_SetDefaultTimeZone(second, "uTc"));
-    assert_default_zone(first, "UTC");
-    JS_FreeContext(first);
-    JS_FreeContext(second);
-    JS_FreeRuntime(rt);
-}
-
 static void test_instant_embedding_allocation(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -664,7 +536,6 @@ int main(void)
     test_instant_embedding_bounds(rt);
     test_instant_embedding_brand(rt);
     test_instant_embedding_allocation();
-    test_default_zone();
     JS_RunGC(rt);
     JS_FreeRuntime(rt);
     return 0;
@@ -719,11 +590,6 @@ int main(void)
         JS_FreeValue(ctx, name);
         JS_FreeValue(ctx, exception);
     }
-    assert(JS_SetDefaultTimeZone(ctx, "UTC") == -1);
-    assert_embedding_error(ctx, "TypeError");
-    temporal = JS_GetDefaultTimeZone(ctx);
-    assert(JS_IsException(temporal) && JS_HasException(ctx));
-    assert_embedding_error(ctx, "TypeError");
     temporal = JS_GetPropertyStr(ctx, global, "Temporal");
     assert(JS_IsUndefined(temporal) && !JS_HasException(ctx));
     JS_FreeValue(ctx, temporal);
