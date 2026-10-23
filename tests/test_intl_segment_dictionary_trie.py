@@ -4,6 +4,7 @@ from bisect import bisect_left
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 from cldr_xml import DataError
@@ -92,6 +93,19 @@ class TrieTests(unittest.TestCase):
         for data in cases:
             with self.subTest(data=data), self.assertRaises(DataError):
                 trie.prepare(data)
+
+    def test_total_scalar_gate_precedes_policy_scan_and_shared_construction(self):
+        class Unvisited(str):
+            def __iter__(self):
+                raise AssertionError('over-budget key was scanned')
+
+        data = dictionary.Dictionary((dictionary.Entry('aa', None),
+                                      dictionary.Entry(Unvisited('bb'), None)), False, 2, 2, ())
+        with patch.object(trie.scalar_trie, 'DEFAULT_LIMITS', trie.scalar_trie.DEFAULT_LIMITS._replace(scalars=3)), \
+                patch.object(trie.scalar_trie, 'prepare') as shared:
+            with self.assertRaisesRegex(DataError, 'scalar budget'):
+                trie.prepare(data)
+            shared.assert_not_called()
 
 
 if __name__ == '__main__':
