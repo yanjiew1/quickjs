@@ -1,16 +1,18 @@
 {
   "cldr": {
     "archive": {
-      "sha256": "026ac1dd802e3964c2577c9bb6876b048a08907c5151ff00fc2d8a17f704c882",
-      "url": "https://codeload.github.com/unicode-org/cldr/tar.gz/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2"
+      "format": "zip",
+      "sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip"
     },
-    "commit": "7cdeb9e7fac52c59f22fc7248b05f989ee5689c2",
-    "manifest_sha256": "7a9b914a70c90272eed2ed2488a5d14a58a558b9c5e9970f350b93a9537a232f",
-    "prerelease": true,
-    "published": "2026-10-12",
-    "release": "49-beta4",
-    "tag": "release-49-beta4"
+    "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+    "distribution": "common",
+    "manifest_sha256": "f3f262e9260d5a91855e3c0b64cf6e9258498d39ae9184028c956a5b26ba14cf",
+    "prerelease": false,
+    "published": "2026-10-22",
+    "release": "49",
+    "tag": "release-49"
   },
   "format": 1,
-  "reviewed": "2026-10-19"
+  "reviewed": "2026-10-23"
 }
