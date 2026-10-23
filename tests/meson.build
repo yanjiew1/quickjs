@@ -29,6 +29,14 @@ if intl_enabled
     suite: ['repo', 'unit', 'generator'],
     timeout: 30,
   )
+
+  test(
+    'data-regeneration',
+    python,
+    args: files('test_data_regeneration.py'),
+    suite: ['repo', 'unit', 'generator'],
+    timeout: 30,
+  )
 endif
 
 # Component declarations capture their selected fixture and compile context.
