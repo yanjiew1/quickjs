@@ -185,6 +185,47 @@ class SegmentBundleTests(unittest.TestCase):
         self.assertNotEqual(segment_bundle.fingerprint(lf), segment_bundle.fingerprint(changed))
 
 
+    def test_final_pack_transfers_paired_sections_without_second_inventory(self):
+        import availability
+        import embed
+        import generate
+        import parents
+        from test_intl_tables import VerifiedFixture
+        from test_intl_segment_program_tables import profile
+
+        source = VerifiedFixture()
+        final_graph, _ = availability.complete(parents.load(source))
+        tags = availability.profile_locales(final_graph, 'native')
+        inputs = segment_bundle.recipe(source.pin, tags)
+        identity = segment_bundle.fingerprint(inputs)
+        programs = tuple(profile(kind, ()) for kind in
+                         ('GraphemeClusterBreak', 'WordBreak', 'SentenceBreak'))
+        strings = ('',) + tags
+        parts = {
+            bundle.STRINGS: tables.encode_strings(strings),
+            bundle.LOCALES: tables.encode_locales(tags, final_graph, {text: i for i, text in enumerate(strings)}),
+            bundle.SEGMENT_DICTIONARIES: self.parts[bundle.SEGMENT_DICTIONARIES],
+            bundle.SEGMENT_PROGRAMS: segment_program_tables.encode(
+                programs, tuple((locale, kind, kind) for locale in range(len(tags)) for kind in range(3)),
+                identity, len(tags)),
+            bundle.SEGMENT_SUPPRESSIONS: segment_suppression_tables.encode(
+                (None,), tuple((locale, 0) for locale in range(len(tags))), identity, len(tags)),
+        }
+        archive = bundle.pack(parts, identity, 'native')
+        binary, manifest = generate.generate(source, 'native', compiled_segmentation=archive)
+        envelope = bundle.unpack(binary)
+        for key in segment_bundle.SECTIONS:
+            self.assertEqual(envelope['sections'][key], parts[key])
+        # Locale IDs are shared, but the formatter string pool has its own IDs.
+        decoded = tables.validate(binary)
+        self.assertEqual(decoded['locales'], tags)
+        self.assertNotEqual(envelope['sections'][bundle.STRINGS], parts[bundle.STRINGS])
+        self.assertEqual(manifest['inputs']['segmentation'], inputs)
+        self.assertIn('NOTICE-SEGMENT-DICTIONARIES', embed.render(binary))
+        with self.assertRaisesRegex(ValueError, 'native profile'):
+            generate.generate(source, 'minimal', compiled_segmentation=archive)
+
+
 class SourceInputsTests(unittest.TestCase):
     def test_reads_are_independent_of_caller_cache_history(self):
         class Reader:
