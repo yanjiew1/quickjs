@@ -4515,6 +4515,14 @@ test(
 )
 
 test(
+  'intl-segment-bundle',
+  python,
+  args: files('test_intl_segment_bundle.py'),
+  suite: ['repo', 'generator'],
+  timeout: 30,
+)
+
+test(
   'intl-segment-expression',
   python,
   args: files('test_intl_segment_expression.py'),
