@@ -52,15 +52,15 @@ jobs:
           python3 tools/ci/audit_intl_datetime.py \
             build/tests/test_intl_date_service_${{ matrix.profile }} \
             --threads "$(getconf _NPROCESSORS_ONLN)"
-      - name: Check delivered Intl APIs against Test262
+      - name: Check all Intl entry points against Test262
         run: |
           python3 tools/build/test262.py bootstrap
           profile_config=()
           if test '${{ matrix.profile }}' = minimal; then
             profile_config=(-c tests/intl-minimal-test262.conf)
           fi
-          # The full DateTimeFormat directory includes locale inventories and
-          # Temporal ranges; leave room for those alongside the other APIs.
+          # Include wrappers and Temporal integration as well as constructors.
+          # Keep the complete selection bounded and report every test's time.
           timeout 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
             -t -m -c tests/intl-locale-test262.conf \
             "${profile_config[@]}" \
