@@ -152,6 +152,7 @@ if get_option('temporal')
     'temporal/relative.c',
     'temporal/time.c',
     'temporal/time-zone.c',
+    'timezone/identifier.c',
     'timezone/system-zone.c',
     'timezone/timezone.c',
   )
