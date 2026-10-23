@@ -3520,6 +3520,12 @@ if intl_enabled
       'test_intl_pack.c',
       '../src/intl/native/pack.c',
     ),
+    'test_intl_segment_routing': files(
+      'test_intl_segment_routing.c',
+      '../src/intl/segment/routing.c',
+      '../src/unicode/libunicode.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables,
     'test_intl_collation_compare': files(
       'test_intl_collation_compare.c',
       '../src/intl/collation/compare.c',
@@ -4723,6 +4729,74 @@ if get_option('intl') == 'native'
   component_test_specs += [{
     'target': intl_segment_suppression_runtime_test,
     'name': 'intl-segment-suppression-runtime',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_segment_dictionary_refine_fixture = custom_target(
+    'intl-segment-dictionary-refine-fixture',
+    output: 'intl-segment-dictionary-refine-fixture.c',
+    command: [python, files('intl_segment_dictionary_refine_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'intl_segment_language_fixture.py',
+      'test_intl_segment_program_tables.py',
+    ),
+  )
+  intl_segment_native_input_test = {
+    'name': 'test_intl_segment_native_input',
+    'sources': files(
+      'test_intl_segment_native_input.c',
+      '../src/intl/segment/native-input.c',
+      '../src/intl/segment/dictionary-refine.c',
+      '../src/intl/segment/dictionary.c',
+      '../src/intl/segment/routing.c',
+      '../src/intl/segment/suppression.c',
+      '../src/intl/segment/suppression-data.c',
+      '../src/intl/segment/literal-graph.c',
+      '../src/intl/segment/scan.c',
+      '../src/intl/segment/program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/unicode/libunicode.c',
+      '../src/unicode/category.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables + [intl_segment_program_fixture] + [intl_segment_suppression_runtime_fixture] + [intl_segment_dictionary_refine_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_segment_native_input_test,
+    'name': 'intl-segment-native-input',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_segment_dictionary_refine_test = {
+    'name': 'test_intl_segment_dictionary_refine',
+    'sources': files(
+      'test_intl_segment_dictionary_refine.c',
+      '../src/intl/segment/dictionary-refine.c',
+      '../src/intl/segment/dictionary.c',
+      '../src/intl/segment/literal-graph.c',
+      '../src/intl/segment/routing.c',
+      '../src/intl/segment/scan.c',
+      '../src/intl/segment/program.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/unicode/libunicode.c',
+      '../src/unicode/category.c',
+      '../src/cutils/cutils.c',
+    ) + unicode_tables + [intl_segment_dictionary_refine_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_segment_dictionary_refine_test,
+    'name': 'intl-segment-dictionary-refine',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,

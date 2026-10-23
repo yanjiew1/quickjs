@@ -59,3 +59,55 @@ release of that borrowed storage. Failed preparation leaves zero output, so the
 binding frees its local UTF-16 reference before wrapper cleanup. Iterator cursor
 commit still precedes JS result allocation. Native refinement, word classification
 and capability admission remain subsequent acceptance steps.
+
+## Native dictionary routing resources
+
+`segment/routing.[ch]` prepares immutable Script and Script_Extensions interval
+caches through the Unicode owner's existing `unicode_script` API. Han, Hiragana
+and Katakana map to the CJK family; Khmer, Lao, Myanmar and Thai map to their
+respective dictionaries. No second script database is generated for Intl.
+
+The cache owns a copy of the allocator in heap-stable storage. Unicode range
+callbacks point there, not at a temporary stack allocator; zero-sized Unicode
+release requests translate to Intl `free`. Partial initialization releases every
+completed or partially built range. Queries use binary interval lookup without
+allocation or shared traversal state. A future shared native configuration owner
+must retain the cache until its last segmenter is gone; this helper introduces
+no separate reference count.
+
+The cache also retains Script_Extensions=Inherited for neutral mark attachment.
+A zero family mask alone cannot distinguish neutral marks from foreign scripts.
+
+Returned masks are candidates, not dictionary-core or boundary decisions.
+Script_Extensions can include punctuation; the refinement owner must also check
+character category, attachment to a surrounding script run, and protected base
+and grapheme decisions. This native routing policy does not claim exact
+Line_Break=SA classification. [Word refinement](intl-segment-word-refinement.md)
+owns those decisions; native admission remains separate work.
+
+## Final native input owner
+
+`segment/native-input.[ch]` connects decoding, compiled rule scans, literal
+sentence suppression and native grapheme protection into final boundary vectors.
+The private pipeline connects grapheme, word and sentence preparation.
+Public native provider admission remains
+unfinished until production data and complete locale capability are validated.
+
+Selected and grapheme scans share one decoded scalar/UTF-16 owner during
+preparation. For sentence input, remove approved suppression cuts, then
+intersect with the native grapheme decisions. Only after every fallible stage
+succeeds are final UTF-16 indexes copied into one retained allocation. Temporary
+text, scans and matcher scratch are all released, including on OOM.
+
+Word input uses the same decoded owner and native grapheme scan, refines through
+the selected dictionaries/routing cache, then applies final grapheme protection.
+One monotonic pass classifies final spans by Letter or decimal-digit membership.
+Word status is stored with the final vectors, so queries never rescan text.
+The borrowed rule configuration names selected/grapheme programs and required
+refinement views; it is not retained or silently replaced with fallback data.
+
+The result borrows no program, list, text or service pointer. Binary-search
+`next` and `containing` queries allocate nothing and carry no mutable traversal
+cursor, so several clients may query the same prepared input independently.
+The common service wrapper can retain the original JS string separately for
+segment text extraction; its data is not needed to query these vectors.
