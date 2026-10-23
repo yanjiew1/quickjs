@@ -362,6 +362,11 @@ static __maybe_unused void cr_dump(CharRange *cr)
 
 static void *cr_default_realloc(void *opaque, void *ptr, size_t size)
 {
+    /* Range cleanup also calls the adapter for empty, unallocated storage. */
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
     return realloc(ptr, size);
 }
 
