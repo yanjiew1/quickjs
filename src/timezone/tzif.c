@@ -427,7 +427,7 @@ int qjs_tzif_info(const QJSTzifState *s, int64_t seconds, QJSTimeZoneInfo *outpu
 }
 
 static void select_transition(const QJSTzifState *s, int64_t candidate,
-                              int64_t seconds, int next, int inclusive,
+                              int64_t seconds, int next, int inclusive, int include_dst,
                               int64_t *best, int *exists)
 {
     int32_t before, after;
@@ -437,17 +437,24 @@ static void select_transition(const QJSTzifState *s, int64_t candidate,
         return;
     if (*exists && (next ? candidate >= *best : candidate <= *best))
         return;
-    if (qjs_tzif_offset(s, candidate - 1, &before) ||
-        qjs_tzif_offset(s, candidate, &after) || before == after)
-        return;
+    if (include_dst) {
+        QJSTimeZoneInfo a, b;
+        if (qjs_tzif_info(s, candidate - 1, &a) || qjs_tzif_info(s, candidate, &b) ||
+            (a.offset_seconds == b.offset_seconds && a.is_dst == b.is_dst))
+            return;
+    } else {
+        if (qjs_tzif_offset(s, candidate - 1, &before) ||
+            qjs_tzif_offset(s, candidate, &after) || before == after)
+            return;
+    }
     if (!*exists || (next ? candidate < *best : candidate > *best)) {
         *best = candidate;
         *exists = 1;
     }
 }
 
-int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
-                        int inclusive, int64_t *output, int *found)
+static int find_transition(const QJSTzifState *s, int64_t seconds, int next,
+                            int inclusive, int include_dst, int64_t *output, int *found)
 {
     uint32_t lo = 0, hi, i;
     int64_t best = 0;
@@ -456,7 +463,8 @@ int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
         return QJS_TZ_DATA;
     if (seconds < -QJS_TZ_OFFSET_LIMIT || seconds > QJS_TZ_OFFSET_LIMIT)
         return QJS_TZ_RANGE;
-    /* Find the explicit boundary, then skip designation/DST-only changes. */
+    /* Find the explicit boundary, then skip changes outside the requested
+       offset/DST domain. Abbreviation-only changes never affect either query. */
     hi = s->time_count;
     while (lo < hi) {
         uint32_t middle = lo + (hi - lo) / 2;
@@ -470,11 +478,18 @@ int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
     if (next) {
         for (i = lo; i < s->time_count && !exists; i++)
             select_transition(s, transition_at(s, i), seconds, next, inclusive,
-                              &best, &exists);
+                              include_dst, &best, &exists);
     } else {
         for (i = lo; i && !exists; i--)
             select_transition(s, transition_at(s, i - 1), seconds, next,
-                              inclusive, &best, &exists);
+                              inclusive, include_dst, &best, &exists);
+    }
+    if (include_dst && s->future && s->time_count) {
+        int64_t last = transition_at(s, s->time_count - 1);
+        /* A footer can retain the final offset while changing its raw DST
+           designation. The footer starts strictly after the last explicit time. */
+        if (last < INT64_MAX)
+            select_transition(s, last + 1, seconds, next, inclusive, include_dst, &best, &exists);
     }
     if (s->future == 2) {
         int64_t last =
@@ -496,7 +511,7 @@ int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
                 for (j = 0; j < 2; j++)
                     if (events[j] > last)
                         select_transition(s, events[j], seconds, next,
-                                          inclusive, &best, &exists);
+                                          inclusive, include_dst, &best, &exists);
                 if (exists &&
                     (next ? best <= year_days(year + adjustment + 1) * 86400 -
                                  8 * 86400
@@ -509,6 +524,27 @@ int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
     if (exists)
         *output = best;
     *found = exists;
+    return QJS_TZ_OK;
+}
+
+int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
+                        int inclusive, int64_t *output, int *found)
+{
+    return find_transition(s, seconds, next, inclusive, 0, output, found);
+}
+
+int qjs_tzif_info_is_constant(const QJSTzifState *s, int64_t first, int64_t last, int *constant)
+{
+    int64_t transition;
+    int found, error;
+    if (!s || !constant)
+        return QJS_TZ_DATA;
+    if (first > last || first < -QJS_TZ_OFFSET_LIMIT || last > QJS_TZ_OFFSET_LIMIT)
+        return QJS_TZ_RANGE;
+    error = find_transition(s, first, 1, 0, 1, &transition, &found);
+    if (error)
+        return error;
+    *constant = !found || transition > last;
     return QJS_TZ_OK;
 }
 

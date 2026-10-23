@@ -235,10 +235,26 @@ static void test_offset_information(void)
     assert(info.offset_seconds == 123 && info.is_dst == 456);
 }
 
+static void test_constant_information(void)
+{
+    const QJSTimeZone *ny = lookup("America/New_York"), *utc = lookup("UTC");
+    int constant = 99;
+    assert(!qjs_timezone_info_is_constant(ny, 1704067200, 1735689600, &constant) && !constant);
+    assert(!qjs_timezone_info_is_constant(ny, 1719792000, 1722470400, &constant) && constant);
+    assert(!qjs_timezone_info_is_constant(ny, 1710053999, 1710054000, &constant) && !constant);
+    assert(!qjs_timezone_info_is_constant(ny, 1710054000, 1710054001, &constant) && constant);
+    assert(!qjs_timezone_info_is_constant(utc, INT64_MIN, INT64_MAX, &constant) && constant);
+    constant = 99;
+    assert(qjs_timezone_info_is_constant(ny, 1, 0, &constant) == QJS_TZ_RANGE && constant == 99);
+    assert(qjs_timezone_info_is_constant(NULL, 0, 1, &constant) == QJS_TZ_DATA && constant == 99);
+    assert(qjs_timezone_info_is_constant(ny, 0, 1, NULL) == QJS_TZ_DATA);
+}
+
 int main(void)
 {
     test_embedded_records();
     test_real_rules();
     test_offset_information();
+    test_constant_information();
     return 0;
 }
