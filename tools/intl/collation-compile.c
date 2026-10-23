@@ -340,9 +340,10 @@ int main(int argc, char **argv)
                ",\"normalized_texts\":%" PRIu64 ",\"starred_scalars\":%" PRIu64 "}\n",
                audit.programs, audit.instructions, audit.texts, audit.starred);
     }
-    free(bytes);
-    free(root_bytes);
+    /* Staged owners may borrow root/input bytes until their cleanup. */
     qjs_intl_collation_archive_clear(&archive);
     qjs_intl_compiled_collation_clear(&image);
+    free(bytes);
+    free(root_bytes);
     return failed ? 1 : 0;
 }
