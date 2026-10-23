@@ -473,3 +473,118 @@ CONFIG
 invoke_runner no -q -c "$test262_tmp/dst-config" -T 2 -a -d "$test262_tmp/test262/test"
 test "$test262_status" -eq 0
 grep -Fx 'Result: 0/1 error, 8 excluded' "$test262_tmp/err"
+
+# Path capabilities replace a broad rule at a narrower directory or exact
+# file. Metadata requirements remain independent and conjunctive.
+mkdir -p "$test262_tmp/requirements/narrow/format" "$test262_tmp/requirements/sibling" \
+    "$test262_tmp/requirements/narrow-extra"
+cat > "$test262_tmp/requirements-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+[features]
+available
+unavailable=skip
+[requirements]
+requirements/ = unavailable
+requirements/narrow/ = available
+requirements/narrow/format/ = available unavailable
+requirements/exact.js = available
+CONFIG
+for test262_path in narrow/pass.js exact.js; do
+    cat > "$test262_tmp/requirements/$test262_path" <<'JS'
+/*---
+flags: [noStrict]
+features: [available]
+---*/
+true;
+JS
+done
+# A multi-capability rule must check its second feature even when metadata
+# is supported. Exact file rules must not match a longer sibling filename.
+for test262_path in narrow/format/skip.js exact.js-extra.js narrow-extra/skip.js; do
+    cat > "$test262_tmp/requirements/$test262_path" <<'JS'
+/*---
+flags: [noStrict]
+features: [available]
+includes: [must-not-be-loaded.js]
+---*/
+throw Error("path capability or matching boundary was ignored");
+JS
+done
+for test262_path in skip.js sibling/skip.js narrow/metadata.js; do
+    cat > "$test262_tmp/requirements/$test262_path" <<'JS'
+/*---
+flags: [noStrict]
+features: [unavailable]
+includes: [must-not-be-loaded.js]
+---*/
+throw Error("missing path or metadata capability must skip before execution");
+JS
+done
+# This one has no metadata feature, so only the broad path rule prevents it.
+cat > "$test262_tmp/requirements/path-only.js" <<'JS'
+/*---
+flags: [noStrict]
+includes: [must-not-be-loaded.js]
+---*/
+throw Error("path-only capability was ignored");
+JS
+for test262_threads in 1 2; do
+    invoke_runner no -q -c "$test262_tmp/requirements-config" -T "$test262_threads" \
+        --timing-log "$test262_tmp/requirements.jsonl" -d "$test262_tmp/requirements"
+    test "$test262_status" -eq 0
+    python3 - "$test262_tmp/requirements.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 9
+assert sum(row['status'] == 'pass' for row in rows) == 2
+assert sum(row['status'] == 'skipped' for row in rows) == 7
+for row in rows:
+    if row['status'] == 'skipped':
+        assert row['duration_ms'] == 0
+PYCODE
+done
+# Normalize config/test path spellings, including an absolute single test.
+invoke_runner no -q -c "$test262_tmp/./requirements-config" -T 2 \
+    --timing-log "$test262_tmp/requirements-absolute.jsonl" \
+    -d "$(pwd)/$test262_tmp/requirements/../requirements"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/requirements-absolute.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 9
+assert sum(row['status'] == 'pass' for row in rows) == 2
+assert sum(row['status'] == 'skipped' for row in rows) == 7
+PYCODE
+invoke_runner no -q -c "$test262_tmp/requirements-config" \
+    -f "$(pwd)/$test262_tmp/requirements/exact.js"
+test "$test262_status" -eq 0
+# An overlay in a child directory must match a root config's test spelling.
+# This is how reduced-locale capabilities qualify untagged staging tests.
+mkdir "$test262_tmp/overlays"
+cat > "$test262_tmp/overlays/locale-config" <<'CONFIG'
+[requirements]
+../requirements/exact.js = unavailable
+CONFIG
+invoke_runner no -q -c "$test262_tmp/requirements-config" \
+    -c "$test262_tmp/overlays/locale-config" \
+    --timing-log "$test262_tmp/overlay.jsonl" \
+    -f "$(pwd)/$test262_tmp/requirements/exact.js"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/overlay.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1 and rows[0]['status'] == 'skipped'
+assert rows[0]['duration_ms'] == 0
+PYCODE
+# A misspelled capability must report a config error rather than hiding tests.
+cat >> "$test262_tmp/requirements-config" <<'CONFIG'
+requirements/typo.js = missing-capability
+CONFIG
+invoke_runner no -q -c "$test262_tmp/requirements-config" -d "$test262_tmp/requirements"
+test "$test262_status" -eq 2
+grep -Fq 'unknown required feature missing-capability' "$test262_tmp/err"
