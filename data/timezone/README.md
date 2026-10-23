@@ -1,7 +1,7 @@
 # Native timezone data
 
 `timezone-data.bin` is the single QJTZ pack generated from IANA tzdata **2026e**
-and CLDR JSON **48.2.3**. Its manifest records exact source revisions,
+and CLDR common release **49**. Its manifest records exact source revisions,
 generation settings, identifier/primary relationships and payload hashes.
 See [the generator guide](../../tools/timezone/README.md) for acquisition,
 offline regeneration and the binary format.
@@ -22,5 +22,5 @@ Generation uses fixed pins and does not change with the current date.
 
 The IANA data is public domain; see [LICENSE-IANA](LICENSE-IANA).
 CLDR metadata and derived mappings use the
-[Unicode license](sources/cldr/LICENSE). Raw CLDR JSON is retained as generator
+[Unicode license](sources/cldr/LICENSE). Raw CLDR XML is retained as generator
 input and is not parsed by the target runtime.
