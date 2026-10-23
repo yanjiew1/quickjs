@@ -239,6 +239,17 @@ jobs:
           submodules: true
       - name: Install MinGW and Wine
         run: |
+          # Use the canonical HTTPS archive for the same Ubuntu package/version set.
+          for apt_source in /etc/apt/sources.list \
+                            /etc/apt/sources.list.d/*.sources \
+                            /etc/apt/sources.list.d/*.list; do
+            if test -f "$apt_source"; then
+              sudo sed -i \
+                's|https\?://azure\.archive\.ubuntu\.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+                "$apt_source"
+            fi
+          done
+
           sudo apt-get update -o Acquire::Retries=3
           # Only the selected 64-bit C/POSIX target and headless Wine loader are needed.
           sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
