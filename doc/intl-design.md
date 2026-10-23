@@ -1026,6 +1026,15 @@ resolution preserves missing/BLOCK/empty and original alias provenance; it does
 not perform name-type, width, metazone or territory fallback. Those are still
 required for complete native specific/generic zone presentation.
 
+Fixed zero identifiers retain their public `+00:00` identity while name styles
+try the CLDR Etc/GMT zone and GMT metazone names. Generic styles can use a
+standard GMT name because a fixed zero offset is permanently standard. Missing,
+blocked or empty names retain numeric fallback. Explicit shortOffset/longOffset
+styles bypass name selection and preserve numeric GMT formatting, including at
+zero. This separates locale names from the wrapper: French can use the GMT name
+while its numeric offset wrapper remains UTC{0}. It is an implementation-defined
+presentation policy consistent with CLDR name lookup, not a synthetic zero label.
+
 `datetime/ordinary-programs.[ch]` prepares a finite owned set of ordinary
 single-date programs. Retain complete useful source pairs in stable group
 order; deduplicate by the full standard component vector. Add all fourteen
