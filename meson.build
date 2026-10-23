@@ -301,7 +301,7 @@ timezone_data = custom_target(
 windows_timezone_data = custom_target(
   'windows-timezone-data',
   input: files(
-    'data/timezone/sources/cldr/windowsZones.json',
+    'data/timezone/sources/cldr/windowsZones.xml',
     'data/timezone/timezone-data.bin',
   ),
   output: 'windows-timezone-data.c',
