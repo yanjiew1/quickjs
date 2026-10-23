@@ -78,6 +78,18 @@ static void test_range_capacity_limits(void)
     assert(cr_realloc(&range, -1) < 0);
 }
 
+static void test_default_range_allocator(void)
+{
+    CharRange range;
+
+    cr_init(&range, NULL, NULL);
+    /* Empty cleanup must not create an ignored zero-size allocation. */
+    assert(range.realloc_func(NULL, NULL, 0) == NULL);
+    cr_free(&range);
+    assert(cr_add_interval(&range, 'a', 'z' + 1) == 0);
+    cr_free(&range);
+}
+
 static void test_empty_range(void)
 {
     CharRange src, dst;
@@ -120,6 +132,7 @@ static void test_case_folding(void)
 int main(void)
 {
     test_range_capacity_limits();
+    test_default_range_allocator();
     test_empty_range();
     test_case_folding();
     return 0;
