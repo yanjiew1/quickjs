@@ -85,3 +85,17 @@ python3 tools/intl/segment_prepare.py \
 The property tool is a build-machine executable, including during cross builds.
 Preparation downloads nothing; acquisition owns authentication and networking.
 Normal engine builds consume the prepared final binary offline.
+
+## Final pack integration
+
+For a production native pack, pass `--compiled-segmentation` to
+`tools/intl/generate.py` together with its compiled collation archive. The
+producer recomputes the completed registry and recipe before transferring
+sections 39/40/41. The enclosing manifest records the segmentation recipe and
+the final generation identity includes every transferred payload hash.
+Minimal generation accepts no segmentation archive and retains no dictionaries.
+
+The pinned-source CI job reproduces the archive, preserved license/notices and
+both final profiles. Normal builds still consume only `data/intl/native.bin`
+or `minimal.bin`; `embed.py` emits one C owner and attributes dictionary-derived
+bytes to the full dictionary license and per-file notice paths.
