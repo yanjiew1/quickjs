@@ -79,6 +79,14 @@ meson compile -C build test262-bootstrap
 TEST262_TIMING_LOG=test262_timings.jsonl meson compile -C build test262-run
 ```
 
+The runner accepts a `[requirements]` section in its configuration. Each entry
+maps a file or directory path to whitespace-separated required features.
+Paths are relative to the configuration file; directory paths end in `/`.
+The longest matching path replaces a broader rule, and each test's own feature
+metadata is still required. Declare every capability in `[features]`; an
+unknown requirement is a configuration error. Capability skips are included in
+the per-test timing report without loading the test's harness.
+
 The runner uses all available processors by default. Set `TEST262_THREADS` to
 limit it. `TEST262_PROGRESS_LOG` records progress alongside optional per-test
 JSONL timings. `test262-default`, `test262-check`, `test262-update` and
