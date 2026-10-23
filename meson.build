@@ -72,7 +72,7 @@ if intl_enabled
   if get_option('intl') == 'minimal'
     # Native Segmenter awaits its CLDR/dictionary profile; expose the verified
     # Unicode default profile through the minimal configuration first.
-    common_args += '-DCONFIG_INTL_SEGMENTER'
+    common_args += ['-DCONFIG_INTL_SEGMENTER', '-DCONFIG_INTL_SEGMENT_MINIMAL']
   endif
   warning('Intl is under development; only the documented completed APIs are available')
 endif
