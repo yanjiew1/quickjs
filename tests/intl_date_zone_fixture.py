@@ -19,7 +19,7 @@ from test_intl_timezone_names import Sources, entity, width, leaf, graph
 
 def pack(variant=None):
     source = Sources()
-    source.set('root', leaf('hourFormat', '+HH:mm;-HH:mm') + leaf('gmtFormat', 'GMT{0}') +
+    root = (leaf('hourFormat', '+HH:mm;-HH:mm') + leaf('gmtFormat', 'GMT{0}') +
         leaf('regionFormat', "'{0}'") + leaf('fallbackFormat', '{0} — {1}') +
         entity(width(leaf('generic', 'Direct zone')), 'Asia/Tokyo') +
         entity(width(leaf('generic', 'Pacific')), 'Pacific', 'metazone') +
@@ -32,8 +32,14 @@ def pack(variant=None):
         entity(leaf('exemplarCity', 'New_York_literal'), 'America/New_York') +
         entity(leaf('exemplarCity', 'Root Phoenix'), 'America/Phoenix') +
         entity(leaf('exemplarCity', 'Unknown place'), 'Etc/Unknown'))
-    source.set('en', entity(leaf('exemplarCity', BLOCK), 'America/Phoenix') +
+    english = (entity(leaf('exemplarCity', BLOCK), 'America/Phoenix') +
                entity(leaf('exemplarCity', ''), 'America/New_York'))
+    if variant == 'gmt':
+        root += (entity(width(leaf('standard', 'Zone standard') + leaf('generic', 'Zone generic')), 'Etc/GMT') +
+                 entity(width(leaf('standard', 'Meta standard') + leaf('generic', 'Meta generic')), 'GMT', 'metazone'))
+        english += entity(width(leaf('standard', BLOCK) + leaf('generic', '')), 'Etc/GMT')
+    source.set('root', root)
+    source.set('en', english)
     tags = graph().tags
     names = names_wire.select(timezone_names.collect(source, graph()), tags)
     periods = {
@@ -52,7 +58,7 @@ def pack(variant=None):
                       ('Pacific', 'US', 'America/Los_Angeles')),
         'primary': (('CN', 'Asia/Shanghai'),),
     }
-    if variant:
+    if variant and variant != 'gmt':
         rows = []
         for row in periods['periods']:
             if row[0] != 'America/Phoenix':
@@ -84,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     text = embed.render(pack()).replace('qjs_intl_native', 'qjs_intl_date_zone_fixture')
-    for variant in ('conflict', 'gap', 'ambiguous'):
+    for variant in ('conflict', 'gap', 'ambiguous', 'gmt'):
         text += '\n' + embed.render(pack(variant)).replace('qjs_intl_native', 'qjs_intl_date_zone_' + variant)
     header = b'TZif3' + bytes(15) + struct.pack('>6I', 0, 0, 0, 0, 1, 4)
     block = struct.pack('>lBB', -28800, 0, 0) + b'STD\0'
