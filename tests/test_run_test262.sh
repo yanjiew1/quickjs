@@ -590,6 +590,25 @@ PYCODE
 invoke_runner no -q -c "$test262_tmp/requirements-config" \
     -f "$(pwd)/$test262_tmp/requirements/exact.js"
 test "$test262_status" -eq 0
+# An overlay in a child directory must match a root config's test spelling.
+# This is how reduced-locale capabilities qualify untagged staging tests.
+mkdir "$test262_tmp/overlays"
+cat > "$test262_tmp/overlays/locale-config" <<'CONFIG'
+[requirements]
+../requirements/exact.js = unavailable
+CONFIG
+invoke_runner no -q -c "$test262_tmp/requirements-config" \
+    -c "$test262_tmp/overlays/locale-config" \
+    --timing-log "$test262_tmp/overlay.jsonl" \
+    -f "$(pwd)/$test262_tmp/requirements/exact.js"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/overlay.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1 and rows[0]['status'] == 'skipped'
+assert rows[0]['duration_ms'] == 0
+PYCODE
 # A misspelled capability must report a config error rather than hiding tests.
 cat >> "$test262_tmp/requirements-config" <<'CONFIG'
 requirements/typo.js = missing-capability
