@@ -62,21 +62,7 @@ import unit_patterns
 import unit_tables
 import unit_grammar
 import unit_grammar_tables
-
-
-class Inputs:
-    """Track this generation's reads independently of a caller's cache history."""
-    def __init__(self, sources):
-        self.sources = sources
-        self.consumed = set()
-
-    def paths(self, prefix):
-        return self.sources.paths(prefix)
-
-    def read(self, name):
-        result = self.sources.read(name)
-        self.consumed.add(name)
-        return result
+from source_inputs import Inputs
 
 
 def generate(sources, profile, compiled_collation=None):
