@@ -256,8 +256,14 @@ jobs:
         # Bound package-network stalls independently of the build/test budget.
         timeout-minutes: 15
         run: |
-          sudo apt update
-          sudo apt install -y wine64 mingw-w64 meson ninja-build
+          sudo apt-get update -o Acquire::Retries=3
+          # This target uses only 64-bit C with POSIX threads. Avoid the MinGW
+          # metapackage's extra C++/32-bit toolchains and Wine recommendations.
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+            wine64 \
+            gcc-mingw-w64-x86-64-posix \
+            meson \
+            ninja-build
       - name: Setup Wine
         timeout-minutes: 5
         run: |
