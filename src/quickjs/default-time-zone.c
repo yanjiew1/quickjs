@@ -9,28 +9,28 @@
 #ifdef CONFIG_TEMPORAL
 /* Runtime host defaults use primary names. Explicit Temporal time-zone inputs continue
    to preserve their canonical alias identifier in their existing parser. */
-static int default_zone_primary(QJSTemporalZone *zone)
+static int default_zone_primary(QJSTimeZoneIdentifier *zone)
 {
     if (zone->is_offset) {
         if (zone->offset_nanoseconds % INT64_C(60000000000))
-            return QJS_TEMPORAL_ERROR_RANGE;
+            return QJS_TZ_RANGE;
         return 0;
     }
     {
         const char *primary = qjs_timezone_primary_identifier(zone->named);
         if (strlen(primary) >= sizeof(zone->identifier))
-            return QJS_TEMPORAL_ERROR_BACKEND;
+            return QJS_TZ_DATA;
         strcpy(zone->identifier, primary);
     }
     return 0;
 }
 
-static int default_zone_commit(JSContext *ctx, const QJSTemporalZone *zone)
+static int default_zone_commit(JSContext *ctx, const QJSTimeZoneIdentifier *zone)
 {
     size_t size = strlen(zone->identifier) + 1;
     char *copy = js_malloc_rt(ctx->rt, size), *old;
     if (!copy)
-        return QJS_TEMPORAL_ERROR_MEMORY;
+        return QJS_TZ_MEMORY;
     memcpy(copy, zone->identifier, size);
     /* Parsing and allocation are complete. No provider/cache mutation, GC,
        user callback, or fallible operation occurs at or after this commit. */
@@ -40,9 +40,9 @@ static int default_zone_commit(JSContext *ctx, const QJSTemporalZone *zone)
     return 0;
 }
 
-int js_default_time_zone_identifier(JSContext *ctx, const char **result)
+static int js_default_time_zone_identifier(JSContext *ctx, const char **result)
 {
-    QJSTemporalZone zone;
+    QJSTimeZoneIdentifier zone;
     int error;
     if (!ctx->rt->default_time_zone) {
         char identifier[256];
@@ -54,8 +54,8 @@ int js_default_time_zone_identifier(JSContext *ctx, const char **result)
         error = qjs_timezone_system_default(identifier, sizeof(identifier),
                                             host_offset_fallback);
         if (error)
-            return QJS_TEMPORAL_ERROR_BACKEND;
-        error = qjs_temporal_zone_parse(&zone, identifier, strlen(identifier));
+            return QJS_TZ_DATA;
+        error = qjs_timezone_parse_identifier(&zone, identifier, strlen(identifier));
         if (!error)
             error = default_zone_primary(&zone);
         if (!error)
@@ -67,13 +67,13 @@ int js_default_time_zone_identifier(JSContext *ctx, const char **result)
     return 0;
 }
 
-int js_default_time_zone_get(JSContext *ctx, QJSTemporalZone *result)
+int js_default_time_zone_get(JSContext *ctx, QJSTimeZoneIdentifier *result)
 {
     const char *identifier;
-    QJSTemporalZone zone;
+    QJSTimeZoneIdentifier zone;
     int error = js_default_time_zone_identifier(ctx, &identifier);
     if (!error)
-        error = qjs_temporal_zone_parse(&zone, identifier, strlen(identifier));
+        error = qjs_timezone_parse_identifier(&zone, identifier, strlen(identifier));
     if (!error)
         *result = zone;
     return error;
@@ -81,9 +81,9 @@ int js_default_time_zone_get(JSContext *ctx, QJSTemporalZone *result)
 
 static int default_zone_throw(JSContext *ctx, int error)
 {
-    if (error == QJS_TEMPORAL_ERROR_MEMORY)
+    if (error == QJS_TZ_MEMORY)
         JS_ThrowOutOfMemory(ctx);
-    else if (error == QJS_TEMPORAL_ERROR_RANGE)
+    else if (error == QJS_TZ_RANGE)
         JS_ThrowRangeError(ctx, "invalid default time zone");
     else
         JS_ThrowInternalError(ctx, "default time-zone backend failed");
@@ -92,11 +92,11 @@ static int default_zone_throw(JSContext *ctx, int error)
 
 int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone)
 {
-    QJSTemporalZone zone;
+    QJSTimeZoneIdentifier zone;
     int error;
     if (!time_zone)
-        return default_zone_throw(ctx, QJS_TEMPORAL_ERROR_RANGE);
-    error = qjs_temporal_zone_parse(&zone, time_zone, strlen(time_zone));
+        return default_zone_throw(ctx, QJS_TZ_RANGE);
+    error = qjs_timezone_parse_identifier(&zone, time_zone, strlen(time_zone));
     if (!error)
         error = default_zone_primary(&zone);
     if (!error)
@@ -118,11 +118,11 @@ JSValue JS_GetDefaultTimeZone(JSContext *ctx)
 int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone)
 {
     (void)time_zone;
-    JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal");
+    JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal or Intl");
     return -1;
 }
 JSValue JS_GetDefaultTimeZone(JSContext *ctx)
 {
-    return JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal");
+    return JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal or Intl");
 }
 #endif
