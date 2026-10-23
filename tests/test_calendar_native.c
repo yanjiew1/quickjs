@@ -94,6 +94,42 @@ static void month_addition(QJSCalendarId calendar, int year, int month, int64_t 
     assert(restored_year == year && restored_month == month);
 }
 
+/* Enumeration exposes canonical backend identities, not localized names or
+   all lenient input aliases. Its borrowed result survives subsequent queries. */
+static void check_era_domain(QJSCalendarId calendar)
+{
+    const char *name = "unchanged", *previous;
+    QJSCalendarDate date;
+    size_t count, i, limit = 2;
+    int error, found = 0;
+
+    if (calendar == QJS_CAL_JAPANESE)
+        limit += qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+    assert(!qjs_calendar_from_epoch_day(calendar, 0, &date));
+    for (count = 0; count <= limit; count++) {
+        previous = name;
+        error = qjs_calendar_era_at(calendar, count, &name);
+        if (error) {
+            assert(error == QJS_CAL_UNSUPPORTED && name == previous);
+            break;
+        }
+        assert(name && *name);
+        if (!strcmp(name, date.era))
+            found = 1;
+        for (i = 0; i < count; i++) {
+            const char *other;
+
+            assert(!qjs_calendar_era_at(calendar, i, &other));
+            assert(strcmp(name, other));
+        }
+    }
+    assert(count <= limit);
+    assert(found == date.has_era);
+    previous = name;
+    assert(qjs_calendar_era_at(calendar, SIZE_MAX, &name) == QJS_CAL_UNSUPPORTED);
+    assert(name == previous);
+}
+
 int main(void)
 {
     static const int years[] = {-271000, -10001, -1, 0, 1, 1888, 1898, 1899,
@@ -109,6 +145,7 @@ int main(void)
         QJSCalendarId id;
 
         assert(qjs_calendar_is_supported((QJSCalendarId)calendar));
+        check_era_domain((QJSCalendarId)calendar);
         assert(!qjs_calendar_from_identifier(&id,
                 qjs_calendar_identifier((QJSCalendarId)calendar),
                 strlen(qjs_calendar_identifier((QJSCalendarId)calendar))));

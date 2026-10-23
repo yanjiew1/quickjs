@@ -25,6 +25,11 @@ int qjs_calendar_backend_is_supported(QJSCalendarId calendar)
     return calendar > QJS_CAL_ISO8601 && calendar < QJS_CAL_COUNT;
 }
 
+int qjs_calendar_backend_era_at(QJSCalendarId calendar, size_t index, const char **out)
+{
+    return qjs_cal_era_at(calendar, index, out);
+}
+
 static int year_start(QJSCalendarId calendar, int32_t year, int64_t *result)
 {
     if (calendar == QJS_CAL_HEBREW)
