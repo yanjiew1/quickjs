@@ -4485,6 +4485,22 @@ if get_option('intl') == 'native'
   )
 
   test(
+    'intl-segment-catalog',
+    python,
+    args: files('test_intl_segment_catalog.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-segment-bundle',
+    python,
+    args: files('test_intl_segment_bundle.py'),
+    suite: ['repo', 'generator', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-segment-expression',
     python,
     args: files('test_intl_segment_expression.py'),
