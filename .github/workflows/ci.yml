@@ -49,6 +49,7 @@ jobs:
       run: |
         timeout 180s python3 tools/intl/acquire.py \
           --cache "$RUNNER_TEMP/intl-cache"
+        echo "CLDR_SOURCE=$RUNNER_TEMP/intl-cache/cldr-49" >> "$GITHUB_ENV"
     - name: Install intl source data build dependencies
       run: |
         sudo apt-get update
@@ -66,14 +67,14 @@ jobs:
     - name: Compare the complete pinned root collation ordering
       run: |
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
-          --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
+          --ordered "$CLDR_SOURCE/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
-          --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
+          --ordered-shifted "$CLDR_SOURCE/common/uca/CollationTest_CLDR_SHIFTED.txt"
     - name: Prepare exact collation targets for each profile
       run: |
         for profile in minimal native; do
           timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
-            --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+            --sources "$CLDR_SOURCE" \
             --profile "$profile" --compiler build-collation/intl-collation-compile \
             --output "$RUNNER_TEMP/collation-$profile.qjcl"
         done
@@ -82,7 +83,7 @@ jobs:
         timeout --kill-after=15s 180s python3 tools/intl/segment_dictionary_sources.py \
           --cache "$RUNNER_TEMP/intl-cache"
         timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+          --sources "$CLDR_SOURCE" \
           --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
           --property-tool build-collation/intl-segment-property \
           --output "$RUNNER_TEMP/native-segmentation.qjin" \
@@ -94,38 +95,38 @@ jobs:
     - name: Audit pinned XML documents and DTD attribute schema
       run: |
         timeout 120s python3 tools/intl/cldr_xml.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit pinned root collation elements
       run: |
         timeout 60s python3 tools/intl/collation_tables.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit collation programs, inheritance and ordered imports
       run: |
         timeout 90s python3 tools/intl/collation_programs.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
         timeout 90s python3 tools/intl/collation_bindings.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile native
+          --sources "$CLDR_SOURCE" --profile native
         timeout 90s python3 tools/intl/collation_bindings.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile minimal
+          --sources "$CLDR_SOURCE" --profile minimal
     - name: Audit root collation group identities and anchor keys
       run: |
         timeout 60s python3 tools/intl/collation_groups.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit logical fractional collation root data
       run: |
         timeout 60s python3 tools/intl/collation_fractional.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
         timeout 60s python3 tools/intl/collation_ordinals.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
         timeout 60s python3 tools/intl/collation_root_input.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+          --sources "$CLDR_SOURCE" \
           --output "$RUNNER_TEMP/collation-root.qjcr"
     - name: Compile and verify collation programs with pinned Unicode
       run: |
         timeout 60s build-collation/intl-collation-compile \
           --audit-root "$RUNNER_TEMP/collation-root.qjcr"
         timeout 90s python3 tools/intl/collation_ir.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+          --sources "$CLDR_SOURCE" \
           --output "$RUNNER_TEMP/collation-input.qjci"
         timeout 60s build-collation/intl-collation-compile \
           --audit-pair "$RUNNER_TEMP/collation-root.qjcr" "$RUNNER_TEMP/collation-input.qjci"
@@ -135,94 +136,94 @@ jobs:
           --compiler build-collation/intl-collation-compile \
           --root-input "$RUNNER_TEMP/collation-root.qjcr" \
           --program-input "$RUNNER_TEMP/collation-input.qjci" \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --profile native \
+          --sources "$CLDR_SOURCE" --profile native \
           --output "$RUNNER_TEMP/collation-runtime.qjcl"
         timeout 60s build-collation/intl-collation-compile \
           --audit-compiled "$RUNNER_TEMP/collation-runtime.qjcl"
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_compiled \
           --archive "$RUNNER_TEMP/collation-runtime.qjcl" \
-          --ordered "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
+          --ordered "$CLDR_SOURCE/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_compiled \
           --archive "$RUNNER_TEMP/collation-runtime.qjcl" \
-          --ordered-shifted "$RUNNER_TEMP/intl-cache/cldr-49-beta4/common/uca/CollationTest_CLDR_SHIFTED.txt"
+          --ordered-shifted "$CLDR_SOURCE/common/uca/CollationTest_CLDR_SHIFTED.txt"
     - name: Audit locale inheritance graphs
       run: |
         timeout 60s python3 tools/intl/parents.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit resolved native list templates
       run: |
         timeout 120s python3 tools/intl/list_patterns.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit locale aliases and extension metadata
       run: |
         timeout 60s python3 tools/intl/locale_metadata.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit resolved numeric symbols
       run: |
         timeout 120s python3 tools/intl/number_symbols.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit plural rules and range records
       run: |
         timeout 60s python3 tools/intl/plural_rules.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit standard number patterns
       run: |
         timeout 120s python3 tools/intl/number_pattern_syntax.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit sparse compact number patterns
       run: |
         timeout 120s python3 tools/intl/compact_pattern_syntax.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit raw date and time pattern syntax
       run: |
         timeout 120s python3 tools/intl/date_pattern_syntax.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
         timeout 120s python3 tools/intl/date_pattern_syntax.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --combinations
+          --sources "$CLDR_SOURCE" --combinations
     - name: Audit localized timezone-name sources
       run: |
         timeout 120s python3 tools/intl/timezone_names.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit supplemental timezone presentation
       run: |
         timeout 120s python3 tools/intl/timezone_presentation.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit supplemental day-period rules
       run: |
         timeout 120s python3 tools/intl/dayperiod_rules.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit inherited calendar date and time styles
       run: |
         timeout 120s python3 tools/intl/date_patterns.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit inherited date and time style connectors
       run: |
         timeout 120s python3 tools/intl/date_combinations.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit sparse calendar names and typed aliases
       run: |
         timeout 120s python3 tools/intl/calendar_names.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit sparse available date patterns and append templates
       run: |
         timeout 120s python3 tools/intl/date_available_formats.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit sparse interval patterns and source templates
       run: |
         timeout 120s python3 tools/intl/date_intervals.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit number range and currency layouts
       run: |
         timeout 120s python3 tools/intl/number_layout.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Audit unit names and grammatical patterns
       run: |
         timeout 180s python3 tools/intl/unit_patterns.py \
-          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+          --sources "$CLDR_SOURCE"
     - name: Reproduce prepared native and minimal Intl sections
       run: |
         for profile in minimal native; do
@@ -231,10 +232,13 @@ jobs:
             segmentation=(--compiled-segmentation "$RUNNER_TEMP/native-segmentation.qjin")
           fi
           timeout --kill-after=30s 600s python3 tools/intl/generate.py \
-            --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+            --sources "$CLDR_SOURCE" \
             --profile "$profile" "${segmentation[@]}" \
             --compiled-collation "$RUNNER_TEMP/collation-$profile.qjcl" \
             --output "$RUNNER_TEMP/intl-$profile.bin" \
+            --manifest "$RUNNER_TEMP/intl-$profile.json"
+          python3 tools/intl/check_data.py --sources "$CLDR_SOURCE" \
+            --input "$RUNNER_TEMP/intl-$profile.bin" \
             --manifest "$RUNNER_TEMP/intl-$profile.json"
           cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-$profile.bin"
           cmp "data/intl/$profile-manifest.json" "$RUNNER_TEMP/intl-$profile.json"
