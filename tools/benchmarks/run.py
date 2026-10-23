@@ -313,13 +313,15 @@ def compiled_feature_config(commands):
     return {name: "y" if name in enabled else "n" for name in names}
 
 
-def build(source, compiler, output, jobs, suite="core"):
+def build(source, compiler, output, jobs, suite="core", baseline_release=False):
     require_pristine_build(source)
     if (source / "meson.build").is_file():
         return build_meson(source, compiler, output, jobs, suite)
     command = ["make", f"-j{jobs}", f"CC={compiler}", f"HOST_CC={compiler}",
                "CONFIG_CLANG=" + ("y" if "clang" in compiler else ""),
-               "CONFIG_LTO=", "CONFIG_WERROR=y"]
+               "CONFIG_LTO=", "CONFIG_WERROR=" + ("" if baseline_release else "y")]
+    # The unmodified upstream sources have locals used only by assertions.
+    # NDEBUG makes them unused; retain warnings without making them fatal.
     config = feature_config(suite)
     command.extend(f"{name}={value}" for name, value in config.items())
     command.append("qjs")
@@ -348,6 +350,7 @@ def build(source, compiler, output, jobs, suite="core"):
             "feature_config": compiled_feature_config(compiler_lines),
             "requested_feature_config": config,
             "build_environment": {"CFLAGS": build_env["CFLAGS"]},
+            "warnings_as_errors": not baseline_release,
             "assertions_enabled": False,
             "flags": "Makefile defaults with -O2, -DNDEBUG, non-LTO, no sanitizers, Werror"}
 
@@ -577,7 +580,9 @@ def main():
         for variant, source in (("baseline", args.baseline), ("candidate", args.candidate)):
             directory = args.output / variant
             directory.mkdir()
-            builds[variant] = build(source, args.compiler, directory, args.build_jobs, args.suite)
+            builds[variant] = build(
+                source, args.compiler, directory, args.build_jobs, args.suite,
+                baseline_release=variant == "baseline" and args.baseline_kind == "bellard")
             state["feature_config"][variant] = builds[variant]["feature_config"]
             write_json(args.output / "builds.json", builds)
         checked_revision(args.candidate, args.candidate_revision)

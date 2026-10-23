@@ -193,8 +193,10 @@ class BenchmarkToolTests(unittest.TestCase):
                     fixture.name: {"scores": ["First", "Second"], "sha256": run.sha256(fixture)}
                 }}}))
                 invocations = []
+                build_policies = []
 
-                def build(source, compiler, destination, jobs, suite):
+                def build(source, compiler, destination, jobs, suite, baseline_release=False):
+                    build_policies.append((destination.name, baseline_release))
                     binary = destination / "qjs"
                     binary.write_bytes(b"mock runtime")
                     return {"binary": str(binary), "binary_sha256": run.sha256(binary),
@@ -226,6 +228,8 @@ class BenchmarkToolTests(unittest.TestCase):
                     ):
                         stack.enter_context(patch.object(run, name, replacement))
                     run.main()
+                self.assertEqual(build_policies, [("baseline", kind == "bellard"),
+                                                  ("candidate", False)])
                 self.assertEqual(baseline.call_count, 3)
                 self.assertTrue(all(call.args[-1] == kind for call in baseline.call_args_list))
                 expected = [variant for rep in range(10) for variant in

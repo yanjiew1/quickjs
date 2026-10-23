@@ -239,3 +239,9 @@ The fixture manifest upstream revision records historical provenance; it
 does not select the comparison baseline. The comparison baseline is selected
 explicitly: either the candidate's actual immediate first parent or the exact original Bellard revision. Fixture provenance
 is independent of both baseline sources.
+
+The pinned Bellard Make build retains compiler warnings without treating them
+as errors: disabling assertions makes some upstream assertion-only locals unused.
+The source remains unmodified. Both compared engines still use `-O2`, non-LTO
+code and `-DNDEBUG`; each build report records its actual warning policy. Candidate
+and parent builds retain their usual warnings-as-errors checks.
