@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import stat
 import struct
 from pathlib import Path
@@ -332,7 +333,9 @@ class ZipSourceTests(unittest.TestCase):
             preserved.write_bytes(b'previous')
             with self.assertRaisesRegex(ValueError, 'CRC'):
                 acquire.materialize(archive, root, pin)
-            self.assertEqual(list(root.iterdir()), [preserved])
+            # MSYS2 directory iteration can spell separators differently from
+            # a joined Path. The contract is the unchanged filename inventory.
+            self.assertEqual(os.listdir(root), ['preserved'])
             self.assertEqual(preserved.read_bytes(), b'previous')
 
     def test_truncation_prefix_and_unknown_format_rejection(self):
