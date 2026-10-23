@@ -154,3 +154,7 @@ libwinpthread*.dll
 
 /tests/test_unicode_gen
 /tests/test_unicode_gen.exe
+
+# Python tools generate these caches locally.
+__pycache__/
+*.py[cod]
