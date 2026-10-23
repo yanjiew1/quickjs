@@ -9,6 +9,14 @@ int qjs_calendar_backend_is_supported(QJSCalendarId calendar)
     return 0;
 }
 
+int qjs_calendar_backend_era_at(QJSCalendarId calendar, size_t index, const char **out)
+{
+    (void)calendar;
+    (void)index;
+    (void)out;
+    return QJS_CAL_UNSUPPORTED;
+}
+
 int qjs_calendar_backend_from_epoch_day(QJSCalendarId calendar, int64_t day,
                                         QJSCalendarDate *result)
 {
