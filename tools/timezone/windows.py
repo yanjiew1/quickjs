@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import struct
+import xml.etree.ElementTree as ET
 
 from acquire import atomic_write
 from bundle import unpack
@@ -13,8 +14,20 @@ from bundle import unpack
 
 def pack(contents, available=None):
     groups = {}
-    for item in json.loads(contents)['supplemental']['windowsZones']['mapTimezones']:
-        row = item['mapZone']
+    if contents.lstrip()[:1] in ('<', b'<'):
+        root = ET.fromstring(contents)
+        if root.tag != 'supplementalData':
+            raise ValueError('invalid CLDR Windows mapping root')
+        rows = []
+        for item in root.findall('./windowsZones/mapTimezones/mapZone'):
+            if set(item.attrib) != {'other', 'territory', 'type'} or list(item):
+                raise ValueError('invalid CLDR Windows mapping record')
+            rows.append({'_' + key: value for key, value in item.attrib.items()})
+    else:
+        # Keep authored JSON fixtures usable; shipped inputs are release XML.
+        rows = [item['mapZone'] for item in
+                json.loads(contents)['supplemental']['windowsZones']['mapTimezones']]
+    for row in rows:
         key, territory, targets = row['_other'], row['_territory'], row['_type']
         if not re.fullmatch(r'[ -~]{1,127}', key) or not re.fullmatch(r'001|[A-Z]{2}', territory):
             raise ValueError('invalid Windows key or territory')
