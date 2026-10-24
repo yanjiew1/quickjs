@@ -393,6 +393,8 @@ foreach variant : variants
   endif
   if tag == 'normal'
     normal_engine = lib
+    normal_support_objects = support_objects
+    normal_data_objects = data_objects
   elif tag == 'shared'
     shared_engine = lib
   else

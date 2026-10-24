@@ -1,7 +1,5 @@
 fs = import('fs')
 
-# Component declarations capture their selected fixture and compile context.
-component_test_specs = []
 fixture_manifest = files('../tools/build/test-fixtures.list')
 fixture_inputs = []
 foreach name : fs.read(fixture_manifest[0]).strip().split('\n')
@@ -120,69 +118,55 @@ test(
   timeout: 120,
 )
 
-# Build engine-independent library tests against their actual owners.
-standalone = {
-  'test_cutils': files(
-    'test_cutils.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_dtoa': files(
-    'test_dtoa.c',
-    '../src/dtoa/dtoa.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode': files(
-    'test_unicode.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode_oom': files(
-    'test_unicode_oom.c',
-    '../src/regexp/compile.c',
-    '../src/regexp/exec.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_fuzz_regexp_timeout': files(
-    'test_fuzz_regexp_timeout.c',
-    '../src/regexp/compile.c',
-    '../src/regexp/exec.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode_gen': files(
-    'test_unicode_gen.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_wait_queue': files(
-    'test_wait_queue.c',
-    '../src/libwait/wait-queue.c',
-  ),
-}
-foreach name, sources : standalone
-  app = {
-    'name': name,
-    'sources': sources,
-    'c_args': host_args,
-    'override_options': ['b_ndebug=false'],
-  }
-  suites = ['repo', 'native']
+# Reuse the selected support archives when assertions already match. A release
+# build needs an assertion-enabled algorithm owner for these white-box tests;
+# immutable tables still use the selected non-LTO data archive in either case.
+component_support = normal_support_objects
+if get_option('b_ndebug') == 'true' or (
+  get_option('b_ndebug') == 'if-release' and
+  get_option('buildtype') in ['release', 'plain']
+)
+  component_support = static_library(
+    'test-support',
+    support_library_sources,
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+    pic: false,
+    install: false,
+  )
+endif
+foreach name : [
+  'test_cutils',
+  'test_dtoa',
+  'test_unicode',
+  'test_unicode_oom',
+  'test_fuzz_regexp_timeout',
+  'test_unicode_gen',
+  'test_wait_queue',
+]
+  app = executable(
+    name,
+    name + '.c',
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: [component_support, normal_data_objects],
+    override_options: ['b_ndebug=false'],
+  )
+  suites = ['repo', 'native', 'unit']
   if name == 'test_wait_queue'
     suites += 'threading'
   endif
-  component_test_specs += [{
-    'target': app,
-    'name': name,
-    'options': {
-      'suite': suites,
-      'workdir': test_workdir,
-      'depends': test_deps,
-      'timeout': 120,
-    },
-  }]
+  test(
+    name,
+    app,
+    suite: suites,
+    workdir: test_workdir,
+    depends: test_deps,
+    timeout: 120,
+  )
 endforeach
 
 context_c = custom_target(
@@ -504,13 +488,13 @@ regexp_test = executable(
     'regexp_test.c',
     '../src/regexp/compile.c',
     '../src/regexp/exec.c',
-    '../src/unicode/libunicode.c',
-    unicode_tables,
-    '../src/cutils/cutils.c',
   ],
+  # TEST changes the RegExp opcode metadata, but not Unicode or C utilities.
   c_args: host_args + ['-DTEST'],
   include_directories: inc,
   dependencies: host_deps,
+  link_with: [component_support, normal_data_objects],
+  override_options: ['b_ndebug=false'],
 )
 test(
   'regexp-cli',
@@ -642,89 +626,6 @@ test(
   suite: ['repo', 'build', 'unit'],
   timeout: 30,
 )
-
-# Share only identical component translation units within this configuration.
-# Component declarations use the same host compiler, include directories and
-# dependencies; source identity, ordered flags and overrides distinguish keys.
-component_object_keys = []
-component_object_libraries = []
-component_objects_by_context = {}
-component_target_builds = []
-component_target_names = []
-component_targets = []
-foreach spec : component_test_specs
-  build = spec['target']
-  target_index = -1
-  foreach index : range(component_target_names.length())
-    if component_target_names[index] == build['name']
-      assert(component_target_builds[index] == build, 'Conflicting component target: ' + build['name'])
-      target_index = index
-      break
-    endif
-  endforeach
-  if target_index == -1
-    compile_args = build.get('c_args', [])
-    overrides = build.get('override_options', [])
-    # A context bucket avoids a quadratic interpreter loop over unrelated
-    # compile settings. Full keys are still checked, so this hint cannot merge
-    # sources or flag lists even if two joined strings happen to coincide.
-    context = '\n'.join(compile_args + overrides)
-    objects = []
-    selected_objects = []
-    foreach source : build['sources']
-      key = [source, compile_args, overrides]
-      object_index = -1
-      candidates = component_objects_by_context.get(context, [])
-      foreach index : candidates
-        if component_object_keys[index] == key
-          object_index = index
-          break
-        endif
-      endforeach
-      if object_index == -1
-        object_index = component_object_keys.length()
-        owner = static_library(
-          'test-object-' + object_index.to_string(),
-          source,
-          c_args: compile_args,
-          include_directories: inc,
-          dependencies: host_deps,
-          override_options: overrides,
-          pic: false,
-          install: false,
-          build_by_default: false,
-        )
-        component_object_keys += [key]
-        component_object_libraries += [owner]
-        component_objects_by_context += {context: candidates + [object_index]}
-      endif
-      if object_index not in selected_objects
-        objects += component_object_libraries[object_index].extract_all_objects(recursive: false)
-        selected_objects += [object_index]
-      endif
-    endforeach
-    target = executable(
-      build['name'],
-      objects: objects,
-      c_args: compile_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      override_options: overrides,
-      link_with: build.get('link_with', []),
-      link_language: 'c',
-    )
-    component_target_builds += [build]
-    component_target_names += [build['name']]
-    component_targets += [target]
-    target_index = component_targets.length() - 1
-  endif
-  options = spec['options']
-  suites = options.get('suite', [])
-  if 'unit' not in suites
-    options += {'suite': suites + ['unit']}
-  endif
-  test(spec['name'], component_targets[target_index], kwargs: options)
-endforeach
 
 # Check that separate CI phases partition the selected repository suite.
 test(
