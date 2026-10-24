@@ -39,7 +39,10 @@ QJSIntlStatus qjs_intl_list_formatter_open(const QJSIntlListService *service,
 void qjs_intl_list_formatter_close(QJSIntlListFormatter *formatter);
 /* Borrow exact UTF-16 items for this call; preserve NUL and lone surrogates.
    The empty output must not overlap inputs. Failures reset it to all zero.
-   Results outlive formatter/service close and use the original allocator. */
+   Results outlive formatter/service close and use the original allocator.
+   Elements are emitted once, including empty strings; literal pieces remain
+   separate as required by DeconstructPattern. No trailing NUL is promised.
+   Clearing a NULL or already cleared result is harmless. */
 QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *formatter,
                                    const QJSIntlUTF16 *items, size_t count,
                                    QJSIntlFormatted *out);
