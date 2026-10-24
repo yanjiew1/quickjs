@@ -3,8 +3,8 @@
 [`data/timezone/pin.json`](../../data/timezone/pin.json) selects released
 **IANA tzdata 2026e** and **CLDR 49 common release XML**.
 The pin records IANA release commit
-`039ef27cc5f062a2055cb67435d6d71adbefd27d` as provenance. The release archive
-SHA-256 authenticates the exact bytes used for generation.
+`039ef27cc5f062a2055cb67435d6d71adbefd27d` as provenance. Acquisition verifies the release archive
+SHA-256 before placing it in the cache.
 CLDR is pinned to `96e54b273d2da4ec6fbad350ba19ff23fa24a588`.
 The vendored BCP47 aliases and Windows mappings are exact members of the
 authenticated official common archive; its URL/hash and member paths are recorded
@@ -24,13 +24,14 @@ size, and uses finite request timeouts and retries. It replaces the archive
 atomically. Existing verified inputs need no network. Updating a release
 requires an explicit pin review.
 
-Only `tz-2026e.tar.gz` is needed in the cache. Generation rechecks that archive
-and materializes its required regular files into a fresh private work directory.
+Only `tz-2026e.tar.gz` is needed in the cache. Generation reads supplied archive
+bytes and materializes required regular files into a fresh private directory;
+it does not check them against pin hashes.
 It validates the complete set before writing any source, rejects duplicate or
 linked required members, and never uses archive paths as output paths. Old
 extracted `tz-2026e/` cache directories are ignored, so modifying a cached
 `zic.c` cannot change the compiler used by generation. Per-member IANA hashes
-are unnecessary because the authenticated archive is the source authority.
+are unnecessary: acquisition authenticates the archive as one source.
 
 Raw CLDR 49 common-release metadata remains under
 `data/timezone/sources/cldr`, with the Unicode license. Acquisition verifies
@@ -87,7 +88,7 @@ cmp data/timezone/timezone-data.bin /path/to/build/timezone-data.bin
 cmp data/timezone/timezone-data-manifest.json /path/to/build/timezone-data-manifest.json
 ```
 
-The generator compiles the pinned zic using `HOST_CC` or `cc`; use
+The generator compiles the supplied zic using `HOST_CC` or `cc`; use
 `--host-cc` to select another **build-host** C compiler. It does not use a
 cross compiler from `CC`, invoke target binaries, download inputs, or depend
 on the installed zic. `awk` and a host C toolchain are needed for regeneration.
@@ -96,8 +97,8 @@ cache and are removed after generation. Subprocesses have finite timeouts.
 
 The input tailoring retains `backzone` histories and `zone.tab` country
 identities. It applies no leap-second table or date-range truncation.
-The manifest contains fixed source identities and hashes, without host
-paths or changing timestamps. CI regenerates and compares both outputs.
+The manifest records declared source revisions and actual archive/CLDR input
+hashes, without host paths or changing timestamps. CI regenerates and compares both outputs.
 
 ## Runtime embedding
 
@@ -141,3 +142,13 @@ order and selects the first target. Windows discovery uses
 localized display names are not used as keys. The discovery API requires Vista
 or newer. Custom Windows rules or disabled dynamic daylight settings can differ
 from the selected IANA zone's rules.
+
+## Supplied inputs
+
+Use `generate.py --archive /path/to/tz-release.tar.gz --cldr-dir /path/to/cldr`
+to generate from custom sources; the CLDR directory needs `timezone.xml`.
+`--pin /path/to/pin.json` supplies declared release names and provenance when
+using another release. Archive structure, required files, primary identities
+and timezone rules are still validated. The generator records actual input
+hashes without requiring them to match the pin. Run acquire separately when
+authentication against official source identities is wanted.
