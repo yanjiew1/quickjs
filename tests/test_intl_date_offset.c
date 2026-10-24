@@ -1,6 +1,6 @@
 /* Localized GMT offsets, copied sources and one typed timezone field.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
-#include "../src/intl/datetime/numeric.h"
+#include "../src/intl/datetime/number-formats.h"
 #include "../src/intl/datetime/zone-offset.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
