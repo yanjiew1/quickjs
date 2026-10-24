@@ -1872,6 +1872,7 @@ python3 tools/intl/segment_prepare.py \
 python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49 \
   --profile native --compiled-collation /path/to/native.qjcl \
   --compiled-segmentation /path/to/native-segmentation.qjin \
+  --segmentation-manifest /path/to/native-segmentation.json \
   --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
