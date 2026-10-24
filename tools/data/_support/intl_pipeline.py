@@ -48,6 +48,9 @@ def commands(args):
         result.append(('generate-' + profile, generate))
         result.append(('verify-' + profile, [sys.executable, str(tools / 'check_data.py')] + selected + [
             '--input', str(output), '--manifest', str(manifest)]))
+    result.append(('collation-oracle', [sys.executable, str(ROOT / 'tests/intl_collation_oracle.py')] +
+                   selected + ['--output', str(args.output_dir / 'intl-collation-oracle.bin'),
+                               '--manifest', str(args.output_dir / 'intl-collation-oracle.json')]))
     return result
 
 

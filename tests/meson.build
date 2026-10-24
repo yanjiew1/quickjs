@@ -486,6 +486,11 @@ if intl_enabled
     files(
       'intl_collation_ordered.c',
       '../src/intl/collation/compare.c',
+      '../src/intl/collation/contexts.c',
+      '../src/intl/collation/elements.c',
+      '../src/intl/collation/logical.c',
+      '../src/intl/collation/root-data.c',
+      '../src/intl/collation/weights.c',
       '../tools/intl/collation-archive.c',
       '../tools/intl/collation-builder.c',
       '../tools/intl/collation-ir.c',
@@ -2513,12 +2518,29 @@ if intl_enabled
     build_by_default: false,
   )
 
+  # Raw source mappings are an independent test oracle, not runtime data.
+  intl_collation_oracle = custom_target(
+    'intl-collation-oracle',
+    input: files('data/intl-collation-oracle.bin'),
+    output: 'intl-collation-oracle.c',
+    command: [python, files('intl_collation_fixture.py'), '--input', '@INPUT@', '--output', '@OUTPUT@'],
+  )
+  intl_collation_oracle_objects = static_library(
+    'intl-collation-oracle-objects',
+    intl_collation_oracle,
+    c_args: host_args,
+    override_options: ['b_lto=false'],
+    install: false,
+    build_by_default: false,
+  )
+
   foreach profile : [get_option('intl')]
     intl_collation_profile_test = executable(
       ('test_intl_collation_' + profile),
       files(
         'test_intl_collation_profiles.c',
       ),
+      objects: intl_collation_oracle_objects.extract_all_objects(recursive: false),
       c_args: host_args,
       include_directories: inc,
       dependencies: host_deps,
