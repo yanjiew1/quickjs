@@ -1,6 +1,9 @@
-/* Host FILE and URL allocation-failure tests.
+/* Host FILE, URL and JSON module allocation-failure tests.
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 #include "oom-allocator.h"
+#include "pool-padding.h"
+#include "../src/quickjs/internal/module.h"
+#include "../src/quickjs-libc/module-loader.h"
 #include "../src/quickjs-libc/worker.h"
 
 static FILE *test_pipe;
@@ -201,8 +204,69 @@ static void test_sleep_timer_deadline(void)
     assert(allocator.live == 0);
 }
 
+static JSClassID json_value_class_id;
+static int json_value_finalized;
+
+static void json_value_finalizer(JSRuntime *rt, JSValue value)
+{
+    (void)rt;
+    (void)value;
+    json_value_finalized++;
+}
+
+static void test_json_export_failure(int attributed)
+{
+    static const JSClassDef definition = {
+        "JSONModuleValue", .finalizer = json_value_finalizer,
+    };
+    static const char name[] = "json-allocation-failure";
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *module;
+    JSAtom atom;
+    JSValue value, attributes;
+    void *padding;
+
+    assert(ctx);
+    JS_NewClassID(&json_value_class_id);
+    assert(JS_NewClass(rt, json_value_class_id, &definition) == 0);
+    value = JS_NewObjectClass(ctx, json_value_class_id);
+    attributes = attributed ? JS_NewObject(ctx) : JS_UNDEFINED;
+    assert(!JS_IsException(value) && !JS_IsException(attributes));
+    /* Retain the name so module creation allocates only its record; the next
+       host allocation must grow its export table, even with pooled storage. */
+    atom = JS_NewAtom(ctx, name);
+    assert(atom != JS_ATOM_NULL && list_empty(&ctx->loaded_modules));
+    padding = test_pool_padding(rt);
+    json_value_finalized = 0;
+    oom_test_begin(&allocator, 2);
+    module = attributed ? create_json_module2(ctx, name, value, attributes) :
+                          create_json_module(ctx, name, value);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && module == NULL);
+    assert(json_value_finalized == 1);
+    oom_test_check_exception(ctx);
+
+    /* A created module belongs to the context even when export setup fails.
+       It must not acquire the consumed value or be manually freed twice. */
+    assert(!list_empty(&ctx->loaded_modules));
+    module = list_entry(ctx->loaded_modules.next, JSModuleDef, link);
+    assert(module->export_entries_count == 0);
+    assert(JS_IsUndefined(module->private_value));
+    assert(JS_StrictEq(ctx, module->attributes, attributes));
+    test_pool_padding_free(rt, padding);
+    JS_FreeAtom(ctx, atom);
+    JS_FreeValue(ctx, attributes);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 int main(void)
 {
+    test_json_export_failure(0);
+    test_json_export_failure(1);
     test_sleep_timer_deadline();
     test_class_registration_failure(0);
 #ifdef USE_WORKER
