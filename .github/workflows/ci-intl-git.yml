@@ -79,6 +79,7 @@ jobs:
             --sources "$source_root" --source-pin tools/intl/pin-git.json \
             --profile native --compiled-collation "$RUNNER_TEMP/git-collation.qjcl" \
             --compiled-segmentation "$RUNNER_TEMP/git-segmentation.qjin" \
+            --segmentation-manifest "$RUNNER_TEMP/git-segmentation.json" \
             --output "$RUNNER_TEMP/native-git.bin" \
             --manifest "$RUNNER_TEMP/native-git-manifest.json"
           python3 tools/intl/check_data.py --sources "$source_root" \
