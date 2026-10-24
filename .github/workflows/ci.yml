@@ -161,34 +161,11 @@ jobs:
     - name: Report Test262 timings
       if: always()
       run: |
-        report_status=0
-        for prefix in test262 test262_intl; do
-          if test -f "${prefix}_timings.jsonl"; then
-            python3 tools/ci/report_test262_timings.py "${prefix}_timings.jsonl" \
-              --csv "${prefix}_timings.csv" --markdown "${prefix}_timings.md" || report_status=$?
-            if test -f "${prefix}_timings.md"; then
-              cat "${prefix}_timings.md" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-        done
-        exit "$report_status"
+        sh tools/ci/report_test262_summaries.sh test262 test262_intl
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -251,20 +228,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -345,34 +309,11 @@ jobs:
     - name: Report Test262 timings
       if: always()
       run: |
-        report_status=0
-        for prefix in test262 test262_intl; do
-          if test -f "${prefix}_timings.jsonl"; then
-            python3 tools/ci/report_test262_timings.py "${prefix}_timings.jsonl" \
-              --csv "${prefix}_timings.csv" --markdown "${prefix}_timings.md" || report_status=$?
-            if test -f "${prefix}_timings.md"; then
-              cat "${prefix}_timings.md" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-        done
-        exit "$report_status"
+        sh tools/ci/report_test262_summaries.sh test262 test262_intl
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -482,20 +423,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -558,20 +486,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -635,20 +550,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -697,20 +599,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -770,20 +659,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
