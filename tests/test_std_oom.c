@@ -1,4 +1,4 @@
-/* Host FILE, URL and JSON module allocation-failure tests.
+/* Host helper and native module allocation-failure tests.
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 #include "oom-allocator.h"
 #include "pool-padding.h"
@@ -33,6 +33,11 @@ static int test_pclose(FILE *f)
 #undef popen
 #undef pclose
 #include "../src/quickjs-libc/event-loop.h"
+
+/* Exercise the example's real private initializer and module entry point. */
+#define js_init_module point_example_module
+#include "../examples/point.c"
+#undef js_init_module
 
 static void check_body(JSContext *ctx, JSValueConst value)
 {
@@ -263,8 +268,117 @@ static void test_json_export_failure(int attributed)
     assert(allocator.live == 0);
 }
 
+static void test_point_export_failure(void)
+{
+    static const char name[] = "point-export-failure";
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *module;
+    JSAtom atom;
+    void *padding;
+
+    assert(ctx);
+    atom = JS_NewAtom(ctx, name);
+    assert(atom != JS_ATOM_NULL);
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 2);
+    module = point_example_module(ctx, name);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && module == NULL);
+    oom_test_check_exception(ctx);
+    test_pool_padding_free(rt, padding);
+    JS_FreeAtom(ctx, atom);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
+static OOMTestAllocator *point_allocator;
+static size_t point_fail_at;
+static int point_init_result;
+
+static int point_init_with_failure(JSContext *ctx, JSModuleDef *module)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    void *padding = test_pool_padding(rt);
+
+    oom_test_begin(point_allocator, point_fail_at);
+    point_init_result = js_point_init(ctx, module);
+    oom_test_end(point_allocator);
+    assert((point_init_result < 0) == !!JS_HasException(ctx));
+    test_pool_padding_free(rt, padding);
+    return point_init_result;
+}
+
+static void test_point_initialization_failures(void)
+{
+    static const char source[] =
+        "import { Point } from 'point-initialization';"
+        "if (new Point(3, 4).norm() !== 5) throw Error('Point initialization');";
+    size_t step, calls = 0, failures = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSModuleDef *module;
+        JSValue result, error;
+
+        assert(ctx);
+        module = point_example_module(ctx, "point-initialization");
+        assert(module);
+        /* Keep parsing/linking outside the injection window. */
+        module->init_func = point_init_with_failure;
+        point_allocator = &allocator;
+        point_fail_at = step;
+        result = JS_Eval(ctx, source, sizeof(source) - 1, "point-oom.js",
+                         JS_EVAL_TYPE_MODULE);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128 && point_init_result == 0);
+            /* Class registration is per-runtime, prototypes are per-realm. */
+            {
+                JSContext *other = JS_NewContext(rt);
+                JSValue imported;
+
+                assert(other && point_example_module(other, "point-initialization"));
+                imported = JS_Eval(other, source, sizeof(source) - 1,
+                                   "point-other.js", JS_EVAL_TYPE_MODULE);
+                assert(!JS_IsException(imported) && !JS_HasException(other));
+                assert(JS_PromiseState(other, imported) == JS_PROMISE_FULFILLED);
+                JS_FreeValue(other, imported);
+                JS_FreeContext(other);
+            }
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (point_init_result < 0) {
+            failures++;
+            if (JS_IsException(result)) {
+                oom_test_check_exception(ctx);
+            } else {
+                assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+                error = JS_PromiseResult(ctx, result);
+                assert(JS_IsError(ctx, error));
+                JS_FreeValue(ctx, error);
+            }
+        } else {
+            assert(!JS_IsException(result) && !JS_HasException(ctx));
+            assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(failures);
+}
+
 int main(void)
 {
+    test_point_export_failure();
+    test_point_initialization_failures();
     test_json_export_failure(0);
     test_json_export_failure(1);
     test_sleep_timer_deadline();
