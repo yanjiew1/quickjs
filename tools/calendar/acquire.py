@@ -71,14 +71,37 @@ def checked_sources():
     return pin
 
 
+def read_normalized(pin, name):
+    """Authenticate and parse the same bytes; never trust a separate reread."""
+    if Path(name).name != name or name in ('', '.', '..'):
+        raise ValueError('invalid normalized calendar name')
+    raw = (SOURCES.parent / name).read_bytes()
+    if digest(raw) != pin['normalized'][name]['sha256']:
+        raise ValueError('modified normalized calendar: ' + name)
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate normalized calendar key: ' + key)
+            result[key] = value
+        return result
+
+    return json.loads(raw.decode('utf-8'), object_pairs_hook=unique_object)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
+    parser.add_argument('--source', action='append', default=[],
+                        help='acquire only this source name (repeatable)')
     args = parser.parse_args()
     pin = checked_sources()
+    if set(args.source) - pin['sources'].keys():
+        raise ValueError('unknown calendar source selection')
     for name, item in pin['sources'].items():
-        if not item['vendored']:
+        if not item['vendored'] and (not args.source or name in args.source):
             fetch(args.cache / name, item, args.offline)
     print('Verified pinned calendar sources')
 
