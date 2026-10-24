@@ -54,6 +54,17 @@ def commands(args):
     return result
 
 
+def stage_timeout(label, override=None):
+    """Keep established per-stage CI bounds unless explicitly overridden."""
+    if override is not None:
+        return override
+    if label == 'segmentation':
+        return 180
+    if label.startswith('collation-') and label != 'collation-oracle':
+        return 240
+    return 600
+
+
 def run(command, log, timeout):
     """Bound a generator stage and retain its diagnostic output."""
     with log.open('wb') as stream:
@@ -166,8 +177,8 @@ def main(argv=None, prog=None):
     parser.add_argument('--profiles', nargs='+', choices=['minimal', 'native'],
                         default=['minimal', 'native'])
     parser.add_argument('--output-dir', type=Path, required=True)
-    parser.add_argument('--timeout', type=positive, default=600,
-                        help='maximum seconds per stage, including child processes')
+    parser.add_argument('--timeout', type=positive,
+                        help='override per-stage limits (180s segmentation, 240s collation, 600s otherwise)')
     args = parser.parse_args(argv)
     if len(set(args.profiles)) != len(args.profiles):
         parser.error('profiles must be unique')
@@ -186,7 +197,7 @@ def main(argv=None, prog=None):
             log = args.output_dir / (label + '.log')
             print(label + ': ' + str(log), flush=True)
             start = time.monotonic()
-            code = run(command, log, args.timeout)
+            code = run(command, log, stage_timeout(label, args.timeout))
             receipt['stages'].append({'name': label, 'command': command,
                                       'seconds': time.monotonic() - start,
                                       'returncode': code, 'log': str(log)})
