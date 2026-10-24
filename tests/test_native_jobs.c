@@ -108,9 +108,11 @@ static void *native_notify(void *opaque)
 {
     TestNotify *test = opaque;
     JSNativeWaiter *inline_waiters;
-    assert(js_native_wait_notify(test->queue, test->location, 1, NULL,
-                                  &inline_waiters) == 1);
+    js_native_wait_queue_lock(test->queue);
+    assert(js_native_wait_notify_one_locked(test->queue, test->location, NULL,
+                                            &inline_waiters));
     assert(!inline_waiters);
+    js_native_wait_queue_unlock(test->queue);
     return NULL;
 }
 
