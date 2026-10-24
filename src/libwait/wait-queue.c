@@ -25,7 +25,6 @@
 #include "wait-queue.h"
 #include <assert.h>
 #include <errno.h>
-#include <float.h>
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -308,31 +307,6 @@ static void js_native_wait_enqueue(JSNativeWaitOwner *owner,
     owner->ready_last = event;
 }
 
-size_t js_native_wait_notify(JSNativeWaitQueue *queue, const void *location,
-                              size_t count, JSNativeWaitOwner *calling_owner,
-                              JSNativeWaiter **inline_first)
-{
-    JSNativeWaiter *waiter, *inline_last = NULL;
-    size_t n = 0;
-    *inline_first = NULL;
-    js_native_wait_queue_lock(queue);
-    while (n < count && js_native_wait_notify_one_locked(queue, location,
-                                                         calling_owner,
-                                                         &waiter)) {
-        n++;
-        if (waiter) {
-            waiter->inline_next = NULL;
-            if (inline_last)
-                inline_last->inline_next = waiter;
-            else
-                *inline_first = waiter;
-            inline_last = waiter;
-        }
-    }
-    js_native_wait_queue_unlock(queue);
-    return n;
-}
-
 int js_native_wait_notify_one_locked(JSNativeWaitQueue *queue,
                                      const void *location,
                                      JSNativeWaitOwner *calling_owner,
@@ -377,32 +351,7 @@ size_t js_native_wait_schedule_timeouts(JSNativeWaitOwner *owner,
     return n;
 }
 
-long double js_native_wait_next_deadline(JSNativeWaitOwner *owner)
-{
-    JSNativeWaiter *waiter;
-    long double deadline = JS_NATIVE_WAIT_FOREVER, candidate;
-    js_native_wait_queue_lock(owner->queue);
-    if (!owner->closing) {
-        for (waiter = owner->first; waiter; waiter = waiter->owner_next) {
-            if (waiter->state != JS_NATIVE_WAIT_LINKED ||
-                waiter->timeout_event.queued)
-                continue;
-            candidate = waiter->deadline_ns;
-            if (waiter->relative_deadline && !isinf(waiter->duration_ms)) {
-                candidate = waiter->started_ns +
-                            (long double)waiter->duration_ms * 1000000.0L;
-                if (isinf(candidate))
-                    candidate = LDBL_MAX;
-            }
-            if (candidate < deadline)
-                deadline = candidate;
-        }
-    }
-    js_native_wait_queue_unlock(owner->queue);
-    return deadline;
-}
-
-JSNativeWaitResult js_native_wait_execute_next2(JSNativeWaitOwner *owner,
+JSNativeWaitResult js_native_wait_execute_next(JSNativeWaitOwner *owner,
                                                long double now_ns,
                                                JSNativeWaiter **pwaiter,
                                                JSNativeWaitEvent **pgeneric)
@@ -440,17 +389,6 @@ JSNativeWaitResult js_native_wait_execute_next2(JSNativeWaitOwner *owner,
         }
     }
     js_native_wait_queue_unlock(owner->queue);
-    return result;
-}
-
-JSNativeWaitResult js_native_wait_execute_next(JSNativeWaitOwner *owner,
-                                              long double now_ns,
-                                              JSNativeWaiter **pwaiter)
-{
-    JSNativeWaitEvent *generic;
-    JSNativeWaitResult result;
-    result = js_native_wait_execute_next2(owner, now_ns, pwaiter, &generic);
-    assert(result != JS_NATIVE_WAIT_GENERIC_JOB);
     return result;
 }
 
