@@ -4,6 +4,8 @@
   "algorithm_version": 1,
   "tz_release": "2026e",
   "tz_commit": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
+  "tz_archive_sha256": "5b62258a9a868813f00b070983b9b3e7279634575571a0fcc732be6a1f7047c1",
+  "cldr_timezone_sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae",
   "cldr_release": "49",
   "cldr_commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
   "primary_algorithm": "ECMA-402 AvailableNamedTimeZoneIdentifiers",
