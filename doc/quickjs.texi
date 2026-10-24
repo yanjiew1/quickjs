@@ -32,11 +32,12 @@ engine. It supports most of the ES2025 specification
 
 @item Embeddable C engine with no required third-party libraries.
 
-@item Fast interpreter with very low startup time: runs the tests of the ECMAScript Test Suite@footnote{@url{https://github.com/tc39/test262}} in less than 2 minutes on a single core of a desktop PC. The complete life cycle of a runtime instance completes in less than 300 microseconds.
+@item Bytecode interpreter without a JIT compiler.
 
 @item Almost complete ES2025 support.
 
-@item Passes nearly 100% of the ECMAScript Test Suite tests when selecting the ES2025 features.
+@item Test262 conformance harness with explicit configuration and exclusions
+@footnote{@url{https://github.com/tc39/test262}}.
 
 @item Compile Javascript sources to executables using static or shared engine linking.
 
