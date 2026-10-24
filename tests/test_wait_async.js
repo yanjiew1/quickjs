@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 import { assert, assertThrows } from "./assert.js";
+import * as std from "std";
 
 function check_result(result, async, value)
 {
@@ -71,6 +72,19 @@ async function test_notify_and_intrinsics()
     }
 }
 
+async function test_foreign_realm()
+{
+    const creator = std.createRealm();
+    const words = new Int32Array(new SharedArrayBuffer(8));
+    const result = creator.global.Atomics.waitAsync(words, 0, 0);
+
+    assert(result.async, true);
+    assert(Object.getPrototypeOf(result) === creator.global.Object.prototype);
+    assert(Object.getPrototypeOf(result.value) === creator.global.Promise.prototype);
+    assert(Atomics.notify(words, 0, 1), 1);
+    assert(await result.value, "ok");
+}
+
 async function test_fifo_and_same_agent_job_order()
 {
     const words = new Int32Array(new SharedArrayBuffer(8));
@@ -110,6 +124,7 @@ if (typeof Atomics === "object") {
     assert(typeof Atomics.waitAsync, "function");
     test_immediate();
     await test_notify_and_intrinsics();
+    await test_foreign_realm();
     await test_fifo_and_same_agent_job_order();
     await test_host_timeout_and_notification_race();
 }
