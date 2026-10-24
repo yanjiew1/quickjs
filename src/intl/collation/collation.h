@@ -24,7 +24,9 @@ typedef struct QJSIntlCollator QJSIntlCollator;
 /* Copy the allocator; all callbacks required and their opaque state must
    outlive handles. Open validates the selected immutable profile. Outputs are
    fresh/disjoint and reset on errors; close(NULL) is safe. No JS callbacks. */
-QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *, QJSIntlCollationService **);
+QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *allocator,
+                                      const struct QJSIntlData *checked_data,
+                                      QJSIntlCollationService **out);
 void qjs_intl_collation_close(QJSIntlCollationService *);
 /* Borrow canonical sorted available locales, excluding source root, until
    service close. All locale indexes below refer to this array. No matching. */
