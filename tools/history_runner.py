@@ -93,7 +93,10 @@ def settings(source, report, mode):
                 threads=os.cpu_count() or 1, assertions=True, lto=False,
                 timing='--timing-log' in runner_text, progress='--progress-log' in runner_text,
                 intl_config='intl' in features and (source / 'tests/intl-locale-test262.conf').is_file(),
-                documentation='documentation' in opts)
+                documentation='documentation' in opts,
+                requested_phases=sorted(set(os.environ.get('REQUESTED_PHASES', 'repo,core,intl').split(','))),
+                controller_revision=os.environ.get('GITHUB_SHA'), workflow_run_id=os.environ.get('GITHUB_RUN_ID'),
+                workflow_attempt=os.environ.get('GITHUB_RUN_ATTEMPT'))
 
 
 def compiler_wrapper(report, state):
@@ -141,6 +144,7 @@ def main():
     source, report = args.source.resolve(), args.report.resolve()
     report.mkdir(parents=True, exist_ok=True)
     state = settings(source, report, args.mode)
+    assert state['requested_phases'] and set(state['requested_phases']) <= {'repo', 'core', 'intl'}
     saved = report / 'configuration.json'
     if saved.exists():
         assert json.loads(saved.read_text()) == state, 'Configuration drift between phases'
@@ -200,11 +204,23 @@ def main():
         cmd = [runner, '-T', str(state['threads']), '-t', '-m', '-c', config]
         if phase == 'core':
             cmd += ['-a']
+        if not state['timing']:
+            # Old runners expose per-file clocks via the slow-test diagnostic.
+            # A negative threshold records even rounded zero-ms attempts.
+            cmd += ['-D', '-1']
         if state['timing']:
             cmd += ['--timing-log', report / (phase + '-timings.jsonl')]
         if state['progress']:
             cmd += ['--progress-log', report / (phase + '-progress.jsonl')]
         command(cmd, execute, env, log, 3600)
+        if not state['timing']:
+            output = report / (phase + '-file-timings.jsonl')
+            with output.open('w') as stream:
+                for line in log.read_text(errors='replace').splitlines():
+                    match = re.fullmatch(r'(.+\.js) \((\d+) ms\)', line)
+                    if match:
+                        stream.write(json.dumps(dict(file=match[1], elapsed_ms=int(match[2]),
+                                                     scope='file_runner_attempt_all_variants')) + '\n')
 
 
 if __name__ == '__main__':

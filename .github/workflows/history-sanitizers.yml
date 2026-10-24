@@ -42,6 +42,7 @@ jobs:
     env:
       CANDIDATE_SHA: ${{ matrix.revision }}
       SANITIZER: ${{ matrix.sanitizer }}
+      REQUESTED_PHASES: ${{ matrix.phases || 'repo,core,intl' }}
       REPORT: ${{ github.workspace }}/historical-report
     steps:
       - name: Check out immutable validation tooling
@@ -83,28 +84,28 @@ jobs:
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase build
       - name: Run repository unit tests
-        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && contains(matrix.phases || 'repo,core,intl', 'repo') }}
         run: |
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase unit
       - name: Run repository integration tests
-        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && contains(matrix.phases || 'repo,core,intl', 'repo') }}
         run: |
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase integration
       - name: Install exact historical Test262 pin and patches
         id: bootstrap
-        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && (contains(matrix.phases || 'repo,core,intl', 'core') || contains(matrix.phases || 'repo,core,intl', 'intl')) }}
         run: |
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase bootstrap
       - name: Run core and Temporal Test262 with all runner threads
-        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' && contains(matrix.phases || 'repo,core,intl', 'core') }}
         run: |
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase core
       - name: Run supported native Intl Test262 with all runner threads
-        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' && contains(matrix.phases || 'repo,core,intl', 'intl') }}
         run: |
           python3 controller/tools/history_runner.py --source candidate --report "$REPORT" \
             --mode "$SANITIZER" --phase intl
@@ -112,7 +113,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: history-${{ matrix.label }}-${{ matrix.sanitizer }}
+          name: history-${{ matrix.label }}-${{ matrix.sanitizer }}-attempt-${{ github.run_attempt }}
           path: |
             historical-report/*.json
             historical-report/*.jsonl
