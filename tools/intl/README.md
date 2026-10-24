@@ -70,8 +70,7 @@ Archive links, unsafe paths and source-cache symlinks are rejected.
 
 CLDR boundary rules do not supply the word dictionaries needed for CJK,
 Khmer, Lao, Myanmar and Thai. `segment-dictionary-pin.json` records released
-ICU 79.1 text inputs by immutable commit URL, byte count, SHA-256 and Git blob
-identity. This is data reuse; it does not link ICU or add an ICU backend.
+ICU 79.1 text inputs by immutable commit URL, byte count and SHA-256. This is data reuse; it does not link ICU or add an ICU backend.
 Acquire explicitly, outside normal builds:
 
 ```sh
@@ -80,14 +79,15 @@ python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache --o
 ```
 
 The `icu-dictionaries-79.1` cache contains the five source dictionaries and
-full release license. Reads authenticate consumed bytes again and include the
-license in generation identity. Keep the complete dictionary notices in
+full release license. Acquisition authenticates pinned bytes. Generator reads
+accept supplied compatible text and record actual hashes, including the license,
+without matching expected sizes or digests. Keep the complete dictionary notices in
 `data/intl/LICENSE-SEGMENT-DICTIONARIES`, including libtabe/IPADIC and other
 third-party notices; the generic Unicode license is insufficient. These raw
 text inputs are for later owned binary compilation, not runtime parsing or
 proof that native dictionary segmentation is already implemented.
 
-`segment_dictionary.py` parses that authenticated cache using the pinned text
+`segment_dictionary.py` parses supplied text using the supported text
 profile: literal words for SEA, and words plus unsigned decimal path costs for
 CJK. It preserves costs (including zero), exact scalar keys, source comments
 and release/license identity. Keys are sorted without normalization. Explicit
@@ -635,8 +635,9 @@ prefix/suffix trees, matcher integration and a 102,038-entry starred shape.
 Frozen executable storage and full instruction execution remain subsequent work.
 
 Collectors use `acquire.Sources` with the cache's `cldr-49` directory.
-The reader authenticates the manifest before use, verifies each consumed file,
-and tracks logical input paths for generated provenance. Cache paths and file
+The reader inventories actual supplied files and tracks consumed paths for
+provenance. It accepts custom data without repinning and rejects changes during
+one generation session; acquisition alone authenticates official pin hashes. Cache paths and file
 timestamps are not provenance. The XML interpretation, inheritance resolution
 and binary encoding are separate layers described in
 [the Intl design](../../doc/intl-design.md#cldr-xml-collection-and-resolution).
@@ -1869,6 +1870,7 @@ python3 tools/intl/segment_prepare.py \
 python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49 \
   --profile native --compiled-collation /path/to/native.qjcl \
   --compiled-segmentation /path/to/native-segmentation.qjin \
+  --segmentation-manifest /path/to/native-segmentation.json \
   --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
@@ -2481,3 +2483,15 @@ unaligned input and every reached allocation failure/retry. Prepared-profile
 tests query all field/width/alternate combinations; generator tests check English
 labels and the alternate AM/PM form. The shared owner establishes no service
 locale availability and applies no consumer formatting fallback.
+
+## Supplied CLDR source trees
+
+Acquisition verifies archives and their inventory against the selected pin.
+Collectors and generators instead inventory the actual `LICENSE` and `common/`
+files in the supplied source directory. They require no acquisition manifest
+and accept compatible edited files or added locales without changing the pin.
+The copied source metadata retains declared upstream provenance; its calculated
+inventory identity and consumed-file receipts describe the supplied bytes.
+Compiler stages use that identity to reject mixed intermediates. Inputs must
+remain unchanged within a generation session. Path, size, XML and semantic
+validation remain active; this is not an unchecked conversion mode.
