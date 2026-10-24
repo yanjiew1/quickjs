@@ -2,7 +2,8 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_DATETIME_ZONE_NAME_H
 #define QJS_INTL_DATETIME_ZONE_NAME_H
-#include "numeric.h"
+#include "number-formats.h"
+#include "components.h"
 #include "zone-offset.h"
 #include "timezone-presentation-data.h"
 #include "../display/data.h"
