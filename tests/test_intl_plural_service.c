@@ -200,9 +200,9 @@ int main(void)
     QJSIntlMathematicalValue value = number("1.125");
     size_t count, calls, fail, live;
     unsigned int mask;
-    assert(qjs_intl_plural_open(NULL, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
-    assert(qjs_intl_plural_open(&allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
-    assert(!qjs_intl_plural_open(&allocator, &service));
+    assert(qjs_intl_plural_open(NULL, NULL, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
+    assert(qjs_intl_plural_open(&allocator, NULL, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!qjs_intl_plural_open(&allocator, NULL, &service));
     calls = state.calls;
     assert(!qjs_intl_plural_available(service, &available, &count) && count >= 2);
     assert(qjs_intl_plural_available(NULL, &available, &count) == QJS_INTL_INVALID_ARGUMENT);
@@ -273,13 +273,13 @@ int main(void)
     assert(!state.live);
 
     state.calls = 0;
-    assert(!qjs_intl_plural_open(&allocator, &service));
+    assert(!qjs_intl_plural_open(&allocator, NULL, &service));
     calls = state.calls;
     qjs_intl_plural_close(service);
     for (fail = 1; fail <= calls; fail++) {
         state.calls = 0;
         state.fail_at = fail;
-        assert(qjs_intl_plural_open(&allocator, &service) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_plural_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY);
         assert(!service && !state.live);
     }
     qjs_intl_plural_close(NULL);
