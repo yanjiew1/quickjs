@@ -17,11 +17,13 @@ import stat
 import struct
 from pathlib import Path, PurePosixPath
 import tarfile
-import tempfile
-import time
-import urllib.error
-import urllib.request
+import sys
 import zipfile
+
+# Keep sibling generator imports ahead of the shared maintenance helpers.
+sys.path.append(str(Path(__file__).resolve().parents[1] / 'data'))
+from _support import io as data_io
+from _support.io import write_atomic as atomic_write
 
 MAX_DOWNLOAD = 128 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
@@ -37,69 +39,18 @@ def json_bytes(value):
     return (json.dumps(value, sort_keys=True, indent=2) + '\n').encode('utf-8')
 
 
-def atomic_write(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # Preserve Ninja restat when generated C is identical. Compare in chunks:
-    # large embedded packs must not require a second whole-file allocation.
-    if path.is_file():
-        with path.open('rb') as previous:
-            for at in range(0, len(data), 64 * 1024):
-                if previous.read(64 * 1024) != data[at:at + 64 * 1024]:
-                    break
-            else:
-                if not previous.read(1):
-                    return
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=str(path.parent), delete=False) as f:
-            temporary = f.name
-            f.write(data)
-        os.replace(temporary, str(path))
-        temporary = None
-    finally:
-        if temporary is not None:
-            os.unlink(temporary)
-
-
-def fetch(path, source, offline=False):
-    """Verify a bounded cache or download before replacing it atomically."""
-    if path.is_file() and path.stat().st_size <= MAX_DOWNLOAD:
-        data = path.read_bytes()
+def fetch(path, source, offline=False, limit=None):
+    """Authenticate bounded cache/download bytes before atomic replacement."""
+    limit = MAX_DOWNLOAD if limit is None else limit
+    if path.is_file() and path.stat().st_size <= limit:
+        data = data_io.read_bytes(path, limit)
         if digest(data) == source['sha256']:
             return data
     if offline:
         raise ValueError('missing or modified pinned archive: ' + str(path))
-    if not source['url'].startswith('https://'):
-        raise ValueError('data sources must use HTTPS')
-    deadline = time.monotonic() + 120
-    for attempt in range(3):
-        try:
-            request = urllib.request.Request(
-                source['url'], headers={'User-Agent': 'QuickJS-Intl-data-generator'})
-            with urllib.request.urlopen(request, timeout=30) as response:
-                if not response.geturl().startswith('https://'):
-                    raise ValueError('data source redirected away from HTTPS')
-                chunks, length = [], 0
-                while True:
-                    if time.monotonic() > deadline:
-                        raise TimeoutError('data download exceeded time bound')
-                    # read() can wait for the whole requested length while a
-                    # slow peer keeps resetting the socket timeout. read1()
-                    # returns after at most one underlying buffered read so
-                    # progress cannot bypass the overall deadline checks.
-                    chunk = response.read1(min(128 * 1024, MAX_DOWNLOAD + 1 - length))
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                    length += len(chunk)
-                    if length > MAX_DOWNLOAD:
-                        raise ValueError('data download exceeded size bound')
-                data = b''.join(chunks)
-            break
-        except (OSError, urllib.error.URLError):
-            if attempt == 2 or time.monotonic() > deadline:
-                raise
-    if len(data) > MAX_DOWNLOAD or digest(data) != source['sha256']:
+    data = data_io.download_bytes(source['url'], limit,
+                                  user_agent='QuickJS-Intl-data-generator')
+    if digest(data) != source['sha256']:
         raise ValueError('download differs from source pin: ' + source['url'])
     atomic_write(path, data)
     return data
