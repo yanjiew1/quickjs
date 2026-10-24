@@ -221,7 +221,7 @@ The optional `cosmo_binary` mode remains outside CI coverage.
 ### Alternate Intl data
 
 The committed Intl packs use the official CLDR common production release.
-`tools/intl/pin-git.json` supports explicit generation from the complete matching
+`data/intl/pin-git.json` supports explicit generation from the complete matching
 Git source snapshot, including its additional locale data. Follow the generation
 commands in [tools/intl/README.md](tools/intl/README.md), then select the resulting
 pack without replacing the committed production data:

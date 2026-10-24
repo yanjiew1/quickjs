@@ -20,7 +20,7 @@ import update_pin
 
 
 def cldr_pin():
-    return json.loads((ROOT / 'tools/intl/pin.json').read_text())
+    return json.loads((ROOT / 'data/intl/pin.json').read_text())
 
 
 def common_archive(extra=()):
@@ -101,7 +101,7 @@ class PinTests(unittest.TestCase):
             source_pins.refresh(template, ['/tz/release=2099b'], archive=data.getvalue())
 
     def test_dictionary_complete_set_preserves_git_identity(self):
-        template = json.loads((ROOT / 'tools/intl/segment-dictionary-pin.json').read_text())
+        template = json.loads((ROOT / 'data/intl/segment-dictionary-pin.json').read_text())
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             for row in template['files']:
@@ -127,7 +127,7 @@ class PinTests(unittest.TestCase):
             raw.write_bytes(common_archive())
             output.write_bytes(b'preserved')
             command = [sys.executable, str(ROOT / 'tools/data/update_pin.py'),
-                       '--pin', str(ROOT / 'tools/intl/pin.json'), '--archive', str(raw),
+                       '--pin', str(ROOT / 'data/intl/pin.json'), '--archive', str(raw),
                        '--output', str(output), '--expected-sha256', '0' * 64]
             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
             self.assertNotEqual(result.returncode, 0)
@@ -140,7 +140,7 @@ class PinTests(unittest.TestCase):
             raw = root / 'common.zip'
             raw.write_bytes(common_archive())
             command = [sys.executable, str(ROOT / 'tools/data/update_pin.py'),
-                       '--pin', str(ROOT / 'tools/intl/pin.json'), '--archive', str(raw),
+                       '--pin', str(ROOT / 'data/intl/pin.json'), '--archive', str(raw),
                        '--output', str(root / 'pin.json'),
                        '--manifest-output', str(root / 'manifest.json'),
                        '--report', str(root / 'report.json')]
@@ -158,7 +158,7 @@ class PinTests(unittest.TestCase):
             raw = root / 'common.zip'
             raw.write_bytes(common_archive())
             command = [sys.executable, str(ROOT / 'tools/data/update_pin.py'),
-                       '--pin', str(ROOT / 'tools/intl/pin.json'), '--archive', str(raw),
+                       '--pin', str(ROOT / 'data/intl/pin.json'), '--archive', str(raw),
                        '--release', '50', '--commit', 'b' * 40,
                        '--output', str(root / 'pin.json')]
             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
