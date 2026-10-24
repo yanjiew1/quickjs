@@ -186,8 +186,11 @@ static void test_sequence_failures(void)
     int calls = 0, allocations, length, fail;
 
     cr_init(&cr, &a, alloc);
-    assert(unicode_sequence_prop_checked("RGI_Emoji", failing_sequence,
-                                         &calls, &cr) == -1);
+    assert(unicode_sequence_prop("unknown", failing_sequence, &calls, &cr) == -2);
+    assert(unicode_sequence_prop("RGI_Emoji", NULL, &calls, &cr) == -1);
+    assert(calls == 0 && a.live == 0);
+    assert(unicode_sequence_prop("RGI_Emoji", failing_sequence,
+                                 &calls, &cr) == -1);
     assert(calls == 1);
     cr_free(&cr);
     assert(a.live == 0);

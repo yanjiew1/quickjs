@@ -933,7 +933,7 @@ static int parse_unicode_property(REParseState *s, REStringList *cr,
         if (ret < 0 && !is_inv && allow_sequence_prop) {
             CharRange cr_tmp;
             cr_init(&cr_tmp, s->opaque, lre_realloc);
-            ret = unicode_sequence_prop_checked(name, seq_prop_cb, cr, &cr_tmp);
+            ret = unicode_sequence_prop(name, seq_prop_cb, cr, &cr_tmp);
             cr_free(&cr_tmp);
             if (ret == -1) {
                 re_string_list_free(cr);
