@@ -5,6 +5,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Service constructors may borrow an unchanged view from successful native
+   qjs_intl_data_open admission. NULL requests standalone compiled-data admission.
+   Constructors copy the view; only its immutable bytes must outlive consumers.
+   Typed sections and module capabilities are still checked by their owners.
+   Minimal Segmenter does not use a data pack and ignores this optional view. */
+struct QJSIntlData;
+
 /* Plain C contracts shared by Intl services; no engine or backend state. */
 typedef enum QJSIntlStatus {
     QJS_INTL_OK = 0,
