@@ -246,12 +246,12 @@ if shared_build
     ]
   endif
 endif
-variants = [['normal', false, false]]
+variants = []
+if static_install or get_option('tests')
+  variants += [['normal', false, get_option('b_lto')]]
+endif
 if shared_build
   variants += [['shared', false, get_option('b_lto')]]
-endif
-if get_option('b_lto')
-  variants += [['lto', false, true]]
 endif
 if meson.is_cross_build()
   variants += [['native', true, false]]
@@ -301,7 +301,7 @@ foreach variant : variants
     gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
-  if tag == 'normal'
+  if not native
     host_vm_args = vm_args
   endif
   compiler_objects = static_library(
@@ -395,23 +395,22 @@ foreach variant : variants
     normal_engine = lib
   elif tag == 'shared'
     shared_engine = lib
-  elif tag == 'lto'
-    lto_engine = lib
   else
     native_engine = lib
   endif
 endforeach
-test_engine = get_option('b_lto') ? lto_engine : normal_engine
-engine = shared_build ? shared_engine : test_engine
+engine = shared_build ? shared_engine : normal_engine
 engine_link = shared_build ? [engine] : []
 engine_whole = shared_build ? [] : [engine]
 tool_support = shared_build ? files('src/cutils/cutils.c') : []
 tool_rpath = shared_build ? get_option('prefix') / library_install_dir : ''
-test_engine_dep = declare_dependency(
-  link_with: test_engine,
-  include_directories: include_directories('include'),
-  dependencies: host_deps,
-)
+if get_option('tests')
+  test_engine_dep = declare_dependency(
+    link_with: normal_engine,
+    include_directories: include_directories('include'),
+    dependencies: host_deps,
+  )
+endif
 engine_dep = declare_dependency(
   link_with: engine,
   include_directories: include_directories('include'),

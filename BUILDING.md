@@ -37,6 +37,10 @@ LTO applies to engine code, including the VM, compiler and support algorithms.
 Generated Unicode tables compile as ordinary objects with LTO disabled, then
 join the same engine library. Their target architecture, sanitizer settings,
 visibility and shared-library PIC settings still match that library.
+Each build provides only its selected engine configuration. The installed
+`libquickjs.a` uses that configuration's LTO setting; there is no second LTO
+archive. `qjsc` applies the matching compiler/linker flags automatically when
+generating an executable.
 
 `--num-processes` controls concurrent repository tests. Use `--timeout-multiplier`
 for slow emulators or instrumentation. The `threading` suite selects concurrency

@@ -571,6 +571,7 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
       'n',
       'n',
       get_option('b_lto') ? lto_flag : '',
+      'libquickjs' + library_suffix,
     ],
     suite: ['repo', 'compiler', 'integration'],
     workdir: test_workdir,
