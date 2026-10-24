@@ -116,7 +116,8 @@ No local header. Directory count is local row count. Both present together.
   `latn` / `0123456789`.
 - 14 width 5 `(locale_sid,default,native,traditional,finance)`, locale_sid sorted. Four preferences
   are section 13 definition indexes. Only traditional/finance may use ABSENT or BLOCKED. Root source
-  row required. This table can contain metadata locales distinct from profile registry L.
+  row required. Native retains all source rows; minimal retains only profile registry L.
+  All explicit numbering definitions in section 13 remain available in either profile.
 
 Source `tools/intl/numbering_tables.py`; C `src/intl/locale/numbering-data.c`. Algorithmic row
 presence does not implement its rule system.
@@ -538,8 +539,9 @@ C owner `src/intl/datetime/dayperiod-data.c`, slicing its open routine.
 Rule validation: `tools/intl/dayperiod_rules.py` and C owner's `valid_rules`; vocabulary
 `tools/intl/dayperiod_codes.py`, `src/intl/datetime/dayperiod-code.h`.
 
-**N is explicit (kind,origin_locale) row count, not selected locale count**. Global supplemental
-source origins, including origins outside a minimal selected locale inventory.
+**N is explicit (kind,origin_locale) row count, not selected locale count**. Native
+retains global supplemental origins. Minimal retains both rule kinds for the selected
+locales and their simple-prefix/root closure, independently of main-data parents.
 Header `(1,M map_count,Q rule_count)` (3 words).
 Then:
 
