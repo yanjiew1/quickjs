@@ -18,9 +18,12 @@ struct QJSIntlSegmentService {
 static const QJSIntlBytes available[] = {{"en", 2}, {"en-US", 5}};
 
 QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator,
+                                    const struct QJSIntlData *checked_data,
                                     QJSIntlSegmentService **out)
 {
     QJSIntlSegmentService *service;
+
+    (void)checked_data; /* Unicode-only provider; no pack to admit or borrow. */
     if (out)
         *out = NULL;
     if (!out || !allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
