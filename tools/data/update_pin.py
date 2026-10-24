@@ -105,7 +105,7 @@ def release_assignments(args, template):
 
 
 def cldr_assignments(args, template):
-    """Propagate one verified CLDR snapshot into its other data owners."""
+    """Derive other data pins from one supplied CLDR snapshot."""
     if bool(args.cldr_pin) != bool(args.cldr_sources):
         raise ValueError('--cldr-pin and --cldr-sources are required together')
     if not args.cldr_pin:

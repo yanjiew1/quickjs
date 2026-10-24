@@ -207,8 +207,10 @@ class PinTests(unittest.TestCase):
                     update_pin.cldr_assignments(args, template)
             args.set = []
             (sources / 'common/bcp47/timezone.xml').write_bytes(b'modified')
-            with self.assertRaisesRegex(ValueError, 'modified source'):
-                update_pin.cldr_assignments(args, template)
+            assignments, files = update_pin.cldr_assignments(args, template)
+            result, _, _ = source_pins.refresh(template, assignments, files)
+            self.assertEqual(result['cldr']['files']['timezone.xml']['sha256'],
+                             source_pins.digest(b'modified'))
 
 
 if __name__ == '__main__':

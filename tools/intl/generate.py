@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare deterministic minimal/native Intl sections from authenticated CLDR."""
+"""Prepare deterministic minimal/native Intl sections from supplied CLDR."""
 import argparse
 import copy
 import json
