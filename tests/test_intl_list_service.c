@@ -1,5 +1,6 @@
 /* Compiled list service: inventories, resolved CLDR contexts and ownership. */
 #include "../src/intl/list/list.h"
+#include "../src/intl/native/data.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,6 +97,45 @@ static void test_formatter_failures(QJSIntlListService *service, size_t locale,
     }
 }
 
+static void test_shared_data(void)
+{
+    Allocation state = {0};
+    QJSIntlAllocator allocator = {&state, allocate, resize, release};
+    QJSIntlData data = {0};
+    QJSIntlListService *services[2] = {NULL, NULL};
+    unsigned int order;
+
+    assert(qjs_intl_list_open(&allocator, &data, &services[0]) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(!services[0] && !state.calls);
+    for (order = 0; order < 2; order++) {
+        const QJSIntlBytes *locales;
+        QJSIntlListFormatter *formatter;
+        size_t count, english;
+        static const uint16_t letter[] = {'i'};
+        static const uint16_t expected[] = {'A', ' ', 'a', 'n', 'd', ' ', 'i'};
+
+        assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                                   &allocator, &data));
+        assert(!qjs_intl_list_open(&allocator, &data, &services[0]));
+        assert(!qjs_intl_list_open(&allocator, &data, &services[1]));
+        /* Only compiled bytes are borrowed. Neither service retains the
+           source view variable or a pointer into the other service. */
+        memset(&data, 0, sizeof(data));
+        qjs_intl_list_close(services[order]);
+        assert(!qjs_intl_list_available(services[1 - order], &locales, &count));
+        english = find(locales, count, "en");
+        assert(english != SIZE_MAX);
+        assert(!qjs_intl_list_formatter_open(services[1 - order], english,
+                                             QJS_INTL_LIST_CONJUNCTION,
+                                             QJS_INTL_LIST_LONG, &formatter));
+        check_pair(formatter, &allocator, letter, 1, expected, 7);
+        qjs_intl_list_formatter_close(formatter);
+        qjs_intl_list_close(services[1 - order]);
+        assert(!state.live);
+    }
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -113,7 +153,7 @@ int main(void)
     static const uint16_t hebrew_expected[] = {'A', ' ', 0x5d5, 0x5d0};
     static const uint16_t hebrew_hyphen[] = {'A', ' ', 0x5d5, '-', 0x590};
 
-    assert(qjs_intl_list_open(&allocator, &service) == QJS_INTL_OK);
+    assert(qjs_intl_list_open(&allocator, NULL, &service) == QJS_INTL_OK);
     calls = state.calls;
     assert(qjs_intl_list_available(service, &locales, &count) == QJS_INTL_OK);
     assert(TEST_INTL_PROFILE ? count > 1000 : count == 2);
@@ -203,17 +243,18 @@ int main(void)
     assert(!state.live);
     for (i = 1; i <= calls; i++) {
         state.fail_at = state.calls + i;
-        assert(qjs_intl_list_open(&allocator, &service) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_list_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY);
         assert(!service && !state.live);
         state.fail_at = 0;
     }
-    assert(qjs_intl_list_open(NULL, &service) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_list_open(&allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_list_open(NULL, NULL, &service) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_list_open(&allocator, NULL, NULL) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_list_available(NULL, &locales, &count) ==
            QJS_INTL_INVALID_ARGUMENT);
     assert(!locales && !count);
     qjs_intl_list_formatter_close(NULL);
     qjs_intl_list_close(NULL);
+    test_shared_data();
     puts("Intl compiled list service tests passed");
     return 0;
 }
