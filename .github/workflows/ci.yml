@@ -229,7 +229,8 @@ jobs:
         for profile in minimal native; do
           segmentation=()
           if test "$profile" = native; then
-            segmentation=(--compiled-segmentation "$RUNNER_TEMP/native-segmentation.qjin")
+            segmentation=(--compiled-segmentation "$RUNNER_TEMP/native-segmentation.qjin"
+                          --segmentation-manifest "$RUNNER_TEMP/native-segmentation.json")
           fi
           timeout --kill-after=30s 600s python3 tools/intl/generate.py \
             --sources "$CLDR_SOURCE" \
