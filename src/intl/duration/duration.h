@@ -12,7 +12,9 @@ typedef struct QJSIntlDurationFormatter QJSIntlDurationFormatter;
    callbacks required by the Number/List composition. Their lifetime covers
    all handles/results. Validate the profile and Number/List dependencies.
    Errors reset *out; NULL closes. */
-QJSIntlStatus qjs_intl_duration_open(const QJSIntlAllocator *, QJSIntlDurationService **);
+QJSIntlStatus qjs_intl_duration_open(const QJSIntlAllocator *allocator,
+                                     const struct QJSIntlData *checked_data,
+                                     QJSIntlDurationService **out);
 void qjs_intl_duration_close(QJSIntlDurationService *);
 /* Borrow sorted extension-free locale tags, excluding root, until close.
    Exact inventory indexes, no matching/fallback or allocation in queries. */
