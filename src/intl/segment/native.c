@@ -41,14 +41,20 @@ void qjs_intl_segment_close(QJSIntlSegmentService *service)
     allocator.free(allocator.opaque, service);
 }
 
-static QJSIntlStatus admit(QJSIntlSegmentService *service)
+static QJSIntlStatus admit(QJSIntlSegmentService *service,
+                            const QJSIntlData *checked_data)
 {
     QJSIntlStatus status;
     uint32_t locale, kind, count;
     size_t at = 0;
 
-    status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
-                                &service->allocator, &service->data);
+    if (checked_data) {
+        service->data = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                                    &service->allocator, &service->data);
+    }
     if (status)
         return status;
     if (service->data.pack.profile != 1)
@@ -118,6 +124,7 @@ static QJSIntlStatus admit(QJSIntlSegmentService *service)
 }
 
 QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator,
+                                    const struct QJSIntlData *checked_data,
                                     QJSIntlSegmentService **out)
 {
     QJSIntlSegmentService *service;
@@ -127,13 +134,15 @@ QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator,
         *out = NULL;
     if (!out || !allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
     service->references = 1;
-    status = admit(service);
+    status = admit(service, checked_data);
     if (status) {
         qjs_intl_segment_close(service);
         return status;
