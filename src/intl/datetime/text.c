@@ -4,16 +4,124 @@
 #include "../common/format-builder.h"
 #include "../common/unary-pattern.h"
 #include "../../calendar/calendar.h"
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
 
 #define MAX_TOKENS (2 * (QJS_INTL_DATETIME_COMPONENT_COUNT + 2) + 1)
 
 typedef struct Piece {
     QJSIntlFormatted number;
+    size_t cut;
     QJSIntlBytes text;
     QJSIntlUnaryPattern affix;
     QJSIntlPartType type;
 } Piece;
+
+static QJSIntlStatus numeric_value(const QJSIntlDatePatternToken *token,
+                                  const QJSIntlDateNumericFields *local, QJSIntlDateHourCycle cycle,
+                                  int64_t *out, QJSIntlPartType *part, unsigned int *digits)
+{
+    *digits = token->width == 2 ? 2 : 1;
+    switch (token->symbol) {
+    case 'y':
+        *out = local->year <= 0 ? 1 - (int64_t)local->year : local->year;
+        *part = QJS_INTL_PART_YEAR;
+        break;
+    case 'r':
+        *out = local->related_year;
+        *part = QJS_INTL_PART_RELATED_YEAR;
+        *digits = 1;
+        break;
+    case 'M': case 'L':
+        if (token->width > 2)
+            return QJS_INTL_UNSUPPORTED;
+        *out = local->month;
+        *part = QJS_INTL_PART_MONTH;
+        break;
+    case 'd':
+        *out = local->day;
+        *part = QJS_INTL_PART_DAY;
+        break;
+    case 'h': case 'H': case 'K': case 'k':
+        *out = local->hour;
+        if (cycle == QJS_INTL_DATE_H11 || cycle == QJS_INTL_DATE_H12) {
+            *out %= 12;
+            if (!*out && cycle == QJS_INTL_DATE_H12)
+                *out = 12;
+        } else if (!*out && cycle == QJS_INTL_DATE_H24) {
+            *out = 24;
+        }
+        *part = QJS_INTL_PART_HOUR;
+        break;
+    case 'm':
+        *out = local->minute;
+        *part = QJS_INTL_PART_MINUTE;
+        break;
+    case 's':
+        *out = local->second;
+        *part = QJS_INTL_PART_SECOND;
+        break;
+    case 'S':
+        *out = local->millisecond / (token->width == 1 ? 100 : token->width == 2 ? 10 : 1);
+        *digits = (unsigned int)token->width;
+        *part = QJS_INTL_PART_FRACTIONAL_SECOND;
+        break;
+    default:
+        return QJS_INTL_UNSUPPORTED;
+    }
+    return QJS_INTL_OK;
+}
+
+/* Find the last two code points in the entire FormatNumeric result. This also
+   respects supplementary decimal digits and any locale pattern literals. */
+static size_t two_digit_start(const QJSIntlFormatted *number)
+{
+    size_t at = number->length;
+    unsigned int count;
+    for (count = 0; count < 2 && at; count++) {
+        uint16_t c = number->text[--at];
+        if (c >= 0xdc00 && c <= 0xdfff && at &&
+            number->text[at - 1] >= 0xd800 && number->text[at - 1] <= 0xdbff)
+            --at;
+    }
+    return at;
+}
+
+static QJSIntlStatus prepare_numeric(const QJSIntlAllocator *allocator,
+                                    const QJSIntlDatePatternToken *token,
+                                    const QJSIntlDateNumericFields *local,
+                                    QJSIntlDateHourCycle cycle,
+                                    const QJSIntlDateNumberFormats *numbers,
+                                    Piece *piece)
+{
+    const QJSIntlNumberFormatter *formatter;
+    QJSIntlMathematicalValue mathematical = {0};
+    char text[32];
+    int64_t field;
+    int length;
+    unsigned int digits;
+    QJSIntlStatus status = numeric_value(token, local, cycle, &field, &piece->type, &digits);
+
+    if (status)
+        return status;
+    formatter = token->symbol == 'S' ? numbers->fraction[digits - 1] :
+                digits == 2 ? numbers->two_digit : numbers->numeric;
+    if (!formatter)
+        return QJS_INTL_INVALID_ARGUMENT;
+    length = snprintf(text, sizeof(text), "%" PRId64, field);
+    if (length <= 0 || (size_t)length >= sizeof(text))
+        return QJS_INTL_OVERFLOW;
+    mathematical.decimal = (QJSIntlBytes){text, (size_t)length};
+    status = qjs_intl_number_format(formatter, &mathematical, &piece->number);
+    if (status)
+        return status;
+    if (!piece->number.text || !piece->number.length)
+        return QJS_INTL_DATA_ERROR;
+    if (digits == 2 && token->symbol != 'S')
+        piece->cut = two_digit_start(&piece->number);
+    return QJS_INTL_OK;
+}
 
 static QJSIntlBytes bytes(const char *text)
 {
@@ -357,10 +465,13 @@ static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlDatePatter
         const Piece *piece = &pieces[i];
         size_t start = builder->length;
         QJSIntlStatus status;
+        QJSIntlPart part = {0, piece->number.length - piece->cut, piece->type};
+        QJSIntlFormatted number = {piece->number.text ? piece->number.text + piece->cut : NULL,
+                                  part.end, &part, 1};
         if (piece->number.text && (piece->affix.prefix.length || piece->affix.suffix.length)) {
             /* The marker belongs to the month part, not a separate literal.
                Suppress the digit body's part while retaining its UTF-16 text. */
-            QJSIntlFormatted digits = piece->number;
+            QJSIntlFormatted digits = number;
             digits.part_count = 0;
             status = qjs_intl_format_builder_text(builder, piece->affix.prefix, NULL, NULL);
             if (!status)
@@ -370,7 +481,7 @@ static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlDatePatter
             if (!status)
                 status = qjs_intl_format_builder_part(builder, start, builder->length, QJS_INTL_PART_MONTH, 0);
         } else if (piece->number.text) {
-            status = qjs_intl_format_builder_body(builder, &piece->number);
+            status = qjs_intl_format_builder_body(builder, &number);
         } else {
             status = qjs_intl_format_builder_text(builder, piece->affix.prefix, NULL, NULL);
             if (!status)
@@ -419,13 +530,11 @@ QJSIntlStatus qjs_intl_date_text_format(const QJSIntlAllocator *allocator,
     if (pattern->count > MAX_TOKENS)
         return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < pattern->count; i++) {
-        QJSIntlDatePattern single;
         unsigned int symbol = pattern->tokens[i].symbol;
         if (!symbol)
             continue;
-        single = (QJSIntlDatePattern){&pattern->tokens[i], 1, NULL, QJS_INTL_DATE_INTERVAL_DEFAULT};
-        status = qjs_intl_date_numeric_format(allocator, &single, &local->numeric, cycle,
-                                              numbers, maximum_output_length, &pieces[i].number);
+        status = prepare_numeric(allocator, &pattern->tokens[i], &local->numeric, cycle,
+                                 numbers, &pieces[i]);
         if (status == QJS_INTL_UNSUPPORTED)
             status = named(data, local, subsecond, &pattern->tokens[i], &pieces[i]);
         else if (!status && (symbol == 'M' || symbol == 'L') &&
