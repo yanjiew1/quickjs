@@ -2,6 +2,7 @@
 """Root collation wire roundtrips, pool bounds and canonical representation."""
 from pathlib import Path
 import struct
+import json
 import sys
 import unittest
 
@@ -10,6 +11,8 @@ import bundle
 import collation_root as source
 import collation_tables as wire
 import tables
+import intl_collation_oracle as oracle
+from test_intl_tables import VerifiedFixture
 
 
 def authored():
@@ -41,6 +44,30 @@ class RootCollationTablesTests(unittest.TestCase):
         shared[bundle.COLLATION_ROOT] = section
         binary = bundle.pack(shared, bytes(32), 'minimal')
         self.assertEqual(tables.validate(binary)['collation_root'], data)
+
+    def test_independent_oracle_preserves_raw_source_sections(self):
+        sources = VerifiedFixture()
+        binary, manifest = oracle.generate(sources)
+        sections = bundle.unpack(binary)['sections']
+        self.assertEqual(set(sections), {bundle.COLLATION_ROOT, bundle.COLLATION_CONTEXTS})
+        root = source.collect(sources)
+        self.assertEqual(wire.decode(sections[bundle.COLLATION_ROOT]), root)
+        self.assertEqual(oracle.collation_contexts.decode(sections[bundle.COLLATION_CONTEXTS], root),
+                         ((2, 1, 1),))
+        self.assertEqual(manifest['sha256'], oracle.acquire.digest(binary))
+        self.assertEqual(set(manifest['inputs']['sources']),
+                         {'LICENSE', source.SOURCE, oracle.collation_contexts.SOURCE})
+        self.assertEqual(oracle.generate(sources), (binary, manifest))
+        # The committed independent oracle is shared by every selected profile.
+        directory = Path(__file__).resolve().parent / 'data'
+        raw = (directory / 'intl-collation-oracle.bin').read_bytes()
+        raw_manifest = json.loads((directory / 'intl-collation-oracle.json').read_text())
+        self.assertEqual(raw_manifest['sha256'], oracle.acquire.digest(raw))
+        self.assertEqual(raw_manifest['bytes'], len(raw))
+        self.assertEqual(raw_manifest['generation'],
+                         oracle.acquire.digest(oracle.acquire.json_bytes(raw_manifest['inputs'])))
+        self.assertEqual(bundle.unpack(raw)['generation'].hex(), raw_manifest['generation'])
+        self.assertEqual(set(bundle.unpack(raw)['sections']), set(sections))
 
     def test_exact_extent_and_fixed_width_elements(self):
         count, raw = wire.encode(authored())
