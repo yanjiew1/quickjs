@@ -5,16 +5,14 @@
 
 /* Internal C library; the JS frontend has already performed any coercion.
  * This is not a replacement for ToPrimitive or StringNumericLiteral parsing.
- * The value slice borrows text, both owned by this result. The decimal field
- * is a second owned representation for the shared rounding core. Results
- * cannot be shallow-copied while in use; clear with the creating allocator.
+ * The value slice borrows the result's owned text. Results cannot be
+ * shallow-copied while in use; clear with the creating allocator. Rounding
+ * consumers parse only when they need a coefficient.
  * Fresh output required. Errors leave an all-zero, clearable result.
  */
 typedef struct QJSIntlNumberDecimal {
     QJSIntlMathematicalValue value;
-    QJSIntlDecimal decimal;
     char *text;              /* NUL-terminated value.decimal backing */
-    uint8_t number_negative; /* original Number sign, including -0 */
 } QJSIntlNumberDecimal;
 
 /* Number branch of ECMA402 ToIntlMathematicalValue: finite nonzero
@@ -27,8 +25,8 @@ QJSIntlStatus qjs_intl_number_to_intl_decimal(const QJSIntlAllocator *, double,
                                               QJSIntlNumberDecimal *);
 
 /* Exact mathematical real value of finite binary64. No shortest conversion
- * or floating arithmetic is involved. Mathematical real(-0) is positive 0;
- * number_negative retains the original sign for the RTF tense decision.
+ * or floating arithmetic is involved. Mathematical real(-0) is positive 0.
+ * The RelativeTimeFormat caller retains its original Number for tense.
  * RelativeTimeFormat's direct PartitionNumberPattern(real(value)) uses this
  * route. NaN/infinity -> INVALID_ARGUMENT; frontend raises its own RangeError.
  * Unsupported double layout -> UNSUPPORTED for either conversion.
