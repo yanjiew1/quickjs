@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 import re
 
-import acquire
 
 FAMILIES = {'cjdict.txt': 'cjk', 'khmerdict.txt': 'khmer',
             'laodict.txt': 'lao', 'burmesedict.txt': 'myanmar',
@@ -56,6 +55,9 @@ def load_pin(path=None):
 
 
 def verify(data, row):
+    # Pin validation can be imported by maintenance without loading acquisition.
+    import acquire
+
     if len(data) != row['bytes'] or acquire.digest(data) != row['sha256']:
         raise ValueError('modified dictionary source: ' + row['name'])
     return data
@@ -73,6 +75,8 @@ class Sources:
         self.read('LICENSE')
 
     def read(self, name):
+        import acquire
+
         row = self.files.get(name)
         if row is None:
             raise ValueError('unlisted dictionary source: ' + str(name))
@@ -100,11 +104,13 @@ class Sources:
 
 
 def prepare(cache, offline=False, pin=None):
+    import acquire
+
     pin = validate_pin(load_pin() if pin is None else pin)
     root = acquire.source_path(Path(cache), 'icu-dictionaries-' + pin['release'])
     for row in pin['files']:
         path = acquire.source_path(root, row['name'])
-        verify(acquire.fetch(path, row, offline), row)
+        verify(acquire.fetch(path, row, offline, limit=MAX_FILE), row)
     # Acquisition authenticates the pin; generator readers only record their
     # actual supplied inputs and keep each read session consistent.
     sources = Sources(root, pin)
