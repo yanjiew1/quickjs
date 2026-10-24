@@ -260,6 +260,7 @@ calendar_data = custom_target(
   ],
   depend_files: files(
     'tools/calendar/acquire.py',
+    'tools/data/_support/io.py',
     'tools/calendar/bundle.py',
   ),
   build_by_default: false,
@@ -294,6 +295,7 @@ timezone_data = custom_target(
   ],
   depend_files: files(
     'tools/timezone/acquire.py',
+    'tools/data/_support/io.py',
     'tools/timezone/bundle.py',
   ),
   build_by_default: false,
@@ -314,6 +316,7 @@ windows_timezone_data = custom_target(
   ],
   depend_files: files(
     'tools/timezone/acquire.py',
+    'tools/data/_support/io.py',
     'tools/timezone/bundle.py',
   ),
   build_by_default: false,
