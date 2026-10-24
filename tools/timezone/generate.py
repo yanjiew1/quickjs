@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one native timezone pack offline from the pinned source cache.
+"""Build one native timezone pack offline from supplied source data.
 
 Only a newly compiled build-host zic is executed. Target programs, installed
 timezone files, and installed zic implementations are never used.
@@ -14,7 +14,7 @@ import shlex
 import subprocess
 import tempfile
 
-from acquire import atomic_write
+from acquire import PIN, SOURCE_NAMES, MAX_DOWNLOAD, atomic_write, extract_sources
 from bundle import pack, unpack
 from primary import available_named_primaries, backzone_links, cldr_countries, zone_table
 
@@ -24,27 +24,37 @@ DATA = ('africa', 'antarctica', 'asia', 'australasia', 'europe',
         'northamerica', 'southamerica', 'etcetera', 'factory', 'backward')
 
 
-def checked_sources(cache, pin):
-    source = cache / ('tz-' + pin['tz']['release'])
-    for name, expected in pin['tz']['files'].items():
-        if hashlib.sha256((source / name).read_bytes()).hexdigest() != expected:
-            raise ValueError('tz source differs from pin: ' + name)
-    cldr = ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
-    for name, item in pin['cldr']['files'].items():
-        if hashlib.sha256((cldr / name).read_bytes()).hexdigest() != item['sha256']:
-            raise ValueError('CLDR source differs from pin: ' + name)
-    return source, cldr
+def read_input(path):
+    with path.open('rb') as stream:
+        raw = stream.read(MAX_DOWNLOAD + 1)
+    if len(raw) > MAX_DOWNLOAD:
+        raise ValueError('timezone input exceeds byte limit: ' + path.name)
+    return raw
 
 
-def generate(cache, output, manifest, host_cc, awk):
-    pin = json.loads((TOOLS / 'pin.json').read_text())
-    source, cldr = checked_sources(cache, pin)
-    table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
-    countries = cldr_countries((cldr / 'timezone.xml').read_bytes(), table_countries)
-    historical = backzone_links((source / 'backzone').read_text())
+def read_sources(cache, pin, work, archive=None, cldr_dir=None):
+    # Acquisition authenticates official inputs. Generation also accepts custom
+    # bytes, but never uses mutable, previously extracted host-compiler sources.
+    archive = archive or cache / ('tz-' + pin['tz']['release'] + '.tar.gz')
+    raw = read_input(archive)
+    directory = cldr_dir or ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
+    cldr = read_input(directory / 'timezone.xml')
+    source = work / 'sources'
+    extract_sources(raw, source, pin['tz']['release'], SOURCE_NAMES)
+    return source, cldr, hashlib.sha256(raw).hexdigest()
+
+
+def generate(cache, output, manifest, host_cc, awk, archive=None, cldr_dir=None,
+             pin_path=None):
+    pin = json.loads((pin_path or PIN).read_text())
     environment = dict(os.environ, LC_ALL='C', TZ='UTC')
+    cache.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='generate-', dir=str(cache)) as directory:
         work = Path(directory)
+        source, cldr, archive_hash = read_sources(cache, pin, work, archive, cldr_dir)
+        table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
+        countries = cldr_countries(cldr, table_countries)
+        historical = backzone_links((source / 'backzone').read_text())
         (work / 'version.h').write_text(
             '#define PKGVERSION "QuickJS "\n#define TZVERSION ' +
             json.dumps(pin['tz']['release']) + '\n' +
@@ -83,6 +93,8 @@ def generate(cache, output, manifest, host_cc, awk):
         receipt = {
             'format': 'QJTZ', 'format_version': 2, 'algorithm_version': 1,
             'tz_release': pin['tz']['release'], 'tz_commit': pin['tz']['commit'],
+            'tz_archive_sha256': archive_hash,
+            'cldr_timezone_sha256': hashlib.sha256(cldr).hexdigest(),
             'cldr_release': pin['cldr']['release'], 'cldr_commit': pin['cldr']['commit'],
             'primary_algorithm': 'ECMA-402 AvailableNamedTimeZoneIdentifiers',
             'spec_commit': '730ca2b88c305862db7be2f83c510dcca33ab48c',
@@ -100,12 +112,16 @@ def generate(cache, output, manifest, host_cc, awk):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, required=True)
+    parser.add_argument('--archive', type=Path, help='supplied IANA release archive')
+    parser.add_argument('--cldr-dir', type=Path, help='directory containing supplied timezone.xml')
+    parser.add_argument('--pin', type=Path, help='declared source versions and identities')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--host-cc', default=os.environ.get('HOST_CC', 'cc'))
     parser.add_argument('--awk', default='awk')
     args = parser.parse_args()
-    generate(args.cache.resolve(), args.output, args.manifest, args.host_cc, args.awk)
+    generate(args.cache.resolve(), args.output, args.manifest, args.host_cc, args.awk,
+             args.archive, args.cldr_dir, args.pin)
 
 
 if __name__ == '__main__':
