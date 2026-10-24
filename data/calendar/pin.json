@@ -13,7 +13,7 @@
       "url": "https://raw.githubusercontent.com/roozbehp/persiancalendar/bc1a519a68b5b0cc78c1d74b6fdb41825c677a65/kabise.txt",
       "revision": "bc1a519a68b5b0cc78c1d74b6fdb41825c677a65",
       "role": "CC0 transcription, leap markers checked against official PDF; corrected Gregorian anchors",
-      "vendored": true,
+      "vendored": false,
       "sha256": "39e85faf0235c1c60087c27be92fae9d6571b83261b9690c76e90f49899500a8"
     },
     "ummalqura_data.rs": {
@@ -209,7 +209,7 @@
       "revision": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
       "release": "49",
       "role": "Official common-release Japanese era codes and Gregorian start dates; 1873 ECMA boundary retained",
-      "vendored": true,
+      "vendored": false,
       "sha256": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a"
     }
   },
@@ -248,6 +248,12 @@
       "sha256": "7646984f7d69ad03026966628081c0c133e05121615bcbcf555a9ef4e756ba07",
       "source": "icu4x-korea-data.rs",
       "method": "tools/calendar/import_icu4x.py from authenticated ICU4X factual rows"
+    },
+    "persian.json": {
+      "sha256": "6a20780166bd9f346ef7a5fefb69592d279cc5f23a010865af9215a92070d327"
+    },
+    "japanese.json": {
+      "sha256": "20ee6fb7043a1ae764f37dfbced09faaa3f19b7fd9eed785583e18d3f915cc34"
     }
   }
 }

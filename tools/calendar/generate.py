@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
-"""Generate one calendar binary from the checked normalized publications."""
+"""Generate one calendar binary from supplied normalized publications."""
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
 import argparse
+import copy
 import datetime
 import json
 from pathlib import Path
 
-from acquire import SOURCES, atomic_write, checked_sources, digest, read_normalized
+from acquire import SOURCES, atomic_write, load_pin, digest, read_normalized
 from bundle import pack, unpack
-from normalize import EPOCH, japanese_eras, persian, ummalqura
+from normalize import EPOCH, japanese_data, persian_data, ummalqura
 from lunisolar import korea_precomputed
 
 
-def datasets():
-    pin = checked_sources()
-    normalized = [persian((SOURCES / 'kabise.txt').read_text(encoding='utf-8')),
-                  ummalqura(read_normalized(pin, 'islamic-umalqura.json'))]
+def datasets(data_dir=None, pin=None):
+    root = SOURCES.parent if data_dir is None else Path(data_dir)
+    pin = copy.deepcopy(load_pin() if pin is None else pin)
+    # These receipts describe supplied bytes, not an authentication claim.
+    # The pin retains declared revisions; acquire validates official inputs.
+    for name, item in pin['normalized'].items():
+        item['sha256'] = digest((root / name).read_bytes())
+    normalized = [persian_data(read_normalized('persian.json', root)),
+                  ummalqura(read_normalized('islamic-umalqura.json', root))]
     result = []
     for data in normalized:
-        saved = SOURCES.parent / (data['calendar'] + '.json')
-        if data['calendar'] == 'persian' and json.loads(saved.read_text()) != data:
-            raise ValueError('normalized calendar differs from source: ' + data['calendar'])
         years = []
         if data['calendar'] == 'persian':
             version = 'tehran-1206-1498'
@@ -33,8 +36,8 @@ def datasets():
         result.append({'calendar': data['calendar'], 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'version': version, 'years': years})
     for name in ('chinese', 'dangi'):
-        path = SOURCES.parent / (name + '.json')
-        data = read_normalized(pin, path.name)
+        path = root / (name + '.json')
+        data = read_normalized(path.name, root)
         first, end = data['primary_span']
         required_first, required_end = data['required_span']
         if data['schema'] != 1 or data['calendar'] != name or not first <= required_first < required_end <= end:
@@ -47,7 +50,7 @@ def datasets():
         version = name + '-publications-20261019-model1'
         if name == 'dangi':
             source = 'icu4x-korea-data.json'
-            expected = korea_precomputed(read_normalized(pin, source))
+            expected = korea_precomputed(read_normalized(source, root))
             saved = {r[0]: r for r in data['rows']}
             if (data.get('precomputed_source') != source or
                     data.get('precomputed_span') != [end, data['end_epoch_day']] or
@@ -59,9 +62,7 @@ def datasets():
         result.append({'calendar': name, 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'years': years,
                        'version': version})
-    eras = japanese_eras((SOURCES / 'cldr-calendarData.xml').read_text(encoding='utf-8'))
-    if json.loads((SOURCES.parent / 'japanese.json').read_text()) != eras:
-        raise ValueError('normalized Japanese eras differ from source')
+    eras = japanese_data(read_normalized('japanese.json', root))
     rows = []
     for name, date, offset in eras['eras']:
         day = (datetime.date(*map(int, date.split('-'))) - EPOCH).days
@@ -72,8 +73,8 @@ def datasets():
     return result, pin
 
 
-def generate(output, manifest):
-    records, pin = datasets()
+def generate(output, manifest, data_dir=None, pin=None):
+    records, pin = datasets(data_dir, pin)
     binary = pack(records)
     contents = unpack(binary)
     receipt = {'format': 'QJCA', 'format_version': 2, 'algorithm_version': 1,
@@ -99,10 +100,13 @@ def generate(output, manifest):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--data-dir', type=Path, help='calendar facts and sources directory')
+    parser.add_argument('--pin', type=Path, help='declared source metadata, not an input whitelist')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     args = parser.parse_args()
-    generate(args.output, args.manifest)
+    generate(args.output, args.manifest, args.data_dir,
+             load_pin(args.pin) if args.pin is not None else None)
 
 
 if __name__ == '__main__':

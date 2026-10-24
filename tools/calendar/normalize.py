@@ -10,7 +10,7 @@ import subprocess
 import unicodedata
 import xml.etree.ElementTree as ET
 
-from acquire import SOURCES, atomic_write, checked_sources, digest
+from acquire import atomic_write
 
 EPOCH = datetime.date(1970, 1, 1)
 
@@ -83,6 +83,55 @@ def persian(text):
             'rows': rows}
 
 
+def persian_data(data):
+    """Validate JSON facts without requiring their original transcription."""
+    if (type(data) is not dict or type(data.get('schema')) is not int or
+            data['schema'] != 1 or data.get('calendar') != 'persian' or
+            type(data.get('first_year')) is not int or data['first_year'] != 1206 or
+            type(data.get('end_epoch_day')) is not int or
+            type(data.get('rows')) is not list or len(data['rows']) != 293):
+        raise ValueError('invalid Persian factual data')
+    previous_end = -52150
+    for index, row in enumerate(data['rows']):
+        if (type(row) is not list or len(row) != 3 or
+                any(type(v) is not int for v in row)):
+            raise ValueError('invalid Persian factual row')
+        year, day, stars = row
+        if year != 1206 + index or day != previous_end or not 0 <= stars <= 2:
+            raise ValueError('invalid Persian year, leap marker or boundary')
+        previous_end = day + 365 + bool(stars)
+    if data['end_epoch_day'] != previous_end:
+        raise ValueError('invalid Persian terminal boundary')
+    return data
+
+
+def japanese_data(data):
+    """Validate modern era facts; the adoption boundary is part of the contract."""
+    if (type(data) is not dict or type(data.get('schema')) is not int or
+            data['schema'] != 1 or data.get('calendar') != 'japanese' or
+            type(data.get('eras')) is not list or not data['eras']):
+        raise ValueError('invalid Japanese factual data')
+    previous = None
+    names = {'ce', 'bce', 'ad', 'bc'}
+    for index, row in enumerate(data['eras']):
+        if type(row) is not list or len(row) != 3:
+            raise ValueError('invalid Japanese factual row')
+        name, text, offset = row
+        if (not isinstance(name, str) or
+                not re.fullmatch(r'[a-z][a-z0-9-]{0,30}', name) or name in names or
+                not isinstance(text, str) or type(offset) is not int):
+            raise ValueError('invalid Japanese era identity')
+        start = datetime.datetime.strptime(text, '%Y-%m-%d').date()
+        if (start.isoformat() != text or
+                (index == 0 and (text != '1873-01-01' or not -1000000 <= offset <= 1872)) or
+                (index != 0 and offset != start.year - 1) or
+                (previous is not None and start <= previous)):
+            raise ValueError('invalid Japanese era start or offset')
+        names.add(name)
+        previous = start
+    return data
+
+
 def ummalqura(data):
     """Validate the maintained ICU4X-derived facts, including both civil joins."""
     if (type(data) is not dict or type(data.get('schema')) is not int or
@@ -127,9 +176,7 @@ def official_persian_rows(text):
     return rows
 
 
-def verify_publication(pdf, pin, normalized):
-    if digest(pdf.read_bytes()) != pin['sources']['persian-official.pdf']['sha256']:
-        raise ValueError('official Persian PDF differs from pin')
+def verify_publication(pdf, normalized):
     result = subprocess.run(['pdftotext', '-layout', str(pdf.resolve()), '-'],
                             stdout=subprocess.PIPE, check=True, timeout=30)
     published = official_persian_rows(result.stdout.decode('utf-8'))
@@ -143,20 +190,20 @@ def verify_publication(pdf, pin, normalized):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--cache', type=Path, required=True, help='supplied raw source directory')
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--verify-persian-pdf', type=Path)
     args = parser.parse_args()
-    pin = checked_sources()
-    datasets = [persian((SOURCES / 'kabise.txt').read_text(encoding='utf-8'))]
+    datasets = [persian((args.cache / 'kabise.txt').read_text(encoding='utf-8'))]
     if args.verify_persian_pdf:
-        verify_publication(args.verify_persian_pdf, pin, datasets[0])
+        verify_publication(args.verify_persian_pdf, datasets[0])
     for data in datasets:
         # One year per line makes the factual transcription easy to review.
         rows = data.pop('rows')
         text = json.dumps(data, indent=2)[:-2] + ',\n  "rows": [\n'
         text += ',\n'.join('    ' + json.dumps(row) for row in rows) + '\n  ]\n}\n'
         atomic_write(args.output_dir / (data['calendar'] + '.json'), text.encode('ascii'))
-    eras = japanese_eras((SOURCES / 'cldr-calendarData.xml').read_text(encoding='utf-8'))
+    eras = japanese_eras((args.cache / 'cldr-calendarData.xml').read_text(encoding='utf-8'))
     atomic_write(args.output_dir / 'japanese.json',
                  (json.dumps(eras, indent=2) + '\n').encode('ascii'))
 

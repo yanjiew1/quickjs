@@ -4,6 +4,8 @@ import copy
 import importlib.util
 import io
 import json
+import shutil
+import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import sys
@@ -88,33 +90,60 @@ class AcquisitionTests(unittest.TestCase):
                     acquire.main()
                 fetch.assert_not_called()
 
-    def test_normalized_json_authentication_and_duplicate_keys(self):
+    def test_supplied_normalized_json_and_duplicate_keys(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / 'facts.json'
             raw = b'{"schema":1}'
             path.write_bytes(raw)
-            pin = {'normalized': {'facts.json': {'sha256': acquire.digest(raw)}}}
             with mock.patch.object(acquire, 'SOURCES', root / 'sources'):
-                self.assertEqual(acquire.read_normalized(pin, 'facts.json'), {'schema': 1})
+                self.assertEqual(acquire.read_normalized('facts.json'), {'schema': 1})
                 path.write_bytes(b'{"schema":2}')
-                with self.assertRaises(ValueError):
-                    acquire.read_normalized(pin, 'facts.json')
+                self.assertEqual(acquire.read_normalized('facts.json'), {'schema': 2})
                 raw = b'{"schema":1,"schema":2}'
                 path.write_bytes(raw)
-                pin['normalized']['facts.json']['sha256'] = acquire.digest(raw)
                 with self.assertRaises(ValueError):
-                    acquire.read_normalized(pin, 'facts.json')
+                    acquire.read_normalized('facts.json')
 
-    def test_icu4x_import_authenticates_before_parsing(self):
+    def test_acquisition_rejects_modified_normalized_inputs(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / 'ummalqura_data.rs').write_bytes(b'changed')
-            pin = {'sources': {'ummalqura_data.rs': {'sha256': acquire.digest(b'expected')}}}
-            with mock.patch.object(icu4x, 'parse_ummalqura_rust') as parse:
+            (root / 'facts.json').write_bytes(b'{"schema":2}')
+            pin = {'sources': {}, 'normalized': {
+                'facts.json': {'sha256': acquire.digest(b'{"schema":1}')}}}
+            with mock.patch.object(acquire, 'SOURCES', root / 'sources'), \
+                    mock.patch.object(acquire, 'load_pin', return_value=pin):
                 with self.assertRaises(ValueError):
-                    icu4x.import_records(root, pin)
-                parse.assert_not_called()
+                    acquire.checked_sources()
+
+    def test_acquisition_authenticates_release_archive_and_member(self):
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, 'w') as output:
+            output.writestr('common/facts.xml', b'facts')
+        raw = archive.getvalue()
+        source = {'url': 'https://invalid.test/archive.zip',
+                  'archive_sha256': acquire.digest(raw), 'path': 'common/facts.xml',
+                  'sha256': acquire.digest(b'facts')}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'facts.xml'
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = raw
+            with mock.patch.object(acquire.urllib.request, 'urlopen', return_value=response):
+                acquire.fetch(path, source)
+            self.assertEqual(path.read_bytes(), b'facts')
+            path.unlink()
+            for field in ('archive_sha256', 'sha256'):
+                changed = dict(source, **{field: '0' * 64})
+                with mock.patch.object(acquire.urllib.request, 'urlopen', return_value=response):
+                    with self.assertRaises(ValueError):
+                        acquire.fetch(path, changed)
+                self.assertFalse(path.exists())
+
+    def test_icu4x_import_accepts_supplied_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'ummalqura_data.rs').write_bytes(b'custom source')
+            self.assertEqual(icu4x.read_rust(root, 'ummalqura_data.rs'), 'custom source')
         with self.assertRaises(ValueError):
             icu4x.parse_ummalqura_rust(
                 'PackedHijriYearData::try_new(1300, [l, s], '
@@ -126,9 +155,13 @@ class AcquisitionTests(unittest.TestCase):
 class NormalizationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.persian_text = (acquire.SOURCES / 'kabise.txt').read_text(encoding='utf-8')
-        cls.umm_facts = acquire.read_normalized(acquire.checked_sources(),
-                                                'islamic-umalqura.json')
+        cls.persian_facts = acquire.read_normalized('persian.json')
+        # Authored grammar fixture, not an independent source oracle. CI
+        # acquires the original transcription and compares its complete output.
+        cls.persian_text = '\n'.join(str(year) + '*' * stars + ' ' +
+            (normalize.EPOCH + normalize.datetime.timedelta(days=day)).isoformat()
+            for year, day, stars in cls.persian_facts['rows'])
+        cls.umm_facts = acquire.read_normalized('islamic-umalqura.json')
 
     def test_complete_persian_coverage_and_derived_boundary(self):
         data = normalize.persian(self.persian_text)
@@ -183,24 +216,28 @@ class NormalizationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             normalize.official_persian_rows(text.replace('1206', '1207'))
 
-    def test_pdf_verification_checks_identity_before_invoking_converter(self):
-        pin = acquire.checked_sources()
+    def test_pdf_verification_checks_supplied_publication(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'source.pdf'
-            path.write_bytes(b'not the pinned PDF')
-            with mock.patch.object(normalize.subprocess, 'run') as converter:
+            path.write_bytes(b'custom PDF')
+            result = mock.Mock(stdout=b'invalid publication')
+            with mock.patch.object(normalize.subprocess, 'run', return_value=result) as converter:
                 with self.assertRaises(ValueError):
-                    normalize.verify_publication(path, pin, {})
-                converter.assert_not_called()
+                    normalize.verify_publication(path, {'rows': []})
+                converter.assert_called_once()
 
 
 class BinaryTests(unittest.TestCase):
     def test_future_japanese_era_needs_no_generator_code_change(self):
-        raw = ET.fromstring((ROOT / 'data/calendar/sources/cldr-calendarData.xml').read_bytes())
+        raw = ET.fromstring(
+            '<supplementalData><calendarData><calendar type="japanese"><eras>'
+            '<era type="1" code="meiji" start="1868-09-08"/>'
+            '<era type="2" code="reiwa" start="2019-05-01"/>'
+            '</eras></calendar></calendarData></supplementalData>')
         eras = raw.find("./calendarData/calendar[@type='japanese']/eras")
         future = ET.SubElement(eras, 'era', {'type': '999', 'code': 'future', 'start': '2035-02-03'})
         data = normalize.japanese_eras(ET.tostring(raw, encoding='unicode'))
-        self.assertEqual(len(data['eras']), 6)
+        self.assertEqual(len(data['eras']), 3)
         self.assertEqual(data['eras'][-1], ['future', '2035-02-03', 2034])
         day = (normalize.datetime.date(2035, 2, 3) - normalize.EPOCH).days
         records = [{'calendar': 'japanese', 'version': 'test',
@@ -263,6 +300,44 @@ class BinaryTests(unittest.TestCase):
             self.assertEqual(out.read_bytes(), binary)
             self.assertEqual(manifest.read_bytes(), (ROOT / 'data/calendar/calendar-data-manifest.json').read_bytes())
         self.assertIn('qjs_native_calendar_data', embed.render(binary))
+
+    def test_generator_accepts_custom_json_and_records_actual_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'facts'
+            root.mkdir()
+            for source in (ROOT / 'data/calendar').glob('*.json'):
+                shutil.copyfile(source, root / source.name)
+            path = root / 'japanese.json'
+            facts = json.loads(path.read_text())
+            facts['eras'].append(['future', '2035-02-03', 2034])
+            path.write_text(json.dumps(facts))
+            pin = acquire.load_pin()
+            expected = pin['normalized']['japanese.json']['sha256']
+            records, receipt = generate.datasets(root, pin)
+            self.assertEqual(next(row for row in records if row['calendar'] == 'japanese')
+                             ['eras'][-1][2], 'future')
+            self.assertEqual(receipt['normalized']['japanese.json']['sha256'],
+                             acquire.digest(path.read_bytes()))
+            self.assertNotEqual(receipt['normalized']['japanese.json']['sha256'], expected)
+            self.assertEqual(pin['normalized']['japanese.json']['sha256'], expected)
+            self.assertTrue(bundle.unpack(bundle.pack(records)))
+
+    def test_factual_json_rejects_invalid_types_and_boundaries(self):
+        for field, value in [('schema', True), ('end_epoch_day', 1), ('first_year', 1207)]:
+            facts = acquire.read_normalized('persian.json')
+            facts[field] = value
+            with self.assertRaises(ValueError):
+                normalize.persian_data(facts)
+        for column, value in [(0, True), (1, -52149), (2, 3)]:
+            facts = acquire.read_normalized('persian.json')
+            facts['rows'][0][column] = value
+            with self.assertRaises(ValueError):
+                normalize.persian_data(facts)
+        for column, value in [(0, 'ce'), (1, '1873-01-02'), (2, True)]:
+            facts = acquire.read_normalized('japanese.json')
+            facts['eras'][0][column] = value
+            with self.assertRaises(ValueError):
+                normalize.japanese_data(facts)
 
     def test_pack_rejects_gap_duplicate_and_invalid_month(self):
         for change in ('gap', 'duplicate', 'month', 'leap', 'end'):
@@ -330,8 +405,7 @@ class LunisolarTests(unittest.TestCase):
             actual = lunisolar.merge(name, primary, boundary)
             if name == 'dangi':
                 actual = lunisolar.extend_dangi(actual,
-                    acquire.read_normalized(acquire.checked_sources(),
-                                            'icu4x-korea-data.json'))
+                    acquire.read_normalized('icu4x-korea-data.json'))
             self.assertEqual(actual, saved)
             self.assertEqual(len(approximate), 11 if name == 'chinese' else 0)
             with self.assertRaises(ValueError):
@@ -343,8 +417,7 @@ class LunisolarTests(unittest.TestCase):
                 lunisolar.merge(name, primary, changed)
 
     def test_korean_precomputed_coverage_and_conflict_rejection(self):
-        source = acquire.read_normalized(acquire.checked_sources(),
-                                         'icu4x-korea-data.json')
+        source = acquire.read_normalized('icu4x-korea-data.json')
         rows = lunisolar.korea_precomputed(source)
         self.assertEqual([r[0] for r in rows], list(range(1912, 2103)))
         data = json.loads((ROOT / 'data/calendar/dangi.json').read_text())
