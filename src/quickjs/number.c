@@ -613,7 +613,7 @@ int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
 
 /* Same as JS_ToInt32Free() but with a 64 bit result. Return (<0, 0)
    in case of exception */
-int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
+static int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
 {
     uint32_t tag;
     int64_t ret;
