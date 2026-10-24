@@ -12,7 +12,7 @@
     29585
   ],
   "approximate_months": [],
-  "precomputed_source": "icu4x-korea-data.rs",
+  "precomputed_source": "icu4x-korea-data.json",
   "precomputed_span": [
     29597,
     47875
