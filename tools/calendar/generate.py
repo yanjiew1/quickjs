@@ -38,11 +38,37 @@ def datasets(data_dir=None, pin=None):
     for name in ('chinese', 'dangi'):
         path = root / (name + '.json')
         data = read_normalized(path.name, root)
+        if (type(data) is not dict or type(data.get('schema')) is not int or
+                data['schema'] != 1 or data.get('calendar') != name or
+                type(data.get('first_year')) is not int or
+                type(data.get('end_epoch_day')) is not int or
+                type(data.get('rows')) is not list or not data['rows']):
+            raise ValueError('invalid lunisolar factual data')
+        # Row years are discarded when projecting into QJCA. Check their types
+        # and index origin first; otherwise a shifted header silently relabels
+        # every otherwise valid year. Python bool/float equality is insufficient.
+        for row in data['rows']:
+            if (type(row) is not list or len(row) != 4 or
+                    any(type(row[i]) is not int for i in (0, 1, 3)) or
+                    type(row[2]) is not list or any(type(n) is not int for n in row[2])):
+                raise ValueError('invalid lunisolar factual row')
+        if data['first_year'] != data['rows'][0][0]:
+            raise ValueError('lunisolar first year disagrees with rows')
+        spans = ('primary_span', 'required_span') + (('precomputed_span',) if name == 'dangi' else ())
+        for field in spans:
+            span = data.get(field)
+            if type(span) is not list or len(span) != 2 or any(type(n) is not int for n in span):
+                raise ValueError('invalid lunisolar coverage span')
         first, end = data['primary_span']
         required_first, required_end = data['required_span']
-        if data['schema'] != 1 or data['calendar'] != name or not first <= required_first < required_end <= end:
+        if not first <= required_first < required_end <= end:
             raise ValueError('incomplete mandatory lunisolar publication coverage')
-        for year, nominal, leap, day, length in data['approximate_months']:
+        if type(data.get('approximate_months')) is not list:
+            raise ValueError('invalid lunisolar approximate months')
+        for row in data['approximate_months']:
+            if type(row) is not list or len(row) != 5 or any(type(n) is not int for n in row):
+                raise ValueError('invalid lunisolar approximate month')
+            year, nominal, leap, day, length = row
             if not (day + length <= required_first or day >= required_end):
                 raise ValueError('approximation enters mandatory calendar dates')
         if [r[0] for r in data['rows']] != list(range(1899, 2101)):

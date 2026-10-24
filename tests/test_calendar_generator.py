@@ -339,6 +339,39 @@ class BinaryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 normalize.japanese_data(facts)
 
+    def test_lunisolar_json_keeps_year_identity_and_integer_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for source in (ROOT / 'data/calendar').glob('*.json'):
+                shutil.copyfile(source, root / source.name)
+            for name in ('chinese', 'dangi'):
+                path = root / (name + '.json')
+                original = path.read_bytes()
+                source = json.loads(original)
+                fields = [('first_year', 1900), ('first_year', True),
+                          ('schema', True), ('end_epoch_day', 47875.0),
+                          ('primary_span', [False, 47875]),
+                          ('approximate_months', [[1899, 1, False, -25892, 30]])]
+                if name == 'dangi':
+                    fields.append(('precomputed_span', [29597.0, 47875.0]))
+                for field, value in fields:
+                    facts = copy.deepcopy(source)
+                    facts[field] = value
+                    path.write_text(json.dumps(facts))
+                    with self.subTest(calendar=name, field=field), self.assertRaises(ValueError):
+                        generate.datasets(root)
+                for column, value in [(0, 1899.0), (1, -25892.0),
+                                      (2, [30.0] + source['rows'][0][2][1:]), (3, False)]:
+                    facts = copy.deepcopy(source)
+                    facts['rows'][0][column] = value
+                    path.write_text(json.dumps(facts))
+                    with self.subTest(calendar=name, column=column), self.assertRaises(ValueError):
+                        generate.datasets(root)
+                path.write_bytes(original)
+            # The accepted facts and their binary remain unchanged.
+            records, _ = generate.datasets(root)
+            self.assertEqual(bundle.pack(records), (ROOT / 'data/calendar/calendar-data.bin').read_bytes())
+
     def test_pack_rejects_gap_duplicate_and_invalid_month(self):
         for change in ('gap', 'duplicate', 'month', 'leap', 'end'):
             datasets, pin = generate.datasets()
