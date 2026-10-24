@@ -11,6 +11,7 @@ typedef struct QJSIntlLocaleService QJSIntlLocaleService;
    On failure, *out is NULL. Closing NULL is safe. No callback runs user code.
    A service has immutable state and no retained operation scratch. */
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
+                                   const struct QJSIntlData *checked_data,
                                    QJSIntlLocaleService **out);
 void qjs_intl_locale_close(QJSIntlLocaleService *service);
 /* Release an owned identity result with the service's original allocator.

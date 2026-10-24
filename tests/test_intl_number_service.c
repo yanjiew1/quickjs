@@ -933,12 +933,12 @@ static void test_failures(const QJSIntlAllocator *allocator, QJSIntlNumberServic
            !formatter);
     live = state->live;
     calls = state->calls;
-    assert(!qjs_intl_number_open(allocator, &retry));
+    assert(!qjs_intl_number_open(allocator, NULL, &retry));
     calls = state->calls - calls;
     qjs_intl_number_close(retry);
     for (i = 1; i <= calls; i++) {
         state->fail_at = state->calls + i;
-        assert(qjs_intl_number_open(allocator, &retry) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_number_open(allocator, NULL, &retry) == QJS_INTL_NO_MEMORY);
         assert(!retry && state->live == live);
     }
     state->fail_at = 0;
@@ -1348,7 +1348,7 @@ static void test_compact_currency(const QJSIntlAllocator *allocator,
     settings.currency_display = QJS_INTL_NUMBER_CURRENCY_NARROW;
     check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1234"), "$1K");
     settings.currency = bytes(code);
-    assert(!qjs_intl_number_open(allocator, &owned_service));
+    assert(!qjs_intl_number_open(allocator, NULL, &owned_service));
     assert(!qjs_intl_number_formatter_open(owned_service, en, (QJSIntlBytes){0}, &settings, &formatter));
     memcpy(code, "USD", 3);
     qjs_intl_number_close(owned_service);
@@ -1511,7 +1511,7 @@ int main(void)
     QJSIntlBytes system;
     const QJSIntlBytes *tags;
     size_t count, i, en;
-    assert(!qjs_intl_number_open(&allocator, &service));
+    assert(!qjs_intl_number_open(&allocator, NULL, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
     {
         QJSIntlData data;

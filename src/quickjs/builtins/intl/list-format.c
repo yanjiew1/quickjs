@@ -21,9 +21,14 @@ static QJSIntlListService *list_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_list) {
+        const QJSIntlData *data = js_intl_data(ctx);
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlListService *service;
-        QJSIntlStatus status = qjs_intl_list_open(&allocator, &service);
+        QJSIntlStatus status;
+
+        if (!data)
+            return NULL;
+        status = qjs_intl_list_open(&allocator, data, &service);
         if (js_intl_error(ctx, status, "list initialization"))
             return NULL;
         rt->intl_list = service;
