@@ -123,7 +123,7 @@ class AcquisitionTests(unittest.TestCase):
                     acquire.extract_sources(raw, target, 'test', names)
                 self.assertEqual(list(target.iterdir()), [])
 
-    def test_generation_uses_verified_archive_not_extracted_cache(self):
+    def test_generation_accepts_supplied_archive_not_extracted_cache(self):
         pin = json.loads((ROOT / 'data/timezone/pin.json').read_text())
         rows = [('tz-test/' + name, ('pinned:' + name).encode(), False)
                 for name in acquire.SOURCE_NAMES]
@@ -140,19 +140,34 @@ class AcquisitionTests(unittest.TestCase):
             (stale / 'zic.c').write_bytes(b'poisoned extracted source')
             work = Path(directory) / 'private'
             with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
-                source, cldr = generate.checked_sources(cache, pin, work)
+                source, cldr, identity = generate.read_sources(cache, pin, work)
                 network.assert_not_called()
             self.assertEqual(source, work / 'sources')
             self.assertEqual((source / 'zic.c').read_bytes(), b'pinned:zic.c')
             self.assertEqual((stale / 'zic.c').read_bytes(), b'poisoned extracted source')
             self.assertEqual(set(p.name for p in source.iterdir()), set(acquire.SOURCE_NAMES))
-            self.assertIn('timezone.xml', cldr)
+            self.assertIn(b'<', cldr)
+            self.assertEqual(identity, sha256(raw))
 
-            # Changed archive bytes fail before any new source is materialized.
+            # Hashes select official acquisition, not a generator whitelist.
+            custom = self.archive([(name, data + b'custom', link)
+                                   for name, data, link in rows])
+            archive.write_bytes(custom)
+            metadata = Path(directory) / 'cldr'
+            metadata.mkdir()
+            (metadata / 'timezone.xml').write_bytes(b'custom CLDR')
+            source, cldr, identity = generate.read_sources(
+                cache, pin, Path(directory) / 'custom', cldr_dir=metadata)
+            self.assertEqual((source / 'zic.c').read_bytes(), b'pinned:zic.ccustom')
+            self.assertEqual(cldr, b'custom CLDR')
+            self.assertEqual(identity, sha256(custom))
+            self.assertNotEqual(identity, pin['tz']['archive']['sha256'])
+
+            # Malformed archives still fail before any new source is materialized.
             archive.write_bytes(b'changed archive')
             work = Path(directory) / 'failed'
-            with self.assertRaises(ValueError):
-                generate.checked_sources(cache, pin, work)
+            with self.assertRaises((ValueError, tarfile.TarError)):
+                generate.read_sources(cache, pin, work)
             self.assertFalse(work.exists())
 
     def test_pinned_metadata_is_present_and_unchanged(self):
