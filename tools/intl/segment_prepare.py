@@ -49,8 +49,6 @@ class Properties:
 
 def prepare(sources, dictionaries, resolver):
     """Return native archive, reproducible receipt and preserved source notices."""
-    if dictionaries.pin != segment_dictionary_sources.load_pin():
-        raise DataError('unreviewed segmentation dictionary source pin')
     cldr = Inputs(sources)
     dictionary_inputs = Inputs(dictionaries)
     cldr.read('LICENSE')
@@ -63,7 +61,8 @@ def prepare(sources, dictionaries, resolver):
     parsed_dictionaries = segment_dictionary.collect(dictionary_inputs)
     graphs = {family: segment_dictionary_trie.prepare(parsed_dictionaries[family])
               for family in segment_dictionary_tables.FAMILIES}
-    inputs = segment_bundle.recipe(sources.pin, tags)
+    inputs = segment_bundle.recipe(sources.manifest['files'],
+                                   dictionaries.identity()['files'], tags)
     identity = segment_bundle.fingerprint(inputs)
     strings = ('',) + tags
     sections = {
@@ -98,8 +97,6 @@ def prepare(sources, dictionaries, resolver):
         'format': 1, 'inputs': inputs, 'fingerprint': identity.hex(),
         'bytes': len(binary), 'sha256': acquire.digest(binary),
         'sources': {name: sources.manifest['files'][name] for name in sorted(cldr.consumed)},
-        'dictionary_files': {name: dictionaries.files[name]['sha256']
-                             for name in sorted(dictionary_inputs.consumed)},
         'corrections': tuple(row._asdict() for row in corrected.corrections),
         'formatter_aliases': aliases,
         'streams': tuple({'kind': row.kind, 'program': row.program,
@@ -124,6 +121,7 @@ def main():
     parser.add_argument('--source-pin', type=Path,
                         help='explicit alternate source pin for release/Git comparison')
     parser.add_argument('--dictionaries', type=Path, required=True)
+    parser.add_argument('--dictionary-pin', type=Path, help='optional declared dictionary metadata')
     parser.add_argument('--property-tool', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -131,7 +129,9 @@ def main():
     parser.add_argument('--notices', type=Path, required=True)
     args = parser.parse_args()
     binary, manifest, license_bytes, notices = prepare(
-        acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), segment_dictionary_sources.Sources(args.dictionaries),
+        acquire.Sources(args.sources, acquire.load_pin(args.source_pin)),
+        segment_dictionary_sources.Sources(
+            args.dictionaries, segment_dictionary_sources.load_pin(args.dictionary_pin)),
         PropertyResolver(args.property_tool))
     for path, contents in ((args.output, binary), (args.manifest, acquire.json_bytes(manifest)),
                             (args.license, license_bytes), (args.notices, notices)):
