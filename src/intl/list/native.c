@@ -16,6 +16,7 @@ struct QJSIntlListService {
 };
 
 QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator,
+                                 const struct QJSIntlData *checked_data,
                                  QJSIntlListService **out)
 {
     QJSIntlListService *service;
@@ -28,13 +29,20 @@ QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator,
     if (!out || !allocator || !allocator->malloc || !allocator->realloc ||
         !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
-    status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
-                                allocator, &service->data);
+    if (checked_data) {
+        service->data = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                                    allocator, &service->data);
+    }
     if (status)
         goto fail;
     status = qjs_intl_list_data_open(&service->data, allocator, &service->patterns);
