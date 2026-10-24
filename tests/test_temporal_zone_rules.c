@@ -176,14 +176,14 @@ int main(void)
     QJSTemporalEpochNs epoch, saved;
     Candidates candidates = {{0}, 0};
     size_t count;
-    int found, equal;
+    int found;
 
     assert(!qjs_temporal_zone_parse(&utc, "uTc", 3));
     assert(!qjs_temporal_zone_parse(&alias, "zulu/utc", 8));
     assert(!strcmp(alias.identifier, "Zulu/UTC"));
-    assert(!qjs_temporal_zones_equal(&utc, &alias, &equal) && equal);
+    assert(qjs_temporal_zones_equal(&utc, &alias));
     assert(!qjs_temporal_zone_parse(&numeric, "+00:00", 6));
-    assert(!qjs_temporal_zones_equal(&alias, &numeric, &equal) && !equal);
+    assert(!qjs_temporal_zones_equal(&alias, &numeric));
     assert(qjs_timezone_backend_count() == 3 && qjs_timezone_count() == 4);
     assert(!strcmp(qjs_timezone_identifier(qjs_timezone_at(0)), "Test/Gap"));
     assert(!strcmp(qjs_timezone_identifier(qjs_timezone_at(1)), "Test/Triple"));
