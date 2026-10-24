@@ -30,9 +30,10 @@ def load_tool(name):
 
 primary = load_tool('primary')
 bundle = load_tool('bundle')
-with mock.patch.dict('sys.modules', {'acquire': acquire, 'bundle': bundle}):
+with mock.patch.dict('sys.modules', {'acquire': acquire, 'bundle': bundle, 'primary': primary}):
     embed = load_tool('embed')
     windows = load_tool('windows')
+    generate = load_tool('generate')
 
 
 def sha256(data):
@@ -104,23 +105,55 @@ class AcquisitionTests(unittest.TestCase):
                             ('../escape', b'not extracted', False)])
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / 'source'
-            acquire.extract_sources(raw, target, 'test', {'africa': sha256(b'data')})
+            acquire.extract_sources(raw, target, 'test', ('africa',))
             self.assertEqual((target / 'africa').read_bytes(), b'data')
             self.assertEqual([entry.name for entry in Path(directory).iterdir()], ['source'])
 
-    def test_rejects_link_and_validates_all_before_writes(self):
-        rows = [('tz-test/africa', b'data', False),
-                ('tz-test/asia', b'wrong', False)]
+    def test_rejects_links_duplicates_and_missing_sources_before_writes(self):
+        archives = [
+            (self.archive([('tz-test/africa', b'data', False)]), ('africa', 'asia')),
+            (self.archive([('tz-test/africa', b'data', False),
+                           ('tz-test/africa', b'duplicate', False)]), ('africa',)),
+            (self.archive([('tz-test/africa', '/tmp/invalid', True)]), ('africa',)),
+        ]
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
+            for raw, names in archives:
+                with self.assertRaises(ValueError):
+                    acquire.extract_sources(raw, target, 'test', names)
+                self.assertEqual(list(target.iterdir()), [])
+
+    def test_generation_uses_verified_archive_not_extracted_cache(self):
+        pin = json.loads((ROOT / 'data/timezone/pin.json').read_text())
+        rows = [('tz-test/' + name, ('pinned:' + name).encode(), False)
+                for name in acquire.SOURCE_NAMES]
+        raw = self.archive(rows)
+        pin['tz'] = {'release': 'test', 'archive': {
+            'url': 'https://invalid.test/archive', 'sha256': sha256(raw)}}
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory) / 'cache'
+            cache.mkdir()
+            archive = cache / 'tz-test.tar.gz'
+            archive.write_bytes(raw)
+            stale = cache / 'tz-test'
+            stale.mkdir()
+            (stale / 'zic.c').write_bytes(b'poisoned extracted source')
+            work = Path(directory) / 'private'
+            with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+                source, cldr = generate.checked_sources(cache, pin, work)
+                network.assert_not_called()
+            self.assertEqual(source, work / 'sources')
+            self.assertEqual((source / 'zic.c').read_bytes(), b'pinned:zic.c')
+            self.assertEqual((stale / 'zic.c').read_bytes(), b'poisoned extracted source')
+            self.assertEqual(set(p.name for p in source.iterdir()), set(acquire.SOURCE_NAMES))
+            self.assertIn('timezone.xml', cldr)
+
+            # Changed archive bytes fail before any new source is materialized.
+            archive.write_bytes(b'changed archive')
+            work = Path(directory) / 'failed'
             with self.assertRaises(ValueError):
-                acquire.extract_sources(self.archive(rows), target, 'test',
-                    {'africa': sha256(b'data'), 'asia': sha256(b'expected')})
-            self.assertEqual(list(target.iterdir()), [])
-            raw = self.archive([('tz-test/africa', '/tmp/invalid', True)])
-            with self.assertRaises(ValueError):
-                acquire.extract_sources(raw, target, 'test', {'africa': sha256(b'data')})
-            self.assertEqual(list(target.iterdir()), [])
+                generate.checked_sources(cache, pin, work)
+            self.assertFalse(work.exists())
 
     def test_pinned_metadata_is_present_and_unchanged(self):
         pin = json.loads((ROOT / 'data' / 'timezone' / 'pin.json').read_text())

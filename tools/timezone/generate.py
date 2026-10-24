@@ -14,7 +14,7 @@ import shlex
 import subprocess
 import tempfile
 
-from acquire import PIN, atomic_write
+from acquire import PIN, SOURCE_NAMES, atomic_write, extract_sources, fetch
 from bundle import pack, unpack
 from primary import available_named_primaries, backzone_links, cldr_countries, zone_table
 
@@ -24,27 +24,32 @@ DATA = ('africa', 'antarctica', 'asia', 'australasia', 'europe',
         'northamerica', 'southamerica', 'etcetera', 'factory', 'backward')
 
 
-def checked_sources(cache, pin):
-    source = cache / ('tz-' + pin['tz']['release'])
-    for name, expected in pin['tz']['files'].items():
-        if hashlib.sha256((source / name).read_bytes()).hexdigest() != expected:
-            raise ValueError('tz source differs from pin: ' + name)
-    cldr = ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
+def checked_sources(cache, pin, work):
+    # Reauthenticate the archive for this generation. An extracted cache may
+    # have changed since acquisition and must never supply executable zic code.
+    tz = pin['tz']
+    archive = fetch(cache / ('tz-' + tz['release'] + '.tar.gz'), tz['archive'], True)
+    directory = ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
+    cldr = {}
     for name, item in pin['cldr']['files'].items():
-        if hashlib.sha256((cldr / name).read_bytes()).hexdigest() != item['sha256']:
+        raw = (directory / name).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != item['sha256']:
             raise ValueError('CLDR source differs from pin: ' + name)
+        cldr[name] = raw
+    source = work / 'sources'
+    extract_sources(archive, source, tz['release'], SOURCE_NAMES)
     return source, cldr
 
 
 def generate(cache, output, manifest, host_cc, awk):
     pin = json.loads(PIN.read_text())
-    source, cldr = checked_sources(cache, pin)
-    table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
-    countries = cldr_countries((cldr / 'timezone.xml').read_bytes(), table_countries)
-    historical = backzone_links((source / 'backzone').read_text())
     environment = dict(os.environ, LC_ALL='C', TZ='UTC')
     with tempfile.TemporaryDirectory(prefix='generate-', dir=str(cache)) as directory:
         work = Path(directory)
+        source, cldr = checked_sources(cache, pin, work)
+        table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
+        countries = cldr_countries(cldr['timezone.xml'], table_countries)
+        historical = backzone_links((source / 'backzone').read_text())
         (work / 'version.h').write_text(
             '#define PKGVERSION "QuickJS "\n#define TZVERSION ' +
             json.dumps(pin['tz']['release']) + '\n' +
