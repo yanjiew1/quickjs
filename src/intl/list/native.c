@@ -15,11 +15,6 @@ struct QJSIntlListService {
     uint32_t root;
 };
 
-struct QJSIntlListFormatter {
-    QJSIntlAllocator allocator;
-    QJSIntlNativeList *engine;
-};
-
 QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator,
                                  QJSIntlListService **out)
 {
@@ -120,7 +115,7 @@ static void *script_realloc(void *opaque, void *ptr, size_t size)
 
 static QJSIntlStatus open_engine(const QJSIntlAllocator *allocator,
                                  QJSIntlListTemplates *templates,
-                                 QJSIntlNativeList **out)
+                                 QJSIntlListFormatter **out)
 {
     CharRange script;
     QJSIntlListScriptRange *ranges = NULL;
@@ -164,7 +159,6 @@ QJSIntlStatus qjs_intl_list_formatter_open(const QJSIntlListService *service,
                                            QJSIntlListStyle style,
                                            QJSIntlListFormatter **out)
 {
-    QJSIntlListFormatter *formatter;
     QJSIntlListTemplates templates = {0};
     QJSIntlStatus status;
     unsigned int part, kind, variant;
@@ -181,47 +175,12 @@ QJSIntlStatus qjs_intl_list_formatter_open(const QJSIntlListService *service,
     for (part = 0; part < 4; part++) {
         qjs_intl_list_data_template(&service->patterns, index, variant, part,
                                     &templates.base[part]);
-        templates.alternate[part] = templates.base[part];
     }
     status =
         qjs_intl_list_data_context(&service->patterns, index, variant, &kind,
-                                   &templates.alternate[0], &templates.alternate[3]);
+                                   &templates.alternate[0], &templates.alternate[1]);
     if (status)
         return status;
     templates.context = (QJSIntlListContext)kind;
-    formatter =
-        service->allocator.malloc(service->allocator.opaque, sizeof(*formatter));
-    if (!formatter)
-        return QJS_INTL_NO_MEMORY;
-    formatter->allocator = service->allocator;
-    status = open_engine(&service->allocator, &templates, &formatter->engine);
-    if (status) {
-        service->allocator.free(service->allocator.opaque, formatter);
-        return status;
-    }
-    *out = formatter;
-    return QJS_INTL_OK;
-}
-
-void qjs_intl_list_formatter_close(QJSIntlListFormatter *formatter)
-{
-    if (formatter) {
-        QJSIntlAllocator allocator = formatter->allocator;
-        qjs_intl_native_list_close(formatter->engine);
-        allocator.free(allocator.opaque, formatter);
-    }
-}
-
-QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *formatter,
-                                   const QJSIntlUTF16 *items, size_t count,
-                                   QJSIntlFormatted *out)
-{
-    return qjs_intl_native_list_format(formatter ? formatter->engine : NULL, items,
-                                       count, out);
-}
-
-void qjs_intl_list_result_clear(const QJSIntlAllocator *allocator,
-                                QJSIntlFormatted *result)
-{
-    qjs_intl_native_list_result_clear(allocator, result);
+    return open_engine(&service->allocator, &templates, out);
 }
