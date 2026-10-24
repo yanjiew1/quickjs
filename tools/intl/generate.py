@@ -12,10 +12,7 @@ import calendar_names
 import calendar_name_tables
 import calendar_eras
 import calendar_era_tables
-import collation_contexts
 import collation_bundle
-import collation_root
-import collation_tables
 import compact_patterns
 import compact_tables
 import currencies
@@ -115,8 +112,6 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
         timezone_presentation.collect(inputs_read, locale_data))
     dayperiod_data = dayperiod_rules.collect(inputs_read)
     calendar_era_data = calendar_eras.collect(inputs_read)
-    collation_data = collation_root.collect(inputs_read)
-    collation_context_data = collation_contexts.collect(inputs_read, collation_data)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     # Formatter defaults use matched locale identities. Keep global Locale
@@ -212,9 +207,6 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
     sections[bundle.TIMEZONE_PRESENTATION] = timezone_presentation_tables.encode(timezone_presentation_data, string_ids)
     sections[bundle.DAYPERIOD_RULES] = dayperiod_tables.encode(dayperiod_data, string_ids)
     sections[bundle.CALENDAR_ERAS] = calendar_era_tables.encode(calendar_era_data, string_ids)
-    # Root UCA mappings are global scalar data, not locale-row projection.
-    sections[bundle.COLLATION_ROOT] = collation_tables.encode(collation_data)
-    sections[bundle.COLLATION_CONTEXTS] = collation_contexts.encode(collation_context_data, collation_data)
     if compiled_section is not None:
         sections[bundle.COMPILED_COLLATION] = compiled_section
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
@@ -240,7 +232,7 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
                          'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'available date patterns, append templates, interval and localized timezone source layers, '
                          'supplemental metazone presentation, day-period clock facts and explicit era name keys, '
-                         'root UCA mappings, optional bound compiled collation, '
+                         'optional bound compiled collation, '
                          'layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
