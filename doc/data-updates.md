@@ -247,9 +247,10 @@ values or encoding assumptions may require generator/algorithm changes.
 
 The pin tool deliberately does not rewrite compatibility code. In particular,
 [`segment_compat.py`](../tools/intl/segment_compat.py) applies a reviewed,
-byte-guarded Japanese FE correction. A new source may fix or alter that defect;
-inspect the new declarations and remove/adapt the correction with regression
-coverage. Never just refresh guard hashes to make an unexplained failure pass.
+structurally guarded Japanese FE correction. It recognizes only the known
+missing declaration and dependency shape. Already-correct data passes through;
+other unresolved names remain strict compiler errors. Review changed source
+semantics rather than adding version or checksum acceptance lists.
 The dictionary grammar, schema/DTD contracts, Unicode-property version and source
 publication checks likewise remain active after candidate generation.
 
