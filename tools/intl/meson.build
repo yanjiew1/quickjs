@@ -3,6 +3,7 @@
 # broader than individual imports so new codec dependencies cannot leave
 # a generated pack fixture stale.
 intl_tool_dependencies = files(
+  '../data/_support/io.py',
   'acquire.py',
   'availability.py',
   'bundle.py',
