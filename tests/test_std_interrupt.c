@@ -28,8 +28,10 @@ static JSValue evaluate(JSContext *ctx, const char *source)
 static void check_restored(JSRuntime *rt, InterruptState *state)
 {
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
-    assert(rt->interrupt_handler == host_interrupt);
-    assert(rt->interrupt_opaque == state);
+    void *opaque;
+
+    assert(JS_GetInterruptHandler(rt, &opaque) == host_interrupt);
+    assert(opaque == state);
     assert(ts->eval_script_recurse == 0);
 }
 

@@ -3,6 +3,11 @@
 #include "quickjs.h"
 #include "quickjs-libc.h"
 
+static int interrupt_noop(JSRuntime *rt, void *opaque)
+{
+    return 0;
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -13,8 +18,16 @@ int main(void)
     void *(*allocate)(JSContext *, size_t) = (js_malloc);
     void (*release)(JSContext *, void *) = (js_free);
     void *buffer;
+    void *opaque = rt;
 
     assert(rt);
+    assert(JS_GetInterruptHandler(rt, &opaque) == NULL && opaque == NULL);
+    JS_SetInterruptHandler(rt, interrupt_noop, rt);
+    assert(JS_GetInterruptHandler(rt, NULL) == interrupt_noop);
+    assert(JS_GetInterruptHandler(rt, &opaque) == interrupt_noop && opaque == rt);
+    JS_SetInterruptHandler(rt, NULL, rt);
+    assert(JS_GetInterruptHandler(rt, &opaque) == NULL && opaque == rt);
+    JS_SetInterruptHandler(rt, NULL, NULL);
     ctx = JS_NewContext(rt);
     assert(ctx);
     buffer = allocate(ctx, 32);

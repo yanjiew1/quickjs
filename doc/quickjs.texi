@@ -1005,6 +1005,11 @@ Use @code{JS_SetInterruptHandler()} to set a callback which is
 regularly called by the engine when it is executing code. This
 callback can be used to implement an execution timeout.
 
+@code{JS_GetInterruptHandler()} returns the current callback and optionally
+writes its opaque pointer through the second argument. The pointer remains
+borrowed; reading it does not transfer ownership. Use the getter and setter on
+the runtime's owning thread to temporarily chain and restore a handler.
+
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
