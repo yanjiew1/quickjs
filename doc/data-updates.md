@@ -225,9 +225,10 @@ coverage. Never just refresh guard hashes to make an unexplained failure pass.
 The dictionary grammar, schema/DTD contracts, Unicode-property version and source
 publication checks likewise remain active after candidate generation.
 
-Changing a producer can require regenerating native data even when upstream
-bytes are unchanged: segmentation packs record producer fingerprints. Regenerate
-receipts rather than editing their recorded hashes. Source version changes do
+Regenerate when input data or compiler output changes. Segmentation identifies
+actual data inputs, while archive and section hashes identify compiled output;
+producer comment or checkout changes alone do not require data churn. Never
+edit generated receipts to disguise changed inputs or output. Source version changes do
 not by themselves justify changing binary wire versions; see the
 [format guide](intl-data-format.md) and component format documents.
 

@@ -63,7 +63,8 @@ def prepare(sources, dictionaries, resolver):
     parsed_dictionaries = segment_dictionary.collect(dictionary_inputs)
     graphs = {family: segment_dictionary_trie.prepare(parsed_dictionaries[family])
               for family in segment_dictionary_tables.FAMILIES}
-    inputs = segment_bundle.recipe(sources.pin, tags)
+    inputs = segment_bundle.recipe(sources.manifest['files'],
+                                   dictionaries.identity()['files'], tags)
     identity = segment_bundle.fingerprint(inputs)
     strings = ('',) + tags
     sections = {
@@ -98,8 +99,6 @@ def prepare(sources, dictionaries, resolver):
         'format': 1, 'inputs': inputs, 'fingerprint': identity.hex(),
         'bytes': len(binary), 'sha256': acquire.digest(binary),
         'sources': {name: sources.manifest['files'][name] for name in sorted(cldr.consumed)},
-        'dictionary_files': {name: dictionaries.files[name]['sha256']
-                             for name in sorted(dictionary_inputs.consumed)},
         'corrections': tuple(row._asdict() for row in corrected.corrections),
         'formatter_aliases': aliases,
         'streams': tuple({'kind': row.kind, 'program': row.program,

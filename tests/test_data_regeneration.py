@@ -33,6 +33,7 @@ class RegenerationTests(unittest.TestCase):
         steps = regenerate_intl.commands(args)
         self.assertEqual(steps[0][0], 'segmentation')
         self.assertIn('--compiled-segmentation', steps[2][1])
+        self.assertIn('--segmentation-manifest', steps[2][1])
 
     def test_generator_timeout_is_bounded(self):
         with tempfile.TemporaryDirectory() as temp:

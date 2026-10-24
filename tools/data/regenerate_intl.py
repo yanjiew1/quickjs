@@ -40,7 +40,8 @@ def commands(args):
             '--profile', profile, '--compiled-collation', str(collation),
             '--output', str(output), '--manifest', str(manifest)]
         if profile == 'native':
-            generate += ['--compiled-segmentation', str(segment)]
+            generate += ['--compiled-segmentation', str(segment),
+                         '--segmentation-manifest', str(args.output_dir / 'segmentation-manifest.json')]
         result.append(('generate-' + profile, generate))
         result.append(('verify-' + profile, [sys.executable, str(tools / 'check_data.py')] + selected + [
             '--input', str(output), '--manifest', str(manifest)]))
