@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tools/intl/**'
+      - 'tools/data/**'
       - 'tools/build/**'
       - 'data/**'
       - 'tests/**'
@@ -19,6 +20,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'tools/intl/**'
+      - 'tools/data/**'
       - 'tools/build/**'
       - 'data/**'
       - 'tests/**'
@@ -63,36 +65,29 @@ jobs:
       - name: Prepare the full native Git profile
         run: |
           source_root="$RUNNER_TEMP/intl-cache/cldr-49-git"
-          timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
+          python3 tools/data/generate.py intl \
             --sources "$source_root" --source-pin data/intl/pin-git.json \
-            --profile native --compiler host-tools/intl-collation-compile \
-            --output "$RUNNER_TEMP/git-collation.qjcl"
-          timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
-            --sources "$source_root" --source-pin data/intl/pin-git.json \
+            --profiles native \
             --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
+            --collation-compiler host-tools/intl-collation-compile \
             --property-tool host-tools/intl-segment-property \
-            --output "$RUNNER_TEMP/git-segmentation.qjin" \
-            --manifest "$RUNNER_TEMP/git-segmentation.json" \
-            --license "$RUNNER_TEMP/git-dictionary-license.txt" \
-            --notices "$RUNNER_TEMP/git-dictionary-notices.txt"
-          timeout --kill-after=30s 600s python3 tools/intl/generate.py \
-            --sources "$source_root" --source-pin data/intl/pin-git.json \
-            --profile native --compiled-collation "$RUNNER_TEMP/git-collation.qjcl" \
-            --compiled-segmentation "$RUNNER_TEMP/git-segmentation.qjin" \
-            --segmentation-manifest "$RUNNER_TEMP/git-segmentation.json" \
-            --output "$RUNNER_TEMP/native-git.bin" \
-            --manifest "$RUNNER_TEMP/native-git-manifest.json"
-          python3 tools/intl/check_data.py --sources "$source_root" \
-            --source-pin data/intl/pin-git.json \
-            --input "$RUNNER_TEMP/native-git.bin" \
-            --manifest "$RUNNER_TEMP/native-git-manifest.json"
+            --output-dir "$RUNNER_TEMP/intl-git"
       - uses: actions/upload-artifact@v7
         with:
           name: full-git-intl-data
           path: |
-            ${{ runner.temp }}/native-git.bin
-            ${{ runner.temp }}/native-git-manifest.json
+            ${{ runner.temp }}/intl-git/native.bin
+            ${{ runner.temp }}/intl-git/native-manifest.json
           if-no-files-found: error
+      - name: Preserve full Git generation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: intl-full-git-generation
+          path: |
+            ${{ runner.temp }}/intl-git/*.log
+            ${{ runner.temp }}/intl-git/regeneration-report.json
+          if-no-files-found: ignore
 
   verify:
     name: Full Git locale API validation
@@ -114,10 +109,10 @@ jobs:
           import hashlib, json, os
           from pathlib import Path
           root = Path(os.environ['RUNNER_TEMP']) / 'full-git-intl'
-          manifest = json.loads((root / 'native-git-manifest.json').read_text())
+          manifest = json.loads((root / 'native-manifest.json').read_text())
           pin = json.loads(Path('data/intl/pin-git.json').read_text())['cldr']
           assert manifest['inputs']['cldr'] == pin
-          assert manifest['sha256'] == hashlib.sha256((root / 'native-git.bin').read_bytes()).hexdigest()
+          assert manifest['sha256'] == hashlib.sha256((root / 'native.bin').read_bytes()).hexdigest()
           PYTHON
       - name: Install target build tools
         run: |
@@ -130,7 +125,7 @@ jobs:
           meson setup build -Dwerror=true -Ddocumentation=disabled \
             -Dintl=native -Dtemporal=true -Ddefault_library=both \
             -Dcalendars=native -Dtimezone_backend=native -Dsystem_timezone_policy=utc \
-            -Dintl_data_file="$RUNNER_TEMP/full-git-intl/native-git.bin" \
+            -Dintl_data_file="$RUNNER_TEMP/full-git-intl/native.bin" \
             -Db_sanitize=address,undefined
       - name: Compile selected targets
         id: compile
@@ -160,14 +155,7 @@ jobs:
       - name: Report repository test results
         if: always()
         run: |
-          for stage in repo-unit repo-integration; do
-            log="build/meson-logs/$stage.txt"
-            if test -f "$log"; then
-              printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
-              tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
-              printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
+          sh tools/ci/report_repo_results.sh
       - name: Report per-test timings
         if: always()
         run: |
