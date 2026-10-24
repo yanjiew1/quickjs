@@ -10,6 +10,7 @@ import bundle
 import dayperiod_rules as source
 import dayperiod_tables as wire
 import tables
+from parents import ParentGraph
 from test_intl_dayperiod_rules import Sources
 
 
@@ -43,6 +44,20 @@ class DayPeriodTablesTests(unittest.TestCase):
         # en/sr/hi-Latn share a list without becoming profile locale rows.
         self.assertEqual(unpack(section)[1], 3)
         self.assertIsNone(wire.decode(None, pool))
+
+    def test_projection_uses_prefixes_and_preserves_both_kinds(self):
+        data = source.collect(Sources())
+        graph = ParentGraph(('root', 'en', 'en-GB', 'sr'), {'en-GB': 'sr'}, {},
+                            {'und': 'en-Latn-US'}, (), False)
+        self.assertEqual(tuple(graph.chain('en-GB')), ('en-GB', 'sr', 'root'))
+        selected = wire.select(data, ('en-GB',))
+        # Main data inherits sr here, but supplemental rules still inherit en.
+        self.assertEqual(selected['rows'], tuple(row for row in data['rows']
+                                                 if row[1] in ('en', 'root')))
+        self.assertEqual({kind for kind, tag, rules in selected['rows'] if tag == 'en'},
+                         {'format', 'selection'})
+        _, pool, ids, section = fixture(selected)
+        self.assertEqual(wire.decode(section, pool), selected)
 
     def test_cross_kind_sharing_empty_point_only_and_empty_section(self):
         points = (('midnight','at',0,0),)
