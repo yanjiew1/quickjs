@@ -448,7 +448,7 @@ int main(void)
     data.periods = &periods;
     data.period_rules = &rules;
     data.use_midnight = 1; /* Authored raw-rule checks opt into exact 00:00. */
-    assert(!qjs_intl_number_open(&allocator, &service));
+    assert(!qjs_intl_number_open(&allocator, NULL, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
     for (en = 0; en < count; en++)
         if (tags[en].length == 2 && !memcmp(tags[en].data, "en", 2))
