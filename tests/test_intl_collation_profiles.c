@@ -1,4 +1,4 @@
-/* Exercise storage lookup over every mapping in each prepared root profile.
+/* Exercise storage lookup over every independent raw-source oracle mapping.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/collation/elements.h"
 #include "../src/intl/collation/compare.h"
@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern const uint8_t qjs_intl_native_bytes[];
-extern const size_t qjs_intl_native_length;
+extern const uint8_t qjs_intl_collation_fixture_bytes[];
+extern const size_t qjs_intl_collation_fixture_length;
 
 static void *allocate(void *opaque, size_t size)
 {
@@ -194,7 +194,7 @@ int main(int argc, char **argv)
     QJSIntlCollationContexts contexts;
     uint32_t *key = NULL, index;
     size_t capacity = 0;
-    assert(!qjs_intl_pack_open(qjs_intl_native_bytes, qjs_intl_native_length, &pack));
+    assert(!qjs_intl_pack_open(qjs_intl_collation_fixture_bytes, qjs_intl_collation_fixture_length, &pack));
     assert(!qjs_intl_collation_root_open(&pack, &root));
     assert(!qjs_intl_collation_contexts_open(&pack, &contexts));
     check_settings(&contexts);
