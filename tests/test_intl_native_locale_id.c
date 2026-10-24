@@ -160,7 +160,7 @@ static void test_service(void)
     char *output;
     size_t calls, i;
 
-    assert(qjs_intl_locale_open(&allocator, &service) == QJS_INTL_OK);
+    assert(qjs_intl_locale_open(&allocator, NULL, &service) == QJS_INTL_OK);
     calls = state.calls;
     assert(state.live == 1);
     test_preferences(service, &state);
@@ -200,10 +200,10 @@ static void test_service(void)
     for (i = 1; i <= calls; i++) {
         state.calls = 0;
         state.fail_at = i;
-        assert(qjs_intl_locale_open(&allocator, &service) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_locale_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY);
         assert(!service && !state.live);
     }
-    assert(qjs_intl_locale_open(NULL, &service) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_open(NULL, NULL, &service) == QJS_INTL_INVALID_ARGUMENT);
     assert(!service);
     qjs_intl_locale_close(NULL);
     assert(qjs_intl_locale_canonicalize(NULL, bytes("en"), &output) ==
