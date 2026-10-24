@@ -1,6 +1,7 @@
 /* Executable numeric date text and date-specific UTF-16 parts.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
-#include "../src/intl/datetime/numeric.h"
+#include "../src/intl/datetime/text.h"
+#include "../src/intl/native/data.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
 #include <limits.h>
@@ -94,6 +95,23 @@ static void close_numbers(QJSIntlDateNumberFormats *numbers)
     memset(numbers, 0, sizeof(*numbers));
 }
 
+/* Numeric cases use the same renderer as production; no second numeric-only
+   pattern API is needed. The prepared name view remains alive in main. */
+static QJSIntlDateTextData text_data;
+
+static QJSIntlStatus render_numeric(const QJSIntlAllocator *allocator,
+                                   const QJSIntlDatePattern *pattern,
+                                   const QJSIntlDateNumericFields *local,
+                                   QJSIntlDateHourCycle cycle,
+                                   const QJSIntlDateNumberFormats *numbers,
+                                   size_t limit, QJSIntlFormatted *out)
+{
+    QJSIntlDateCalendarFields fields = {0};
+    fields.numeric = *local;
+    return qjs_intl_date_text_format(allocator, pattern, &fields, local->millisecond != 0,
+                                    cycle, numbers, &text_data, limit, out);
+}
+
 static void check(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,
                    const QJSIntlDateNumericFields *local, const char *source,
                    QJSIntlDateHourCycle cycle, const char *text)
@@ -101,7 +119,7 @@ static void check(const QJSIntlAllocator *allocator, const QJSIntlDateNumberForm
     QJSIntlDatePattern pattern;
     QJSIntlFormatted result;
     assert(!qjs_intl_date_pattern_compile(allocator, bytes(source), &pattern));
-    assert(!qjs_intl_date_numeric_format(allocator, &pattern, local, cycle, numbers, 1000, &result));
+    assert(!render_numeric(allocator, &pattern, local, cycle, numbers, 1000, &result));
     qjs_intl_date_pattern_clear(allocator, &pattern);
     expected(&result, text);
     qjs_intl_formatted_clear(allocator, &result);
@@ -138,7 +156,7 @@ static void test_latn(const QJSIntlAllocator *allocator, const QJSIntlDateNumber
     assert(!qjs_intl_date_pattern_compile(allocator, bytes("yy-MM-dd HH:mm:ss.SSS"), &pattern));
     baseline = state->live;
     state->calls = 0;
-    assert(!qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23, numbers, 1000, &result));
+    assert(!render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23, numbers, 1000, &result));
     calls = state->calls;
     assert(result.part_count == 13 && result.parts[0].type == QJS_INTL_PART_YEAR &&
            result.parts[2].type == QJS_INTL_PART_MONTH && result.parts[4].type == QJS_INTL_PART_DAY &&
@@ -149,23 +167,23 @@ static void test_latn(const QJSIntlAllocator *allocator, const QJSIntlDateNumber
         state->calls = 0;
         state->fail_at = i;
         memset(&result, 0xff, sizeof(result));
-        assert(qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23,
+        assert(render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                            numbers, 1000, &result) == QJS_INTL_NO_MEMORY);
         assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
         state->fail_at = 0;
     }
-    assert(qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23,
+    assert(render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                        numbers, 1, &result) == QJS_INTL_OVERFLOW);
     assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
     local.second = 60;
-    assert(qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23,
+    assert(render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                        numbers, 1000, &result) == QJS_INTL_INVALID_ARGUMENT);
     assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
     local.second = 3;
     {
         QJSIntlDateNumberFormats missing = *numbers;
         missing.two_digit = NULL;
-        assert(qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23,
+        assert(render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                            &missing, 1000, &result) == QJS_INTL_INVALID_ARGUMENT);
         assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
     }
@@ -175,11 +193,11 @@ static void test_latn(const QJSIntlAllocator *allocator, const QJSIntlDateNumber
         check(allocator, &empty, &local, "'literal 😀'", QJS_INTL_DATE_H23, "literal 😀");
     }
     {
-        const char *unsupported[] = {"MMM", "EEEE", "h a", "r(U)", "y G", "z", "Y", "y r"};
+        const char *unsupported[] = {"r(U)", "z", "Y", "y r"};
         for (i = 0; i < sizeof(unsupported) / sizeof(*unsupported); i++) {
             assert(!qjs_intl_date_pattern_compile(allocator, bytes(unsupported[i]), &pattern));
             baseline = state->live;
-            assert(qjs_intl_date_numeric_format(allocator, &pattern, &local, QJS_INTL_DATE_H23,
+            assert(render_numeric(allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                                numbers, 1000, &result) == QJS_INTL_UNSUPPORTED);
             assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
             qjs_intl_date_pattern_clear(allocator, &pattern);
@@ -192,12 +210,17 @@ int main(void)
     Allocation state = {0};
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
     QJSIntlNumberService *service;
+    QJSIntlData prepared;
+    QJSIntlCalendarNameData names;
     const QJSIntlBytes *tags;
     QJSIntlDateNumberFormats numbers;
     QJSIntlDateNumericFields local = {2026, 2026, 10, 20, 0, 2, 3, 987};
     QJSIntlDatePattern pattern;
     QJSIntlFormatted result;
     size_t locale, count;
+    assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, &allocator, &prepared));
+    assert(!qjs_intl_calendar_name_data_open(&prepared, &allocator, &names));
+    text_data.names = &names;
     assert(!qjs_intl_number_open(&allocator, NULL, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
     for (locale = 0; locale < count; locale++)
@@ -215,11 +238,11 @@ int main(void)
     {
         QJSIntlFormatted zero = {0};
         size_t baseline = state.live;
-        assert(qjs_intl_date_numeric_format(&allocator, &pattern, &local, QJS_INTL_DATE_H23,
+        assert(render_numeric(&allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                            &numbers, 13, &result) == QJS_INTL_OVERFLOW);
         assert(!memcmp(&result, &zero, sizeof(result)) && state.live == baseline);
     }
-    assert(!qjs_intl_date_numeric_format(&allocator, &pattern, &local, QJS_INTL_DATE_H23,
+    assert(!render_numeric(&allocator, &pattern, &local, QJS_INTL_DATE_H23,
                                        &numbers, 14, &result));
     assert(result.parts[0].end == 4); /* Two supplementary code points. */
     qjs_intl_date_pattern_clear(&allocator, &pattern);
