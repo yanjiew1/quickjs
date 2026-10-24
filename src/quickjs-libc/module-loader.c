@@ -154,24 +154,13 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
 
 static int json_module_init(JSContext *ctx, JSModuleDef *m)
 {
-    JSValue val;
-    val = JS_GetModulePrivateValue(ctx, m);
-    JS_SetModuleExport(ctx, m, "default", val);
-    return 0;
+    return JS_SetModuleExport(ctx, m, "default",
+                              JS_GetModulePrivateValue(ctx, m));
 }
 
 JSModuleDef *create_json_module(JSContext *ctx, const char *module_name, JSValue val)
 {
-    JSModuleDef *m;
-    m = JS_NewCModule(ctx, module_name, json_module_init);
-    if (!m) {
-        JS_FreeValue(ctx, val);
-        return NULL;
-    }
-    /* only export the "default" symbol which will contain the JSON object */
-    JS_AddModuleExport(ctx, m, "default");
-    JS_SetModulePrivateValue(ctx, m, val);
-    return m;
+    return create_json_module2(ctx, module_name, val, JS_UNDEFINED);
 }
 
 /* Consume val; borrow attributes for explicit preload identity. */
@@ -181,6 +170,7 @@ JSModuleDef *create_json_module2(JSContext *ctx, const char *module_name,
     JSModuleDef *m;
 
     m = JS_NewCModule2(ctx, module_name, json_module_init, attributes);
+    /* only export the "default" symbol which will contain the JSON object */
     if (!m || JS_AddModuleExport(ctx, m, "default") < 0) {
         JS_FreeValue(ctx, val);
         return NULL;
