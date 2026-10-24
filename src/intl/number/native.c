@@ -1043,16 +1043,28 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
     }
     if (!status) {
         unsigned int affix_form = complete_currency ? COMPACT_SIGN_FORM + form : form;
+        const QJSIntlNumberPatternToken *tokens = formatter->tokens + formatter->offsets[affix_form];
+        size_t count = formatter->counts[affix_form];
+        QJSIntlFormatted *target = formatter->currency_name || formatter->unit.active ? &signed_body : out;
         symbols = formatter->symbols;
         if (complete_currency)
             symbols.before_currency = symbols.after_currency = (QJSIntlBytes){0};
         else
             filter_spacing(&symbols, &body);
-        status = qjs_intl_number_affix_format(
-            &formatter->allocator, formatter->tokens + formatter->offsets[affix_form],
-            formatter->counts[affix_form], &symbols, &body,
-            form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
-            formatter->currency_name || formatter->unit.active ? &signed_body : out);
+        if (count == 1 && tokens[0].kind == QJS_INTL_NUMBER_TOKEN_NUMBER &&
+            !tokens[0].text.length && form != QJS_INTL_NUMBER_PATTERN_PLUS &&
+            body.text && body.length && body.parts && body.part_count &&
+            body.length <= formatter->body.maximum_output_length) {
+            /* The selected pattern adds nothing to our already owned result.
+               Transfer it here; the general affix API keeps borrowing input. */
+            *target = body;
+            memset(&body, 0, sizeof(body));
+        } else {
+            status = qjs_intl_number_affix_format(
+                &formatter->allocator, tokens, count, &symbols, &body,
+                form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
+                target);
+        }
     }
     if (!status && formatter->currency_name) {
         QJSIntlPluralCategory category = QJS_INTL_PLURAL_OTHER;
