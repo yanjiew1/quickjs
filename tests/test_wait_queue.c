@@ -37,25 +37,51 @@ static void finish(JSNativeWaitOwner *owner, JSNativeWaiter *waiter)
     assert(js_native_wait_retire(owner, waiter));
 }
 
+/* A foreign notifier never receives an inline result or reads owner storage. */
+static size_t notify_foreign(JSNativeWaitQueue *queue, const void *location,
+                             size_t count)
+{
+    JSNativeWaiter *inline_waiter;
+    size_t notified = 0;
+
+    js_native_wait_queue_lock(queue);
+    while (notified < count &&
+           js_native_wait_notify_one_locked(queue, location, NULL,
+                                            &inline_waiter)) {
+        assert(!inline_waiter);
+        notified++;
+    }
+    js_native_wait_queue_unlock(queue);
+    return notified;
+}
+
+/* Wait-only cases use the same event selector as production; mixed FIFO cases
+   below inspect its generic-event output directly. */
+static JSNativeWaitResult execute_wait(JSNativeWaitOwner *owner,
+                                      long double now_ns,
+                                      JSNativeWaiter **waiter)
+{
+    JSNativeWaitEvent *generic;
+    JSNativeWaitResult result;
+
+    result = js_native_wait_execute_next(owner, now_ns, waiter, &generic);
+    assert(!generic && result != JS_NATIVE_WAIT_GENERIC_JOB);
+    return result;
+}
+
 static void *notify_thread(void *opaque)
 {
     TestNotify *test = opaque;
-    JSNativeWaiter *inline_waiters;
-    test->notified = js_native_wait_notify(test->queue, test->location,
-                                          test->count, NULL, &inline_waiters);
-    assert(!inline_waiters);
+    test->notified = notify_foreign(test->queue, test->location, test->count);
     return NULL;
 }
 
 static void *notify_race_thread(void *opaque)
 {
     TestNotify *test = opaque;
-    JSNativeWaiter *inline_waiters;
     atomic_store(&test->started, 1);
     while (!atomic_load(&test->stop)) {
-        js_native_wait_notify(test->queue, test->location, SIZE_MAX,
-                               NULL, &inline_waiters);
-        assert(!inline_waiters);
+        notify_foreign(test->queue, test->location, SIZE_MAX);
     }
     return NULL;
 }
@@ -94,9 +120,7 @@ static void test_mixed_fifo(void)
            JS_NATIVE_WAIT_NO_EVENT);
     js_native_wait_queue_unlock(&queue);
     add_wait(&queue, &owner, &last, &location, JS_NATIVE_WAIT_FOREVER);
-    assert(js_native_wait_notify(&queue, &location, 2, NULL,
-                                  &inline_waiters) == 2);
-    assert(!inline_waiters);
+    assert(notify_foreign(&queue, &location, 2) == 2);
     assert(first.state == JS_NATIVE_WAIT_NOTIFIED);
     assert(sync.state == JS_NATIVE_WAIT_NOTIFIED);
     assert(last.state == JS_NATIVE_WAIT_LINKED);
@@ -104,13 +128,15 @@ static void test_mixed_fifo(void)
     assert(js_native_wait_finish_sync_locked(&queue, &sync, 1) ==
            JS_NATIVE_WAIT_OK);
     js_native_wait_queue_unlock(&queue);
-    assert(js_native_wait_execute_next(&owner, 0, &completed) ==
+    assert(execute_wait(&owner, 0, &completed) ==
            JS_NATIVE_WAIT_OK && completed == &first);
     finish(&owner, completed);
-    assert(js_native_wait_notify(&queue, &location, 1, &owner,
-                                  &inline_waiters) == 1);
-    assert(inline_waiters == &last && !inline_waiters->inline_next);
+    js_native_wait_queue_lock(&queue);
+    assert(js_native_wait_notify_one_locked(&queue, &location, &owner,
+                                            &inline_waiters));
+    assert(inline_waiters == &last);
     finish(&owner, &last);
+    js_native_wait_queue_unlock(&queue);
     assert(!js_native_wait_owner_close(&owner));
     pthread_cond_destroy(&condition);
     js_native_wait_queue_destroy(&queue);
@@ -120,22 +146,22 @@ static void test_expiry_is_not_selection(void)
 {
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
-    JSNativeWaiter waiter, *completed, *inline_waiters;
+    JSNativeWaiter waiter, *completed;
     int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
-    assert(js_native_wait_next_deadline(&owner) == 100);
+    assert(js_native_wait_next_delay(&owner, 0) ==
+           nextafterl(100.0L / 1000000.0L, INFINITY));
     assert(!js_native_wait_schedule_timeouts(&owner, 99));
     assert(js_native_wait_schedule_timeouts(&owner, 100) == 1);
     assert(!js_native_wait_schedule_timeouts(&owner, 101));
     assert(waiter.state == JS_NATIVE_WAIT_LINKED);
-    assert(js_native_wait_notify(&queue, &location, 1, NULL,
-                                  &inline_waiters) == 1);
+    assert(notify_foreign(&queue, &location, 1) == 1);
     /* The timeout job precedes the foreign resolution job and is a no-op. */
-    assert(js_native_wait_execute_next(&owner, 101, &completed) ==
+    assert(execute_wait(&owner, 101, &completed) ==
            JS_NATIVE_WAIT_EVENT_NOOP && completed == &waiter);
-    assert(js_native_wait_execute_next(&owner, 101, &completed) ==
+    assert(execute_wait(&owner, 101, &completed) ==
            JS_NATIVE_WAIT_OK && completed == &waiter);
     finish(&owner, &waiter);
     assert(!js_native_wait_owner_close(&owner));
@@ -152,12 +178,14 @@ static void test_inline_notify_keeps_timeout_token_alive(void)
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
     assert(js_native_wait_schedule_timeouts(&owner, 100) == 1);
-    assert(js_native_wait_notify(&queue, &location, 1, &owner,
-                                  &inline_waiters) == 1);
+    js_native_wait_queue_lock(&queue);
+    assert(js_native_wait_notify_one_locked(&queue, &location, &owner,
+                                            &inline_waiters));
     assert(inline_waiters == &waiter);
     js_native_wait_complete(&owner, &waiter);
     assert(!js_native_wait_retire(&owner, &waiter));
-    assert(js_native_wait_execute_next(&owner, 100, &completed) ==
+    js_native_wait_queue_unlock(&queue);
+    assert(execute_wait(&owner, 100, &completed) ==
            JS_NATIVE_WAIT_EVENT_NOOP && completed == &waiter);
     assert(js_native_wait_retire(&owner, &waiter));
     assert(!js_native_wait_owner_close(&owner));
@@ -168,16 +196,15 @@ static void test_timeout_selection_wins(void)
 {
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
-    JSNativeWaiter waiter, *completed, *inline_waiters;
+    JSNativeWaiter waiter, *completed;
     int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
     assert(js_native_wait_schedule_timeouts(&owner, 100) == 1);
-    assert(js_native_wait_execute_next(&owner, 100, &completed) ==
+    assert(execute_wait(&owner, 100, &completed) ==
            JS_NATIVE_WAIT_TIMEOUT && completed == &waiter);
-    assert(!js_native_wait_notify(&queue, &location, SIZE_MAX, NULL,
-                                   &inline_waiters));
+    assert(!notify_foreign(&queue, &location, SIZE_MAX));
     finish(&owner, &waiter);
     assert(!js_native_wait_owner_close(&owner));
     js_native_wait_queue_destroy(&queue);
@@ -203,11 +230,11 @@ static void test_owner_wake_and_coalescing(void)
     assert_wake(&owner, 1);
     assert(!pthread_join(thread, NULL));
     assert(test.notified == 2);
-    assert(js_native_wait_execute_next(&owner, 0, &completed) ==
+    assert(execute_wait(&owner, 0, &completed) ==
            JS_NATIVE_WAIT_OK && completed == &first);
     finish(&owner, &first);
     assert_wake(&owner, 1);
-    assert(js_native_wait_execute_next(&owner, 0, &completed) ==
+    assert(execute_wait(&owner, 0, &completed) ==
            JS_NATIVE_WAIT_OK && completed == &second);
     finish(&owner, &second);
     assert_wake(&owner, 0);
@@ -220,23 +247,21 @@ static void test_close_detaches_both_event_slots(void)
 {
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
-    JSNativeWaiter first, second, *inline_waiters, *closed;
+    JSNativeWaiter first, second, *closed;
     int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &first, &location, 100);
     add_wait(&queue, &owner, &second, &location, 100);
     assert(js_native_wait_schedule_timeouts(&owner, 100) == 2);
-    assert(js_native_wait_notify(&queue, &location, 1, NULL,
-                                  &inline_waiters) == 1);
+    assert(notify_foreign(&queue, &location, 1) == 1);
     closed = js_native_wait_owner_close(&owner);
     assert(closed == &first && closed->owner_next == &second);
     assert(first.state == JS_NATIVE_WAIT_CANCELLED);
     assert(second.state == JS_NATIVE_WAIT_CANCELLED);
     assert(!first.notify_event.queued && !first.timeout_event.queued);
     assert(!second.notify_event.queued && !second.timeout_event.queued);
-    assert(!js_native_wait_notify(&queue, &location, SIZE_MAX, NULL,
-                                   &inline_waiters));
+    assert(!notify_foreign(&queue, &location, SIZE_MAX));
     js_native_wait_queue_destroy(&queue);
 }
 
@@ -272,22 +297,22 @@ static void test_distinct_locations_and_zero_count(void)
 {
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
-    JSNativeWaiter first, second, *completed, *inline_waiters;
+    JSNativeWaiter first, second, *completed;
     int location[2];
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &first, &location[0], 500);
     add_wait(&queue, &owner, &second, &location[1], 100);
-    assert(js_native_wait_next_deadline(&owner) == 100);
-    assert(!js_native_wait_notify(&queue, &location[0], 0, NULL,
-                                   &inline_waiters));
-    assert(js_native_wait_notify(&queue, &location[1], SIZE_MAX, NULL,
-                                  &inline_waiters) == 1);
+    assert(js_native_wait_next_delay(&owner, 0) ==
+           nextafterl(100.0L / 1000000.0L, INFINITY));
+    assert(!notify_foreign(&queue, &location[0], 0));
+    assert(notify_foreign(&queue, &location[1], SIZE_MAX) == 1);
     assert(first.state == JS_NATIVE_WAIT_LINKED);
-    assert(js_native_wait_execute_next(&owner, 0, &completed) ==
+    assert(execute_wait(&owner, 0, &completed) ==
            JS_NATIVE_WAIT_OK && completed == &second);
     finish(&owner, &second);
-    assert(js_native_wait_next_deadline(&owner) == 500);
+    assert(js_native_wait_next_delay(&owner, 0) ==
+           nextafterl(500.0L / 1000000.0L, INFINITY));
     assert(js_native_wait_owner_close(&owner) == &first);
     js_native_wait_queue_destroy(&queue);
 }
@@ -296,7 +321,7 @@ static void test_generic_jobs_share_exact_fifo(void)
 {
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
-    JSNativeWaiter waiter, *completed, *inline_waiters;
+    JSNativeWaiter waiter, *completed;
     JSNativeWaitEvent first, middle, last, *generic;
     int location = 0, jobs[3] = { 0 };
     assert(!js_native_wait_queue_init(&queue));
@@ -305,20 +330,19 @@ static void test_generic_jobs_share_exact_fifo(void)
     js_native_wait_enqueue_generic(&owner, &first, &jobs[0], 1);
     assert(js_native_wait_schedule_timeouts(&owner, 100) == 1);
     js_native_wait_enqueue_generic(&owner, &middle, &jobs[1], 0);
-    assert(js_native_wait_notify(&queue, &location, 1, NULL,
-                                  &inline_waiters) == 1);
+    assert(notify_foreign(&queue, &location, 1) == 1);
     js_native_wait_enqueue_generic(&owner, &last, &jobs[2], 0);
-    assert(js_native_wait_execute_next2(&owner, 100, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 100, &completed, &generic) ==
            JS_NATIVE_WAIT_GENERIC_JOB && generic == &first);
     assert(generic->generic_job == &jobs[0] && generic->initial_job);
-    assert(js_native_wait_execute_next2(&owner, 100, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 100, &completed, &generic) ==
            JS_NATIVE_WAIT_EVENT_NOOP && completed == &waiter);
-    assert(js_native_wait_execute_next2(&owner, 100, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 100, &completed, &generic) ==
            JS_NATIVE_WAIT_GENERIC_JOB && generic == &middle);
-    assert(js_native_wait_execute_next2(&owner, 100, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 100, &completed, &generic) ==
            JS_NATIVE_WAIT_OK && completed == &waiter);
     finish(&owner, completed);
-    assert(js_native_wait_execute_next2(&owner, 100, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 100, &completed, &generic) ==
            JS_NATIVE_WAIT_GENERIC_JOB && generic == &last);
     assert(!js_native_wait_has_events(&owner));
     assert(!js_native_wait_owner_close(&owner));
@@ -349,9 +373,9 @@ static void test_recursive_owner_append_and_fractional_deadline(void)
                                              &completed));
     assert(!completed);
     js_native_wait_queue_unlock(&queue);
-    assert(js_native_wait_execute_next2(&owner, 101, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 101, &completed, &generic) ==
            JS_NATIVE_WAIT_GENERIC_JOB && generic == &reaction);
-    assert(js_native_wait_execute_next2(&owner, 101, &completed, &generic) ==
+    assert(js_native_wait_execute_next(&owner, 101, &completed, &generic) ==
            JS_NATIVE_WAIT_OK && completed == &second);
     finish(&owner, completed);
     js_native_wait_enqueue_generic(&owner, &reaction, &job, 0);
@@ -375,7 +399,6 @@ static void test_finite_huge_and_fractional_relative_timeouts(void)
                                        &owner, 0, DBL_MAX);
     js_native_wait_queue_unlock(&queue);
     assert(js_native_wait_next_delay(&owner, 0) == (long double)DBL_MAX);
-    assert(isfinite(js_native_wait_next_deadline(&owner)));
     js_native_wait_queue_lock(&queue);
     js_native_wait_add_relative_locked(&queue, &fraction, &locations[1],
                                        &owner, 0, 0.5);

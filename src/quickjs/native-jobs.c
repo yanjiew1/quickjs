@@ -162,7 +162,7 @@ int js_native_jobs_next(JSRuntime *rt, void **job, JSContext **pctx)
         now = 0;
     }
     js_native_wait_schedule_timeouts(&owner->native, now);
-    result = js_native_wait_execute_next2(&owner->native, now, &waiter, &event);
+    result = js_native_wait_execute_next(&owner->native, now, &waiter, &event);
     if (result == JS_NATIVE_WAIT_NO_EVENT)
         return 0;
     if (result == JS_NATIVE_WAIT_GENERIC_JOB) {

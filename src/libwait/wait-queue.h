@@ -92,7 +92,6 @@ struct JSNativeWaiter {
     JSNativeWaiter *wait_next;
     JSNativeWaiter *owner_prev;
     JSNativeWaiter *owner_next;
-    JSNativeWaiter *inline_next;
     JSNativeWaitOwner *owner;
     pthread_cond_t *sync_condition;
     const void *location;
@@ -147,14 +146,9 @@ long double js_native_wait_next_delay(JSNativeWaitOwner *owner,
 JSNativeWaitResult js_native_wait_finish_sync_locked(JSNativeWaitQueue *queue,
                                                     JSNativeWaiter *waiter,
                                                     int deadline_reached);
-/* Select synchronous and asynchronous waits in one FIFO. Same-agent async
-   completions return in inline_first and must be resolved before notify
-   returns. Foreign completions queue only embedded native tokens. */
-size_t js_native_wait_notify(JSNativeWaitQueue *queue, const void *location,
-                              size_t count, JSNativeWaitOwner *calling_owner,
-                              JSNativeWaiter **inline_first);
-/* Select exactly one waiter. The owner builtin resolves an inline result
-   before selecting the next waiter, still in this critical section. */
+/* Select one synchronous or asynchronous wait in FIFO order. The owner
+   builtin resolves a same-agent inline result before selecting another waiter,
+   still under this lock. Foreign selections queue only embedded native tokens. */
 int js_native_wait_notify_one_locked(JSNativeWaitQueue *queue,
                                      const void *location,
                                      JSNativeWaitOwner *calling_owner,
@@ -163,13 +157,9 @@ int js_native_wait_notify_one_locked(JSNativeWaitQueue *queue,
    after timer expiry but before the owner executes its timeout job can win. */
 size_t js_native_wait_schedule_timeouts(JSNativeWaitOwner *owner,
                                        long double now_ns);
-long double js_native_wait_next_deadline(JSNativeWaitOwner *owner);
 /* Called at owner-job execution, not at generic host ingestion. The caller
    may now use waiter->owner_data. An obsolete timeout returns EVENT_NOOP. */
 JSNativeWaitResult js_native_wait_execute_next(JSNativeWaitOwner *owner,
-                                              long double now_ns,
-                                              JSNativeWaiter **waiter);
-JSNativeWaitResult js_native_wait_execute_next2(JSNativeWaitOwner *owner,
                                                long double now_ns,
                                                JSNativeWaiter **waiter,
                                                JSNativeWaitEvent **generic);
