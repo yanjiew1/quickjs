@@ -15,6 +15,8 @@ import tempfile
 import urllib.error
 import urllib.request
 
+ROOT = Path(__file__).resolve().parents[2]
+PIN = ROOT / 'data' / 'timezone' / 'pin.json'
 MAX_DOWNLOAD = 8 * 1024 * 1024
 
 
@@ -90,13 +92,13 @@ def main():
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
     args = parser.parse_args()
-    pin = json.loads(Path(__file__).with_name('pin.json').read_text())
+    pin = json.loads(PIN.read_text())
     tz = pin['tz']
     archive = fetch(args.cache / ('tz-' + tz['release'] + '.tar.gz'),
                     tz['archive'], args.offline)
     extract_sources(archive, args.cache / ('tz-' + tz['release']),
                     tz['release'], tz['files'])
-    metadata = Path(__file__).resolve().parents[2] / 'data' / 'timezone' / 'sources' / 'cldr'
+    metadata = ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
     for name, source in pin['cldr']['files'].items():
         if digest((metadata / name).read_bytes()) != source['sha256']:
             raise ValueError('vendored CLDR source differs from pin: ' + name)

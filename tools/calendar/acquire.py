@@ -15,6 +15,7 @@ import urllib.request
 
 TOOLS = Path(__file__).resolve().parent
 SOURCES = TOOLS.parents[1] / 'data' / 'calendar' / 'sources'
+PIN = SOURCES.parent / 'pin.json'
 MAX_DOWNLOAD = 8 * 1024 * 1024
 
 
@@ -59,7 +60,7 @@ def fetch(path, source, offline=False):
 
 
 def checked_sources():
-    pin = json.loads((TOOLS / 'pin.json').read_text())
+    pin = json.loads(PIN.read_text())
     if pin['schema'] != 1:
         raise ValueError('unsupported calendar pin schema')
     for name, item in pin['sources'].items():

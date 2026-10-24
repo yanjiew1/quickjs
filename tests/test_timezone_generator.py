@@ -123,7 +123,7 @@ class AcquisitionTests(unittest.TestCase):
             self.assertEqual(list(target.iterdir()), [])
 
     def test_pinned_metadata_is_present_and_unchanged(self):
-        pin = json.loads((TOOLS / 'pin.json').read_text())
+        pin = json.loads((ROOT / 'data' / 'timezone' / 'pin.json').read_text())
         self.assertEqual(pin['tz']['tag'], pin['tz']['release'])
         for name, source in pin['cldr']['files'].items():
             data = (ROOT / 'data' / 'timezone' / 'sources' / 'cldr' / name).read_bytes()
@@ -321,7 +321,7 @@ class BundleTests(unittest.TestCase):
         data = ROOT / 'data' / 'timezone'
         binary = (data / 'timezone-data.bin').read_bytes()
         manifest = json.loads((data / 'timezone-data-manifest.json').read_text())
-        pin = json.loads((TOOLS / 'pin.json').read_text())
+        pin = json.loads((ROOT / 'data' / 'timezone' / 'pin.json').read_text())
         decoded = bundle.unpack(binary)
         self.assertEqual(sha256(binary), manifest['data_sha256'])
         self.assertEqual(len(binary), manifest['binary_size'])

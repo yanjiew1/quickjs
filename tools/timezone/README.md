@@ -1,6 +1,7 @@
 # Native timezone source inputs
 
-`pin.json` selects released **IANA tzdata 2026e** and **CLDR 49 common release XML**.
+[`data/timezone/pin.json`](../../data/timezone/pin.json) selects released
+**IANA tzdata 2026e** and **CLDR 49 common release XML**.
 The IANA Git tag resolves to `039ef27cc5f062a2055cb67435d6d71adbefd27d`.
 CLDR is pinned to `96e54b273d2da4ec6fbad350ba19ff23fa24a588`.
 The vendored BCP47 aliases and Windows mappings are exact members of the
