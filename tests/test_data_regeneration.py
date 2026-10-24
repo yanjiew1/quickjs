@@ -24,7 +24,7 @@ class RegenerationTests(unittest.TestCase):
                                dictionaries=None, property_tool=None)
         steps = regenerate_intl.commands(args)
         self.assertEqual([label for label, _ in steps],
-                         ['collation-minimal', 'generate-minimal', 'verify-minimal'])
+                         ['collation-minimal', 'generate-minimal', 'verify-minimal', 'collation-oracle'])
         for _, command in steps:
             self.assertEqual(command[command.index('--source-pin') + 1], str(args.source_pin))
         self.assertNotIn('--compiled-segmentation', steps[1][1])
