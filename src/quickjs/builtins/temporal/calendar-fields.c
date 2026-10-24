@@ -397,7 +397,8 @@ int js_temporal_time_zones_equal(JSContext *ctx,
     QJSTemporalZone first, second;
     if (js_temporal_time_zone_to_native(ctx, one, &first) ||
         js_temporal_time_zone_to_native(ctx, two, &second)) return -1;
-    return js_temporal_calendar_error(ctx, qjs_temporal_zones_equal(&first, &second, result));
+    *result = qjs_temporal_zones_equal(&first, &second);
+    return 0;
 }
 typedef struct JSTemporalOffsetMatch {
     QJSTemporalEpochNs wall, epoch;
