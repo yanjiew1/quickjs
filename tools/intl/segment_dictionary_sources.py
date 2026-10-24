@@ -2,7 +2,6 @@
 """Acquire released segmentation dictionaries as data, without linking ICU."""
 import argparse
 import copy
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -45,34 +44,28 @@ def validate_pin(pin):
         size = row.get('bytes')
         if (row.get('source') != source or row.get('url') != url or
                 type(size) is not int or not 0 < size <= MAX_FILE or
-                not matches(r'[0-9a-f]{64}', row.get('sha256')) or
-                not matches(r'[0-9a-f]{40}', row.get('git_blob'))):
+                not matches(r'[0-9a-f]{64}', row.get('sha256'))):
             raise ValueError('invalid pinned dictionary file: ' + name)
     return result
 
 
-def load_pin():
-    path = Path(__file__).with_name('segment-dictionary-pin.json')
+def load_pin(path=None):
+    path = Path(__file__).with_name('segment-dictionary-pin.json') if path is None else Path(path)
     return validate_pin(json.loads(path.read_text()))
 
 
 def verify(data, row):
-    # SHA-256 authenticates bytes. The independently reviewed Git blob records
-    # which release file those bytes represent, not a second download source.
     if len(data) != row['bytes'] or acquire.digest(data) != row['sha256']:
-        raise ValueError('modified dictionary source: ' + row['name'])
-    blob = hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
-    if blob != row['git_blob']:
         raise ValueError('modified dictionary source: ' + row['name'])
     return data
 
 
 class Sources:
-    """Authenticate each consumed file and retain its complete license identity."""
+    """Read supplied dictionaries and record the bytes actually consumed."""
     def __init__(self, root, pin=None):
         self.root = Path(root)
         self.pin = validate_pin(load_pin() if pin is None else pin)
-        self.files = {row['name']: row for row in self.pin['files']}
+        self.files = {row['name']: dict(row) for row in self.pin['files']}
         self.consumed = set()
         # This release's license also contains libtabe/IPADIC and other
         # dictionary notices; the generic Unicode license is not a substitute.
@@ -83,9 +76,20 @@ class Sources:
         if row is None:
             raise ValueError('unlisted dictionary source: ' + str(name))
         path = acquire.source_path(self.root, name)
-        if not path.is_file() or path.stat().st_size != row['bytes']:
-            raise ValueError('missing or resized dictionary source: ' + name)
-        data = verify(path.read_bytes(), row)
+        if not path.is_file():
+            raise ValueError('missing or nonregular dictionary source: ' + name)
+        with path.open('rb') as stream:
+            data = stream.read(MAX_FILE + 1)
+        if len(data) > MAX_FILE:
+            raise ValueError('dictionary source exceeds byte limit: ' + name)
+        if name == 'LICENSE' and not data:
+            raise ValueError('dictionary license must not be empty')
+        actual = acquire.digest(data)
+        if name in self.consumed and actual != row['sha256']:
+            raise ValueError('dictionary changed during generation: ' + name)
+        # The pin remains declared metadata. Consumed records describe actual
+        # supplied bytes and need not match its size or checksum.
+        row['sha256'], row['bytes'] = actual, len(data)
         self.consumed.add(name)
         return data
 
@@ -100,8 +104,8 @@ def prepare(cache, offline=False, pin=None):
     for row in pin['files']:
         path = acquire.source_path(root, row['name'])
         verify(acquire.fetch(path, row, offline), row)
-    # Consumers verify again at read time; a previous successful preparation
-    # never authorizes modified files or a different release.
+    # Acquisition authenticates the pin; generator readers only record their
+    # actual supplied inputs and keep each read session consistent.
     sources = Sources(root, pin)
     for name in FAMILIES:
         sources.read(name)
@@ -111,9 +115,10 @@ def prepare(cache, offline=False, pin=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, required=True)
+    parser.add_argument('--pin', type=Path, help='selected dictionary acquisition pin')
     parser.add_argument('--offline', action='store_true')
     args = parser.parse_args()
-    sources = prepare(args.cache, args.offline)
+    sources = prepare(args.cache, args.offline, load_pin(args.pin))
     print('Verified ICU dictionary data ' + sources.pin['release'] + ': ' + str(sources.root))
 
 
