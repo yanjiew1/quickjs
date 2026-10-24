@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit a generated pack's registry and global metadata against pinned sources.
+"""Audit a generated pack's registry and global metadata against supplied sources.
 
 Runtime readers check wire structure; this host check separately proves that
 projection did not drop a source locale or global numbering-preference binding.
@@ -19,7 +19,7 @@ def verify(sources, binary, manifest):
     pin = sources.pin
     if (manifest['inputs']['cldr'] != pin or manifest['sha256'] != acquire.digest(binary) or
             manifest['bytes'] != len(binary)):
-        raise ValueError('prepared pack differs from source pin or manifest')
+        raise ValueError('prepared pack differs from source metadata or manifest')
     generation = acquire.digest(acquire.json_bytes(manifest['inputs']))
     decoded = tables.validate(binary)
     envelope = decoded['envelope']
