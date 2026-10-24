@@ -119,9 +119,13 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
     collation_context_data = collation_contexts.collect(inputs_read, collation_data)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
-    # Only formatter locale rows are reduced for minimal. Global identity,
-    # preferences and timezone metadata retain their full source coverage.
+    # Formatter defaults use matched locale identities. Keep global Locale
+    # identity/region facts and every explicit numbering definition separately.
     selected_tags = set(tags)
+    if profile == 'minimal':
+        numbering_data['locales'] = tuple(row for row in numbering_data['locales']
+                                          if row[0] in selected_tags)
+        dayperiod_data = dayperiod_tables.select(dayperiod_data, tags)
     symbol_data['rows'] = tuple(row for row in symbol_data['rows'] if row[0] in selected_tags)
     pattern_data['rows'] = tuple(row for row in pattern_data['rows'] if row[0] in selected_tags)
     pattern_data['grouping'] = tuple(row for row in pattern_data['grouping'] if row[0] in selected_tags)
