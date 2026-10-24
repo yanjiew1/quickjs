@@ -1,3 +1,10 @@
+Historical upstream ideas
+=========================
+
+This inherited list is not the fork's current roadmap or feature inventory.
+Some entries describe mechanisms already implemented here; check the current
+source, tests and BUILDING.md before selecting work from it.
+
 Misc ideas:
 - use custom printf to avoid compatibility issues with floating point numbers
 - consistent naming for preprocessor defines
