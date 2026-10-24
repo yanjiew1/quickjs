@@ -24,7 +24,9 @@ typedef struct QJSIntlSegment {
 
 /* Open copies the allocator; its opaque owner outlives every handle. Failures
    reset *out; closing NULL is safe. No JS callbacks or input ownership transfer. */
-QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *, QJSIntlSegmentService **out);
+QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator,
+                                    const struct QJSIntlData *checked_data,
+                                    QJSIntlSegmentService **out);
 void qjs_intl_segment_close(QJSIntlSegmentService *);
 /* Borrow a canonical sorted locale inventory until service close. This is
    executable coverage of this service, not the generic locale metadata list. */
