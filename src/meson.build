@@ -80,7 +80,7 @@ support_library_sources = files(
   'unicode/libunicode.c',
   'cutils/cutils.c',
 )
-support_sources = support_library_sources + files(
+host_service_sources = files(
   'quickjs-libc/event-loop.c',
   'quickjs-libc/host.c',
   'quickjs-libc/module-loader.c',
@@ -88,6 +88,8 @@ support_sources = support_library_sources + files(
   'quickjs-libc/std.c',
   'quickjs-libc/worker.c',
 )
+
+support_sources = support_library_sources + host_service_sources
 
 # Immutable generated tables have one object owner outside LTO.
 data_sources = []
