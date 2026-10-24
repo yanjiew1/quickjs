@@ -8,12 +8,15 @@ import argparse
 import hashlib
 import io
 import json
-import os
 from pathlib import Path
 import tarfile
-import tempfile
-import urllib.error
-import urllib.request
+
+import sys
+
+# Keep sibling generator imports ahead of the shared maintenance helpers.
+sys.path.append(str(Path(__file__).resolve().parents[1] / 'data'))
+from _support import io as data_io
+from _support.io import write_atomic as atomic_write
 
 ROOT = Path(__file__).resolve().parents[2]
 PIN = ROOT / 'data' / 'timezone' / 'pin.json'
@@ -29,41 +32,20 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def atomic_write(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    name = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=str(path.parent), delete=False) as f:
-            name = f.name
-            f.write(data)
-        os.replace(name, str(path))
-        name = None
-    finally:
-        if name is not None:
-            os.unlink(name)
-
-
 def fetch(path, source, offline=False):
     expected = source['sha256']
     if path.is_file():
-        with path.open('rb') as source_file:
-            cached = source_file.read(MAX_DOWNLOAD + 1)
-        if len(cached) <= MAX_DOWNLOAD and digest(cached) == expected:
+        try:
+            cached = data_io.read_bytes(path, MAX_DOWNLOAD)
+        except ValueError:
+            cached = None
+        if cached is not None and digest(cached) == expected:
             return cached
     if offline:
         raise ValueError('missing or modified pinned input: ' + str(path))
     if not source['url'].startswith('https://'):
         raise ValueError('source URL must use HTTPS')
-    for attempt in range(3):
-        try:
-            request = urllib.request.Request(source['url'],
-                                             headers={'User-Agent': 'QuickJS-data-generator'})
-            with urllib.request.urlopen(request, timeout=30) as response:
-                data = response.read(MAX_DOWNLOAD + 1)
-            break
-        except (OSError, urllib.error.URLError):
-            if attempt == 2:
-                raise
+    data = data_io.download_bytes(source['url'], MAX_DOWNLOAD)
     if len(data) > MAX_DOWNLOAD or digest(data) != expected:
         raise ValueError('download differs from source pin: ' + source['url'])
     atomic_write(path, data)
