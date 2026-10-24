@@ -190,6 +190,33 @@ function test_duration_rounding() {
 }
 
 function test_relative_duration() {
+    // These ISO cases also cover the internal relative-arithmetic entry points.
+    const start = Temporal.PlainDateTime.from("2024-01-01");
+    const end = Temporal.PlainDateTime.from("2024-02-01");
+    const difference = start.until(end, {
+        largestUnit: "month", smallestUnit: "day", roundingMode: "trunc",
+    });
+    check(difference, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert(difference.total({ unit: "month", relativeTo: start }), 1);
+    assert(difference.total({ unit: "day", relativeTo: start }), 31);
+    assert(end.until(start).total({ unit: "day", relativeTo: end }), -31);
+
+    const midday = start.with({ hour: 12 });
+    const days = {
+        largestUnit: "day", smallestUnit: "day", roundingMode: "halfExpand",
+    };
+    check(start.until(midday, days), [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
+    check(midday.until(start, days), [0, 0, 0, -1, 0, 0, 0, 0, 0, 0]);
+
+    // Month rounding must retain years extracted before the rounded remainder.
+    const yearStart = Temporal.PlainDateTime.from("2020-01-01");
+    check(yearStart.until("2021-01-20", {
+        largestUnit: "year", smallestUnit: "month", roundingMode: "halfExpand",
+    }), [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert(yearStart.until("2020-01-16T12:00").total({
+        unit: "month", relativeTo: yearStart,
+    }), 0.5);
+
     const month = Duration.from("P1M");
     assert(month.total({ unit: "day", relativeTo: "2024-02-01" }), 29);
     assert(month.total({ unit: "day", relativeTo: "2023-02-01" }), 28);
