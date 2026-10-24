@@ -8,18 +8,17 @@
 #include "../../value/conversion.h"
 #include <math.h>
 
-static int exact_decimal(JSContext *ctx, const QJSIntlAllocator *allocator, const char *text,
-                         size_t length, QJSIntlNumberDecimal *out)
+static int exact_decimal(JSContext *ctx, const char *text, size_t length,
+                         QJSIntlNumberDecimal *out)
 {
     QJSIntlStatus status;
     out->text = js_strndup(ctx, text, length);
     if (!out->text)
         return -1;
     out->value.decimal = (QJSIntlBytes){out->text, length};
-    status = qjs_intl_decimal_parse(allocator, out->value.decimal, &out->decimal);
+    status = qjs_intl_decimal_validate(out->value.decimal);
     if (js_intl_error(ctx, status, "mathematical value"))
         return -1;
-    out->number_negative = out->decimal.negative;
     return 0;
 }
 
@@ -68,7 +67,7 @@ int js_intl_to_mathematical_value(JSContext *ctx, JSValueConst value, QJSIntlNum
                        begin[count] == '-' || begin[count] == '.' || begin[count] == 'e' ||
                        begin[count] == 'E')
                     count++;
-                result = exact_decimal(ctx, &allocator, begin, count, out);
+                result = exact_decimal(ctx, begin, count, out);
                 goto done;
             }
         }
@@ -79,7 +78,7 @@ int js_intl_to_mathematical_value(JSContext *ctx, JSValueConst value, QJSIntlNum
         goto done;
     bytes = JS_ToCStringLen(ctx, &length, text);
     if (bytes)
-        result = exact_decimal(ctx, &allocator, bytes, length, out);
+        result = exact_decimal(ctx, bytes, length, out);
 done:
     JS_FreeCString(ctx, bytes);
     JS_FreeValue(ctx, text);
