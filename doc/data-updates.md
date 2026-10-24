@@ -233,7 +233,9 @@ review responsibility described above. Untouched receipts remain unchanged.
 normalized JSON names listed in the template. It does not import raw data or
 certify the calendar algorithms; generation performs the semantic checks.
 Calendar normalization/generation remain
-separate scripted stages described in the calendar README. Required published
+separate scripted stages described in the calendar README. The
+[calendar JSON format](calendar-json-format.md) defines the factual fields,
+month encodings and coverage conventions. Required published
 ranges, independently checked transcriptions and approximation boundaries must
 remain distinguishable. Do not extend a claimed official range by relabeling an
 approximation or an ICU precomputation.
