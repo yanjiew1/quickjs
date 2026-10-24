@@ -32,6 +32,17 @@ def records(data):
     return tuple(sorted(rows))
 
 
+def select(data, tags):
+    # Supplemental clock rules use simple prefix fallback, not the exceptional
+    # CLDR main-data parent graph. Preserve both format and selection lists.
+    required = {'root'}
+    for tag in tags:
+        while tag:
+            required.add(tag)
+            tag = tag.rsplit('-', 1)[0] if '-' in tag else ''
+    return {'rows': tuple(row for row in data['rows'] if row[1] in required)}
+
+
 def strings(data):
     return {''} | {tag for kind, tag, rules in data['rows']}
 
