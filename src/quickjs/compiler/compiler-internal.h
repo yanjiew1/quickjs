@@ -30,7 +30,6 @@
 #define GLOBAL_VAR_OFFSET 0x40000000
 #define ARGUMENT_VAR_OFFSET 0x20000000
 
-#define OPTIMIZE         1
 #define ARG_SCOPE_INDEX 1
 
 static inline void dbuf_set_error(DynBuf *s)

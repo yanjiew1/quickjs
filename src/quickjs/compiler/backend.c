@@ -2106,7 +2106,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             break;
         case OP_gosub:
             s->jump_size++;
-            if (OPTIMIZE) {
+            {
                 /* remove calls to empty finalizers  */
                 int label;
                 LabelSlot *ls;
@@ -2121,30 +2121,11 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             }
             goto no_change;
         case OP_drop:
-            if (0) {
-                /* remove drops before return_undef */
-                /* do not perform this optimization in pass2 because
-                   it breaks patterns recognised in resolve_labels */
-                int pos1 = pos_next;
-                int line1 = line_num;
-                while (code_match(&cc, pos1, OP_drop, -1)) {
-                    if (cc.line_num >= 0) line1 = cc.line_num;
-                    pos1 = cc.pos;
-                }
-                if (code_match(&cc, pos1, OP_return_undef, -1)) {
-                    pos_next = pos1;
-                    if (line1 != -1 && line1 != line_num) {
-                        line_num = line1;
-                        s->line_number_size++;
-                        dbuf_putc(&bc_out, OP_line_num);
-                        dbuf_put_u32(&bc_out, line_num);
-                    }
-                    break;
-                }
-            }
+            /* Keep drops here: removing them in pass2 breaks patterns
+               recognised by resolve_labels. */
             goto no_change;
         case OP_insert3:
-            if (OPTIMIZE) {
+            {
                 /* Transformation: insert3 put_array_el|put_ref_value drop -> put_array_el|put_ref_value */
                 if (code_match(&cc, pos_next, M2(OP_put_array_el, OP_put_ref_value), OP_drop, -1)) {
                     dbuf_putc(&bc_out, cc.op);
@@ -2161,8 +2142,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_lnot:
-            if (OPTIMIZE &&
-                code_match(&cc, pos_next, M2(OP_if_false, OP_if_true), -1)) {
+            if (code_match(&cc, pos_next, M2(OP_if_false, OP_if_true), -1)) {
                 if (cc.line_num != -1 && cc.line_num != line_num) {
                     line_num = cc.line_num;
                     s->line_number_size++;
@@ -2187,7 +2167,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
         case OP_throw:
         case OP_throw_error:
         case OP_ret:
-            if (OPTIMIZE) {
+            {
                 /* remove dead code */
                 int line = -1;
                 dbuf_put(&bc_out, bc_buf + pos, len);
@@ -2329,7 +2309,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_dup:
-            if (OPTIMIZE) {
+            {
                 /* Transformation: dup if_false(l1) drop, l1: if_false(l2) -> if_false(l2) */
                 /* Transformation: dup if_true(l1) drop, l1: if_true(l2) -> if_true(l2) */
                 if (code_match(&cc, pos_next, M2(OP_if_false, OP_if_true), OP_drop, -1)) {
@@ -2841,7 +2821,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         case OP_goto:
             label = get_u32(bc_buf + pos + 1);
         has_goto:
-            if (OPTIMIZE) {
+            {
                 int line1 = -1;
                 /* Use custom matcher because multiple labels can follow */
                 label = find_jump_target(s, label, &op1, &line1);
@@ -2871,14 +2851,6 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
         case OP_gosub:
             label = get_u32(bc_buf + pos + 1);
-            if (0 && OPTIMIZE) {
-                label = find_jump_target(s, label, &op1, NULL);
-                if (op1 == OP_ret) {
-                    update_label(s, label, -1);
-                    /* empty finally clause: remove gosub */
-                    break;
-                }
-            }
             goto has_label;
 
         case OP_catch:
@@ -2888,7 +2860,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         case OP_if_true:
         case OP_if_false:
             label = get_u32(bc_buf + pos + 1);
-            if (OPTIMIZE) {
+            {
                 label = find_jump_target(s, label, &op1, NULL);
                 /* transform if_false/if_true(l1) label(l1) -> drop label(l1) */
                 if (code_has_label(&cc, pos_next, label)) {
@@ -2981,7 +2953,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 atom = get_u32(bc_buf + pos + 1);
                 label = get_u32(bc_buf + pos + 5);
                 is_with = bc_buf[pos + 9];
-                if (OPTIMIZE) {
+                {
                     label = find_jump_target(s, label, &op1, NULL);
                 }
                 assert(label >= 0 && label < s->label_count);
@@ -3007,7 +2979,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             break;
 
         case OP_drop:
-            if (OPTIMIZE) {
+            {
                 /* remove useless drops before return */
                 if (code_match(&cc, pos_next, OP_return_undef, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
@@ -3018,7 +2990,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
         case OP_null:
 #if SHORT_OPCODES
-            if (OPTIMIZE) {
+            {
                 /* transform null strict_eq into is_null */
                 if (code_match(&cc, pos_next, OP_strict_eq, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
@@ -3042,7 +3014,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             /* fall thru */
         case OP_push_false:
         case OP_push_true:
-            if (OPTIMIZE) {
+            {
                 val = (op == OP_push_true);
                 if (code_match(&cc, pos_next, M2(OP_if_false, OP_if_true), -1)) {
                 has_constant_test:
@@ -3068,7 +3040,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_push_i32:
-            if (OPTIMIZE) {
+            {
                 /* transform i32(val) neg -> i32(-val) */
                 val = get_i32(bc_buf + pos + 1);
                 if ((val != INT32_MIN && val != 0)
@@ -3101,7 +3073,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_push_bigint_i32:
-            if (OPTIMIZE) {
+            {
                 /* transform i32(val) neg -> i32(-val) */
                 val = get_i32(bc_buf + pos + 1);
                 if (val != INT32_MIN
@@ -3123,7 +3095,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 #if SHORT_OPCODES
         case OP_push_const:
         case OP_fclosure:
-            if (OPTIMIZE) {
+            {
                 int idx = get_u32(bc_buf + pos + 1);
                 if (idx < 256) {
                     add_pc2line_info(s, bc_out.size, line_num);
@@ -3135,7 +3107,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_get_field:
-            if (OPTIMIZE) {
+            {
                 JSAtom atom = get_u32(bc_buf + pos + 1);
                 if (atom == JS_ATOM_length) {
                     JS_FreeAtom(ctx, atom);
@@ -3147,7 +3119,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 #endif
         case OP_push_atom_value:
-            if (OPTIMIZE) {
+            {
                 JSAtom atom = get_u32(bc_buf + pos + 1);
                 /* remove push/drop pairs generated by the parser */
                 if (code_match(&cc, pos_next, OP_drop, -1)) {
@@ -3168,7 +3140,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_to_propkey:
-            if (OPTIMIZE) {
+            {
                 /* remove redundant to_propkey opcodes when storing simple data */
                 if (code_match(&cc, pos_next, M3(OP_get_loc, OP_get_arg, OP_get_var_ref), -1, OP_put_array_el, -1)
                 ||  code_match(&cc, pos_next, M3(OP_push_i32, OP_push_const, OP_push_atom_value), OP_put_array_el, -1)
@@ -3179,7 +3151,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_undefined:
-            if (OPTIMIZE) {
+            {
                 /* remove push/drop pairs generated by the parser */
                 if (code_match(&cc, pos_next, OP_drop, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
@@ -3223,7 +3195,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_insert2:
-            if (OPTIMIZE) {
+            {
                 /* A discarded checked global store needs only its saved
                    resolution and value, without preserving the result. */
                 if (code_match(&cc, pos_next, OP_put_var_check,
@@ -3250,7 +3222,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_dup:
-            if (OPTIMIZE) {
+            {
                 /* Transformation: dup put_x(n) drop -> put_x(n) */
                 int op1, line2 = -1;
                 /* Transformation: dup put_x(n) -> set_x(n) */
@@ -3277,7 +3249,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             goto no_change;
 
         case OP_get_loc:
-            if (OPTIMIZE) {
+            {
                 /* transformation:
                    get_loc(n) post_dec put_loc(n) drop -> dec_loc(n)
                    get_loc(n) post_inc put_loc(n) drop -> inc_loc(n)
@@ -3352,7 +3324,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 #if SHORT_OPCODES
         case OP_get_arg:
         case OP_get_var_ref:
-            if (OPTIMIZE) {
+            {
                 int idx;
                 idx = get_u16(bc_buf + pos + 1);
                 add_pc2line_info(s, bc_out.size, line_num);
@@ -3365,7 +3337,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         case OP_put_loc_check:
         case OP_put_arg:
         case OP_put_var_ref:
-            if (OPTIMIZE) {
+            {
                 /* transformation: put_x(n) get_x(n) -> set_x(n) */
                 int idx;
                 idx = get_u16(bc_buf + pos + 1);
@@ -3384,7 +3356,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
         case OP_post_inc:
         case OP_post_dec:
-            if (OPTIMIZE) {
+            {
                 /* transformation:
                    post_inc put_x drop -> inc put_x
                    post_inc perm3 put_field drop -> inc put_field
@@ -3428,7 +3400,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
 #if SHORT_OPCODES
         case OP_typeof:
-            if (OPTIMIZE) {
+            {
                 /* simplify typeof tests */
                 if (code_match(&cc, pos_next, OP_push_atom_value, M4(OP_strict_eq, OP_strict_neq, OP_eq, OP_neq), -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
@@ -3481,7 +3453,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         assert(label_slots[i].first_reloc == NULL);
     }
 #if SHORT_OPCODES
-    if (OPTIMIZE && !dbuf_error(&bc_out)) {
+    if (!dbuf_error(&bc_out)) {
         /* more jump optimizations */
         int patch_offsets = 0;
         for (i = 0, jp = s->jump_slots; i < s->jump_count; i++, jp++) {
