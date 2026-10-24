@@ -38,9 +38,11 @@ An HTTPS download plus a calculated checksum is not independent verification of
 the publisher or the data's meaning. Review the official release/tag, checksums
 or signatures when available, licenses and publication provenance. Supply
 `--expected-sha256` when an independently obtained archive checksum is available.
-The tool does not manufacture semantic approval: changed pins clear an existing
-review date unless explicitly supplied, and its report says no semantic review
-was performed. Fill review/publication dates only after checking them.
+The tool does not manufacture semantic approval. Changes relative to the supplied
+template clear its review date, and the report says no semantic review was
+performed. A manually edited `--pin` is the new comparison baseline: clear its
+stale review dates and supply the inputs matching any edited provenance yourself.
+Fill review/publication dates only after checking them.
 
 | Owner | Accepted source lock | Prepared outputs / detailed instructions |
 | --- | --- | --- |
@@ -92,9 +94,11 @@ python3 tools/data/update_pin.py \
 ```
 
 Alternatively, `--distribution git` derives the Git archive URL from a common
-template; `--distribution common` selects the official common URL. Custom URLs
-can be supplied with `--set /cldr/archive/url=https://...`. They must still use
-the supported archive layout and CLDR schema, with accurate source provenance.
+template; `--distribution common` selects the official common URL. For custom
+URLs, copy a pin to a working JSON template and edit its
+`cldr.archive` and provenance fields directly. Pass that template with `--pin`
+and the actual archive with `--archive`. The supported archive layout and CLDR
+schema still apply; no checksum needs calculating by hand.
 For Git archives the root is `cldr-COMMIT/`; common ZIPs contain `common/` and
 `LICENSE`. An arbitrary JSON export is not an interchangeable XML source.
 
@@ -191,7 +195,7 @@ python3 tools/data/update_pin.py \
 ```
 
 CLDR timezone metadata has an independent version. Derive its candidate from
-the same authenticated CLDR snapshot instead of copying hashes manually:
+the same selected CLDR snapshot instead of copying hashes manually:
 
 ```sh
 python3 tools/data/update_pin.py --pin data/timezone/pin.json \
@@ -200,7 +204,7 @@ python3 tools/data/update_pin.py --pin data/timezone/pin.json \
   --output /path/to/work/timezone-cldr-pin.json
 ```
 
-This copies release/commit/archive identity and hashes the verified
+This copies release/commit/archive identity and hashes the supplied
 `timezone.xml`, `windowsZones.xml` and `LICENSE` members. It leaves the IANA pin
 unchanged. After review, stage those raw members and pin, then use the existing
 timezone acquisition/generation scripts. Check primary identities, renaming
@@ -209,20 +213,26 @@ policy, territory mappings, historical rules and transitions.
 Japanese eras and their CLDR license can use the same propagation command with
 `--pin data/calendar/pin.json`; unrelated calendar sources remain unchanged.
 Calendar publications otherwise have independent publishers and versions;
-there is no single calendar release to substitute. Update selected receipts:
+there is no single calendar release to substitute. Copy its pin to a working
+JSON template and edit the selected source's revision, URL and descriptive
+metadata. Then hash the replacement raw input and maintained factual JSON:
 
 ```sh
-python3 tools/data/update_pin.py --pin data/calendar/pin.json \
+python3 tools/data/update_pin.py --pin /path/to/work/calendar-template.json \
   --file kabise.txt=/path/to/new/kabise.txt \
-  --set /sources/kabise.txt/revision=FULL_COMMIT \
+  --data-dir /path/to/updated-calendar-facts \
   --output /path/to/work/calendar-pin.json
 ```
 
 Also replace/update the corresponding license and source URL when changing
 that publication. Review descriptive notes/ranges for the new source;
-propagation does not rewrite factual interpretation. Changed metadata requires its actual
-input bytes; untouched receipts remain unchanged. JSON Pointer syntax makes
-filenames containing dots unambiguous. Calendar normalization/generation remain
+propagation does not rewrite factual interpretation. Metadata changed by the
+updater requires its actual input bytes; manual template edits follow the
+review responsibility described above. Untouched receipts remain unchanged.
+`--data-dir` rehashes the
+normalized JSON names listed in the template. It does not import raw data or
+certify the calendar algorithms; generation performs the semantic checks.
+Calendar normalization/generation remain
 separate scripted stages described in the calendar README. Required published
 ranges, independently checked transcriptions and approximation boundaries must
 remain distinguishable. Do not extend a claimed official range by relabeling an
