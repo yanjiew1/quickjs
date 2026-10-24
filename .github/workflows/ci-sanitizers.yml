@@ -107,14 +107,7 @@ jobs:
     - name: Report repository test results
       if: always()
       run: |
-        for stage in repo-unit repo-integration; do
-          log="build/meson-logs/$stage.txt"
-          if test -f "$log"; then
-            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
-            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
-            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
-          fi
-        done
+        sh tools/ci/report_repo_results.sh
     - name: Report per-test timings
       if: always()
       run: |
