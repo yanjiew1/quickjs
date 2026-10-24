@@ -519,6 +519,7 @@ foreach variant : variants
   if tag == 'normal'
     normal_engine = lib
     normal_support_objects = support_objects
+    normal_support_sources = variant_support_sources
     normal_data_objects = data_objects
   elif tag == 'shared'
     shared_engine = lib
