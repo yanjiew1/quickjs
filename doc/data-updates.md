@@ -27,8 +27,8 @@ was performed. Fill review/publication dates only after checking them.
 
 | Owner | Accepted source lock | Prepared outputs / detailed instructions |
 | --- | --- | --- |
-| Intl locale, collation and boundary rules | [`tools/intl/pin.json`](../tools/intl/pin.json); alternate [`pin-git.json`](../tools/intl/pin-git.json) | `data/intl`; [data tools](../tools/intl/README.md) |
-| Segmentation dictionaries | [`segment-dictionary-pin.json`](../tools/intl/segment-dictionary-pin.json) | Included in native Intl; full dictionary license and notices |
+| Intl locale, collation and boundary rules | [`data/intl/pin.json`](../data/intl/pin.json); alternate [`pin-git.json`](../data/intl/pin-git.json) | `data/intl`; [data tools](../tools/intl/README.md) |
+| Segmentation dictionaries | [`segment-dictionary-pin.json`](../data/intl/segment-dictionary-pin.json) | Included in native Intl; full dictionary license and notices |
 | IANA rules and CLDR Windows/alias metadata | [`data/timezone/pin.json`](../data/timezone/pin.json) | `data/timezone`; [timezone tools](../tools/timezone/README.md) |
 | Calendar publications and Japanese eras | [`data/calendar/pin.json`](../data/calendar/pin.json) | `data/calendar`; [calendar tools](../tools/calendar/README.md) |
 | Unicode properties and normalization | [`unicode_download.sh`](../tools/unicode_download.sh), [`unicode-data.sha256`](../tools/unicode-data.sha256), version macros in `src/unicode/libunicode.h` | `libunicode-table.c/.h`; [build instructions](../BUILDING.md#external-suites-and-developer-tools) and Unicode CI |
@@ -48,7 +48,7 @@ Generate a candidate for a selected release without manually computing hashes:
 
 ```sh
 python3 tools/data/update_pin.py \
-  --pin tools/intl/pin.json --release 49 --resolve-tag --download \
+  --pin data/intl/pin.json --release 49 --resolve-tag --download \
   --output /path/to/work/common-pin.json \
   --manifest-output /path/to/work/common-inventory.json \
   --report /path/to/work/common-pin-report.json
@@ -69,7 +69,7 @@ For the corresponding full Git distribution:
 
 ```sh
 python3 tools/data/update_pin.py \
-  --pin tools/intl/pin-git.json --release 49 --resolve-tag --download \
+  --pin data/intl/pin-git.json --release 49 --resolve-tag --download \
   --output /path/to/work/git-pin.json \
   --manifest-output /path/to/work/git-inventory.json
 ```
@@ -151,7 +151,7 @@ the complete license. A release change requires the complete source set:
 
 ```sh
 python3 tools/data/update_pin.py \
-  --pin tools/intl/segment-dictionary-pin.json \
+  --pin data/intl/segment-dictionary-pin.json \
   --release 79.1 --resolve-tag --download \
   --output /path/to/work/dictionary-pin.json
 ```
