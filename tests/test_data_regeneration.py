@@ -13,7 +13,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools/data'))
-import regenerate_intl
+from _support import intl_pipeline as regenerate_intl
 
 
 class RegenerationTests(unittest.TestCase):
@@ -37,6 +37,28 @@ class RegenerationTests(unittest.TestCase):
         args.dictionary_pin = Path('/dictionary-candidate.json')
         command = regenerate_intl.commands(args)[0][1]
         self.assertEqual(command[command.index('--dictionary-pin') + 1], str(args.dictionary_pin))
+
+    def test_public_commands_preserve_spaced_paths_and_working_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / 'cache with spaces'
+            cache.mkdir()
+            result = subprocess.run(
+                [sys.executable, str(ROOT / 'tools/data/acquire.py'), 'cldr',
+                 '--cache', str(cache), '--offline'],
+                cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('cache with spaces', result.stderr.decode())
+            # This family runs outside the dispatcher process. Relative output
+            # names must stay relative to the caller, including their spaces.
+            result = subprocess.run(
+                [sys.executable, str(ROOT / 'tools/data/generate.py'), 'calendar',
+                 '--output', 'output data.bin', '--manifest', 'manifest data.json'],
+                cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            self.assertEqual((root / 'output data.bin').read_bytes(),
+                             (ROOT / 'data/calendar/calendar-data.bin').read_bytes())
+            self.assertTrue((root / 'manifest data.json').is_file())
 
     def test_generator_timeout_is_bounded(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -94,7 +116,7 @@ class RegenerationTests(unittest.TestCase):
             output.mkdir()
             pin = output / 'collation-minimal.log'
             pin.write_bytes(b'input must survive')
-            command = [sys.executable, str(ROOT / 'tools/data/regenerate_intl.py'),
+            command = [sys.executable, str(ROOT / 'tools/data/generate.py'), 'intl',
                        '--sources', str(sources), '--source-pin', str(pin),
                        '--collation-compiler', sys.executable, '--profiles', 'minimal',
                        '--output-dir', str(output)]
@@ -123,7 +145,7 @@ class RegenerationTests(unittest.TestCase):
                 alias.symlink_to(member)
             except (OSError, NotImplementedError):
                 self.skipTest('symlink creation is unavailable')
-            command = [sys.executable, str(ROOT / 'tools/data/regenerate_intl.py'),
+            command = [sys.executable, str(ROOT / 'tools/data/generate.py'), 'intl',
                        '--sources', str(sources), '--collation-compiler', sys.executable,
                        '--profiles', 'minimal', '--output-dir', str(output)]
             result = subprocess.run(command, stdout=subprocess.PIPE,

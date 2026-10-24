@@ -26,8 +26,8 @@ cyclic calendars without canonical era codes do not acquire a fictitious era.
 ## Acquire the pinned inputs
 
 ```sh
-python3 tools/intl/acquire.py --cache /path/to/intl-cache
-python3 tools/intl/acquire.py --cache /path/to/intl-cache --offline
+python3 tools/data/acquire.py cldr --cache /path/to/intl-cache
+python3 tools/data/acquire.py cldr --cache /path/to/intl-cache --offline
 ```
 
 `data/intl/pin.json` identifies CLDR 49's official common release ZIP by release tag,
@@ -45,7 +45,7 @@ Common data is materialized under `cldr-49`; Git data uses `cldr-49-git`, so bot
 can coexist under one cache directory:
 
 ```sh
-python3 tools/intl/acquire.py --cache /path/to/intl-cache \
+python3 tools/data/acquire.py cldr --cache /path/to/intl-cache \
   --source-pin data/intl/pin-git.json
 ```
 
@@ -77,8 +77,8 @@ ICU 79.1 text inputs by immutable commit URL, byte count and SHA-256. This is da
 Acquire explicitly, outside normal builds:
 
 ```sh
-python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
-python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache --offline
+python3 tools/data/acquire.py dictionaries --cache /path/to/intl-cache
+python3 tools/data/acquire.py dictionaries --cache /path/to/intl-cache --offline
 ```
 
 The `icu-dictionaries-79.1` cache contains the five source dictionaries and
@@ -1864,7 +1864,7 @@ meson compile -C build intl-collation-compile intl-segment-property
 python3 tools/intl/collation_prepare.py \
   --sources /path/to/intl-cache/cldr-49 --profile native \
   --compiler build/intl-collation-compile --output /path/to/native.qjcl
-python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache
+python3 tools/data/acquire.py dictionaries --cache /path/to/intl-cache
 python3 tools/intl/segment_prepare.py \
   --sources /path/to/intl-cache/cldr-49 \
   --dictionaries /path/to/intl-cache/icu-dictionaries-79.1 \
