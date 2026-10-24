@@ -68,7 +68,6 @@ extern char **environ;
 #include "thread.h"
 #include "os.h"
 #include "std.h"
-#include "../quickjs/internal/runtime.h"
 
 static void *js_std_dbuf_realloc(void *opaque, void *ptr, size_t size)
 {
@@ -573,8 +572,8 @@ static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (!ts->recv_pipe && ++ts->eval_script_recurse == 1) {
         /* install the interrupt handler */
-        ts->prev_interrupt_handler = rt->interrupt_handler;
-        ts->prev_interrupt_opaque = rt->interrupt_opaque;
+        ts->prev_interrupt_handler =
+            JS_GetInterruptHandler(rt, &ts->prev_interrupt_opaque);
         ts->eval_script_sigint = 0;
         JS_SetInterruptHandler(rt, interrupt_handler, ts);
     }
