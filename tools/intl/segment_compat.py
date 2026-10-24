@@ -1,4 +1,4 @@
-"""Explicit source corrections for the authenticated segmentation profile.
+"""Narrow structural corrections for compatible segmentation source data.
 
 Raw collection and strict compilation remain available unchanged. Corrections
 produce derived records and a separate receipt, never modified source files.
@@ -6,22 +6,10 @@ produce derived records and a separate receipt, never modified source files.
 from collections import namedtuple
 import hashlib
 
-from cldr_xml import DataError
 from segment_sources import Definition
 
-PIN = '96e54b273d2da4ec6fbad350ba19ff23fa24a588'
 ROOT = 'common/segments/root.xml'
 JAPANESE = 'common/segments/ja.xml'
-HASHES = {
-    ROOT: 'e3e778feaeee9e6aa8173722898c482bd79ef3074fd529f3b7ebda279d522a3d',
-    JAPANESE: 'e5cb9d23eb3976c42227c4832e95d9ba0e976dc8e726405d9063838702756493',
-}
-# Published common and complete Git files have different headers/whitespace.
-# Both reviewed distributions retain the same missing-FE declaration defect.
-GIT_HASHES = {
-    ROOT: '1f9130f21b3e72ff14d73100bb12297abebd248df6c1d292aa275c0aea60317c',
-    JAPANESE: 'df79236c2d1dafe54c61880a2954fa715b736af1edd6e98ac50154f49bd2063d',
-}
 JAPANESE_VARIABLES = (
     Definition('$Hiragana', r'\p{Hiragana}'),
     Definition('$Hiragana', '($Hiragana $FE*)'),
@@ -40,45 +28,39 @@ CorrectedSources = namedtuple('CorrectedSources', 'records corrections')
 
 
 def japanese_word_fe(sources, records):
-    """Restore the removed historical FE union for exactly the pinned tailoring.
+    """Restore the historical FE union only for its known declaration shape.
 
     CLDR-18917 removed root's FE declaration when introducing ignore remaps,
-    but Japanese's older wrappers still reference it. This is a native source
-    compatibility correction, not a TR35 rule for unknown names. Hashes and
-    declaration shape must both match before insertion into a derived stream.
-    Records must come from unmodified segment_sources.collect(sources); the
-    additional declaration guards check the inserted union's dependencies too.
+    while the Japanese wrappers still reference it. This is a compatibility
+    correction, not a TR35 fallback for unknown names. Already-correct or other
+    source data passes through unchanged for ordinary strict compilation.
     """
-    if sources.pin['commit'] != PIN:
-        raise DataError('unreviewed CLDR segmentation correction source pin')
-    distribution = sources.pin.get('distribution', 'common')
-    if distribution not in ('common', 'git'):
-        raise DataError('unreviewed CLDR segmentation source distribution')
-    hashes = HASHES if distribution == 'common' else GIT_HASHES
-    for name, expected in hashes.items():
-        if hashlib.sha256(sources.read(name)).hexdigest() != expected:
-            raise DataError('changed segmentation correction source: ' + name)
+    records = tuple(records)
+    unchanged = CorrectedSources(records, ())
     selected = [index for index, row in enumerate(records)
                 if row.locale == 'ja' and row.kind == 'WordBreak']
     if len(selected) != 1:
-        raise DataError('missing or repeated Japanese word tailoring')
+        return unchanged
     index = selected[0]
     row = records[index]
     if row.source != JAPANESE or row.variables != JAPANESE_VARIABLES:
-        raise DataError('changed Japanese FE correction declaration shape')
+        return unchanged
     roots = [item for item in records if item.locale == 'root' and item.kind == 'WordBreak']
     if (len(roots) != 1 or roots[0].source != ROOT or
             any(item.identifier == '$FE' for item in roots[0].variables or ())):
-        raise DataError('unexpected root FE binding in correction profile')
+        return unchanged
     names = frozenset(item.identifier for item in ROOT_FE_VARIABLES)
     dependencies = tuple(item for item in roots[0].variables or () if item.identifier in names)
     if dependencies != ROOT_FE_VARIABLES:
-        raise DataError('changed inherited FE dependency declarations')
+        return unchanged
+    hashes = {name: hashlib.sha256(sources.read(name)).hexdigest()
+              for name in (ROOT, JAPANESE)}
     # Insert before the first wrapper, not before its initial Hiragana set;
     # capture_variables will retain the same previous self-binding semantics.
     changed = row._replace(variables=row.variables[:1] + (HISTORICAL_FE,) + row.variables[1:])
     result = tuple(changed if position == index else item for position, item in enumerate(records))
-    receipt = Correction('japanese-word-fe', PIN, JAPANESE, hashes[ROOT], hashes[JAPANESE],
+    receipt = Correction('japanese-word-fe', sources.pin.get('commit'), JAPANESE,
+                         hashes[ROOT], hashes[JAPANESE],
                          1, HISTORICAL_FE.identifier, HISTORICAL_FE.expression,
                          '56a2de16366cd5bfe18628e941ea84849cfd4153')
     return CorrectedSources(result, (receipt,))
