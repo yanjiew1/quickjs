@@ -2534,856 +2534,855 @@ if intl_enabled
     build_by_default: false,
   )
 
-  foreach profile : [get_option('intl')]
-    intl_collation_profile_test = executable(
-      ('test_intl_collation_' + profile),
-      files(
-        'test_intl_collation_profiles.c',
-      ),
-      objects: intl_collation_oracle_objects.extract_all_objects(recursive: false),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: [intl_test_tools] + component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-collation-data-' + profile),
-      intl_collation_profile_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_collation_prepared_test = executable(
-      ('test_intl_collation_prepared_' + profile),
-      files(
-        'test_intl_collation_prepared.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: [intl_test_tools] + component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-collation-prepared-' + profile),
-      intl_collation_prepared_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_collation_service_test = executable(
-      ('test_intl_collation_service_' + profile),
-      files(
-        'test_intl_collation_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: [intl_test_tools] + component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-collation-service-' + profile),
-      intl_collation_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_calendar_era_test = executable(
-      ('test_intl_calendar_era_' + profile),
-      intl_calendar_era_sources,
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-calendar-era-' + profile),
-      intl_calendar_era_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_data_test = executable(
-      ('test_intl_data_' + profile),
-      files(
-        'test_intl_data.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    intl_numbering_test = executable(
-      ('test_intl_numbering_' + profile),
-      intl_numbering_owner_sources,
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-numbering-' + profile),
-      intl_numbering_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_number_symbol_test = executable(
-      ('test_intl_number_symbols_' + profile),
-      intl_number_symbol_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-number-symbols-' + profile),
-      intl_number_symbol_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_number_pattern_test = executable(
-      ('test_intl_number_patterns_' + profile),
-      intl_number_pattern_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-number-patterns-' + profile),
-      intl_number_pattern_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_compact_test = executable(
-      ('test_intl_compact_' + profile),
-      intl_compact_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-compact-' + profile),
-      intl_compact_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_currency_test = executable(
-      ('test_intl_currency_' + profile),
-      intl_currency_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-currency-' + profile),
-      intl_currency_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_number_layout_test = executable(
-      ('test_intl_number_layout_' + profile),
-      intl_number_layout_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-number-layout-' + profile),
-      intl_number_layout_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_plural_service_test = executable(
-      ('test_intl_plural_service_' + profile),
-      files(
-        'test_intl_plural_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-plural-service-' + profile),
-      intl_plural_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_plural_data_test = executable(
-      ('test_intl_plural_data_' + profile),
-      intl_plural_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-plural-data-' + profile),
-      intl_plural_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    test(
-      ('intl-prepared-' + profile),
-      intl_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_list_data_test = executable(
-      ('test_intl_list_data_' + profile),
-      files(
-        'test_intl_list_data.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-list-data-' + profile),
-      intl_list_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_preference_test = executable(
-      ('test_intl_preferences_' + profile),
-      files(
-        'test_intl_preferences.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-preferences-' + profile),
-      intl_preference_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_locale_resolve_test = executable(
-      ('test_intl_locale_resolve_' + profile),
-      files(
-        'test_intl_locale_resolve.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-locale-resolve-' + profile),
-      intl_locale_resolve_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_locale_test = executable(
-      ('test_intl_locale_id_' + profile),
-      files(
-        'test_intl_native_locale_id.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-locale-id-' + profile),
-      intl_locale_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_list_test = executable(
-      ('test_intl_list_service_' + profile),
-      files(
-        'test_intl_list_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-list-service-' + profile),
-      intl_list_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_ordinary_profile_test = executable(
-      ('test_intl_date_ordinary_' + profile),
-      intl_date_ordinary_sources,
-      objects: [
-        intl_date_ordinary_fixture_objects.extract_all_objects(recursive: false),
-      ],
-      c_args: (host_args + [
-        ('-DTEST_INTL_ORDINARY_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-ordinary-' + profile),
-      intl_date_ordinary_profile_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_zone_test = executable(
-      ('test_intl_date_zone_' + profile),
-      files(
-        'test_intl_date_zone.c',
-      ) + files(
-      ),
-      objects: [
-        intl_date_zone_fixture_objects.extract_all_objects(recursive: false),
-      ],
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-zone-' + profile),
-      intl_date_zone_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_offset_test = executable(
-      ('test_intl_date_offset_' + profile),
-      files(
-        'test_intl_date_offset.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-offset-' + profile),
-      intl_date_offset_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_text_test = executable(
-      ('test_intl_date_text_' + profile),
-      files(
-        'test_intl_date_text.c',
-      ),
-      objects: [
-        intl_date_text_fixture_objects.extract_all_objects(recursive: false),
-      ],
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-text-' + profile),
-      intl_date_text_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_format_test = executable(
-      ('test_intl_date_format_' + profile),
-      files(
-        'test_intl_date_format.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-format-' + profile),
-      intl_date_format_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_service_test = executable(
-      ('test_intl_date_service_' + profile),
-      files(
-        'test_intl_date_service.c',
-      ),
-      objects: [
-        intl_date_interval_selector_fixture_objects.extract_all_objects(recursive: false),
-      ],
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-service-' + profile),
-      intl_date_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_numeric_test = executable(
-      ('test_intl_date_numeric_' + profile),
-      files(
-        'test_intl_date_numeric.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-numeric-' + profile),
-      intl_date_numeric_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_number_service_test = executable(
-      ('test_intl_number_service_' + profile),
-      files(
-        'test_intl_number_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-number-service-' + profile),
-      intl_number_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_duration_service_test = executable(
-      ('test_intl_duration_service_' + profile),
-      files(
-        'test_intl_duration_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-duration-service-' + profile),
-      intl_duration_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_display_service_test = executable(
-      ('test_intl_display_service_' + profile),
-      files(
-        'test_intl_display_service.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-display-service-' + profile),
-      intl_display_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 60,
-    )
-    intl_relative_service_test = executable(
-      ('test_intl_relative_service_' + profile),
-      files(
-        'test_intl_relative_service.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-relative-service-' + profile),
-      intl_relative_service_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_native_number_test = executable(
-      ('test_intl_native_number_' + profile),
-      files(
-        'test_intl_native_number.c',
-      ),
-      c_args: (host_args + [
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-native-number-' + profile),
-      intl_native_number_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_relative_test = executable(
-      ('test_intl_relative_data_' + profile),
-      intl_relative_owner_sources,
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-relative-data-' + profile),
-      intl_relative_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_dayperiod_data_test = executable(
-      ('test_intl_dayperiod_data_' + profile),
-      files(
-        'test_intl_dayperiod_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-dayperiod-data-' + profile),
-      intl_dayperiod_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_timezone_presentation_data_test = executable(
-      ('test_intl_timezone_presentation_data_' + profile),
-      files(
-        'test_intl_timezone_presentation_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-timezone-presentation-data-' + profile),
-      intl_timezone_presentation_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_timezone_name_data_test = executable(
-      ('test_intl_timezone_name_data_' + profile),
-      files(
-        'test_intl_timezone_name_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-timezone-name-data-' + profile),
-      intl_timezone_name_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_interval_data_test = executable(
-      ('test_intl_date_interval_data_' + profile),
-      files(
-        'test_intl_date_interval_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-interval-data-' + profile),
-      intl_date_interval_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_available_data_test = executable(
-      ('test_intl_date_available_data_' + profile),
-      files(
-        'test_intl_date_available_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-available-data-' + profile),
-      intl_date_available_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_calendar_name_data_test = executable(
-      ('test_intl_calendar_name_data_' + profile),
-      files(
-        'test_intl_calendar_name_profiles.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-calendar-name-data-' + profile),
-      intl_calendar_name_data_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_combination_test = executable(
-      ('test_intl_date_combination_data_' + profile),
-      files(
-        'test_intl_date_combination_data.c',
-      ),
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-combination-data-' + profile),
-      intl_date_combination_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_style_test = executable(
-      ('test_intl_date_style_data_' + profile),
-      files(
-        'test_intl_date_style_data.c',
-      ),
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-style-data-' + profile),
-      intl_date_style_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_date_field_test = executable(
-      ('test_intl_date_field_data_' + profile),
-      intl_date_field_owner_sources,
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-date-field-data-' + profile),
-      intl_date_field_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_display_test = executable(
-      ('test_intl_display_data_' + profile),
-      intl_display_owner_sources,
-      c_args: (host_args + ['-DTEST_INTL_PREPARED=1', '-DTEST_INTL_EMPTY=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-display-data-' + profile),
-      intl_display_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_calendar_name_test = executable(
-      ('test_intl_calendar_names_' + profile),
-      intl_calendar_name_sources,
-      c_args: (host_args + ['-DTEST_INTL_CALENDAR_NAME_MODE=4']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-calendar-names-' + profile),
-      intl_calendar_name_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_language_match_test = executable(
-      ('test_intl_language_match_' + profile),
-      intl_language_match_sources,
-      c_args: (host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=1']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-language-match-' + profile),
-      intl_language_match_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_language_format_test = executable(
-      ('test_intl_language_format_' + profile),
-      intl_language_format_sources,
-      c_args: (host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=1']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-language-format-' + profile),
-      intl_language_format_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_duration_test = executable(
-      ('test_intl_duration_data_' + profile),
-      intl_duration_owner_sources,
-      c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-duration-data-' + profile),
-      intl_duration_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_unit_test = executable(
-      ('test_intl_unit_data_' + profile),
-      intl_unit_owner_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-unit-data-' + profile),
-      intl_unit_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_unit_grammar_test = executable(
-      ('test_intl_unit_grammar_data_' + profile),
-      intl_unit_grammar_sources,
-      c_args: (host_args + [
-        '-DTEST_INTL_AUTHORED=0',
-        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-      ]),
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    test(
-      ('intl-unit-grammar-data-' + profile),
-      intl_unit_grammar_test,
-      suite: ['repo', 'native'] + ['unit'],
-      timeout: 30,
-    )
-    intl_inventory_test = executable(
-      ('test_intl_locale_inventory_' + profile),
-      files(
-        'test_intl_locale_inventory.c',
-      ),
-      c_args: host_args,
-      include_directories: inc,
-      dependencies: host_deps,
-      link_with: component_libraries,
-      override_options: ['b_ndebug=false'],
-    )
-    intl_inventory_env = environment()
-    if host_machine.cpu_family() == 'aarch64' and cc.get_id() == 'gcc' and get_option('b_sanitize').contains('address')
-      # GCC ARM64 fake-stack scanning dominates this exhaustive data-only pass.
-      # Functional and allocation-failure tests retain use-after-return checks,
-      # as do Clang and the other platforms' full inventory checks.
-      intl_inventory_env.append('ASAN_OPTIONS', 'detect_stack_use_after_return=0', separator: ':')
-    endif
-    test(
-      ('intl-locale-inventory-' + profile),
-      intl_inventory_test,
-      suite: ['repo', 'native'] + ['unit'],
-      env: intl_inventory_env,
-      timeout: 30,
-    )
-  endforeach
+  profile = get_option('intl')
+  intl_collation_profile_test = executable(
+    ('test_intl_collation_' + profile),
+    files(
+      'test_intl_collation_profiles.c',
+    ),
+    objects: intl_collation_oracle_objects.extract_all_objects(recursive: false),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: [intl_test_tools] + component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-collation-data-' + profile),
+    intl_collation_profile_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_collation_prepared_test = executable(
+    ('test_intl_collation_prepared_' + profile),
+    files(
+      'test_intl_collation_prepared.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: [intl_test_tools] + component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-collation-prepared-' + profile),
+    intl_collation_prepared_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_collation_service_test = executable(
+    ('test_intl_collation_service_' + profile),
+    files(
+      'test_intl_collation_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: [intl_test_tools] + component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-collation-service-' + profile),
+    intl_collation_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_calendar_era_test = executable(
+    ('test_intl_calendar_era_' + profile),
+    intl_calendar_era_sources,
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-calendar-era-' + profile),
+    intl_calendar_era_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_data_test = executable(
+    ('test_intl_data_' + profile),
+    files(
+      'test_intl_data.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  intl_numbering_test = executable(
+    ('test_intl_numbering_' + profile),
+    intl_numbering_owner_sources,
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-numbering-' + profile),
+    intl_numbering_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_number_symbol_test = executable(
+    ('test_intl_number_symbols_' + profile),
+    intl_number_symbol_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-number-symbols-' + profile),
+    intl_number_symbol_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_number_pattern_test = executable(
+    ('test_intl_number_patterns_' + profile),
+    intl_number_pattern_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-number-patterns-' + profile),
+    intl_number_pattern_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_compact_test = executable(
+    ('test_intl_compact_' + profile),
+    intl_compact_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-compact-' + profile),
+    intl_compact_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_currency_test = executable(
+    ('test_intl_currency_' + profile),
+    intl_currency_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-currency-' + profile),
+    intl_currency_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_number_layout_test = executable(
+    ('test_intl_number_layout_' + profile),
+    intl_number_layout_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-number-layout-' + profile),
+    intl_number_layout_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_plural_service_test = executable(
+    ('test_intl_plural_service_' + profile),
+    files(
+      'test_intl_plural_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-plural-service-' + profile),
+    intl_plural_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_plural_data_test = executable(
+    ('test_intl_plural_data_' + profile),
+    intl_plural_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-plural-data-' + profile),
+    intl_plural_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  test(
+    ('intl-prepared-' + profile),
+    intl_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_list_data_test = executable(
+    ('test_intl_list_data_' + profile),
+    files(
+      'test_intl_list_data.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-list-data-' + profile),
+    intl_list_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_preference_test = executable(
+    ('test_intl_preferences_' + profile),
+    files(
+      'test_intl_preferences.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-preferences-' + profile),
+    intl_preference_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_locale_resolve_test = executable(
+    ('test_intl_locale_resolve_' + profile),
+    files(
+      'test_intl_locale_resolve.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-locale-resolve-' + profile),
+    intl_locale_resolve_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_locale_test = executable(
+    ('test_intl_locale_id_' + profile),
+    files(
+      'test_intl_native_locale_id.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-locale-id-' + profile),
+    intl_locale_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_list_test = executable(
+    ('test_intl_list_service_' + profile),
+    files(
+      'test_intl_list_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-list-service-' + profile),
+    intl_list_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_ordinary_profile_test = executable(
+    ('test_intl_date_ordinary_' + profile),
+    intl_date_ordinary_sources,
+    objects: [
+      intl_date_ordinary_fixture_objects.extract_all_objects(recursive: false),
+    ],
+    c_args: (host_args + [
+      ('-DTEST_INTL_ORDINARY_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-ordinary-' + profile),
+    intl_date_ordinary_profile_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_zone_test = executable(
+    ('test_intl_date_zone_' + profile),
+    files(
+      'test_intl_date_zone.c',
+    ) + files(
+    ),
+    objects: [
+      intl_date_zone_fixture_objects.extract_all_objects(recursive: false),
+    ],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-zone-' + profile),
+    intl_date_zone_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_offset_test = executable(
+    ('test_intl_date_offset_' + profile),
+    files(
+      'test_intl_date_offset.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-offset-' + profile),
+    intl_date_offset_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_text_test = executable(
+    ('test_intl_date_text_' + profile),
+    files(
+      'test_intl_date_text.c',
+    ),
+    objects: [
+      intl_date_text_fixture_objects.extract_all_objects(recursive: false),
+    ],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-text-' + profile),
+    intl_date_text_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_format_test = executable(
+    ('test_intl_date_format_' + profile),
+    files(
+      'test_intl_date_format.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-format-' + profile),
+    intl_date_format_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_service_test = executable(
+    ('test_intl_date_service_' + profile),
+    files(
+      'test_intl_date_service.c',
+    ),
+    objects: [
+      intl_date_interval_selector_fixture_objects.extract_all_objects(recursive: false),
+    ],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-service-' + profile),
+    intl_date_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_numeric_test = executable(
+    ('test_intl_date_numeric_' + profile),
+    files(
+      'test_intl_date_numeric.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-numeric-' + profile),
+    intl_date_numeric_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_number_service_test = executable(
+    ('test_intl_number_service_' + profile),
+    files(
+      'test_intl_number_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-number-service-' + profile),
+    intl_number_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_duration_service_test = executable(
+    ('test_intl_duration_service_' + profile),
+    files(
+      'test_intl_duration_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-duration-service-' + profile),
+    intl_duration_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_display_service_test = executable(
+    ('test_intl_display_service_' + profile),
+    files(
+      'test_intl_display_service.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-display-service-' + profile),
+    intl_display_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 60,
+  )
+  intl_relative_service_test = executable(
+    ('test_intl_relative_service_' + profile),
+    files(
+      'test_intl_relative_service.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-relative-service-' + profile),
+    intl_relative_service_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_native_number_test = executable(
+    ('test_intl_native_number_' + profile),
+    files(
+      'test_intl_native_number.c',
+    ),
+    c_args: (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-native-number-' + profile),
+    intl_native_number_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_relative_test = executable(
+    ('test_intl_relative_data_' + profile),
+    intl_relative_owner_sources,
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-relative-data-' + profile),
+    intl_relative_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_dayperiod_data_test = executable(
+    ('test_intl_dayperiod_data_' + profile),
+    files(
+      'test_intl_dayperiod_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-dayperiod-data-' + profile),
+    intl_dayperiod_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_timezone_presentation_data_test = executable(
+    ('test_intl_timezone_presentation_data_' + profile),
+    files(
+      'test_intl_timezone_presentation_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-timezone-presentation-data-' + profile),
+    intl_timezone_presentation_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_timezone_name_data_test = executable(
+    ('test_intl_timezone_name_data_' + profile),
+    files(
+      'test_intl_timezone_name_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-timezone-name-data-' + profile),
+    intl_timezone_name_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_interval_data_test = executable(
+    ('test_intl_date_interval_data_' + profile),
+    files(
+      'test_intl_date_interval_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-interval-data-' + profile),
+    intl_date_interval_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_available_data_test = executable(
+    ('test_intl_date_available_data_' + profile),
+    files(
+      'test_intl_date_available_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-available-data-' + profile),
+    intl_date_available_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_calendar_name_data_test = executable(
+    ('test_intl_calendar_name_data_' + profile),
+    files(
+      'test_intl_calendar_name_profiles.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-calendar-name-data-' + profile),
+    intl_calendar_name_data_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_combination_test = executable(
+    ('test_intl_date_combination_data_' + profile),
+    files(
+      'test_intl_date_combination_data.c',
+    ),
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-combination-data-' + profile),
+    intl_date_combination_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_style_test = executable(
+    ('test_intl_date_style_data_' + profile),
+    files(
+      'test_intl_date_style_data.c',
+    ),
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-style-data-' + profile),
+    intl_date_style_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_date_field_test = executable(
+    ('test_intl_date_field_data_' + profile),
+    intl_date_field_owner_sources,
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-date-field-data-' + profile),
+    intl_date_field_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_display_test = executable(
+    ('test_intl_display_data_' + profile),
+    intl_display_owner_sources,
+    c_args: (host_args + ['-DTEST_INTL_PREPARED=1', '-DTEST_INTL_EMPTY=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-display-data-' + profile),
+    intl_display_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_calendar_name_test = executable(
+    ('test_intl_calendar_names_' + profile),
+    intl_calendar_name_sources,
+    c_args: (host_args + ['-DTEST_INTL_CALENDAR_NAME_MODE=4']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-calendar-names-' + profile),
+    intl_calendar_name_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_language_match_test = executable(
+    ('test_intl_language_match_' + profile),
+    intl_language_match_sources,
+    c_args: (host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=1']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-language-match-' + profile),
+    intl_language_match_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_language_format_test = executable(
+    ('test_intl_language_format_' + profile),
+    intl_language_format_sources,
+    c_args: (host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=1']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-language-format-' + profile),
+    intl_language_format_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_duration_test = executable(
+    ('test_intl_duration_data_' + profile),
+    intl_duration_owner_sources,
+    c_args: (host_args + ['-DTEST_INTL_AUTHORED=0']),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-duration-data-' + profile),
+    intl_duration_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_unit_test = executable(
+    ('test_intl_unit_data_' + profile),
+    intl_unit_owner_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-unit-data-' + profile),
+    intl_unit_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_unit_grammar_test = executable(
+    ('test_intl_unit_grammar_data_' + profile),
+    intl_unit_grammar_sources,
+    c_args: (host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    ('intl-unit-grammar-data-' + profile),
+    intl_unit_grammar_test,
+    suite: ['repo', 'native'] + ['unit'],
+    timeout: 30,
+  )
+  intl_inventory_test = executable(
+    ('test_intl_locale_inventory_' + profile),
+    files(
+      'test_intl_locale_inventory.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: component_libraries,
+    override_options: ['b_ndebug=false'],
+  )
+  intl_inventory_env = environment()
+  if host_machine.cpu_family() == 'aarch64' and cc.get_id() == 'gcc' and get_option('b_sanitize').contains('address')
+    # GCC ARM64 fake-stack scanning dominates this exhaustive data-only pass.
+    # Functional and allocation-failure tests retain use-after-return checks,
+    # as do Clang and the other platforms' full inventory checks.
+    intl_inventory_env.append('ASAN_OPTIONS', 'detect_stack_use_after_return=0', separator: ':')
+  endif
+  test(
+    ('intl-locale-inventory-' + profile),
+    intl_inventory_test,
+    suite: ['repo', 'native'] + ['unit'],
+    env: intl_inventory_env,
+    timeout: 30,
+  )
 
   intl_locale_info_fixture = custom_target(
     'intl-locale-info-authored-fixture',
@@ -4361,127 +4360,44 @@ if native_calendars
 endif
 
 if intl_enabled
-  test(
-    'intl-number-symbols',
-    python,
-    args: files('test_intl_number_symbols.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-currencies',
-    python,
-    args: files('test_intl_currencies.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-currency-tables',
-    python,
-    args: files('test_intl_currency_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-layout',
-    python,
-    args: files('test_intl_number_layout.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-layout-tables',
-    python,
-    args: files('test_intl_number_layout_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-sparse-maps',
-    python,
-    args: files('test_intl_sparse_maps.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-unit-grammar',
-    python,
-    args: files('test_intl_unit_grammar.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-unit-grammar-tables',
-    python,
-    args: files('test_intl_unit_grammar_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-unit-patterns',
-    python,
-    args: files('test_intl_unit_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-duration-tables',
-    python,
-    args: files('test_intl_duration_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-field-tables',
-    python,
-    args: files('test_intl_date_field_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-calendar-eras',
-    python,
-    args: files('test_intl_calendar_eras.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-dayperiod-rules',
-    python,
-    args: files('test_intl_dayperiod_rules.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
+  foreach python_case : [
+    ['intl-number-symbols', 'test_intl_number_symbols.py'],
+    ['intl-currencies', 'test_intl_currencies.py'],
+    ['intl-currency-tables', 'test_intl_currency_tables.py'],
+    ['intl-number-layout', 'test_intl_number_layout.py'],
+    ['intl-number-layout-tables', 'test_intl_number_layout_tables.py'],
+    ['intl-sparse-maps', 'test_intl_sparse_maps.py'],
+    ['intl-unit-grammar', 'test_intl_unit_grammar.py'],
+    ['intl-unit-grammar-tables', 'test_intl_unit_grammar_tables.py'],
+    ['intl-unit-patterns', 'test_intl_unit_patterns.py'],
+    ['intl-duration-tables', 'test_intl_duration_tables.py'],
+    ['intl-date-field-tables', 'test_intl_date_field_tables.py'],
+    ['intl-calendar-eras', 'test_intl_calendar_eras.py'],
+    ['intl-dayperiod-rules', 'test_intl_dayperiod_rules.py'],
+  ]
+    test(
+      python_case[0],
+      python,
+      args: files(python_case[1]),
+      suite: ['repo', 'native', 'unit'],
+      timeout: 30,
+    )
+  endforeach
 endif
 
 if get_option('intl') == 'native'
-  test(
-    'intl-segment-sources',
-    python,
-    args: files('test_intl_segment_sources.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-segment-inheritance',
-    python,
-    args: files('test_intl_segment_inheritance.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
+  foreach python_case : [
+    ['intl-segment-sources', 'test_intl_segment_sources.py'],
+    ['intl-segment-inheritance', 'test_intl_segment_inheritance.py'],
+  ]
+    test(
+      python_case[0],
+      python,
+      args: files(python_case[1]),
+      suite: ['repo', 'native', 'unit'],
+      timeout: 30,
+    )
+  endforeach
 endif
 
 if intl_enabled
@@ -4960,253 +4876,47 @@ if get_option('intl') == 'native'
 endif
 
 if intl_enabled
-  test(
-    'intl-dayperiod-tables',
-    python,
-    args: files('test_intl_dayperiod_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-style-tables',
-    python,
-    args: files('test_intl_date_style_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-combination-tables',
-    python,
-    args: files('test_intl_date_combination_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-available-tables',
-    python,
-    args: files('test_intl_date_available_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-calendar-name-tables',
-    python,
-    args: files('test_intl_calendar_name_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-calendar-names',
-    python,
-    args: files('test_intl_calendar_names.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-interval-tables',
-    python,
-    args: files('test_intl_date_interval_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-timezone-name-tables',
-    python,
-    args: files('test_intl_timezone_name_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-timezone-presentation-tables',
-    python,
-    args: files('test_intl_timezone_presentation_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-timezone-presentation',
-    python,
-    args: files('test_intl_timezone_presentation.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-timezone-names',
-    python,
-    args: files('test_intl_timezone_names.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-zone-pattern-syntax',
-    python,
-    args: files('test_intl_zone_pattern_syntax.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-intervals',
-    python,
-    args: files('test_intl_date_intervals.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-available-formats',
-    python,
-    args: files('test_intl_date_available_formats.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-combinations',
-    python,
-    args: files('test_intl_date_combinations.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-patterns',
-    python,
-    args: files('test_intl_date_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-pattern-syntax',
-    python,
-    args: files('test_intl_date_pattern_syntax.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-date-field-names',
-    python,
-    args: files('test_intl_date_field_names.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-display-tables',
-    python,
-    args: files('test_intl_display_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-display-names',
-    python,
-    args: files('test_intl_display_names.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-duration-patterns',
-    python,
-    args: files('test_intl_duration_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-relative-patterns',
-    python,
-    args: files('test_intl_relative_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-relative-tables',
-    python,
-    args: files('test_intl_relative_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-unit-tables',
-    python,
-    args: files('test_intl_unit_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-symbol-tables',
-    python,
-    args: files('test_intl_number_symbol_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-compact-tables',
-    python,
-    args: files('test_intl_compact_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-compact-pattern-syntax',
-    python,
-    args: files('test_intl_compact_pattern_syntax.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-compact-patterns',
-    python,
-    args: files('test_intl_compact_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-pattern-tables',
-    python,
-    args: files('test_intl_number_pattern_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-pattern-syntax',
-    python,
-    args: files('test_intl_number_pattern_syntax.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-number-patterns',
-    python,
-    args: files('test_intl_number_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
+  foreach python_case : [
+    ['intl-dayperiod-tables', 'test_intl_dayperiod_tables.py'],
+    ['intl-date-style-tables', 'test_intl_date_style_tables.py'],
+    ['intl-date-combination-tables', 'test_intl_date_combination_tables.py'],
+    ['intl-date-available-tables', 'test_intl_date_available_tables.py'],
+    ['intl-calendar-name-tables', 'test_intl_calendar_name_tables.py'],
+    ['intl-calendar-names', 'test_intl_calendar_names.py'],
+    ['intl-date-interval-tables', 'test_intl_date_interval_tables.py'],
+    ['intl-timezone-name-tables', 'test_intl_timezone_name_tables.py'],
+    ['intl-timezone-presentation-tables', 'test_intl_timezone_presentation_tables.py'],
+    ['intl-timezone-presentation', 'test_intl_timezone_presentation.py'],
+    ['intl-timezone-names', 'test_intl_timezone_names.py'],
+    ['intl-zone-pattern-syntax', 'test_intl_zone_pattern_syntax.py'],
+    ['intl-date-intervals', 'test_intl_date_intervals.py'],
+    ['intl-date-available-formats', 'test_intl_date_available_formats.py'],
+    ['intl-date-combinations', 'test_intl_date_combinations.py'],
+    ['intl-date-patterns', 'test_intl_date_patterns.py'],
+    ['intl-date-pattern-syntax', 'test_intl_date_pattern_syntax.py'],
+    ['intl-date-field-names', 'test_intl_date_field_names.py'],
+    ['intl-display-tables', 'test_intl_display_tables.py'],
+    ['intl-display-names', 'test_intl_display_names.py'],
+    ['intl-duration-patterns', 'test_intl_duration_patterns.py'],
+    ['intl-relative-patterns', 'test_intl_relative_patterns.py'],
+    ['intl-relative-tables', 'test_intl_relative_tables.py'],
+    ['intl-unit-tables', 'test_intl_unit_tables.py'],
+    ['intl-number-symbol-tables', 'test_intl_number_symbol_tables.py'],
+    ['intl-compact-tables', 'test_intl_compact_tables.py'],
+    ['intl-compact-pattern-syntax', 'test_intl_compact_pattern_syntax.py'],
+    ['intl-compact-patterns', 'test_intl_compact_patterns.py'],
+    ['intl-number-pattern-tables', 'test_intl_number_pattern_tables.py'],
+    ['intl-number-pattern-syntax', 'test_intl_number_pattern_syntax.py'],
+    ['intl-number-patterns', 'test_intl_number_patterns.py'],
+  ]
+    test(
+      python_case[0],
+      python,
+      args: files(python_case[1]),
+      suite: ['repo', 'native', 'unit'],
+      timeout: 30,
+    )
+  endforeach
 
   test(
     'intl-collation-compiler-input',
@@ -5323,125 +5033,31 @@ if intl_enabled
     args: files('test_intl_collation_contexts.py'),
     suite: ['repo', 'generator', 'unit'],
   )
-  test(
-    'intl-collation-root',
-    python,
-    args: files('test_intl_collation_root.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-plural-sources',
-    python,
-    args: files('test_intl_plural_rules.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-plural-tables',
-    python,
-    args: files('test_intl_plural_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-numbering-tables',
-    python,
-    args: files('test_intl_numbering_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-numbering-metadata',
-    python,
-    args: files('test_intl_numbering.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-locale-preferences',
-    python,
-    args: files('test_intl_preferences.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-locale-metadata',
-    python,
-    args: files('test_intl_locale_metadata.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-typed-tables',
-    python,
-    args: files('test_intl_tables.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-available-locales',
-    python,
-    args: files('test_intl_availability.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-binary-envelope',
-    python,
-    args: files('test_intl_bundle.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-list-patterns',
-    python,
-    args: files('test_intl_list_patterns.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-record-resolution',
-    python,
-    args: files('test_intl_resolution.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-locale-inheritance',
-    python,
-    args: files('test_intl_parents.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-xml-schema',
-    python,
-    args: files('test_intl_xml.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
-
-  test(
-    'intl-source-acquisition',
-    python,
-    args: files('test_intl_sources.py'),
-    suite: ['repo', 'native', 'unit'],
-    timeout: 30,
-  )
+  foreach python_case : [
+    ['intl-collation-root', 'test_intl_collation_root.py'],
+    ['intl-plural-sources', 'test_intl_plural_rules.py'],
+    ['intl-plural-tables', 'test_intl_plural_tables.py'],
+    ['intl-numbering-tables', 'test_intl_numbering_tables.py'],
+    ['intl-numbering-metadata', 'test_intl_numbering.py'],
+    ['intl-locale-preferences', 'test_intl_preferences.py'],
+    ['intl-locale-metadata', 'test_intl_locale_metadata.py'],
+    ['intl-typed-tables', 'test_intl_tables.py'],
+    ['intl-available-locales', 'test_intl_availability.py'],
+    ['intl-binary-envelope', 'test_intl_bundle.py'],
+    ['intl-list-patterns', 'test_intl_list_patterns.py'],
+    ['intl-record-resolution', 'test_intl_resolution.py'],
+    ['intl-locale-inheritance', 'test_intl_parents.py'],
+    ['intl-xml-schema', 'test_intl_xml.py'],
+    ['intl-source-acquisition', 'test_intl_sources.py'],
+  ]
+    test(
+      python_case[0],
+      python,
+      args: files(python_case[1]),
+      suite: ['repo', 'native', 'unit'],
+      timeout: 30,
+    )
+  endforeach
 
   test(
     'intl-git-source',
