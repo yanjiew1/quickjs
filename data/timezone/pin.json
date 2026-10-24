@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "tz": {
+    "release": "2026e",
+    "tag": "2026e",
+    "commit": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
+    "released": "2026-09-29",
+    "archive": {
+      "url": "https://codeload.github.com/eggert/tz/tar.gz/refs/tags/2026e",
+      "sha256": "5b62258a9a868813f00b070983b9b3e7279634575571a0fcc732be6a1f7047c1"
+    }
+  },
+  "cldr": {
+    "release": "49",
+    "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+    "released": "2026-10-22",
+    "archive": {
+      "format": "zip",
+      "sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip"
+    },
+    "files": {
+      "timezone.xml": {
+        "path": "common/bcp47/timezone.xml",
+        "sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae"
+      },
+      "windowsZones.xml": {
+        "path": "common/supplemental/windowsZones.xml",
+        "sha256": "5f902f94106a396cb7774f0b0e1ca4dfecb686494045350c0b4935d378e3913b"
+      },
+      "LICENSE": {
+        "path": "LICENSE",
+        "sha256": "65eb33419e22a297550a811b5b535f5e532f9a7e0114b516c0ea18afd53c3804"
+      }
+    }
+  },
+  "reviewed": "2026-10-23"
+}
