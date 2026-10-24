@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import authenticated ICU4X Rust facts into candidate calendar JSON files.
+"""Import supplied ICU4X Rust facts into candidate calendar JSON files.
 
 This is an update helper, never an input to normal data generation. Original
 source revisions, digests and the Unicode license remain in the data pin.
@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import re
 
-from acquire import PIN, MAX_DOWNLOAD, atomic_write, digest
+from acquire import MAX_DOWNLOAD, atomic_write
 from normalize import EPOCH, ummalqura
 from lunisolar import korea_precomputed, require
 
@@ -81,11 +81,11 @@ def parse_korean_rust(text):
     return rows
 
 
-def read_rust(cache, pin, name):
+def read_rust(cache, name):
     with (cache / name).open('rb') as source:
         raw = source.read(MAX_DOWNLOAD + 1)
-    if len(raw) > MAX_DOWNLOAD or digest(raw) != pin['sources'][name]['sha256']:
-        raise ValueError('ICU4X source differs from pin: ' + name)
+    if len(raw) > MAX_DOWNLOAD:
+        raise ValueError('ICU4X source exceeds byte limit: ' + name)
     return raw.decode('utf-8')
 
 
@@ -96,9 +96,9 @@ def render(data):
     return (text + '\n  ]\n}\n').encode('ascii')
 
 
-def import_records(cache, pin):
-    umm = parse_ummalqura_rust(read_rust(cache, pin, 'ummalqura_data.rs'))
-    rows = parse_korean_rust(read_rust(cache, pin, 'icu4x-korea-data.rs'))
+def import_records(cache):
+    umm = parse_ummalqura_rust(read_rust(cache, 'ummalqura_data.rs'))
+    rows = parse_korean_rust(read_rust(cache, 'icu4x-korea-data.rs'))
     korean = {'schema': 1, 'calendar': 'dangi', 'first_year': 1912,
               'end_epoch_day': rows[-1][1] + sum(rows[-1][2]), 'rows': rows}
     # The maintained facts and imported facts obey the same semantic contract.
@@ -110,10 +110,9 @@ def import_records(cache, pin):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, required=True)
-    parser.add_argument('--pin', type=Path, default=PIN)
     parser.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
-    records = import_records(args.cache, json.loads(args.pin.read_text()))
+    records = import_records(args.cache)
     for name, data in records.items():
         atomic_write(args.output_dir / name, render(data))
 

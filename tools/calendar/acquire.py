@@ -6,17 +6,20 @@ Normal builds use vendored normalized data and never run this command.
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import tempfile
 import urllib.error
 import urllib.request
+import zipfile
 
 TOOLS = Path(__file__).resolve().parent
 SOURCES = TOOLS.parents[1] / 'data' / 'calendar' / 'sources'
 PIN = SOURCES.parent / 'pin.json'
 MAX_DOWNLOAD = 8 * 1024 * 1024
+MAX_ARCHIVE = 128 * 1024 * 1024
 
 
 def digest(data):
@@ -44,40 +47,61 @@ def fetch(path, source, offline=False):
         raise ValueError('missing or modified calendar source: ' + path.name)
     if not source['url'].startswith('https://'):
         raise ValueError('calendar source URL must use HTTPS')
+    # A source can be a member of the official release ZIP. Authenticate the
+    # archive before opening it; materialize only the requested member.
+    limit = MAX_ARCHIVE if 'path' in source else MAX_DOWNLOAD
+    expected = source.get('archive_sha256', source['sha256'])
     for attempt in range(3):
         try:
             request = urllib.request.Request(source['url'], headers={
                 'User-Agent': 'QuickJS-calendar-generator'})
             with urllib.request.urlopen(request, timeout=30) as response:
-                raw = response.read(MAX_DOWNLOAD + 1)
+                raw = response.read(limit + 1)
             break
         except (OSError, urllib.error.URLError):
             if attempt == 2:
                 raise
-    if len(raw) > MAX_DOWNLOAD or digest(raw) != source['sha256']:
+    if len(raw) > limit or digest(raw) != expected:
         raise ValueError('calendar download differs from pin: ' + path.name)
+    if 'path' in source:
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            entry = archive.getinfo(source['path'])
+            if entry.file_size > MAX_DOWNLOAD:
+                raise ValueError('calendar archive member exceeds byte limit')
+            raw = archive.read(entry)
+    if digest(raw) != source['sha256']:
+        raise ValueError('calendar archive member differs from pin: ' + path.name)
     atomic_write(path, raw)
 
 
-def checked_sources():
-    pin = json.loads(PIN.read_text())
+def load_pin(path=None):
+    pin = json.loads((PIN if path is None else path).read_text())
     if pin['schema'] != 1:
         raise ValueError('unsupported calendar pin schema')
+    return pin
+
+
+def checked_sources():
+    pin = load_pin()
     for name, item in pin['sources'].items():
         if Path(name).name != name or name in ('', '.', '..'):
             raise ValueError('invalid source name')
         if item['vendored'] and digest((SOURCES / name).read_bytes()) != item['sha256']:
             raise ValueError('vendored calendar source differs from pin: ' + name)
+    for name, item in pin['normalized'].items():
+        if Path(name).name != name or name in ('', '.', '..'):
+            raise ValueError('invalid normalized calendar name')
+        if digest((SOURCES.parent / name).read_bytes()) != item['sha256']:
+            raise ValueError('normalized calendar differs from pin: ' + name)
     return pin
 
 
-def read_normalized(pin, name):
-    """Authenticate and parse the same bytes; never trust a separate reread."""
+def read_normalized(name, directory=None):
+    """Parse supplied facts; acquisition alone enforces pinned identities."""
     if Path(name).name != name or name in ('', '.', '..'):
         raise ValueError('invalid normalized calendar name')
-    raw = (SOURCES.parent / name).read_bytes()
-    if digest(raw) != pin['normalized'][name]['sha256']:
-        raise ValueError('modified normalized calendar: ' + name)
+    root = SOURCES.parent if directory is None else Path(directory)
+    raw = (root / name).read_bytes()
 
     def unique_object(pairs):
         result = {}

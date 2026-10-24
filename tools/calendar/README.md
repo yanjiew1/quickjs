@@ -5,8 +5,9 @@ on 2026-10-19 at `d026068ed653130a37d79a95c0122ecf5319f1a4`.
 Its required publication ranges take precedence over arithmetic approximations.
 
 [`data/calendar/pin.json`](../../data/calendar/pin.json) records exact source
-identities. Raw redistributable receipts live
-in `data/calendar/sources`; normalized factual records live in `data/calendar`.
+identities. Normalized factual records live in `data/calendar`; `sources/` retains only
+licenses and notices. Original documents are acquired into an external cache
+when updating or independently reproducing the facts.
 The maintained ICU4X inputs are parsed JSON, not Rust source. Original Rust
 revisions and hashes remain in the pin, with the complete Unicode license.
 They are acquired and parsed only by the explicit update importer below.
@@ -44,7 +45,7 @@ the required Islamic civil fallback continuously.
 
 ## Japanese eras
 
-`sources/cldr-calendarData.xml` is raw supplemental data from the official
+The original `cldr-calendarData.xml` is supplemental data from the official
 CLDR 49 common archive, pinned to release commit
 `96e54b273d2da4ec6fbad350ba19ff23fa24a588`. Its modern era codes and
 Gregorian start dates agree with ECMA-402's Japanese government era rules.
@@ -58,10 +59,9 @@ Gregorian eras before that date, so Meiji's lookup start is clamped to
 old Japanese calendar and are not interpreted as Gregorian dates.
 
 To update eras, review a new released CLDR source against the government
-announcement and specification, replace the vendored source/license, and
-update their revision and byte hashes in
-[`data/calendar/pin.json`](../../data/calendar/pin.json). Then run normalization and generation below, and commit the source, `japanese.json`, binary and
-manifest together. No C lookup change is needed for another era. CI compares
+announcement and specification, update the source identity in
+[`data/calendar/pin.json`](../../data/calendar/pin.json). Then run normalization and generation below, and commit the
+pin, `japanese.json`, binary and manifest together. No C lookup change is needed for another era. CI compares
 the regenerated JSON and binary; a synthetic sixth-era test verifies lookup
 and year resolution with additional data. Updates require rebuilding the
 embedded snapshot; runtime data loading is not introduced.
@@ -78,7 +78,7 @@ python3 tools/calendar/acquire.py --cache /path/to/calendar-cache --offline
 Reproduce normalized records offline, then compare them with the repository:
 
 ```sh
-python3 tools/calendar/normalize.py --output-dir /path/to/build/calendar
+python3 tools/calendar/normalize.py --cache /path/to/calendar-cache --output-dir /path/to/build/calendar
 cmp data/calendar/persian.json /path/to/build/calendar/persian.json
 cmp data/calendar/japanese.json /path/to/build/calendar/japanese.json
 ```
@@ -95,10 +95,11 @@ cmp data/calendar/islamic-umalqura.json /path/to/build/calendar-facts/islamic-um
 cmp data/calendar/icu4x-korea-data.json /path/to/build/calendar-facts/icu4x-korea-data.json
 ```
 
-The importer authenticates the cache against the original source hashes before
-parsing. Review source updates and their candidate facts before replacing the
-maintained JSON and its normalized hash in the data pin. Ordinary generation
-validates and consumes those authenticated JSON bytes directly. Korean facts
+Acquisition authenticates official sources against the pin. Importers and
+generators accept supplied compatible data without requiring pinned hashes;
+they still validate syntax, coverage, types and calendar boundaries. Review
+candidate facts before replacing the maintained JSON and its normalized hash.
+Ordinary generation consumes the JSON directly and records its actual hashes. Korean facts
 retain all 1912–2102 records, including padding years and the nominal leap-month
 number converted from ICU4X's inserted ordinal. They are algorithmic precomputed
 data, not additional official KASI publication. The KASI overlaps remain checked
@@ -106,8 +107,8 @@ when reconstructing the composite Dangi dataset.
 
 To independently compare all official PDF leap markers, install `pdftotext`
 and add `--verify-persian-pdf /path/to/calendar-cache/persian-official.pdf`.
-The converter has a timeout, runs only for this explicit check, and requires
-the exact pinned PDF. Downloaded publications are never runtime dependencies.
+The converter has a timeout and runs only for this explicit semantic check.
+Acquire first when reproducing the official pinned PDF. Downloaded publications are never runtime dependencies.
 
 Run the fast offline generator tests with
 `python3 tests/test_calendar_generator.py`.
@@ -145,7 +146,7 @@ return to our approximation in 2101.
 `primary_span` and `required_span` retain their original coverage, while
 `precomputed_source` and `precomputed_span` identify the extension separately.
 Ordinary generation reads the maintained JSON facts. Only the explicit update
-importer parses the authenticated original Rust as data; no Rust toolchain or
+importer parses supplied original Rust as data; no Rust toolchain or
 ICU library is needed. The Unicode License V3 receipt remains at
 `data/calendar/sources/LICENSE-ICU4X`.
 
@@ -171,13 +172,14 @@ cmp data/calendar/dangi.json /path/to/build/calendar/dangi.json
 ```
 
 No target executable, ICU installation or system timezone database is used.
-Normal builds do not fetch these publications. Offline pack regeneration
-checks the normalized records against their recorded byte hashes; the command
-above separately reproduces those records from the acquired source receipts.
+Normal builds do not fetch these publications. Offline pack generation checks
+factual types, coverage and boundaries without authenticating source hashes.
+The command above independently reproduces the JSON from supplied originals;
+acquire them first when checking the official pinned source identity.
 
 ## Single binary pack
 
-`generate.py` checks normalized records and their source identities, then emits
+`generate.py` validates normalized facts and records their actual hashes, then emits
 one `calendar-data.bin` plus a provenance manifest. QJCA version 2 uses big-endian
 integers: a 32-byte header, 32-byte dataset indices, source-version strings and
 12-byte year records. Each year stores its first epoch day, two bits per month
@@ -210,3 +212,22 @@ python3 tools/calendar/generate.py \
 cmp data/calendar/calendar-data.bin /path/to/build/calendar-data.bin
 cmp data/calendar/calendar-data-manifest.json /path/to/build/calendar-data-manifest.json
 ```
+
+## Supplied data
+
+Generate from a separate directory containing the maintained JSON filenames;
+original transcription, XML and Rust files are not needed:
+
+```sh
+python3 tools/calendar/generate.py --data-dir /path/to/calendar-facts \
+  --output /path/to/build/calendar-data.bin \
+  --manifest /path/to/build/calendar-data-manifest.json
+```
+
+`--pin /path/to/pin.json` optionally supplies declared source revisions and
+boundary metadata. Its input hashes are not an acceptance whitelist for
+conversion. The manifest records actual JSON hashes; declared upstream
+provenance is not a claim that custom bytes were authenticated. Keep the
+appropriate notices with derived data. Acquisition remains the operation that
+verifies official source hashes. CI acquires original inputs, independently
+reproduces their JSON, and compares the generated pack and manifest.

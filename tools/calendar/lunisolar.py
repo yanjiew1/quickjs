@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from acquire import SOURCES, atomic_write, checked_sources, digest, read_normalized
+from acquire import SOURCES, atomic_write, load_pin, read_normalized
 
 EPOCH = datetime.date(1970, 1, 1)
 
@@ -23,10 +23,8 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def read_source(cache, pin, name):
-    raw = (cache / name).read_bytes()
-    require(digest(raw) == pin['sources'][name]['sha256'], 'modified source: ' + name)
-    return raw
+def read_source(cache, name):
+    return (cache / name).read_bytes()
 
 
 def pmo(text):
@@ -209,16 +207,16 @@ def merge(name, primary, approximate):
 
 
 def normalize(cache, boundary_tool):
-    pin = checked_sources()
-    primary_pmo = pmo(read_source(cache, pin, 'pmo-calendar.js').decode('utf-8'))
+    pin = load_pin()
+    primary_pmo = pmo(read_source(cache, 'pmo-calendar.js').decode('utf-8'))
     for item in pin['boundary_months']:
-        read_source(cache, pin, item['source'])
+        read_source(cache, item['source'])
         day = (datetime.datetime.strptime(item['start'], '%Y-%m-%d').date() - EPOCH).days
         primary_pmo.append((item['year'], item['month'], item['leap'], day, item['length']))
     primary_kasi = []
     for month in range(1, 13):
         for leap in range(2):
-            raw = read_source(cache, pin, 'kasi-month-%02d-%d.json' % (month, leap))
+            raw = read_source(cache, 'kasi-month-%02d-%d.json' % (month, leap))
             primary_kasi.extend(kasi(raw, month, leap))
     raw = subprocess.run([str(boundary_tool.resolve())], stdout=subprocess.PIPE,
                          check=True, timeout=30)
@@ -226,7 +224,7 @@ def normalize(cache, boundary_tool):
     require(boundary['schema'] == 1 and boundary['role'] == 'approximation' and
             len(boundary['years']) == 2, 'invalid boundary export')
     approx = {r['calendar']: approximate_months(r) for r in boundary['years']}
-    korean = read_normalized(pin, 'icu4x-korea-data.json')
+    korean = read_normalized('icu4x-korea-data.json')
     result = [merge('chinese', primary_pmo, approx['chinese']),
               extend_dangi(merge('dangi', primary_kasi, approx['dangi']), korean)]
     for data in result:
