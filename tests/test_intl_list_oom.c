@@ -3,6 +3,48 @@
 #ifdef CONFIG_INTL
 #include "../src/quickjs/internal/string.h"
 #include "pool-padding.h"
+#include "../src/quickjs/builtins/intl.h"
+
+static void test_shared_admission_failures(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContextRaw(rt);
+    const QJSIntlData *data;
+    QJSIntlLocaleService *locale;
+    void *padding;
+    int valid;
+
+    assert(ctx && !JS_AddIntrinsicBaseObjects(ctx));
+    assert(!rt->intl_data.pack.bytes);
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    data = js_intl_data(ctx);
+    oom_test_end(&allocator);
+    test_pool_padding_free(rt, padding);
+    assert(!data && allocator.failures == 1 && !rt->intl_data.pack.bytes);
+    oom_test_check_exception(ctx);
+    data = js_intl_data(ctx);
+    assert(data == &rt->intl_data && data->pack.bytes);
+    locale = js_intl_locale_service(ctx);
+    assert(locale && !rt->intl_number);
+
+    /* Exhaust pools again so failure reaches the next service's real allocator,
+       rather than succeeding from an existing arena. Keep shared admission. */
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    assert(!js_intl_number_service(ctx));
+    oom_test_end(&allocator);
+    test_pool_padding_free(rt, padding);
+    assert(allocator.failures == 1 && !rt->intl_number);
+    assert(js_intl_data(ctx) == data && rt->intl_locale == locale);
+    oom_test_check_exception(ctx);
+    assert(!qjs_intl_locale_validate(locale, (QJSIntlBytes){"en", 2}, &valid) && valid);
+    assert(js_intl_number_service(ctx) && !JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
 
 static void test_operation(int operation)
 {
@@ -188,6 +230,7 @@ static void test_format(int parts)
 int main(void)
 {
 #ifdef CONFIG_INTL
+    test_shared_admission_failures();
     test_operation(0);
     test_operation(1);
     test_operation(2);
