@@ -42,12 +42,22 @@ jobs:
     timeout-minutes: 5
     steps:
     - uses: actions/checkout@v7
+    - name: Acquire original calendar source receipts
+      run: |
+        python3 tools/calendar/acquire.py --cache "$RUNNER_TEMP/calendar-sources" \
+          --source ummalqura_data.rs --source icu4x-korea-data.rs \
+          --source kabise.txt --source cldr-calendarData.xml
+    - name: Reproduce factual JSON from authenticated source
+      run: |
+        python3 tools/calendar/import_icu4x.py --cache "$RUNNER_TEMP/calendar-sources" \
+          --output-dir "$RUNNER_TEMP/calendar-facts"
+        cmp data/calendar/islamic-umalqura.json "$RUNNER_TEMP/calendar-facts/islamic-umalqura.json"
+        cmp data/calendar/icu4x-korea-data.json "$RUNNER_TEMP/calendar-facts/icu4x-korea-data.json"
     - name: Reproduce normalized calendar publications offline
       run: |
         python3 tests/test_calendar_generator.py
-        python3 tools/calendar/normalize.py --output-dir "$RUNNER_TEMP/calendar"
+        python3 tools/calendar/normalize.py --cache "$RUNNER_TEMP/calendar-sources" --output-dir "$RUNNER_TEMP/calendar"
         cmp data/calendar/persian.json "$RUNNER_TEMP/calendar/persian.json"
-        cmp data/calendar/islamic-umalqura.json "$RUNNER_TEMP/calendar/islamic-umalqura.json"
         cmp data/calendar/japanese.json "$RUNNER_TEMP/calendar/japanese.json"
         python3 tools/calendar/generate.py --output "$RUNNER_TEMP/calendar-data.bin" --manifest "$RUNNER_TEMP/calendar-manifest.json"
         cmp data/calendar/calendar-data.bin "$RUNNER_TEMP/calendar-data.bin"
