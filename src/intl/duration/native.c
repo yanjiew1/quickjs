@@ -279,7 +279,9 @@ QJSIntlStatus qjs_intl_duration_formatter_open(const QJSIntlDurationService *ser
     for (unit = 0; unit < QJS_TEMPORAL_UNIT_COUNT; unit++) {
         if (options->units[unit].style == QJS_INTL_DURATION_UNIT_FRACTIONAL)
             continue;
-        for (sign = 0; sign < 2; sign++) {
+        /* YEAR is the first possible displayed component, so it can never
+           need a sign-suppressed formatter. */
+        for (sign = 0; sign < (unit == QJS_TEMPORAL_YEAR ? 1 : 2); sign++) {
             QJSIntlNumberOptions number = number_options(options, unit, sign);
             status = qjs_intl_number_formatter_open(service->number, service->locales[locale].number,
                                                      system, &number, &formatter->numbers[unit][sign]);
