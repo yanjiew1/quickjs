@@ -215,6 +215,24 @@ The optional `docs` target builds HTML when `makeinfo` is installed. With
 to require HTML tooling, or `disabled` to omit these targets. Documentation and
 its generated version file remain in the build directory.
 
+### Alternate Intl data
+
+The committed Intl packs use the official CLDR common production release.
+`data/intl/pin-git.json` supports explicit generation from the complete matching
+Git source snapshot, including its additional locale data. Follow the generation
+commands in [the data maintenance guide](doc/data-updates.md), then select the resulting
+pack without replacing the committed production data:
+
+```sh
+meson setup /path/to/build-git /path/to/source \
+  -Dintl=native -Dintl_data_file=/path/to/native-git.bin
+```
+
+The selected pack must match the build's minimal/native profile. It is validated
+and embedded as one C translation unit; normal builds neither download sources
+nor parse XML at runtime. The option accepts absolute paths or paths relative to
+the source tree.
+
 ## Cross compilation
 
 Use Meson's `--cross-file` and define its `exe_wrapper` when target executables
@@ -235,21 +253,3 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 `extras` selections require the corresponding toolchains or Unicode inputs.
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
-
-### Alternate Intl data
-
-The committed Intl packs use the official CLDR common production release.
-`data/intl/pin-git.json` supports explicit generation from the complete matching
-Git source snapshot, including its additional locale data. Follow the generation
-commands in [the data maintenance guide](doc/data-updates.md), then select the resulting
-pack without replacing the committed production data:
-
-```sh
-meson setup /path/to/build-git /path/to/source \
-  -Dintl=native -Dintl_data_file=/path/to/native-git.bin
-```
-
-The selected pack must match the build's minimal/native profile. It is validated
-and embedded as one C translation unit; normal builds neither download sources
-nor parse XML at runtime. The option accepts absolute paths or paths relative to
-the source tree.
