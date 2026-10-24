@@ -150,8 +150,8 @@ int main(void)
     int supported;
     QJSIntlAllocator incomplete = allocator;
     incomplete.realloc = NULL;
-    assert(qjs_intl_duration_open(&incomplete, &failed) == QJS_INTL_INVALID_ARGUMENT && !failed && !state.calls);
-    assert(!qjs_intl_duration_open(&allocator, &service));
+    assert(qjs_intl_duration_open(&incomplete, NULL, &failed) == QJS_INTL_INVALID_ARGUMENT && !failed && !state.calls);
+    assert(!qjs_intl_duration_open(&allocator, NULL, &service));
     calls = state.calls;
     qjs_intl_duration_close(service);
     assert(!state.live);
@@ -159,11 +159,11 @@ int main(void)
         state.calls = 0;
         state.fail_at = fail;
         failed = (void *)1;
-        assert(qjs_intl_duration_open(&allocator, &failed) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_duration_open(&allocator, NULL, &failed) == QJS_INTL_NO_MEMORY);
         assert(!failed && !state.live);
     }
     state.fail_at = 0;
-    assert(!qjs_intl_duration_open(&allocator, &service));
+    assert(!qjs_intl_duration_open(&allocator, NULL, &service));
     assert(!qjs_intl_duration_available(service, &available, &count));
     assert(count >= 1 && count < 10000);
     for (i = 0; i < count; i++) {
