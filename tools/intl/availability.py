@@ -11,9 +11,9 @@ def profile_locales(graph, profile):
     if profile != 'minimal':
         raise ValueError('unknown native Intl data profile')
 
-    # Keep the explicit US identity as well as generic English. Sparse authored
-    # fixtures need not contain every production seed.
-    seeds = (locale for locale in ('en', 'en-US') if locale in graph.tags)
+    # Minimal exposes generic English only. Regional requests still use normal
+    # prefix matching; root remains an internal source-data fallback.
+    seeds = (locale for locale in ('en',) if locale in graph.tags)
     return tuple(sorted({tag for locale in seeds for tag in graph.chain(locale)}))
 
 

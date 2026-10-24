@@ -1903,8 +1903,9 @@ work with an independent build directory.
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
 locale identity metadata, regional/script preferences, and deduplicated sets
 of resolved list templates. Both profiles retain all identity and preference
-metadata. `--profile minimal` selects English and its parents for formatter
-records; `native` retains the full graph. Section IDs
+metadata. `--profile minimal` selects only `en` and its required root inheritance for
+formatter records. Requests such as `en-US` still match `en` by standard prefix
+matching, without a separate regional data identity; `native` retains the full graph. Section IDs
 and string IDs are stable within a generation, not across source upgrades.
 The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.

@@ -204,7 +204,7 @@ int main(void)
     assert(qjs_intl_plural_open(&allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
     assert(!qjs_intl_plural_open(&allocator, &service));
     calls = state.calls;
-    assert(!qjs_intl_plural_available(service, &available, &count) && count >= 2);
+    assert(!qjs_intl_plural_available(service, &available, &count) && count >= 1);
     assert(qjs_intl_plural_available(NULL, &available, &count) == QJS_INTL_INVALID_ARGUMENT);
     assert(!available && !count);
     assert(!qjs_intl_plural_available(service, &available, &count));
