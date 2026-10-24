@@ -1,4 +1,4 @@
-/* Global clock rules remain available independently of prepared locale rows.
+/* Selected clock rules retain both kinds and their prefix/root fallbacks.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/datetime/dayperiod-data.h"
 #include <assert.h>
@@ -68,14 +68,18 @@ int main(void)
     size_t calls;
     assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, &allocator, &data));
     assert(!qjs_intl_dayperiod_data_open(&data, &allocator, &owner) && !state.live);
-    assert(owner.row_count == 178 && owner.map_count == 117 && owner.rule_count == 651);
+    if (data.pack.profile)
+        assert(owner.row_count == 178 && owner.map_count == 117 && owner.rule_count == 651);
+    else
+        assert(owner.row_count == 4 && owner.map_count == 3 && owner.rule_count == 12);
     calls = state.calls;
     for (i = 0; i < owner.row_count; i++) {
         assert(!qjs_intl_dayperiod_row(&owner, i, &kind, &origin, &map));
         assert(!qjs_intl_dayperiod_find(&owner, kind, origin, &found) && found == map);
         kinds[kind]++;
     }
-    assert(kinds[QJS_INTL_DAYPERIOD_FORMAT] == 89 && kinds[QJS_INTL_DAYPERIOD_SELECTION] == 89);
+    assert(kinds[QJS_INTL_DAYPERIOD_FORMAT] == (data.pack.profile ? 89 : 2));
+    assert(kinds[QJS_INTL_DAYPERIOD_SELECTION] == (data.pack.profile ? 89 : 2));
     for (i = 0; i < owner.map_count; i++) {
         assert(!qjs_intl_dayperiod_map(&owner, i, &start, &count));
         for (j = 0; j < count; j++) {
@@ -89,12 +93,19 @@ int main(void)
     map = find(&owner, QJS_INTL_DAYPERIOD_SELECTION, "en");
     assert(!has(&owner, map, QJS_INTL_DAYPERIOD_MIDNIGHT));
     assert(!has(&owner, map, QJS_INTL_DAYPERIOD_NOON));
-    map = find(&owner, QJS_INTL_DAYPERIOD_SELECTION, "gsw");
-    assert(has(&owner, map, QJS_INTL_DAYPERIOD_MIDNIGHT));
-    map = find(&owner, QJS_INTL_DAYPERIOD_FORMAT, "hi-Latn");
-    assert(has(&owner, map, QJS_INTL_DAYPERIOD_NIGHT1));
-    map = find(&owner, QJS_INTL_DAYPERIOD_FORMAT, "sr");
-    assert(has(&owner, map, QJS_INTL_DAYPERIOD_MORNING1));
+    if (data.pack.profile) {
+        map = find(&owner, QJS_INTL_DAYPERIOD_SELECTION, "gsw");
+        assert(has(&owner, map, QJS_INTL_DAYPERIOD_MIDNIGHT));
+        map = find(&owner, QJS_INTL_DAYPERIOD_FORMAT, "hi-Latn");
+        assert(has(&owner, map, QJS_INTL_DAYPERIOD_NIGHT1));
+        map = find(&owner, QJS_INTL_DAYPERIOD_FORMAT, "sr");
+        assert(has(&owner, map, QJS_INTL_DAYPERIOD_MORNING1));
+    } else {
+        assert(qjs_intl_dayperiod_find(&owner, QJS_INTL_DAYPERIOD_SELECTION, bytes("gsw"), &map) ==
+               QJS_INTL_UNSUPPORTED);
+        assert(qjs_intl_dayperiod_find(&owner, QJS_INTL_DAYPERIOD_FORMAT, bytes("sr"), &map) ==
+               QJS_INTL_UNSUPPORTED);
+    }
     assert(qjs_intl_dayperiod_find(&owner, QJS_INTL_DAYPERIOD_FORMAT, bytes("sr-Latn"), &map) == QJS_INTL_UNSUPPORTED);
     map = find(&owner, QJS_INTL_DAYPERIOD_FORMAT, "root");
     assert(!qjs_intl_dayperiod_map(&owner, map, &start, &count) && count == 2);
