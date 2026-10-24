@@ -3,34 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include "quickjs.h"
-
-/* Existing arenas must not bypass the failure requested by the memory limit. */
-static void *exhaust_pooled_blocks(JSRuntime *rt)
-{
-    void *padding = NULL, *ptr;
-    size_t size;
-
-    JS_SetMemoryLimit(rt, 0);
-    for (size = sizeof(void *); size <= 512; size += sizeof(void *)) {
-        while ((ptr = js_malloc_rt(rt, size)) != NULL) {
-            memcpy(ptr, &padding, sizeof(padding));
-            padding = ptr;
-        }
-    }
-    JS_SetMemoryLimit(rt, (size_t)-1);
-    return padding;
-}
-
-static void free_padding(JSRuntime *rt, void *padding)
-{
-    while (padding) {
-        void *next;
-
-        memcpy(&next, padding, sizeof(next));
-        js_free_rt(rt, padding);
-        padding = next;
-    }
-}
+#include "pool-padding.h"
 
 static void *nested_padding;
 static JSValue nested_error;
@@ -42,7 +15,7 @@ static JSValue resolve_inner(JSContext *ctx, JSValueConst this_val,
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSValue result;
 
-    nested_padding = exhaust_pooled_blocks(rt);
+    nested_padding = test_pool_padding(rt);
     JS_SetMemoryLimit(rt, 0);
     result = JS_Call(ctx, argv[0], JS_UNDEFINED, 1, (JSValueConst *)data);
     JS_SetMemoryLimit(rt, (size_t)-1);
@@ -96,7 +69,7 @@ static void test_nested(JSContext *ctx)
     JS_FreeValue(ctx, promise);
     JS_FreeValue(ctx, outer);
     JS_FreeValue(ctx, inner);
-    free_padding(rt, nested_padding);
+    test_pool_padding_free(rt, nested_padding);
     nested_padding = NULL;
 }
 
@@ -116,7 +89,7 @@ int main(void)
     thenable = JS_Eval(ctx, source, strlen(source), "<promise-oom>",
                        JS_EVAL_TYPE_GLOBAL);
     assert(!JS_IsException(thenable));
-    padding = exhaust_pooled_blocks(rt);
+    padding = test_pool_padding(rt);
     JS_SetMemoryLimit(rt, 0);
     result = JS_Call(ctx, funcs[0], JS_UNDEFINED, 1,
                      (JSValueConst *)&thenable);
@@ -138,7 +111,7 @@ int main(void)
     JS_FreeValue(ctx, funcs[0]);
     JS_FreeValue(ctx, funcs[1]);
     JS_FreeValue(ctx, promise);
-    free_padding(rt, padding);
+    test_pool_padding_free(rt, padding);
     test_nested(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
