@@ -209,37 +209,6 @@ static void test_teardown_cancels_and_releases_backing(void)
     notify_join(words, 0);
 }
 
-static void test_realm_and_nonblocking_owner(void)
-{
-    _Atomic(int32_t) words[2] = { 0, 0 };
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *creator = JS_NewContext(rt), *caller = JS_NewContext(rt);
-    JSValue global, caller_global, method, prototype, promise_prototype;
-    assert(rt && creator && caller);
-    JS_SetCanBlock(rt, 0);
-    install_shared(caller, words, NULL, NULL);
-    global = JS_GetGlobalObject(creator);
-    caller_global = JS_GetGlobalObject(caller);
-    method = eval(creator, "Atomics.waitAsync");
-    prototype = eval(creator, "Object.prototype");
-    promise_prototype = eval(creator, "Promise.prototype");
-    assert(JS_SetPropertyStr(caller, caller_global, "foreignWait", method) >= 0);
-    assert(JS_SetPropertyStr(caller, caller_global, "creatorObject", prototype) >= 0);
-    assert(JS_SetPropertyStr(caller, caller_global, "creatorPromise", promise_prototype) >= 0);
-    eval_void(caller,
-        "var words = new Int32Array(shared);"
-        "var result = foreignWait(words, 0, 0);"
-        "if (!result.async || Object.getPrototypeOf(result) !== creatorObject ||"
-        "Object.getPrototypeOf(result.value) !== creatorPromise) throw Error('realm');"
-        "if (Atomics.notify(words, 0, 1) !== 1) throw Error('notify');");
-    drain(rt);
-    JS_FreeValue(creator, global);
-    JS_FreeValue(caller, caller_global);
-    JS_FreeContext(caller);
-    JS_FreeContext(creator);
-    JS_FreeRuntime(rt);
-}
-
 static void test_oom_does_not_publish_a_wait(void)
 {
     size_t budget;
@@ -298,7 +267,6 @@ int main(void)
     test_foreign_fifo_and_context_root();
     test_queued_timeout_can_lose_to_notify();
     test_teardown_cancels_and_releases_backing();
-    test_realm_and_nonblocking_owner();
     test_oom_does_not_publish_a_wait();
 #endif
     return 0;

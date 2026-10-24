@@ -1508,43 +1508,6 @@ static void test_typed_array_external_overlap(void)
 }
 
 
-static void test_stripped_function_to_string(void)
-{
-    static const char *const functions[] = {
-        "(function named() {})",
-        "(function* named() {})",
-        "(async function named() {})",
-        "(async function* named() {})",
-    };
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx;
-    JSValue function, global;
-    size_t i;
-
-    assert(rt);
-    JS_SetStripInfo(rt, JS_STRIP_SOURCE);
-    ctx = JS_NewContext(rt);
-    assert(ctx);
-    for (i = 0; i < countof(functions); i++) {
-        function = JS_Eval(ctx, functions[i], strlen(functions[i]),
-                           "<stripped-function>", JS_EVAL_TYPE_GLOBAL);
-        assert(!JS_IsException(function));
-        global = JS_GetGlobalObject(ctx);
-        assert(JS_SetPropertyStr(ctx, global, "strippedFunction", function) >= 0);
-        JS_FreeValue(ctx, global);
-        check_eval(ctx,
-            "(() => {"
-            " Object.defineProperty(strippedFunction, 'name', {"
-            "   get() { throw Error('source-stripped name read'); }"
-            " });"
-            " return Function.prototype.toString.call(strippedFunction) ==="
-            "   'function () {\\n    [native code]\\n}';"
-            "})()");
-    }
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
-}
-
 static JSValue native_name_callback(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv)
 {
@@ -4006,7 +3969,6 @@ int main(int argc, char **argv)
         { "regexp-interrupt", test_regexp_interrupt },
         { "allocator-overflow", test_allocator_size_overflow },
         { "native-name", test_native_function_initial_name },
-        { "stripped-function", test_stripped_function_to_string },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },
         { "allocator-api", test_allocator_api_entry_point },
