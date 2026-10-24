@@ -38,6 +38,13 @@ class RegenerationTests(unittest.TestCase):
         command = regenerate_intl.commands(args)[0][1]
         self.assertEqual(command[command.index('--dictionary-pin') + 1], str(args.dictionary_pin))
 
+    def test_stage_limits_keep_the_established_ci_bounds(self):
+        for label, expected in [('segmentation', 180), ('collation-minimal', 240),
+                                 ('collation-native', 240), ('generate-native', 600),
+                                 ('verify-minimal', 600), ('collation-oracle', 600)]:
+            self.assertEqual(regenerate_intl.stage_timeout(label), expected)
+            self.assertEqual(regenerate_intl.stage_timeout(label, 12), 12)
+
     def test_public_commands_preserve_spaced_paths_and_working_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
