@@ -14,7 +14,7 @@ import shlex
 import subprocess
 import tempfile
 
-from acquire import atomic_write
+from acquire import PIN, atomic_write
 from bundle import pack, unpack
 from primary import available_named_primaries, backzone_links, cldr_countries, zone_table
 
@@ -37,7 +37,7 @@ def checked_sources(cache, pin):
 
 
 def generate(cache, output, manifest, host_cc, awk):
-    pin = json.loads((TOOLS / 'pin.json').read_text())
+    pin = json.loads(PIN.read_text())
     source, cldr = checked_sources(cache, pin)
     table_countries, country_rows = zone_table((source / 'zone.tab').read_text())
     countries = cldr_countries((cldr / 'timezone.xml').read_bytes(), table_countries)

@@ -4,7 +4,8 @@ Calendar algorithms follow the ECMA-402 Stage 4 era/monthCode PR, reviewed
 on 2026-10-19 at `d026068ed653130a37d79a95c0122ecf5319f1a4`.
 Its required publication ranges take precedence over arithmetic approximations.
 
-`pin.json` records exact source identities. Raw redistributable receipts live
+[`data/calendar/pin.json`](../../data/calendar/pin.json) records exact source
+identities. Raw redistributable receipts live
 in `data/calendar/sources`; normalized factual records live in `data/calendar`.
 Normal builds are offline and do not parse source documents or run source code.
 
@@ -55,7 +56,9 @@ old Japanese calendar and are not interpreted as Gregorian dates.
 
 To update eras, review a new released CLDR source against the government
 announcement and specification, replace the vendored source/license, and
-update their revision and byte hashes in `pin.json`. Then run normalization
+update their revision and byte hashes in
+[`data/calendar/pin.json`](../../data/calendar/pin.json). Then run
+normalization
 and generation below, and commit the source, `japanese.json`, binary and
 manifest together. No C lookup change is needed for another era. CI compares
 the regenerated JSON and binary; a synthetic sixth-era test verifies lookup
@@ -100,7 +103,9 @@ HKO differs on 30 dates in 2057; HKO values are not substituted for PMO.
 
 The table starts at lunar New Year 1900. Its preceding M12 is manually
 transcribed from PDF page 3: January 1 is day 1, January 30 is day 30, and
-January 31 starts the next year. `pin.json` records the source PDF and page.
+January 31 starts the next year.
+[`data/calendar/pin.json`](../../data/calendar/pin.json) records the source PDF
+and page.
 Earlier months of lunar 1899 use the explicitly documented approximation.
 
 Dangi publication records come from 24 pinned official KASI responses, one normal/leap
