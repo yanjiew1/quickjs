@@ -9,6 +9,7 @@
 
 typedef struct Allocation {
     unsigned int calls, fail_at, live;
+    size_t limit, largest;
 } Allocation;
 
 static void *allocate(void *opaque, size_t size)
@@ -16,7 +17,9 @@ static void *allocate(void *opaque, size_t size)
     Allocation *state = opaque;
     void *ptr;
     assert(size);
-    if (++state->calls == state->fail_at)
+    if (size > state->largest)
+        state->largest = size;
+    if (++state->calls == state->fail_at || (state->limit && size > state->limit))
         return NULL;
     ptr = malloc(size);
     if (ptr)
@@ -87,14 +90,20 @@ int main(void)
     QJSIntlBytes value;
     unsigned int calls, i, j, direction;
     int shared = 0;
-    uint32_t count;
+    uint32_t count, gregorian;
     size_t weeks_at, calendars_at, hours_at, scripts_at;
     uint8_t *copy;
 
     assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
                                &allocator, &data));
+    /* Preference scratch must follow the few hundred preference rows, not
+       the much larger shared string pool. Keep the raw-data gate separate. */
     state.calls = 0;
+    state.largest = 0;
+    state.limit = 8192;
     assert(!qjs_intl_locale_preferences_open(&data, &allocator, &preferences));
+    assert(state.largest <= state.limit);
+    state.limit = 0;
     calls = state.calls;
     assert(calls > 1 && !state.live);
     assert(preferences.weeks.count == 156 && preferences.calendars.count == 52);
@@ -150,10 +159,10 @@ int main(void)
     corrupt(&allocator, weeks_at + 16, qjs_intl_read_u32(preferences.weeks.bytes));
     corrupt(&allocator, calendars_at + 4, data.strings.count);
     corrupt(&allocator, calendars_at + 8, 2);
-    /* Change a later reference to an already checked shared list. */
-    for (i = 1; i < preferences.calendars.count && !shared; i++) {
+    /* Nonadjacent rows sharing a list must still agree on its count. */
+    for (i = 2; i < preferences.calendars.count && !shared; i++) {
         const uint8_t *row = preferences.calendars.bytes + (size_t)i * 12;
-        for (j = 0; j < i; j++) {
+        for (j = 0; j + 1 < i; j++) {
             const uint8_t *earlier = preferences.calendars.bytes + (size_t)j * 12;
             if (qjs_intl_read_u32(row + 4) == qjs_intl_read_u32(earlier + 4)) {
                 corrupt(&allocator, calendars_at + (size_t)i * 12 + 8,
@@ -164,6 +173,23 @@ int main(void)
         }
     }
     assert(shared);
+    /* A pooled token accepted as a calendar must be checked again against
+       hour-cycle grammar when referenced by the other table. */
+    gregorian = string_id(&data, "gregorian");
+    for (i = 0; i < preferences.calendars.count; i++) {
+        const uint8_t *row = preferences.calendars.bytes + (size_t)i * 12;
+        if (qjs_intl_read_u32(row + 4) == gregorian &&
+            qjs_intl_read_u32(row + 8) == 1)
+            break;
+    }
+    assert(i < preferences.calendars.count);
+    for (i = 0; i < preferences.hours.count; i++) {
+        const uint8_t *row = preferences.hours.bytes + (size_t)i * 12;
+        if (qjs_intl_read_u32(row + 8) == 1)
+            break;
+    }
+    assert(i < preferences.hours.count);
+    corrupt(&allocator, hours_at + (size_t)i * 12 + 4, gregorian);
     corrupt(&allocator, hours_at + 4, string_id(&data, "en"));
     corrupt(&allocator, hours_at + 8, 5);
     corrupt(&allocator, scripts_at, string_id(&data, "en"));
