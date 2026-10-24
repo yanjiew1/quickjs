@@ -2,8 +2,9 @@
 """Acquire pinned CLDR source data; normal builds never download inputs.
 
 Production uses the released common data ZIP; a fixed Git archive is available
-for comparison. Collectors consume authenticated logical files, including DTDs,
-test data and license, without depending on a checkout or local cache history.
+for comparison. Acquisition authenticates archive inputs. Collectors snapshot
+supplied logical files, including DTDs, test data and license, independently of
+an acquisition manifest or previous cache history.
 """
 import argparse
 from collections import namedtuple
@@ -26,7 +27,6 @@ MAX_DOWNLOAD = 128 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
 MAX_EXPANSION = 768 * 1024 * 1024
 MAX_MEMBERS = 20000
-MAX_MANIFEST = 8 * 1024 * 1024
 
 
 def digest(data):
@@ -39,6 +39,16 @@ def json_bytes(value):
 
 def atomic_write(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Preserve Ninja restat when generated C is identical. Compare in chunks:
+    # large embedded packs must not require a second whole-file allocation.
+    if path.is_file():
+        with path.open('rb') as previous:
+            for at in range(0, len(data), 64 * 1024):
+                if previous.read(64 * 1024) != data[at:at + 64 * 1024]:
+                    break
+            else:
+                if not previous.read(1):
+                    return
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(dir=str(path.parent), delete=False) as f:
@@ -282,23 +292,61 @@ def load_pin(path=None):
 
 
 class Sources:
-    """Read only authenticated logical files for subsequent XML collectors."""
+    """Snapshot supplied CLDR files; acquisition alone authenticates the pin.
+
+    Compiler stages share the calculated inventory identity. Reject changes
+    during a read session, rather than mixing bytes from different snapshots.
+    No acquisition manifest is required or written for a custom source tree.
+    """
     def __init__(self, root, pin=None):
         self.root = Path(root)
-        pin = load_pin() if pin is None else pin
-        self.pin = copy.deepcopy(pin)
-        path = source_path(self.root, 'source-manifest.json')
-        if not path.is_file() or path.stat().st_size > MAX_MANIFEST:
-            raise ValueError('missing or oversized source manifest')
-        manifest = path.read_bytes()
-        if digest(manifest) != pin['manifest_sha256']:
-            raise ValueError('source manifest differs from pin')
-        self.manifest = json.loads(manifest.decode('utf-8'))
-        if (not isinstance(self.manifest, dict) or
-                self.manifest.get('release') != pin['release'] or
-                self.manifest.get('archive_sha256') != pin['archive']['sha256']):
-            raise ValueError('source manifest release/archive identity differs from pin')
-        self.consumed = set()
+        self.pin = copy.deepcopy(load_pin() if pin is None else pin)
+        common = source_path(self.root, 'common')
+        license_bytes = self._read('LICENSE')
+        files = {'LICENSE': digest(license_bytes)}
+        names = {'license'}
+        total = len(license_bytes)
+        pending = [common]
+        count = 1  # LICENSE is already in the snapshot.
+        while pending:
+            # scandir propagates unreadable-directory errors. A glob that
+            # silently skips a subtree would produce an incomplete identity.
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    count += 1
+                    if count > MAX_MEMBERS:
+                        raise ValueError('too many source paths')
+                    name = Path(entry.path).relative_to(self.root).as_posix()
+                    path = source_path(self.root, name)
+                    folded = name.casefold()
+                    if folded in names:
+                        raise ValueError('duplicate source path: ' + name)
+                    names.add(folded)
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append(path)
+                        continue
+                    raw = self._read(name)
+                    total += len(raw)
+                    if total > MAX_EXPANSION:
+                        raise ValueError('source tree exceeds resource bound')
+                    files[name] = digest(raw)
+        if 'common/dtd/ldml.dtd' not in files:
+            raise ValueError('source tree lacks CLDR data or DTD')
+        # Archive/release fields are declared provenance. Only the file digests
+        # below describe this supplied tree; they need not equal accepted pins.
+        self.manifest = {'archive_sha256': self.pin['archive']['sha256'],
+                         'files': files, 'release': self.pin['release']}
+        self.pin['manifest_sha256'] = digest(json_bytes(self.manifest))
+
+    def _read(self, name):
+        path = source_path(self.root, name)
+        if not path.is_file():
+            raise ValueError('missing or nonregular source: ' + name)
+        with path.open('rb') as stream:
+            data = stream.read(MAX_FILE + 1)
+        if len(data) > MAX_FILE:
+            raise ValueError('oversized source: ' + name)
+        return data
 
     def paths(self, prefix):
         return tuple(name for name in sorted(self.manifest['files'])
@@ -307,14 +355,10 @@ class Sources:
     def read(self, name):
         expected = self.manifest['files'].get(name)
         if expected is None:
-            raise ValueError('unlisted source: ' + name)
-        path = source_path(self.root, name)
-        if not path.is_file() or path.stat().st_size > MAX_FILE:
-            raise ValueError('missing or oversized source: ' + name)
-        data = path.read_bytes()
+            raise ValueError('source absent from input snapshot: ' + name)
+        data = self._read(name)
         if digest(data) != expected:
-            raise ValueError('modified source: ' + name)
-        self.consumed.add(name)
+            raise ValueError('source changed during generation: ' + name)
         return data
 
 
