@@ -2,7 +2,7 @@
 """Audit a generated pack's registry and global metadata against supplied sources.
 
 Runtime readers check wire structure; this host check separately proves that
-projection did not drop a source locale or global numbering-preference binding.
+projection did not drop a selected locale or its numbering-preference binding.
 """
 import argparse
 import json
@@ -40,14 +40,14 @@ def verify(sources, binary, manifest):
     expected = tuple(sorted(graph.tags)) if profile == 'native' else availability.profile_locales(graph, profile)
     if decoded['locales'] != expected or manifest['locales'] != len(expected):
         raise ValueError('prepared pack omits or changes selected source locales')
-    if tuple(row[0] for row in decoded['numbering']['locales']) != tuple(sorted(graph.tags)):
-        raise ValueError('prepared pack omits global source numbering locales')
+    if tuple(row[0] for row in decoded['numbering']['locales']) != expected:
+        raise ValueError('prepared pack omits or changes selected numbering locales')
     for name, expected_hash in manifest['inputs']['sources'].items():
         if sources.manifest['files'].get(name) != expected_hash:
             raise ValueError('prepared source receipt differs from source inventory')
         sources.read(name)
     return {'profile': profile, 'locales': len(expected),
-            'global_numbering_locales': len(graph.tags), 'sha256': manifest['sha256']}
+            'numbering_locales': len(expected), 'sha256': manifest['sha256']}
 
 
 def main():
