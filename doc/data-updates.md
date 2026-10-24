@@ -9,12 +9,29 @@ provenance → regenerate → validate → commit a coherent update**. A new sou
 version, a generated binary format and a generator's compatibility policy are
 different things; changing one does not automatically change the others.
 
+## Maintenance commands
+
+| Operation | Entry point | Families |
+| --- | --- | --- |
+| Acquire and authenticate pinned sources | `python3 tools/data/acquire.py FAMILY` | `cldr`, `dictionaries`, `calendar`, `timezone` |
+| Generate and verify prepared candidate data offline | `python3 tools/data/generate.py FAMILY` | `intl`, `calendar`, `timezone` |
+| Calculate a candidate source lock | `python3 tools/data/update_pin.py` | CLDR, dictionaries, calendar, timezone |
+
+Put `--help` after a family for its input options. Family collectors and
+validators remain in their owning tool directories; orchestration and output
+helpers are private in `tools/data/_support`. Unicode keeps its existing C
+generator and download/checksum procedure listed below.
+
+Acquisition verifies pin hashes. Generators accept compatible supplied inputs
+without requiring those hashes to match; they validate structure/semantics and
+record the bytes consumed. A source lock can accompany custom input as metadata.
+
 ## What a pin means
 
 Pins are reproducibility locks, not a requirement to calculate hashes by hand.
 Use [`update_pin.py`](../tools/data/update_pin.py) to generate them. The tool
-hashes the actual inputs, computes CLDR's complete logical inventory and ICU
-dictionary Git blob identities, and writes a separate candidate. It refuses to
+hashes the actual inputs, computes CLDR's complete logical inventory and
+dictionary file sizes, and writes a separate candidate. It refuses to
 overwrite an input pin or raw input file.
 
 An HTTPS download plus a calculated checksum is not independent verification of
@@ -84,9 +101,9 @@ For Git archives the root is `cldr-COMMIT/`; common ZIPs contain `common/` and
 Acquire each authenticated candidate into its own cache:
 
 ```sh
-python3 tools/intl/acquire.py --source-pin /path/to/work/common-pin.json \
+python3 tools/data/acquire.py cldr --source-pin /path/to/work/common-pin.json \
   --cache /path/to/common-cache
-python3 tools/intl/acquire.py --source-pin /path/to/work/git-pin.json \
+python3 tools/data/acquire.py cldr --source-pin /path/to/work/git-pin.json \
   --cache /path/to/git-cache
 ```
 
@@ -104,13 +121,13 @@ Compile the **build-host** tools once; do not pass cross-target executables:
 ```sh
 meson setup /path/to/host-tools -Dtests=false -Dexamples=false -Dtemporal=false
 meson compile -C /path/to/host-tools intl-collation-compile intl-segment-property
-python3 tools/intl/segment_dictionary_sources.py --cache /path/to/dictionary-cache
+python3 tools/data/acquire.py dictionaries --cache /path/to/dictionary-cache
 ```
 
 Run the scripted offline pipeline for either selected source distribution:
 
 ```sh
-python3 tools/data/regenerate_intl.py \
+python3 tools/data/generate.py intl \
   --sources /path/to/common-cache/cldr-49 \
   --source-pin /path/to/work/common-pin.json \
   --dictionaries /path/to/dictionary-cache/icu-dictionaries-79.1 \

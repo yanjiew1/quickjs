@@ -9,9 +9,9 @@ import subprocess
 import sys
 import time
 
-from outputs import encoded, write_atomic
+from .outputs import encoded, write_atomic
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def commands(args):
@@ -153,8 +153,8 @@ def positive(value):
     return value
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(argv=None, prog=None):
+    parser = argparse.ArgumentParser(prog=prog, description=__doc__)
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--source-pin', type=Path)
     parser.add_argument('--dictionaries', type=Path)
@@ -168,7 +168,7 @@ def main():
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--timeout', type=positive, default=600,
                         help='maximum seconds per stage, including child processes')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if len(set(args.profiles)) != len(args.profiles):
         parser.error('profiles must be unique')
     if 'native' in args.profiles and (not args.dictionaries or not args.property_tool):
@@ -201,11 +201,3 @@ def main():
         if receipt['status'] == 'running':
             receipt['status'] = 'failed'
         write_atomic(args.output_dir / 'regeneration-report.json', encoded(receipt))
-
-
-if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except (OSError, ValueError) as error:
-        print('regenerate_intl: ' + str(error), file=sys.stderr)
-        sys.exit(1)
