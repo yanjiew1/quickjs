@@ -30,12 +30,12 @@ python3 tools/intl/acquire.py --cache /path/to/intl-cache
 python3 tools/intl/acquire.py --cache /path/to/intl-cache --offline
 ```
 
-`pin.json` identifies CLDR 49's official common release ZIP by release tag,
+`data/intl/pin.json` identifies CLDR 49's official common release ZIP by release tag,
 commit, archive SHA-256 and complete logical-manifest SHA-256. Its production
 filtering deliberately excludes lower-coverage locale data. Normal builds use
 this prepared distribution; tools never follow `main` or `latest`.
 
-`pin-git.json` separately pins the complete `common/` tree from the matching
+`data/intl/pin-git.json` separately pins the complete `common/` tree from the matching
 release commit. Choose it explicitly when generating data with all Git-source
 locales. The source inventories remain separate; missing production records are
 not silently filled from Git. Neither source's Java/tooling programs are executed
@@ -46,7 +46,7 @@ can coexist under one cache directory:
 
 ```sh
 python3 tools/intl/acquire.py --cache /path/to/intl-cache \
-  --source-pin tools/intl/pin-git.json
+  --source-pin data/intl/pin-git.json
 ```
 
 An optional independent check compares that authenticated snapshot with an
@@ -72,7 +72,7 @@ Archive links, unsafe paths and source-cache symlinks are rejected.
 ## Acquire segmentation dictionary data
 
 CLDR boundary rules do not supply the word dictionaries needed for CJK,
-Khmer, Lao, Myanmar and Thai. `segment-dictionary-pin.json` records released
+Khmer, Lao, Myanmar and Thai. `data/intl/segment-dictionary-pin.json` records released
 ICU 79.1 text inputs by immutable commit URL, byte count and SHA-256. This is data reuse; it does not link ICU or add an ICU backend.
 Acquire explicitly, outside normal builds:
 
