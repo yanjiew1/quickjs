@@ -129,7 +129,7 @@ static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
     if (!str)
         return JS_EXCEPTION;
     re_bytecode_buf = lre_compile(&re_bytecode_len, error_msg,
-                                  sizeof(error_msg), str, len, re_flags, ctx);
+                                  sizeof(error_msg), str, len, re_flags, ctx->rt);
     JS_FreeCString(ctx, str);
     if (!re_bytecode_buf) {
         JS_ThrowSyntaxError(ctx, "%s", error_msg);
@@ -500,25 +500,26 @@ fail:
     return JS_EXCEPTION;
 }
 
+/* The engine-independent RegExp hooks need runtime state only. Callers retain
+   their context to translate compile and execution failures into exceptions. */
 int lre_check_stack_overflow(void *opaque, size_t alloca_size)
 {
-    JSContext *ctx = opaque;
-    return js_check_stack_overflow(ctx->rt, alloca_size);
+    JSRuntime *rt = opaque;
+    return js_check_stack_overflow(rt, alloca_size);
 }
 
 int lre_check_timeout(void *opaque)
 {
-    JSContext *ctx = opaque;
-    JSRuntime *rt = ctx->rt;
-    return (rt->interrupt_handler && 
+    JSRuntime *rt = opaque;
+    return (rt->interrupt_handler &&
             rt->interrupt_handler(rt, rt->interrupt_opaque));
 }
 
 void *lre_realloc(void *opaque, void *ptr, size_t size)
 {
-    JSContext *ctx = opaque;
+    JSRuntime *rt = opaque;
     /* No JS exception is raised here */
-    return js_realloc_rt(ctx->rt, ptr, size);
+    return js_realloc_rt(rt, ptr, size);
 }
 
 static JSValue js_regexp_escape(JSContext *ctx, JSValueConst this_val,
@@ -661,7 +662,7 @@ static JSValue js_regexp_exec(JSContext *ctx, JSValueConst this_val,
     } else {
         rc = lre_exec(capture, re_bytecode,
                       str_buf, last_index, str->len,
-                      shift, ctx);
+                      shift, ctx->rt);
     }
     if (rc != 1) {
         if (rc >= 0) {
@@ -887,7 +888,7 @@ static JSValue js_regexp_replace(JSContext *ctx, JSValueConst this_val, JSValueC
             ret = 0;
         } else {
             ret = lre_exec(capture, re_bytecode,
-                           str_buf, last_index, str->len, shift, ctx);
+                           str_buf, last_index, str->len, shift, ctx->rt);
         }
         if (ret != 1) {
             if (ret >= 0) {
