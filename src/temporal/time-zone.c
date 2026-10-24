@@ -273,13 +273,11 @@ int qjs_temporal_zone_transition(const QJSTemporalZone *zone,
 }
 
 int qjs_temporal_zones_equal(const QJSTemporalZone *a,
-                             const QJSTemporalZone *b, int *result)
+                             const QJSTemporalZone *b)
 {
     if (a->is_offset || b->is_offset)
-        *result = a->is_offset && b->is_offset &&
-                  a->offset_nanoseconds == b->offset_nanoseconds;
-    else
-        *result = !strcmp(qjs_timezone_primary_identifier(a->named),
-                          qjs_timezone_primary_identifier(b->named));
-    return 0;
+        return a->is_offset && b->is_offset &&
+               a->offset_nanoseconds == b->offset_nanoseconds;
+    return !strcmp(qjs_timezone_primary_identifier(a->named),
+                   qjs_timezone_primary_identifier(b->named));
 }
