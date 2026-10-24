@@ -40,7 +40,7 @@ static int default_zone_commit(JSContext *ctx, const QJSTimeZoneIdentifier *zone
     return 0;
 }
 
-int js_default_time_zone_identifier(JSContext *ctx, const char **result)
+static int js_default_time_zone_identifier(JSContext *ctx, const char **result)
 {
     QJSTimeZoneIdentifier zone;
     int error;

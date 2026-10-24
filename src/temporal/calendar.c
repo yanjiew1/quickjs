@@ -18,12 +18,6 @@ const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar)
     return qjs_calendar_is_supported(calendar) ? qjs_calendar_identifier(calendar) : NULL;
 }
 
-int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
-                                          const char *text, size_t length)
-{
-    return qjs_calendar_from_identifier(result, text, length);
-}
-
 unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,
                                            unsigned requested)
 {

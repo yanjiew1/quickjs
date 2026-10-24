@@ -3,8 +3,7 @@
 #define QUICKJS_DEFAULT_TIME_ZONE_H
 #ifdef CONFIG_TEMPORAL
 #include "../../timezone/identifier.h"
-/* Return pure backend errors. These helpers do not set pending exceptions. */
-int js_default_time_zone_identifier(JSContext *, const char **);
+/* Return backend errors without setting a pending exception. */
 int js_default_time_zone_get(JSContext *, QJSTimeZoneIdentifier *);
 #endif
 #endif

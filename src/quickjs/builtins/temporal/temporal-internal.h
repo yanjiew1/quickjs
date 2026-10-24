@@ -158,7 +158,6 @@ int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
                             QJSCalendarId *result);
 int js_temporal_get_calendar(JSContext *ctx, JSValueConst object,
                              QJSCalendarId *result);
-const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar);
 
 /* Resolve the runtime default zone through the common Date policy. */
 int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result);

@@ -21,9 +21,9 @@ static int month_index(QJSCalendarId calendar, int64_t day, int64_t *result)
     return qjs_calendar_astro_mean_lunation_number(time - offset, result);
 }
 
-int qjs_cal_native_lunar_add_months(QJSCalendarId calendar, int32_t year,
-                                   int month, int64_t delta,
-                                   int32_t *result_year, int *result_month)
+static int qjs_cal_native_lunar_add_months(QJSCalendarId calendar, int32_t year,
+                                          int month, int64_t delta,
+                                          int32_t *result_year, int *result_month)
 {
     QJSNativeCalendarYear source, target;
     QJSISODate iso;

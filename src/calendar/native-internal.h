@@ -15,7 +15,4 @@ int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
                         QJSNativeCalendarYear *result);
 int qjs_cal_native_lunar(QJSCalendarId calendar);
 int64_t qjs_cal_native_month_start(const QJSNativeCalendarYear *year, int month);
-int qjs_cal_native_lunar_add_months(QJSCalendarId calendar, int32_t year,
-                                   int month, int64_t delta,
-                                   int32_t *result_year, int *result_month);
 #endif /* QUICKJS_CALENDAR_NATIVE_INTERNAL_H */
