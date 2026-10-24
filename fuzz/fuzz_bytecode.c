@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size < 8) return 0; // Need at least minimal bytecode header
@@ -20,23 +19,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         return 0;
     }
     
-    char load_script[256];
-    snprintf(load_script, sizeof(load_script),
-             "(function() { "
-             "  var buf = new Uint8Array(%zu); "
-             "  for (var i = 0; i < %zu; i++) buf[i] = 0; "
-             "  return evalBinary(buf); "
-             "})()", size, size);
-    
-    JSValue eval_result = JS_Eval(ctx, load_script, strlen(load_script), 
-                                   "<bytecode-load>", 0);
-    
-    if (!JS_IsException(eval_result)) {
-        JS_FreeValue(ctx, eval_result);
-    } else {
+    /* Parse fuzz bytes through the actual C reader. Never execute untrusted
+       bytecode; only the trusted compiler-produced round trips below run. */
+    JSValue decoded = JS_ReadObject(ctx, data, size, JS_READ_OBJ_BYTECODE);
+    if (JS_IsException(decoded))
         JS_FreeValue(ctx, JS_GetException(ctx));
-    }
-    
+    else
+        JS_FreeValue(ctx, decoded);
+
     const char* simple_script = "({ a: 1, b: 'test', c: function() { return 42; } })";
     
     JSValue bytecode = JS_Eval(ctx, simple_script, strlen(simple_script),
