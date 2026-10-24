@@ -51,7 +51,7 @@ static void check_allocation_failure(JSContext *ctx)
     text[1] = '.';
     input = JS_NewStringLen(ctx, text, sizeof(text));
     assert(!JS_IsException(input));
-    /* Both exact-text and coefficient allocations exceed the small pools. */
+    /* The exact-text allocation exceeds the small pools. */
     JS_SetMemoryLimit(rt, 0);
     memset(&value, 0xff, sizeof(value));
     assert(js_intl_to_mathematical_value(ctx, input, &value) < 0);

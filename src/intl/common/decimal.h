@@ -63,6 +63,8 @@ typedef struct QJSIntlDecimalResult {
  * from inputs. Clear with the same allocator. Calls borrow input slices only.
  * OUT_OF_RANGE exponent/output expansion -> OVERFLOW, syntax -> INVALID_ARGUMENT.
  */
+/* Check the same finite grammar and exponent limits without allocating. */
+QJSIntlStatus qjs_intl_decimal_validate(QJSIntlBytes);
 QJSIntlStatus qjs_intl_decimal_parse(const QJSIntlAllocator *, QJSIntlBytes,
                                      QJSIntlDecimal *out);
 QJSIntlStatus qjs_intl_decimal_from_value(const QJSIntlAllocator *,
