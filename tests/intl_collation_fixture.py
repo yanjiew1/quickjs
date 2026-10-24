@@ -40,18 +40,23 @@ def fixture(contexts=False):
 
 
 def emit(binary, output):
-    # Authored packs omit locale/string sections, so use a small direct emitter.
+    # Authored/oracle packs omit locale/string sections. Adjacent strings keep
+    # large source oracles cheap to compile; the bound excludes the terminator.
     lines = ['#include <stddef.h>', '#include <stdint.h>',
-             'const uint8_t qjs_intl_collation_fixture_bytes[] = {']
-    for at in range(0, len(binary), 12):
-        lines.append('    ' + ', '.join('0x%02x' % b for b in binary[at:at + 12]) + ',')
-    lines.extend(('};', 'const size_t qjs_intl_collation_fixture_length = %d;' % len(binary), ''))
+             '#if defined(__has_attribute)', '#if __has_attribute(nonstring)',
+             '__attribute__((nonstring))', '#endif', '#endif',
+             'const uint8_t qjs_intl_collation_fixture_bytes[%d] =' % len(binary)]
+    for at in range(0, len(binary), 32):
+        lines.append('    "' + ''.join('\\x%02x' % b for b in binary[at:at + 32]) + '"')
+    lines.extend((';', 'const size_t qjs_intl_collation_fixture_length = %d;' % len(binary), ''))
     atomic_write(output, '\n'.join(lines).encode('ascii'))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--contexts', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--contexts', action='store_true')
+    mode.add_argument('--input', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    emit(fixture(args.contexts), args.output)
+    emit(args.input.read_bytes() if args.input else fixture(args.contexts), args.output)
