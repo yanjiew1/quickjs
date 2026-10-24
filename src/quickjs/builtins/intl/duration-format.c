@@ -39,9 +39,13 @@ static QJSIntlDurationService *duration_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_duration) {
+        const QJSIntlData *data = js_intl_data(ctx);
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlDurationService *service;
-        if (js_intl_error(ctx, qjs_intl_duration_open(&allocator, &service), "duration initialization"))
+
+        if (!data)
+            return NULL;
+        if (js_intl_error(ctx, qjs_intl_duration_open(&allocator, data, &service), "duration initialization"))
             return NULL;
         rt->intl_duration = service;
     }
