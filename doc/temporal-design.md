@@ -2,7 +2,7 @@
 
 Temporal is implemented in C, with independent calendar and timezone libraries.
 The native configuration supplies its own data and algorithms without ICU or
-installed system timezone databases. This design records the agreed target;
+installed system timezone databases. This guide describes ownership and durable algorithm decisions;
 implementation progress and validation belong in working notes.
 
 ## Specification and implementation sources
@@ -236,43 +236,33 @@ ICU4X and ICU4C is not independent publication evidence if they share a source.
 
 ## Data acquisition and reproducible generation
 
-Use three layers:
+Calendar maintains parsed factual JSON and its source pin under `data/calendar`;
+only necessary licenses/notices remain beside it, not redundant original Rust or
+XML. Timezone uses its selected source archive and CLDR identity facts to build
+one rules pack. Calendar originals, IANA archives and parsing intermediates use
+a caller-selected cache, separately from candidates and build outputs. The small
+CLDR timezone identity XML files remain checked-in inputs under
+`data/timezone/sources/cldr`, also used by Windows mapping generation.
 
-1. Official source archives, documents or captured publications.
-2. Reviewed normalized text or JSON with a stable project-owned schema.
-3. Deterministically generated calendar and timezone binary packs.
+See the [calendar JSON contract](calendar-json-format.md),
+[calendar update tools](../tools/calendar/README.md) and
+[timezone tools](../tools/timezone/README.md) for actual formats, commands,
+source coverage and publication discrepancies. Data pins record provenance,
+licenses and accepted identities. Distinguish official facts, transcriptions,
+precomputed extensions and approximations; a hosting site does not establish
+code authorship or a redistribution license.
 
-Store normalized calendar publications and source manifests under data/calendar
-and data/timezone. Small redistributable source documents can be kept there;
-large downloaded archives and parsing intermediates use a caller-selected
-cache or build directory. Use relative repository paths. Normalized source
-data and final packs are versioned; generated embedding C lives in the build
-directory and is compiled once. A header contains declarations only.
+Acquisition authenticates selected sources with bounded HTTPS operations.
+Generators accept compatible supplied inputs, validate structure and semantics,
+and record actual consumed bytes rather than require old pin hashes. Manual
+transcription is acceptable for unstable PDFs/HTML when its values and coverage
+can be independently checked. Do not overwrite original evidence with normalized
+representations or claim that a hash proves transcription accuracy.
 
-Each dataset records source identity, official URL, publication/release,
-SHA-256, coverage and units, source page/table locations, conversion method,
-license and attribution, and applicable specification revision. Identify
-transcriptions, mirrors, generated approximations and independent validation
-sources accurately. Hosting a third party's table does not establish authorship
-or a license for its code.
-
-Manual transcription is acceptable for unstable HTML or PDFs. Commit the
-normalized input and enough source evidence to review it. Rebuilding the
-binary must work offline without private captures or an unpublished parser.
-Hash verification proves identity, not transcription accuracy; verify the
-actual values and complete coverage independently.
-
-Provide explicit acquisition, verification and generation tools. Acquisition
-uses HTTPS, pinned versions/hashes, finite retries and timeouts, atomic output
-and a caller-selected cache. Validate content instead of accepting an HTML
-error page as a PDF. Updating to a new release is an explicit operation, not a
-normal build side effect. Normal builds need no network.
-
-Generators validate ordering, gaps, duplicates, coverage, valid month lengths,
-leap-month placement, year boundaries, alias resolution and checked integer
-arithmetic. Emit deterministic ordering and no changing timestamps or host
-paths. Preserve upstream raw sources rather than overwriting them with
-normalized representations.
+Generation checks ordering, gaps, month lengths/leap placement, boundaries,
+aliases and integer bounds. Outputs are deterministic, without host paths or
+changing timestamps. Normal builds consume prepared data offline; generated C
+embedding belongs in the build directory with one compilation owner.
 
 ## Binary data and memory ownership
 
@@ -282,10 +272,9 @@ algorithm compatibility information. Do not serialize native structs or
 pointers. Share strings and repeated records; use bitsets and indexed deltas
 where appropriate without introducing compression-library dependencies.
 
-Embedded data is the initial default. Readers accept a const byte span and
-length, allowing a later external-file loader to reuse the same algorithms.
-External loading is not part of the initial implementation and must not turn
-into per-query filesystem I/O or runtime backend switching.
+Data is embedded at build time. Readers accept an immutable byte span and
+length, independently of generated C symbol names. There is no per-query
+filesystem access, external-file loading or runtime backend switching.
 
 Compiled data is immutable and may be shared process-wide. Mutable caches have
 an explicit runtime owner and bounded lifetime. Avoid common-query allocation
@@ -293,7 +282,7 @@ and needless copies. Keep the data snapshot stable for a runtime's lifetime.
 Provider handles and borrowed records must not outlive their owner. Keep
 backend errors distinct from unsupported identifiers and allocation failures.
 
-## Validation and staged delivery
+## Validation
 
 Add fast repository tests for each algorithm, publication adapter and feature.
 Verify source data separately from the binary writer. Include malformed data,
@@ -309,22 +298,3 @@ cross builds and exported symbols. Full Test262 runs in CI using available
 threads; local implementation gates use combined ASan+UBSan repository tests.
 Remove skips made obsolete by completed features. Benchmark likely Date and
 Temporal performance changes against the parent with assertions disabled.
-
-Implementation order is mandatory:
-
-1. Complete the minimum conforming Temporal implementation first: all standard
-   Temporal types and operations, ISO calendar, UTC and explicit fixed-offset
-   timezones, without IANA data, non-ISO calendars or ICU. Integrate Date's shared
-   timezone policy and validate the minimal configuration independently.
-2. Add native IANA timezones, their reproducible acquisition and binary tools,
-   complete named-zone semantics, and Unix/Windows host discovery.
-3. Add the other standard calendars, their authoritative publications, source
-   normalization and binary generation. Start with simple arithmetic families,
-   then deliver each publication-backed calendar separately.
-4. Complete conformance, independent review and documentation for the full
-   configuration while retaining coverage of the minimal configuration.
-
-Make small coherent commits within each stage. Public APIs accompany the feature
-that needs them. Prefer mechanical reviewed reuse from temporal-bak over
-duplication, while replacing its system-first provider and incomplete source
-acquisition paths. Keep main unchanged.
