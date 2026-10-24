@@ -22,7 +22,10 @@ def commands(args):
     result = []
     segment = args.output_dir / 'segmentation.qjin'
     if 'native' in args.profiles:
-        result.append(('segmentation', [sys.executable, str(tools / 'segment_prepare.py')] + selected + [
+        dictionary_metadata = (
+            ['--dictionary-pin', str(args.dictionary_pin)] if args.dictionary_pin else [])
+        result.append(('segmentation', [sys.executable, str(tools / 'segment_prepare.py')] +
+                       selected + dictionary_metadata + [
             '--dictionaries', str(args.dictionaries),
             '--property-tool', str(args.property_tool),
             '--output', str(segment),
@@ -107,7 +110,7 @@ def preflight(args, steps):
             if value in ('--output', '--manifest', '--license', '--notices'):
                 outputs.add(Path(command[index + 1]).resolve())
     directories = [path for path in (args.sources, args.dictionaries) if path]
-    files = [path for path in (args.source_pin, args.collation_compiler,
+    files = [path for path in (args.source_pin, args.dictionary_pin, args.collation_compiler,
                               args.property_tool) if path]
     aliases = {}
     for output in outputs:
@@ -152,6 +155,7 @@ def main():
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--source-pin', type=Path)
     parser.add_argument('--dictionaries', type=Path)
+    parser.add_argument('--dictionary-pin', type=Path)
     parser.add_argument('--collation-compiler', type=Path, required=True,
                         help='build-host intl-collation-compile executable')
     parser.add_argument('--property-tool', type=Path,
@@ -166,7 +170,7 @@ def main():
         parser.error('profiles must be unique')
     if 'native' in args.profiles and (not args.dictionaries or not args.property_tool):
         parser.error('native requires --dictionaries and --property-tool')
-    for name in ('sources', 'source_pin', 'dictionaries', 'collation_compiler', 'property_tool', 'output_dir'):
+    for name in ('sources', 'source_pin', 'dictionaries', 'dictionary_pin', 'collation_compiler', 'property_tool', 'output_dir'):
         value = getattr(args, name)
         if value is not None:
             setattr(args, name, value.resolve())

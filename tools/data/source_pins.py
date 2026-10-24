@@ -178,8 +178,7 @@ def refresh(template, assignments=(), files=None, archive=None,
             row['sha256'] = digest(data)
             if kind == 'dictionaries':
                 row['bytes'] = len(data)
-                row['git_blob'] = hashlib.sha1(
-                    b'blob ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
+                row.pop('git_blob', None)
         if kind == 'dictionaries':
             # Existing tools are standalone scripts with a sibling acquire import.
             # Bind that dependency only during loading, without changing sys.path

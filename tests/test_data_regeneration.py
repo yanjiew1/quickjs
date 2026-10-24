@@ -18,7 +18,7 @@ import regenerate_intl
 
 class RegenerationTests(unittest.TestCase):
     def test_regeneration_plan_keeps_source_selection_and_profile_dependencies(self):
-        args = SimpleNamespace(sources=Path('/source'), source_pin=Path('/candidate.json'),
+        args = SimpleNamespace(sources=Path('/source'), source_pin=Path('/candidate.json'), dictionary_pin=None,
                                output_dir=Path('/output'), profiles=['minimal'],
                                collation_compiler=Path('/host/compiler'),
                                dictionaries=None, property_tool=None)
@@ -34,6 +34,9 @@ class RegenerationTests(unittest.TestCase):
         self.assertEqual(steps[0][0], 'segmentation')
         self.assertIn('--compiled-segmentation', steps[2][1])
         self.assertIn('--segmentation-manifest', steps[2][1])
+        args.dictionary_pin = Path('/dictionary-candidate.json')
+        command = regenerate_intl.commands(args)[0][1]
+        self.assertEqual(command[command.index('--dictionary-pin') + 1], str(args.dictionary_pin))
 
     def test_generator_timeout_is_bounded(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -144,7 +147,7 @@ class RegenerationTests(unittest.TestCase):
             except (OSError, NotImplementedError):
                 self.skipTest('hard-link creation is unavailable')
             args = SimpleNamespace(sources=sources, dictionaries=None,
-                                   source_pin=None, collation_compiler=None,
+                                   source_pin=None, dictionary_pin=None, collation_compiler=None,
                                    property_tool=None, output_dir=output)
             with self.assertRaisesRegex(ValueError, 'source member'):
                 regenerate_intl.preflight(args, [('collation-minimal', [])])
@@ -159,7 +162,7 @@ class RegenerationTests(unittest.TestCase):
             output.mkdir()
             os.mkfifo(str(output / 'collation-minimal.log'))
             args = SimpleNamespace(sources=sources, dictionaries=None,
-                                   source_pin=None, collation_compiler=None,
+                                   source_pin=None, dictionary_pin=None, collation_compiler=None,
                                    property_tool=None, output_dir=output)
             with self.assertRaisesRegex(ValueError, 'regular file'):
                 regenerate_intl.preflight(args, [('collation-minimal', [])])

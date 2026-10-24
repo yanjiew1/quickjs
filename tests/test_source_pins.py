@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Offline candidate-pin contracts; no production source or network mutation."""
 import copy
-import hashlib
 import io
 import json
 from pathlib import Path
@@ -111,8 +110,8 @@ class PinTests(unittest.TestCase):
             for row in pin['files']:
                 data = (root / row['name']).read_bytes()
                 self.assertEqual(row['bytes'], len(data))
-                self.assertEqual(row['git_blob'], hashlib.sha1(
-                    b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest())
+                self.assertEqual(row['sha256'], source_pins.digest(data))
+                self.assertNotIn('git_blob', row)
                 self.assertIn('/' + 'a' * 40 + '/', row['url'])
             with self.assertRaisesRegex(ValueError, 'complete source set'):
                 source_pins.refresh(template, ['/commit=' + 'a' * 40])
