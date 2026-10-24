@@ -2,7 +2,7 @@
   "bytes": 65881820,
   "complete_services": [],
   "format": 1,
-  "generation": "e4e542b96126e3112a9dda7651c54de3f368ecbe179046d78423e9ad9e7556f7",
+  "generation": "e793e2c9440d12e5fe86cad4fa18a2a12c7af0bee4cbce57fea1580d2b8b543c",
   "inputs": {
     "cldr": {
       "archive": {
@@ -377,11 +377,11 @@
       },
       "40": {
         "count": 4,
-        "sha256": "bd673232021e397ea872a1501dbb1aed4b4ba4bf540277055ac1106bf2193d3a"
+        "sha256": "ec4fc2ea1b4f74a458c7f66b512c6ea3628e929419857b2c9b75bad199db0b56"
       },
       "41": {
         "count": 8,
-        "sha256": "f550f260d8bc802503c3ce9d984cc74805b508cf45d69d13bd65caf642253892"
+        "sha256": "64f992f4f0f85739512909a76014548d7f58f27d66c37bbd69b0d178633e386b"
       },
       "5": {
         "count": 37,
@@ -405,82 +405,14 @@
       }
     },
     "segmentation": {
-      "cldr": {
-        "archive": {
-          "format": "zip",
-          "sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
-          "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip"
-        },
-        "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
-        "distribution": "common",
-        "manifest_sha256": "f3f262e9260d5a91855e3c0b64cf6e9258498d39ae9184028c956a5b26ba14cf",
-        "prerelease": false,
-        "published": "2026-10-22",
-        "release": "49",
-        "tag": "release-49"
-      },
+      "cldr_inventory": "50dc59d9b04c8f98e2e0e9d0a82a67314a774eb728e53183c41587c1b8cd080c",
       "dictionaries": {
-        "commit": "ddc6b66926bfac6036144ca9902992a0d6d50af9",
-        "files": [
-          {
-            "bytes": 4195904,
-            "family": "cjk",
-            "git_blob": "8d2bd6b8ac689bbc52a6dfe0b4c28d54ed5b9b77",
-            "name": "cjdict.txt",
-            "sha256": "e73fd72048981d0cc13e9dc436a7eaba07ffb6eff58c8a59dc75c1df746663a0",
-            "source": "icu4c/source/data/brkitr/dictionaries/cjdict.txt",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/icu4c/source/data/brkitr/dictionaries/cjdict.txt"
-          },
-          {
-            "bytes": 2031114,
-            "family": "khmer",
-            "git_blob": "83a649b2cc964cece0ffe06b931aebdb7b0cd717",
-            "name": "khmerdict.txt",
-            "sha256": "87bee2d17cd5148aa36957eb05409eefc124de8ad519b81b789298ef3e60b5d9",
-            "source": "icu4c/source/data/brkitr/dictionaries/khmerdict.txt",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/icu4c/source/data/brkitr/dictionaries/khmerdict.txt"
-          },
-          {
-            "bytes": 673894,
-            "family": "lao",
-            "git_blob": "8eb43185e9ab6d00afe0f80e17891e33af976f06",
-            "name": "laodict.txt",
-            "sha256": "3c876934a3fa81031d2333525eafaca6a7c9f842e3b98f18c38880420afb5d36",
-            "source": "icu4c/source/data/brkitr/dictionaries/laodict.txt",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/icu4c/source/data/brkitr/dictionaries/laodict.txt"
-          },
-          {
-            "bytes": 1164408,
-            "family": "myanmar",
-            "git_blob": "dd415141f562b1ba9ffb8bb67458fa735b9b3059",
-            "name": "burmesedict.txt",
-            "sha256": "61d8abc3d9102b2f9bf0c9f44db0d7ab89b18172d8cd26832e4c83174bd8673b",
-            "source": "icu4c/source/data/brkitr/dictionaries/burmesedict.txt",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/icu4c/source/data/brkitr/dictionaries/burmesedict.txt"
-          },
-          {
-            "bytes": 493054,
-            "family": "thai",
-            "git_blob": "854b36e60f3fc2f01135ad3a23c153ea5643794d",
-            "name": "thaidict.txt",
-            "sha256": "3166abde40c0f44ab91c28f5ce96d7d1472cb7882e1c0bda0a72f8f69dba4274",
-            "source": "icu4c/source/data/brkitr/dictionaries/thaidict.txt",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/icu4c/source/data/brkitr/dictionaries/thaidict.txt"
-          },
-          {
-            "bytes": 27718,
-            "family": "license",
-            "git_blob": "fec99457b941a38283b6b2f6e128470182c73dc0",
-            "name": "LICENSE",
-            "sha256": "e09827667e0bb3c808b2a463548ba814a5e6249b67353234d70c8dfc2bcc417d",
-            "source": "LICENSE",
-            "url": "https://raw.githubusercontent.com/unicode-org/icu/ddc6b66926bfac6036144ca9902992a0d6d50af9/LICENSE"
-          }
-        ],
-        "format": 1,
-        "release": "79.1",
-        "reviewed": "2026-10-23",
-        "tag": "release-79.1"
+        "LICENSE": "e09827667e0bb3c808b2a463548ba814a5e6249b67353234d70c8dfc2bcc417d",
+        "burmesedict.txt": "61d8abc3d9102b2f9bf0c9f44db0d7ab89b18172d8cd26832e4c83174bd8673b",
+        "cjdict.txt": "e73fd72048981d0cc13e9dc436a7eaba07ffb6eff58c8a59dc75c1df746663a0",
+        "khmerdict.txt": "87bee2d17cd5148aa36957eb05409eefc124de8ad519b81b789298ef3e60b5d9",
+        "laodict.txt": "3c876934a3fa81031d2333525eafaca6a7c9f842e3b98f18c38880420afb5d36",
+        "thaidict.txt": "3166abde40c0f44ab91c28f5ce96d7d1472cb7882e1c0bda0a72f8f69dba4274"
       },
       "format": 1,
       "locales": [
@@ -1669,55 +1601,6 @@
         "zu",
         "zu-ZA"
       ],
-      "producers": {
-        "src/cutils/cutils.c": "70fb16fef667ad4e347f934e402174f96ec8276e289b144d6efaabb310385e62",
-        "src/cutils/cutils.h": "7f5866d0431dc4867ed30e3133ebc5f179072f967c1bc7dffaecb2957e24c92e",
-        "src/intl/common/types.h": "062ca95a29eb229912ded76286eff6fcbc26239962b0cc0c30225dce97dfef8e",
-        "src/unicode/break-properties-def.h": "8d1c6baa68ebdad9d9738be77651d10d254c36e352bf63a43730df147f472d17",
-        "src/unicode/break-properties.c": "696875c6562273fd13c8c5bb6ef0055cda046ff553a6381be7be50321a88f07c",
-        "src/unicode/break-properties.h": "1cc34f268252db86e3e27994a7a4316803acef437e0f7cae1279bd635ddf51c8",
-        "src/unicode/libunicode-es-property-grammar.inc": "4ebf13215b87c27a64ce85e97b85b0fca807f706023e0a484ef95c7532c3b9fc",
-        "src/unicode/libunicode-table.c": "bf9af57894000a5aff00740faa138fac19e0aa0bfeef5ebfa5b2cd2e0072008c",
-        "src/unicode/libunicode-table.h": "f892f2095d8c0cd3c9c51783542eb245cb45bb1a63fde299694e79649bd6d6fa",
-        "src/unicode/libunicode.c": "b3fad429626b0ec5e6a18d8f297f8cd61f41fd1348555c8861639640c4749598",
-        "src/unicode/libunicode.h": "03f764ef90d4597d15d6a2aee8d1aacfd0a97d929394f8e7bf35e5b00ee2f16b",
-        "src/unicode/unicode-encoding.h": "c1449e2ad1fa9360e06b731a24143a417aaba3105c73ad9edba617da15d6b320",
-        "tools/intl/acquire.py": "ebe6d91fb64148c4366f87692ab4f119e6691ed25c55b4592178ea180a029775",
-        "tools/intl/availability.py": "41fe6951f8a52e9acc163b518386798729d82b963dbf494eb578b01947a1897f",
-        "tools/intl/bundle.py": "1a3080cb9fc4fb288ffde11222e8cc3b01b2512a350545745b46c07fe5367c45",
-        "tools/intl/cldr_xml.py": "c0491cfe3c8d428a6f216df9d5a0d7e3f34b2de9532821f74b462757e354b88b",
-        "tools/intl/parents.py": "56554733f039fefd5fef476edcd4d3bdbdc730a3e6db033b8df88b63ee9d886e",
-        "tools/intl/scalar_trie.py": "d0de64dcf73cd36e15e8801dbad2ee20f6bc8e18f5f1c3a8d7904d3d640a9daf",
-        "tools/intl/scalar_trie_tables.py": "6c20870014ad6723fcc95d2174b81f9cac46176a53c72c21fcdb4b7a63dbc73f",
-        "tools/intl/segment-property-main.c": "0ff40368f058a4a778d9a485546d7b4c9d3eb193424a756a87465b352d891749",
-        "tools/intl/segment-property.c": "003ba0de274105f42e063bf1bfb0a4bcd6a9a1f41edb618ff4da90621c95867c",
-        "tools/intl/segment-property.h": "3af801245aa1798568b4cce551d56c7b97c0d6b0897de0afc16054ca9df77fec",
-        "tools/intl/segment_alphabet.py": "22d6d979cd5c0d0cec5beccfc235bacdf78dade730b27c350a68859e09984dae",
-        "tools/intl/segment_bundle.py": "05ee45b084b7e9895f2d02d75000c7a0e1c218625b8b527f6f3a082dfdc3bd66",
-        "tools/intl/segment_catalog.py": "1fcdd74ae136b71d2330d0a2fc9d0822b843a4bba2f90317423dcee50b56da96",
-        "tools/intl/segment_compat.py": "c0d0d15690dace10a5fa4e24aadf4b9b96676f4458dcef23bf94d6252b500ecb",
-        "tools/intl/segment_dfa.py": "6a0ebb69d78a78b5ca8050c4cb6bd3f536506167944924fdf3fc308aa7a81a63",
-        "tools/intl/segment_dictionary.py": "e748729d6c47de9576818555daddd3bf2e09665123a8b2abc4e9f730b37c8cca",
-        "tools/intl/segment_dictionary_sources.py": "de977896639cd0f537437409d8f99024685e7fad5761017fed537a844f72dcaa",
-        "tools/intl/segment_dictionary_tables.py": "96de8b0ef8f016191fa5b37943e65449bcca725ce02fab4c256f8955aff5d95a",
-        "tools/intl/segment_dictionary_trie.py": "8b1a31419d74c86afdfb4703bede340e382ee592ab890beffd9fe0d460158c00",
-        "tools/intl/segment_expression.py": "f9224e3a70845c654c397feb11f28df866beba36f50b9fe13aeea3836b2158c4",
-        "tools/intl/segment_inheritance.py": "8798a959c44a79ecbda95ebdbcef9b75d20db1e33f55243c7dd5ee1e01d878e7",
-        "tools/intl/segment_lower.py": "011e19c539deaeda575b041e3d2d999b48dfaabffb2b075cb3f3f29f23125777",
-        "tools/intl/segment_nfa.py": "394c920e86ab056fa9fb9510d21fac6deac4be3a20ff914b3f93b909584e5084",
-        "tools/intl/segment_prepare.py": "b235b93757728c0afe93880f6773109308510f087fee108b2648338166cf5adf",
-        "tools/intl/segment_profile.py": "79647d384efc4621a3ab3e2585f9b570945b0052b4880fd60b0fdb5abf6cced1",
-        "tools/intl/segment_program.py": "9f28352416812b4e52bdf6c33318a4b865123aa82375f7e846b48862591e60b6",
-        "tools/intl/segment_program_tables.py": "f0277d0512651806b71ad71da3e67c2f0f2183991e263a16b17cdf482ab45c1b",
-        "tools/intl/segment_property.py": "49ff28933fd8ba141b90c1b5ae59c888aa6213b5d1bd57ac40fcb6e216ba4dbd",
-        "tools/intl/segment_rules.py": "f97264c0d1ad772e6ee6ca4403c5d6f3696b72e7b71f1ff0c9ac0bfdc801c3bb",
-        "tools/intl/segment_sets.py": "76631c5e2c686622b46d413f3bc5f685b9f40933174306d1e74ea107039ffa79",
-        "tools/intl/segment_sources.py": "7864d85bcadf587cdb83c46237821abe7342b430994bff509b1d0edcfa3e1511",
-        "tools/intl/segment_suppression_tables.py": "6267ae439d62e4e94b2d896cbfdd6fb3179f6a86048f6af83982fa3487d35379",
-        "tools/intl/segment_suppressions.py": "499254d8181603b778444b017a036f3093bd5496897c70bb019fa5f6794ad6d7",
-        "tools/intl/source_inputs.py": "ff30313e643760f18a06e759019c1f8deafa9240666bc2c7970bdf7b8af7f005",
-        "tools/intl/tables.py": "d0c8a0b5651fd1b8bbdccb261101b71f83c5e9e5e0476cc95954bbc3ff51dd74"
-      },
       "profile": "native",
       "semantic_profile": 1,
       "unicode": "18.0.0"
@@ -2837,6 +2720,6 @@
   },
   "locales": 1184,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, root UCA mappings, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "de35d983d1e55ce725e308c7160e34359effbe4518168725c631829ecf75ae4e",
+  "sha256": "f863eae0c6bd4a147254e42e3d751e58dbb418947c3d7f45cb84a8e9d5c29317",
   "strings": 391196
 }
