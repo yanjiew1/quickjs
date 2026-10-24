@@ -4172,6 +4172,7 @@ else
 endif
 if intl_enabled
   js_tests += {
+    'intl-profile': ['-m', 'tests/test_intl_profile.js', get_option('intl')],
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
