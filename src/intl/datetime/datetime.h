@@ -59,6 +59,7 @@ typedef struct QJSIntlDateHourPreferences {
    Capability queries use this service's own indexes, allocate no result strings,
    and never invoke user code. Opening validates source data, not JS options. */
 QJSIntlStatus qjs_intl_datetime_open(const QJSIntlAllocator *allocator,
+                                     const struct QJSIntlData *checked_data,
                                      QJSIntlDateTimeService **out);
 void qjs_intl_datetime_close(QJSIntlDateTimeService *service);
 QJSIntlStatus qjs_intl_datetime_available(const QJSIntlDateTimeService *service,

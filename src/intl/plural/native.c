@@ -23,7 +23,9 @@ struct QJSIntlPluralFormatter {
     QJSIntlPluralOptions options;
 };
 
-QJSIntlStatus qjs_intl_plural_open(const QJSIntlAllocator *allocator, QJSIntlPluralService **out)
+QJSIntlStatus qjs_intl_plural_open(const QJSIntlAllocator *allocator,
+                                   const struct QJSIntlData *checked_data,
+                                   QJSIntlPluralService **out)
 {
     QJSIntlPluralService *service;
     QJSIntlData data;
@@ -35,12 +37,19 @@ QJSIntlStatus qjs_intl_plural_open(const QJSIntlAllocator *allocator, QJSIntlPlu
         *out = NULL;
     if (!out || !allocator || !allocator->malloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
-    status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &data);
+    if (checked_data) {
+        data = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &data);
+    }
     if (status)
         goto fail;
     status = qjs_intl_plural_data_open(&data, allocator, &service->plurals);
