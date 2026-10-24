@@ -15,7 +15,7 @@ struct QJSIntlSegmentService {
     QJSIntlAllocator allocator;
 };
 
-static const QJSIntlBytes available[] = {{"en", 2}, {"en-US", 5}};
+static const QJSIntlBytes available[] = {{"en", 2}};
 
 QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator,
                                     QJSIntlSegmentService **out)

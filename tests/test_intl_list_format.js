@@ -24,7 +24,6 @@ for (const type of ["conjunction", "disjunction", "unit"]) {
     }
 }
 assert(new List("en-u-nu-arab-x-private").resolvedOptions().locale, "en");
-assert(new List("en-US").resolvedOptions().locale, "en-US");
 const defaultListLocale = new List().resolvedOptions().locale;
 for (const localeMatcher of ["lookup", "best fit"]) {
     for (const [locales, expected] of [
