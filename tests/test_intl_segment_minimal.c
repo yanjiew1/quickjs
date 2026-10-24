@@ -75,7 +75,7 @@ int main(void)
     const QJSIntlBytes *locales;
     size_t count, calls;
     int i;
-    assert(!qjs_intl_segment_open(&allocator, &service));
+    assert(!qjs_intl_segment_open(&allocator, NULL, &service));
     assert(!qjs_intl_segment_available(service, &locales, &count) && count == 2);
     assert(locales[0].length == 2 && !memcmp(locales[0].data, "en", 2));
     assert(locales[1].length == 5 && !memcmp(locales[1].data, "en-US", 5));
@@ -150,7 +150,7 @@ int main(void)
     assert(state.calls == calls && !state.live);
     state.fail_at = state.calls + 1;
     service = (void *)1;
-    assert(qjs_intl_segment_open(&allocator, &service) == QJS_INTL_NO_MEMORY && !service);
+    assert(qjs_intl_segment_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY && !service);
     qjs_intl_segmenter_close(NULL);
     qjs_intl_segment_close(NULL);
     qjs_intl_segment_input_clear(NULL);
