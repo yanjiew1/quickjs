@@ -1,8 +1,8 @@
 {
-  "bytes": 5350428,
+  "bytes": 4164008,
   "complete_services": [],
   "format": 1,
-  "generation": "0d0c0cf7423cc434b162f905957c15ad19a29f03344c3dbaead62ff7fb2ad624",
+  "generation": "f80603af4a40d37383d5f79d9f5fef8157f851cb52b5d9defbfeb532b1a9a0ab",
   "inputs": {
     "cldr": {
       "archive": {
@@ -141,14 +141,6 @@
       "35": {
         "count": 27,
         "sha256": "6fe05e76db1ed6268606e872f90f688beaa00270eafd37aec50f8b775674a1c1"
-      },
-      "36": {
-        "count": 40467,
-        "sha256": "4171a25d2db5e91e492efb172580607626b1e37c179aba8d68269b70a99c5952"
-      },
-      "37": {
-        "count": 4,
-        "sha256": "663985e77c28ae514b83f206ef8eed84c50c4e2d95ad67bb7f3a754ef5f93471"
       },
       "38": {
         "count": 4,
@@ -1279,7 +1271,7 @@
     }
   },
   "locales": 2,
-  "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, root UCA mappings, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "586b65712d65eef7012c36f9038c475bf129130d5a05a238fdb942d0a67ce1d5",
+  "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
+  "sha256": "56885d688bdbc77f51182ccf7e8bd3fe9b23637439c138a2dabd868c8c0b7497",
   "strings": 25208
 }
