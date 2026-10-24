@@ -54,19 +54,10 @@ class PinTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 source_pins.refresh(cldr_pin(), archive=common_archive([(name, b'x')]))
 
-    def test_pointer_types_and_filename_keys(self):
-        value = {'release': '49', 'enabled': False, 'files': [{'sha256': 'old'}],
-                 'sources': {'file.xml': {'revision': 'old'}}}
-        source_pins.set_pointer(value, '/release=50')
-        source_pins.set_pointer(value, '/enabled=true')
-        source_pins.set_pointer(value, '/files/0/sha256=new')
-        source_pins.set_pointer(value, '/sources/file.xml/revision=next')
-        self.assertEqual(value['release'], '50')
-        self.assertIs(value['enabled'], True)
-        self.assertEqual(value['sources']['file.xml']['revision'], 'next')
-        for text in ('/files/-1/sha256=x', '/files/01/sha256=x', '/missing=x', '/files/~2=x'):
-            with self.subTest(text=text), self.assertRaises((ValueError, KeyError)):
-                source_pins.set_pointer(value, text)
+    def test_candidate_keeps_the_template_source_family(self):
+        template = {'schema': 1, 'sources': {}}
+        with self.assertRaisesRegex(ValueError, 'template source family'):
+            source_pins.refresh(template, candidate=cldr_pin())
 
     def test_calendar_partial_update_and_review_date(self):
         template = {'schema': 1, 'review_date': '2020-01-01', 'sources': {
@@ -75,13 +66,16 @@ class PinTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             raw = Path(temp) / 'era.xml'
             raw.write_bytes(b'future era')
-            pin, _, _ = source_pins.refresh(template, ['/sources/era.xml/revision=after'],
-                                            {'era.xml': raw})
+            candidate = copy.deepcopy(template)
+            candidate['sources']['era.xml']['revision'] = 'after'
+            pin, _, _ = source_pins.refresh(template, candidate, {'era.xml': raw})
+            self.assertEqual(candidate['review_date'], '2020-01-01')
+            self.assertEqual(template['sources']['era.xml']['revision'], 'before')
             self.assertEqual(pin['sources']['era.xml']['sha256'], source_pins.digest(raw.read_bytes()))
             self.assertEqual(pin['sources']['other.txt'], template['sources']['other.txt'])
             self.assertIsNone(pin['review_date'])
             with self.assertRaisesRegex(ValueError, 'requires input bytes'):
-                source_pins.refresh(template, ['/sources/era.xml/revision=after'])
+                source_pins.refresh(template, candidate)
 
     def test_timezone_archive_uses_the_generation_source_contract(self):
         timezone = source_pins.load_tool('pin_test_timezone', 'tools/timezone/acquire.py')
@@ -97,8 +91,10 @@ class PinTests(unittest.TestCase):
         pin, _, _ = source_pins.refresh(template, archive=data.getvalue())
         self.assertNotIn('files', pin['tz'])
         self.assertEqual(pin['tz']['archive']['sha256'], source_pins.digest(data.getvalue()))
+        candidate = copy.deepcopy(template)
+        candidate['tz']['release'] = '2099b'
         with self.assertRaisesRegex(ValueError, 'missing required sources'):
-            source_pins.refresh(template, ['/tz/release=2099b'], archive=data.getvalue())
+            source_pins.refresh(template, candidate, archive=data.getvalue())
 
     def test_dictionary_complete_set_preserves_git_identity(self):
         template = json.loads((ROOT / 'data/intl/segment-dictionary-pin.json').read_text())
@@ -106,7 +102,9 @@ class PinTests(unittest.TestCase):
             root = Path(temp)
             for row in template['files']:
                 (root / row['name']).write_bytes(('fixture ' + row['name']).encode())
-            pin, _, _ = source_pins.refresh(template, ['/commit=' + 'a' * 40], files_root=root)
+            candidate = copy.deepcopy(template)
+            candidate['commit'] = 'a' * 40
+            pin, _, _ = source_pins.refresh(template, candidate, files_root=root)
             for row in pin['files']:
                 data = (root / row['name']).read_bytes()
                 self.assertEqual(row['bytes'], len(data))
@@ -114,11 +112,39 @@ class PinTests(unittest.TestCase):
                 self.assertNotIn('git_blob', row)
                 self.assertIn('/' + 'a' * 40 + '/', row['url'])
             with self.assertRaisesRegex(ValueError, 'complete source set'):
-                source_pins.refresh(template, ['/commit=' + 'a' * 40])
-            for assignment in ('/release=79.2', '/tag=release-79.2'):
-                with self.subTest(assignment=assignment), self.assertRaisesRegex(
+                source_pins.refresh(template, candidate)
+            for name, value in (('release', '79.2'), ('tag', 'release-79.2')):
+                candidate = copy.deepcopy(template)
+                candidate[name] = value
+                with self.subTest(name=name), self.assertRaisesRegex(
                         ValueError, 'complete source set'):
-                    source_pins.refresh(template, [assignment])
+                    source_pins.refresh(template, candidate)
+
+    def test_calendar_facts_are_rehashed_without_overwriting_inputs(self):
+        template = {'schema': 1, 'review_date': '2020-01-01', 'sources': {},
+                    'normalized': {'era.json': {'sha256': 'old'}}}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = root / 'era.json'
+            raw.write_bytes(b'{"eras": []}\n')
+            candidate, _, _ = source_pins.refresh(template, data_dir=root)
+            self.assertEqual(candidate['normalized']['era.json']['sha256'],
+                             source_pins.digest(raw.read_bytes()))
+            self.assertIsNone(candidate['review_date'])
+            self.assertEqual(template['normalized']['era.json']['sha256'], 'old')
+            pin = root / 'template.json'
+            pin.write_text(json.dumps(template))
+            result = subprocess.run(
+                [sys.executable, str(ROOT / 'tools/data/update_pin.py'), '--pin', str(pin),
+                 '--data-dir', str(root), '--output', str(raw)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(raw.read_bytes(), b'{"eras": []}\n')
+            self.assertIn(b'input', result.stderr)
+            unsafe = copy.deepcopy(template)
+            unsafe['normalized']['../escape.json'] = {'sha256': 'old'}
+            with self.assertRaisesRegex(ValueError, 'normalized calendar input'):
+                source_pins.refresh(unsafe, data_dir=root)
 
     def test_cli_failure_preserves_output(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -192,22 +218,18 @@ class PinTests(unittest.TestCase):
             pin_path.write_text(json.dumps(selected))
             sources = root / 'sources'
             acquire.materialize(raw, sources, selected['cldr'])
-            args = SimpleNamespace(cldr_pin=pin_path, cldr_sources=sources, set=[])
-            assignments, files = update_pin.cldr_assignments(args, template)
-            result, _, _ = source_pins.refresh(template, assignments, files)
+            args = SimpleNamespace(cldr_pin=pin_path, cldr_sources=sources)
+            candidate = copy.deepcopy(template)
+            files = update_pin.propagate_cldr(args, candidate)
+            result, _, _ = source_pins.refresh(template, candidate, files)
             self.assertEqual(result['tz'], template['tz'])
             self.assertEqual(result['cldr']['files']['timezone.xml']['sha256'],
                              source_pins.digest(b'aliases'))
-            for pointer in ('/cldr', '/cldr/archive', '/cldr/archive/url',
-                            '/cldr/files/timezone.xml'):
-                args.set = [pointer + '={}']
-                with self.subTest(pointer=pointer), self.assertRaisesRegex(
-                        ValueError, 'must not override provenance'):
-                    update_pin.cldr_assignments(args, template)
-            args.set = []
+            self.assertEqual(result['cldr']['archive'], selected['cldr']['archive'])
             (sources / 'common/bcp47/timezone.xml').write_bytes(b'modified')
-            assignments, files = update_pin.cldr_assignments(args, template)
-            result, _, _ = source_pins.refresh(template, assignments, files)
+            candidate = copy.deepcopy(template)
+            files = update_pin.propagate_cldr(args, candidate)
+            result, _, _ = source_pins.refresh(template, candidate, files)
             self.assertEqual(result['cldr']['files']['timezone.xml']['sha256'],
                              source_pins.digest(b'modified'))
 
