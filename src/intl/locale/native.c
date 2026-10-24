@@ -15,6 +15,7 @@ struct QJSIntlLocaleService {
 };
 
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
+                                   const struct QJSIntlData *checked_data,
                                    QJSIntlLocaleService **out)
 {
     QJSIntlLocaleService *service;
@@ -26,12 +27,19 @@ QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
     if (!out || !allocator || !allocator->malloc || !allocator->realloc ||
         !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
         return QJS_INTL_NO_MEMORY;
     service->allocator = *allocator;
-    status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
-                                allocator, &data);
+    if (checked_data) {
+        data = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                                    allocator, &data);
+    }
     if (!status)
         status =
             qjs_intl_locale_metadata_open(&data, allocator, &service->metadata);

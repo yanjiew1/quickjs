@@ -166,9 +166,18 @@ static QJSIntlStatus calendar_supported(const DateData *data, QJSIntlBytes ident
     return status;
 }
 
-static QJSIntlStatus open_data(const QJSIntlAllocator *allocator, DateData *out)
+static QJSIntlStatus open_data(const QJSIntlAllocator *allocator,
+                               const QJSIntlData *checked_data, DateData *out)
 {
-    QJSIntlStatus status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &out->pack);
+    QJSIntlStatus status;
+
+    if (checked_data) {
+        out->pack = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                                    allocator, &out->pack);
+    }
     if (!status)
         status = qjs_intl_locale_metadata_open(&out->pack, allocator, &out->metadata);
     if (!status)
@@ -274,7 +283,9 @@ void qjs_intl_datetime_close(QJSIntlDateTimeService *service)
     }
 }
 
-QJSIntlStatus qjs_intl_datetime_open(const QJSIntlAllocator *allocator, QJSIntlDateTimeService **out)
+QJSIntlStatus qjs_intl_datetime_open(const QJSIntlAllocator *allocator,
+                                     const struct QJSIntlData *checked_data,
+                                     QJSIntlDateTimeService **out)
 {
     QJSIntlDateTimeService *service;
     QJSIntlLocaleService *identity = NULL;
@@ -287,16 +298,18 @@ QJSIntlStatus qjs_intl_datetime_open(const QJSIntlAllocator *allocator, QJSIntlD
         *out = NULL;
     if (!out || !allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
-    status = open_data(allocator, &service->data);
+    status = open_data(allocator, checked_data, &service->data);
     if (!status)
-        status = qjs_intl_number_open(allocator, &service->number);
+        status = qjs_intl_number_open(allocator, &service->data.pack, &service->number);
     if (!status)
-        status = qjs_intl_locale_open(allocator, &identity);
+        status = qjs_intl_locale_open(allocator, &service->data.pack, &identity);
     if (!status)
         status = qjs_intl_locale_preferences_open(&service->data.pack, allocator, &preferences);
     if (status)
