@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare deterministic minimal/native Intl sections from authenticated CLDR."""
+"""Prepare deterministic minimal/native Intl sections from supplied CLDR."""
 import argparse
 import copy
+import json
 from pathlib import Path
 
 import acquire
@@ -66,11 +67,14 @@ import unit_grammar_tables
 from source_inputs import Inputs
 
 
-def generate(sources, profile, compiled_collation=None, compiled_segmentation=None):
+def generate(sources, profile, compiled_collation=None, compiled_segmentation=None,
+             segmentation_manifest=None):
     if profile not in bundle.PROFILES:
         raise ValueError('unknown native Intl data profile')
     if compiled_segmentation is not None and profile != 'native':
         raise ValueError('compiled segmentation requires the native profile')
+    if (compiled_segmentation is None) != (segmentation_manifest is None):
+        raise ValueError('compiled segmentation and its manifest are required together')
     inputs_read = Inputs(sources)
     # Authored fixtures can omit optional service sections. The production CLI
     # requires the already compiled profile; generation never invents a fallback.
@@ -85,7 +89,8 @@ def generate(sources, profile, compiled_collation=None, compiled_segmentation=No
     segmentation_sections, segmentation_inputs = {}, None
     if compiled_segmentation is not None:
         segmentation_sections, segmentation_inputs = segment_bundle.pair(
-            inputs_read, sources.pin, graph, tags, compiled_segmentation)
+            inputs_read, sources.manifest['files'], graph, tags, compiled_segmentation,
+            segmentation_manifest)
     locale_data = locale_metadata.collect(inputs_read, graph)
     preference_data = preferences.collect(inputs_read)
     numbering_data = numbering.collect(inputs_read, graph)
@@ -246,6 +251,7 @@ def main():
     parser.add_argument('--profile', choices=tuple(bundle.PROFILES), required=True)
     parser.add_argument('--compiled-collation', type=Path, required=True)
     parser.add_argument('--compiled-segmentation', type=Path)
+    parser.add_argument('--segmentation-manifest', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     args = parser.parse_args()
@@ -253,10 +259,14 @@ def main():
         parser.error('--compiled-segmentation is required for the native profile')
     if args.profile != 'native' and args.compiled_segmentation is not None:
         parser.error('--compiled-segmentation applies only to the native profile')
+    if (args.compiled_segmentation is None) != (args.segmentation_manifest is None):
+        parser.error('--compiled-segmentation and --segmentation-manifest are required together')
     binary, manifest = generate(acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), args.profile,
                                 args.compiled_collation.read_bytes(),
                                 args.compiled_segmentation.read_bytes()
-                                if args.compiled_segmentation is not None else None)
+                                if args.compiled_segmentation is not None else None,
+                                json.loads(args.segmentation_manifest.read_text())
+                                if args.segmentation_manifest is not None else None)
     acquire.atomic_write(args.output, binary)
     acquire.atomic_write(args.manifest, acquire.json_bytes(manifest))
 
