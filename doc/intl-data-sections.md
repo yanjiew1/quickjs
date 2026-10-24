@@ -598,8 +598,9 @@ codes and noncontiguous raw IDs remain data, without changing a compiled table.
 
 Encoder/decoder `tools/intl/collation_tables.py`; authenticated source collector
 `tools/intl/collation_root.py`; C owner `src/intl/collation/root-data.c`.
-This optional section describes explicit CLDR
-root UCA mappings, independently of selected locale inventories. Its presence
+This test-oracle section describes explicit CLDR root UCA mappings, independently
+of selected locale inventories. Production packs omit sections 36 and 37; their
+shared raw data lives in `tests/data/intl-collation-oracle.bin`. Its presence
 does not establish executable Collator support or apply locale tailorings.
 
 **N is the number of mappings**, and must be positive. Header words are
@@ -795,10 +796,9 @@ before publishing any service capability.
 
 Production generation requires `--compiled-collation`; normal engine builds
 consume prepared QJIN bytes offline. Unrelated authored fixtures may omit this
-optional section. Sections 36/37 retain their independent raw diagnostic root
-for existing source-oracle tests; executable comparisons use section 38. This
-temporary root-data duplication is explicit and does not imply two runtime
-collation algorithms or source fallback between the representations.
+optional section. Sections 36/37 reside only in the independent test oracle,
+generated directly from raw allkeys/context sources. Executable comparisons
+use section 38; runtime packs do not carry the diagnostic representation.
 
 ## 39 SEGMENT_DICTIONARIES
 
