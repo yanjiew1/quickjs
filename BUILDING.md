@@ -70,7 +70,9 @@ import library installs into `libdir`. On other platforms, the library
 installs into `libdir/quickjs` and installed tools have the configured runtime
 search path. Applications select their own runtime search path when linking.
 `pkg-config --cflags --libs quickjs` supplies include and link flags;
-`--static` also supplies support-library dependencies.
+`--static` also supplies support-library dependencies and the matching final-link
+LTO flag when the installed archive contains bitcode. Such archives require a
+compatible compiler/linker; ordinary shared-library consumers need no LTO flag.
 
 In `shared` mode, `qjsc` executable output links the shared engine with a runtime
 search path. In `static` and `both` modes, its executable output uses the static
