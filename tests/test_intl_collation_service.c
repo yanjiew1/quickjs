@@ -287,7 +287,7 @@ int main(void)
 
     qjs_intl_collation_close(NULL);
     qjs_intl_collator_close(NULL);
-    assert(!qjs_intl_collation_open(&allocator, &service));
+    assert(!qjs_intl_collation_open(&allocator, NULL, &service));
     assert(!qjs_intl_collation_available(service, &available, &count));
     assert(TEST_INTL_PROFILE ? count > 2 : count == 2);
     en = find(available, count, "en");
@@ -331,10 +331,10 @@ int main(void)
     for (i = 0; i < failures; i++) {
         state.calls = 0;
         state.fail_at = failure_ids[i];
-        assert(qjs_intl_collation_open(&allocator, &service) == QJS_INTL_NO_MEMORY && !service);
+        assert(qjs_intl_collation_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY && !service);
         assert(!state.live);
     }
     state.fail_at = 0;
-    assert(qjs_intl_collation_open(NULL, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
+    assert(qjs_intl_collation_open(NULL, NULL, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
     return 0;
 }
