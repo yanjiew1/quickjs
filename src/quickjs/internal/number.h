@@ -157,7 +157,6 @@ static inline int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val)
     return 0;
 }
 
-int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 
 int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
                     int min, int max, int max_default);
