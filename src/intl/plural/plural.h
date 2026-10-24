@@ -25,7 +25,9 @@ typedef struct QJSIntlPluralFormatter QJSIntlPluralFormatter;
 /* Compile-time selected implementation. Copy the allocator; its callbacks and
    opaque state must outlive all handles. Opening validates the selected pack.
    On error *out is NULL. Closing NULL is safe. No JS callbacks occur. */
-QJSIntlStatus qjs_intl_plural_open(const QJSIntlAllocator *, QJSIntlPluralService **out);
+QJSIntlStatus qjs_intl_plural_open(const QJSIntlAllocator *allocator,
+                                   const struct QJSIntlData *checked_data,
+                                   QJSIntlPluralService **out);
 void qjs_intl_plural_close(QJSIntlPluralService *);
 /* Borrow sorted, canonical, extension-free available tags until service close.
    Root is excluded. Failure clears both outputs. No matching happens here. */
