@@ -7,10 +7,8 @@ import os
 from pathlib import Path
 import re
 import sys
-import time
-import urllib.request
 
-from _support import source_pins
+from _support import io as data_io, source_pins
 from _support.outputs import encoded, write_atomic
 
 
@@ -23,25 +21,8 @@ def named_file(text):
 
 def download(url, limit=source_pins.MAX_ARCHIVE):
     """Fetch a candidate, not a trusted lock; provenance still needs review."""
-    if not url.startswith('https://'):
-        raise ValueError('candidate downloads require HTTPS')
-    deadline = time.monotonic() + 120
-    request = urllib.request.Request(url, headers={'User-Agent': 'QuickJS-data-maintenance'})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        if not response.geturl().startswith('https://'):
-            raise ValueError('candidate redirected away from HTTPS')
-        chunks, total = [], 0
-        while True:
-            if time.monotonic() > deadline:
-                raise ValueError('candidate download exceeded time limit')
-            chunk = response.read1(min(128 * 1024, limit + 1 - total))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            total += len(chunk)
-            if total > limit:
-                raise ValueError('candidate archive exceeds byte limit')
-    return b''.join(chunks)
+    return data_io.download_bytes(url, limit, attempts=1,
+                                   user_agent='QuickJS-data-maintenance')
 
 
 def resolve_tag(repository, tag):
@@ -191,7 +172,8 @@ def main(argv=None):
                 downloaded_files[row['name']] = download(url, 16 * 1024 * 1024)
         elif kind in ('cldr', 'timezone'):
             item = candidate['cldr'] if kind == 'cldr' else candidate['tz']
-            archive = download(item['archive']['url'])
+            archive = download(item['archive']['url'],
+                               8 * 1024 * 1024 if kind == 'timezone' else source_pins.MAX_ARCHIVE)
         else:
             raise ValueError('calendar publications use their individual --file inputs')
     if args.expected_sha256 is not None:
