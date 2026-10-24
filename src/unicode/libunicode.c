@@ -1944,7 +1944,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
         for(i = 0; i < cr->len; i += 2) {
             for(c = cr->points[i]; c < cr->points[i + 1]; c++) {
                 seq[0] = c;
-                cb(opaque, seq, 1);
+                if (cb(opaque, seq, 1))
+                    return -1;
             }
         }
 
@@ -1956,7 +1957,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
             for(c = cr->points[i]; c < cr->points[i + 1]; c++) {
                 seq[0] = c;
                 seq[1] = 0xfe0f;
-                cb(opaque, seq, 2);
+                if (cb(opaque, seq, 2))
+                    return -1;
             }
         }
 
@@ -1969,7 +1971,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
                 for(j = 0; j < 5; j++) {
                     seq[0] = c;
                     seq[1] = 0x1f3fb + j;
-                    cb(opaque, seq, 2);
+                    if (cb(opaque, seq, 2))
+                        return -1;
                 }
             }
         }
@@ -1984,7 +1987,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
                 c1 = c % 26;
                 seq[0] = 0x1F1E6 + c0;
                 seq[1] = 0x1F1E6 + c1;
-                cb(opaque, seq, 2);
+                if (cb(opaque, seq, 2))
+                    return -1;
             }
         }
         break;
@@ -2074,7 +2078,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
                             printf(" %04x", seq[j]);
                         printf("\n");
 #endif
-                        cb(opaque, seq, k);
+                        if (cb(opaque, seq, k))
+                            return -1;
                     }
                 }
             }
@@ -2092,7 +2097,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
                     seq[j++] = 0xe0000 + c;
                 }
                 seq[j++] = 0xe007f;
-                cb(opaque, seq, j);
+                if (cb(opaque, seq, j))
+                    return -1;
             }
         }
         break;
@@ -2104,7 +2110,8 @@ static int unicode_sequence_prop1(int seq_prop_idx, UnicodeSequencePropCB *cb, v
                 seq[0] = c;
                 seq[1] = 0xfe0f;
                 seq[2] = 0x20e3;
-                cb(opaque, seq, 3);
+                if (cb(opaque, seq, 3))
+                    return -1;
             }
         }
         break;
@@ -2130,6 +2137,9 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
                           CharRange *cr)
 {
     int seq_prop_idx;
+
+    if (!cb)
+        return -1;
     seq_prop_idx = unicode_find_name(unicode_sequence_prop_name_table, prop_name);
     if (seq_prop_idx < 0)
         return -2;
@@ -2137,29 +2147,3 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
 }
 
 #include "libunicode-es-property-grammar.inc"
-
-typedef struct {
-    UnicodeSequencePropCheckedCB *cb;
-    void *opaque;
-    int failed;
-} UnicodeNativeSequenceContext;
-
-static void unicode_native_sequence_checked(void *opaque,
-                                           const uint32_t *buf, int len)
-{
-    UnicodeNativeSequenceContext *s = opaque;
-    if (!s->failed && s->cb(s->opaque, buf, len))
-        s->failed = 1;
-}
-
-int unicode_sequence_prop_checked(const char *name,
-                                 UnicodeSequencePropCheckedCB *cb, void *opaque,
-                                 CharRange *cr)
-{
-    UnicodeNativeSequenceContext s = { cb, opaque, 0 };
-    int ret;
-    if (!cb)
-        return -1;
-    ret = unicode_sequence_prop(name, unicode_native_sequence_checked, &s, cr);
-    return s.failed ? -1 : ret;
-}
