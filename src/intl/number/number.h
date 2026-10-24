@@ -78,7 +78,9 @@ typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
    Copy the allocator; malloc/free required, realloc unused. Its callbacks and
    opaque state outlive corresponding formatters and result clearing. Opening
    validates the selected immutable profile. Errors clear *out; NULL closes. */
-QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *, QJSIntlNumberService **out);
+QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator,
+                                   const struct QJSIntlData *checked_data,
+                                   QJSIntlNumberService **out);
 void qjs_intl_number_close(QJSIntlNumberService *);
 /* Borrow canonical sorted extension-free tags, excluding root, until close.
    No locale matching occurs. Failure clears both outputs. */
