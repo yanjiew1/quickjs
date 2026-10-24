@@ -2,16 +2,61 @@
 """Check timing report results and preservation of partial CI evidence."""
 import csv
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 
 TOOL = Path(__file__).resolve().parents[1] / 'tools/ci/report_test262_timings.py'
+ROOT = TOOL.parents[2]
 
 
 class TimingReportTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('sh'), 'CI reporting uses a POSIX shell')
+    def test_ci_summary_preserves_partial_failure_and_missing_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first, second = root / 'first', root / 'second'
+            summary = root / 'summary.md'
+            environment = dict(os.environ, GITHUB_STEP_SUMMARY=str(summary))
+            command = ['sh', str(TOOL.with_name('report_test262_summaries.sh')),
+                       str(first), str(second)]
+            self.assertEqual(subprocess.call(command, cwd=ROOT, env=environment), 0)
+            self.assertFalse(summary.exists())
+            row = dict(file='case.js', thread=0, index=0, mode='strict',
+                       status='pass', duration_ms=1)
+            Path(str(first) + '_timings.jsonl').write_text('{broken\n')
+            Path(str(second) + '_timings.jsonl').write_text(json.dumps(row) + '\n')
+            # A bad first report must neither hide its failure nor prevent
+            # the later valid report from preserving its evidence.
+            self.assertEqual(subprocess.call(command, cwd=ROOT, env=environment), 1)
+            self.assertTrue(Path(str(first) + '_timings.csv').exists())
+            self.assertTrue(Path(str(second) + '_timings.csv').exists())
+            text = summary.read_text()
+            self.assertIn('1 rejected records', text)
+            self.assertIn('1 pass', text)
+
+    @unittest.skipUnless(shutil.which('sh'), 'CI reporting uses a POSIX shell')
+    def test_ci_repository_summary_accepts_partial_logs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            logs = root / 'build/meson-logs'
+            logs.mkdir(parents=True)
+            (logs / 'repo-unit.txt').write_text(''.join(str(i) + '\n' for i in range(25)))
+            summary = root / 'summary.md'
+            environment = dict(os.environ, GITHUB_STEP_SUMMARY=str(summary))
+            self.assertEqual(subprocess.call(
+                ['sh', str(TOOL.with_name('report_repo_results.sh'))],
+                cwd=root, env=environment), 0)
+            text = summary.read_text()
+            self.assertIn('### repo-unit', text)
+            self.assertNotIn('repo-integration', text)
+            self.assertIn('```text\n5\n', text)
+            self.assertIn('24\n', text)
+
     def test_complete_and_partial(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
