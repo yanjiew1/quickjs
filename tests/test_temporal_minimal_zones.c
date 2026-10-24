@@ -18,7 +18,7 @@ int main(void)
     QJSTemporalEpochNs zero = { 0, 0 }, result, limit;
     int64_t ns;
     size_t count;
-    int found, equal;
+    int found;
     QJSTimeZoneInfo info;
 
     assert(!qjs_temporal_zone_parse(&utc, "uTc", 3));
@@ -39,7 +39,7 @@ int main(void)
     assert(!memcmp(&saved, &utc, sizeof(utc)));
     assert(!qjs_temporal_zone_parse(&offset, "-00:00", 6));
     assert(!strcmp(offset.identifier, "+00:00"));
-    assert(!qjs_temporal_zones_equal(&utc, &offset, &equal) && !equal);
+    assert(!qjs_temporal_zones_equal(&utc, &offset));
     assert(!qjs_temporal_zone_parse(&offset, "+0530", 5));
     assert(!strcmp(offset.identifier, "+05:30"));
     assert(!qjs_temporal_zone_offset(&offset, zero, &ns));
