@@ -65,7 +65,9 @@ static uint32_t find_program(const QJSIntlCollationService *service, size_t loca
     return UINT32_MAX;
 }
 
-QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *allocator, QJSIntlCollationService **out)
+QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *allocator,
+                                      const struct QJSIntlData *checked_data,
+                                      QJSIntlCollationService **out)
 {
     QJSIntlCollationService *service;
     QJSIntlData outer;
@@ -78,6 +80,8 @@ QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *allocator, QJSIntl
         *out = NULL;
     if (!out || !allocator || !allocator->malloc || !allocator->realloc || !allocator->free)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (checked_data && !checked_data->pack.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
 
     service = allocator->malloc(allocator->opaque, sizeof(*service));
     if (!service)
@@ -85,7 +89,12 @@ QJSIntlStatus qjs_intl_collation_open(const QJSIntlAllocator *allocator, QJSIntl
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
 
-    status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &outer);
+    if (checked_data) {
+        outer = *checked_data;
+        status = QJS_INTL_OK;
+    } else {
+        status = qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &outer);
+    }
     if (!status)
         status = qjs_intl_pack_section(&outer.pack, QJS_INTL_SECTION_COMPILED_COLLATION, &section);
     /* The outer generation hashes a complete recipe, not just the CLDR source
