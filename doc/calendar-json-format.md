@@ -139,7 +139,12 @@ required span stay unchanged when adding the precomputed extension: extending
 the table does not turn ICU4X-derived facts into KASI publications. The generator
 checks Dangi's saved rows against `icu4x-korea-data.json`, including overlaps.
 `boundary_model` remains provenance even though its current Dangi approximation
-list is empty.
+list is empty. Its `source_revision` identifies the project commit containing
+the approximation model used for boundary generation; it is not a PMO/KASI
+publication revision or this JSON's hash. It neither selects runtime algorithms
+nor acts as a generator hash gate. The pin and generated manifest retain this
+provenance separately from the packed year records. The
+[model source](../src/calendar/lunisolar.c) records its ICU provenance and license.
 
 ### Parsed Korean source facts
 
