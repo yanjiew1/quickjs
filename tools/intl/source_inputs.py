@@ -1,4 +1,4 @@
-"""Track a preparation's authenticated reads independently of caller history."""
+"""Track a preparation's supplied reads independently of caller history."""
 
 
 class Inputs:
