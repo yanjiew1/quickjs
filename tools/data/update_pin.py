@@ -10,8 +10,8 @@ import sys
 import time
 import urllib.request
 
-import source_pins
-from outputs import encoded, write_atomic
+from _support import source_pins
+from _support.outputs import encoded, write_atomic
 
 
 def named_file(text):

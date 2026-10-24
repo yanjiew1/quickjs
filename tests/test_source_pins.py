@@ -15,7 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools/data'))
-import source_pins
+from _support import source_pins
 import update_pin
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 MAX_FILE = 64 * 1024 * 1024
 MAX_ARCHIVE = 128 * 1024 * 1024
 
