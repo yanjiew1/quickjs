@@ -12,6 +12,8 @@ import subprocess
 import unittest
 from unittest import mock
 
+from test_data_io import Response
+
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'tools' / 'timezone'
 spec = importlib.util.spec_from_file_location('timezone_acquire',
@@ -46,7 +48,7 @@ class AcquisitionTests(unittest.TestCase):
             path = Path(directory) / 'source'
             path.write_bytes(b'pinned')
             source = {'url': 'https://invalid.test/data', 'sha256': sha256(b'pinned')}
-            with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen') as network:
                 self.assertEqual(acquire.fetch(path, source), b'pinned')
                 network.assert_not_called()
                 self.assertEqual(acquire.fetch(path, source, True), b'pinned')
@@ -56,8 +58,8 @@ class AcquisitionTests(unittest.TestCase):
             path = Path(directory) / 'source'
             path.write_bytes(b'existing')
             source = {'url': 'https://invalid.test/data', 'sha256': sha256(b'pinned')}
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
-                                   return_value=io.BytesIO(b'wrong')):
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
+                                   return_value=Response(b'wrong')):
                 with self.assertRaises(ValueError):
                     acquire.fetch(path, source)
             self.assertEqual(path.read_bytes(), b'existing')
@@ -66,8 +68,8 @@ class AcquisitionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'nested' / 'source'
             source = {'url': 'https://invalid.test/data', 'sha256': sha256(b'pinned')}
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
-                                   return_value=io.BytesIO(b'pinned')) as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
+                                   return_value=Response(b'pinned')) as network:
                 self.assertEqual(acquire.fetch(path, source), b'pinned')
                 self.assertEqual(network.call_args[1]['timeout'], 30)
             self.assertEqual(path.read_bytes(), b'pinned')
@@ -80,7 +82,7 @@ class AcquisitionTests(unittest.TestCase):
             for exists in [False, True]:
                 if exists:
                     path.write_bytes(b'modified')
-                with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+                with mock.patch.object(acquire.data_io.urllib.request, 'urlopen') as network:
                     with self.assertRaises(ValueError):
                         acquire.fetch(path, source, True)
                     network.assert_not_called()
@@ -139,7 +141,7 @@ class AcquisitionTests(unittest.TestCase):
             stale.mkdir()
             (stale / 'zic.c').write_bytes(b'poisoned extracted source')
             work = Path(directory) / 'private'
-            with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen') as network:
                 source, cldr, identity = generate.read_sources(cache, pin, work)
                 network.assert_not_called()
             self.assertEqual(source, work / 'sources')
