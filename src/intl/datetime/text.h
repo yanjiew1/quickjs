@@ -3,7 +3,8 @@
 #ifndef QJS_INTL_DATETIME_TEXT_H
 #define QJS_INTL_DATETIME_TEXT_H
 #include "chronology.h"
-#include "numeric.h"
+#include "number-formats.h"
+#include "pattern-info.h"
 #include "calendar-identity.h"
 #include "dayperiod.h"
 #include "era-data.h"
@@ -44,8 +45,9 @@ QJSIntlStatus qjs_intl_date_names_admit(const QJSIntlDatePattern *pattern,
    selection-rule list. Absent rules use the documented AM/PM fallback.
 
    All owners and NumberFormat instances remain immutable and outlive this
-   operation. Numeric fields reuse numeric_format's exact digit/normalization
-   contract. Lunar months apply the exact inherited leap template to formatted
+   operation. Numeric y<=0 becomes 1-y, while relatedYear stays signed.
+   Truncate fractional milliseconds before localization; two-digit fields
+   retain the last two Unicode code points of the whole formatted value. Lunar months apply the exact inherited leap template to formatted
    digits or names, without guessed width/context fallbacks. Numeric/all
    decoration follows CLDR's regular M/L handling; the current ECMA numeric
    pseudocode does not explicitly include this established calendar behavior.
