@@ -92,7 +92,7 @@ int main(void)
     const QJSIntlBytes *available;
     size_t count, i, english = SIZE_MAX, calls, live, fail;
     int supported;
-    assert(!qjs_intl_relative_open(&allocator, &service));
+    assert(!qjs_intl_relative_open(&allocator, NULL, &service));
     calls = state.calls;
     qjs_intl_relative_close(service);
     assert(!state.live);
@@ -100,11 +100,11 @@ int main(void)
         state.calls = 0;
         state.fail_at = fail;
         failed = (void *)1;
-        assert(qjs_intl_relative_open(&allocator, &failed) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_relative_open(&allocator, NULL, &failed) == QJS_INTL_NO_MEMORY);
         assert(!failed && !state.live);
     }
     state.fail_at = 0;
-    assert(!qjs_intl_relative_open(&allocator, &service));
+    assert(!qjs_intl_relative_open(&allocator, NULL, &service));
     assert(!qjs_intl_relative_available(service, &available, &count));
     assert(count >= 1 && count < 10000);
     for (i = 0; i < count; i++) {

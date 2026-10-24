@@ -224,7 +224,7 @@ int main(void)
                                       locale(&zones.data, "en"), locale(&regions.data, "en"), {"US", 2}};
     assert(!qjs_intl_date_offset_from_data(&zones, data.zones.names_locale, &allocator, &offset));
     data.offset = &offset;
-    assert(!qjs_intl_number_open(&allocator, &service));
+    assert(!qjs_intl_number_open(&allocator, NULL, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
     for (en = 0; en < count; en++)
         if (tags[en].length == 2 && !memcmp(tags[en].data, "en", 2))

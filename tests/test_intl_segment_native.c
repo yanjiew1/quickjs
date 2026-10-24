@@ -61,7 +61,7 @@ static void check_routes_and_lifetimes(const QJSIntlAllocator *allocator)
     QJSIntlUTF16 text = {units, 6};
     size_t count, calls;
 
-    assert(!qjs_intl_segment_open(allocator, &service));
+    assert(!qjs_intl_segment_open(allocator, NULL, &service));
     assert(!qjs_intl_segment_available(service, &available, &count) && count == 2);
     assert(available[0].length == 2 && !memcmp(available[0].data, "en", 2));
     assert(available[1].length == 2 && !memcmp(available[1].data, "zh", 2));
@@ -122,7 +122,7 @@ static void check_failures(const QJSIntlAllocator *allocator)
     size_t calls, at, live;
 
     state->calls = 0;
-    assert(!qjs_intl_segment_open(allocator, &service));
+    assert(!qjs_intl_segment_open(allocator, NULL, &service));
     calls = state->calls;
     qjs_intl_segment_close(service);
     assert(!state->live);
@@ -132,11 +132,11 @@ static void check_failures(const QJSIntlAllocator *allocator)
         state->calls = 0;
         state->fail_at = at;
         service = (void *)1;
-        assert(qjs_intl_segment_open(allocator, &service) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_segment_open(allocator, NULL, &service) == QJS_INTL_NO_MEMORY);
         assert(!service && !state->live);
     }
     state->fail_at = 0;
-    assert(!qjs_intl_segment_open(allocator, &service));
+    assert(!qjs_intl_segment_open(allocator, NULL, &service));
     live = state->live;
     state->fail_at = state->calls + 1;
     assert(qjs_intl_segmenter_open(service, 0, QJS_INTL_SEGMENT_WORD, &segmenter) == QJS_INTL_NO_MEMORY);
@@ -184,13 +184,13 @@ int main(void)
     QJSIntlAllocator invalid = allocator;
 
     invalid.realloc = NULL;
-    assert(qjs_intl_segment_open(&invalid, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
-    assert(qjs_intl_segment_open(&allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_segment_open(&invalid, NULL, &service) == QJS_INTL_INVALID_ARGUMENT && !service);
+    assert(qjs_intl_segment_open(&allocator, NULL, NULL) == QJS_INTL_INVALID_ARGUMENT);
 #if QJS_INTL_TEST_SEGMENT_CASE == 0
     check_routes_and_lifetimes(&allocator);
     check_failures(&allocator);
 #else
-    assert(qjs_intl_segment_open(&allocator, &service) ==
+    assert(qjs_intl_segment_open(&allocator, NULL, &service) ==
            (QJS_INTL_TEST_SEGMENT_CASE == 1 || QJS_INTL_TEST_SEGMENT_CASE == 4 ?
             QJS_INTL_DATA_ERROR : QJS_INTL_UNSUPPORTED));
     assert(!service);
