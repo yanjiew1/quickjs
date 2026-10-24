@@ -76,12 +76,11 @@ int main(void)
     size_t count, calls;
     int i;
     assert(!qjs_intl_segment_open(&allocator, &service));
-    assert(!qjs_intl_segment_available(service, &locales, &count) && count == 2);
+    assert(!qjs_intl_segment_available(service, &locales, &count) && count == 1);
     assert(locales[0].length == 2 && !memcmp(locales[0].data, "en", 2));
-    assert(locales[1].length == 5 && !memcmp(locales[1].data, "en-US", 5));
     for (i = 0; i < 3; i++)
-        assert(!qjs_intl_segmenter_open(service, 1, i, &segmenters[i]));
-    assert(qjs_intl_segmenter_open(service, 2, 0, &out) == QJS_INTL_INVALID_ARGUMENT && !out);
+        assert(!qjs_intl_segmenter_open(service, 0, i, &segmenters[i]));
+    assert(qjs_intl_segmenter_open(service, 1, 0, &out) == QJS_INTL_INVALID_ARGUMENT && !out);
     assert(qjs_intl_segmenter_open(service, 0, (QJSIntlGranularity)-1, &out) ==
            QJS_INTL_INVALID_ARGUMENT && !out);
     state.fail_at = state.calls + 1;

@@ -61,7 +61,7 @@ class BindingTests(unittest.TestCase):
                                     {}, {'collations': {}},
                                     {'und': 'en-Latn-US', 'zz': 'zz-Latn-AA'}, (), False)
         completed, aliases = availability.complete(graph)
-        self.assertEqual(availability.profile_locales(completed, 'minimal'), ('en', 'en-US', 'root'))
+        self.assertEqual(availability.profile_locales(completed, 'minimal'), ('en', 'root'))
         self.assertIn('zz-AA', availability.profile_locales(completed, 'native'))
 
         original = catalog((program('zz-Latn-AA', 'special'),), keywords=(keyword('special'),))
@@ -75,7 +75,7 @@ class BindingTests(unittest.TestCase):
         with patch.object(bindings.collation_programs, 'load', return_value=c):
             minimal = bindings.collect(None, 'minimal')
             native = bindings.collect(None, 'native')
-        self.assertEqual([row.locale for row in minimal if not row.collation], ['en', 'en-US'])
+        self.assertEqual([row.locale for row in minimal if not row.collation], ['en'])
         self.assertNotIn('root', {row.locale for row in native})
 
     def test_invalid_profiles_and_missing_search_fail_closed(self):

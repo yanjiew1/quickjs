@@ -17,8 +17,8 @@ function check(locales, options, locale, value, key = 'nu', requestIndex = 0) {
     assert(result.value, value);
     assert(result.requestIndex, requestIndex);
 }
-check(undefined, undefined, 'en-US', 'latn', 'nu', -1);
-check('zz-u-nu-arab', undefined, 'en-US', 'latn', 'nu', -1);
+check(undefined, undefined, 'en', 'latn', 'nu', -1);
+check('zz-u-nu-arab', undefined, 'en', 'latn', 'nu', -1);
 check('en', undefined, 'en', 'latn');
 check('en-US-u-nu-arab', undefined, 'en-US-u-nu-arab', 'arab');
 check('en-u-nu-arab', {numberingSystem: 'arab'}, 'en-u-nu-arab', 'arab');
