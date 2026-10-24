@@ -58,7 +58,6 @@ void qjs_intl_number_decimal_clear(const QJSIntlAllocator *a, QJSIntlNumberDecim
 {
     if (!out)
         return;
-    qjs_intl_decimal_clear(a, &out->decimal);
     if (out->text && allocator_valid(a))
         a->free(a->opaque, out->text);
     memset(out, 0, sizeof(*out));
@@ -78,14 +77,13 @@ static QJSIntlStatus prepare(const QJSIntlAllocator *a, double number,
     return QJS_INTL_OK;
 }
 
-/* Commit both owned representations only after the complete parse succeeds.
+/* Commit owned text only after the complete validation succeeds.
  * Nonfinite values bypass this helper and never allocate.
  */
 static QJSIntlStatus finish(const QJSIntlAllocator *a, const char *text, size_t length,
-                            QJSIntlMathematicalKind kind, unsigned int negative,
+                            QJSIntlMathematicalKind kind,
                             QJSIntlNumberDecimal *out)
 {
-    QJSIntlDecimal d;
     QJSIntlBytes s;
     QJSIntlStatus status;
     char *copy;
@@ -98,16 +96,14 @@ static QJSIntlStatus finish(const QJSIntlAllocator *a, const char *text, size_t 
     copy[length] = '\0';
     s.data = copy;
     s.length = length;
-    status = qjs_intl_decimal_parse(a, s, &d);
+    status = qjs_intl_decimal_validate(s);
     if (status != QJS_INTL_OK) {
         a->free(a->opaque, copy);
         return status;
     }
     out->text = copy;
-    out->decimal = d;
     out->value.kind = kind;
     out->value.decimal = s;
-    out->number_negative = (uint8_t)negative;
     return QJS_INTL_OK;
 }
 
@@ -125,7 +121,6 @@ QJSIntlStatus qjs_intl_number_to_intl_decimal(const QJSIntlAllocator *a, double 
     negative = (unsigned int)(bits >> 63);
     magnitude = bits & UINT64_C(0x7fffffffffffffff);
     if ((magnitude >> 52) == 0x7ff) {
-        out->number_negative = (uint8_t)negative;
         out->value.kind = (magnitude & UINT64_C(0x000fffffffffffff)) ? QJS_INTL_NAN
                           : negative ? QJS_INTL_NEGATIVE_INFINITY
                                      : QJS_INTL_POSITIVE_INFINITY;
@@ -145,7 +140,7 @@ QJSIntlStatus qjs_intl_number_to_intl_decimal(const QJSIntlAllocator *a, double 
         return QJS_INTL_DATA_ERROR;
     return finish(a, text, (size_t)length,
                   !magnitude && negative ? QJS_INTL_NEGATIVE_ZERO : QJS_INTL_FINITE,
-                  negative, out);
+                  out);
 }
 
 /* Decimal coefficient in little-endian base10. Each multiplier is 2 or 5,
@@ -187,7 +182,7 @@ QJSIntlStatus qjs_intl_number_to_real_decimal(const QJSIntlAllocator *a, double 
     if (field == 0x7ff)
         return QJS_INTL_INVALID_ARGUMENT;
     if (!magnitude)
-        return finish(a, "0", 1, QJS_INTL_FINITE, negative, out);
+        return finish(a, "0", 1, QJS_INTL_FINITE, out);
     significand = magnitude & UINT64_C(0x000fffffffffffff);
     if (field) {
         significand |= UINT64_C(0x0010000000000000);
@@ -232,5 +227,5 @@ QJSIntlStatus qjs_intl_number_to_real_decimal(const QJSIntlAllocator *a, double 
             text[at++] = exponent_digits[--n];
     }
     text[at] = '\0';
-    return finish(a, text, at, QJS_INTL_FINITE, negative, out);
+    return finish(a, text, at, QJS_INTL_FINITE, out);
 }
