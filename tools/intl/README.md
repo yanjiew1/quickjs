@@ -159,10 +159,12 @@ flags, then orders mappings by scalar sequence for deterministic lookup-table
 generation. Its audit reports observed sizes without making those sizes runtime
 limits. `collation_tables.py` encodes the optional section 36 and audits a full
 source roundtrip. Neither prerequisite executes locale tailorings or advertises
-Collator support. Both prepared profiles carry the same diagnostic root mapping
-section; its allocation-free C reader is `src/intl/collation/root-data.c`.
-Executable locale tailorings use the separate compiled section 38 and ranked
-comparison pipeline described below.
+Collator support. The raw mappings and context section 37 belong only to
+`tests/data/intl-collation-oracle.bin`, prepared directly from allkeys and
+FractionalUCA by `tests/intl_collation_oracle.py`. Its manifest records source
+receipts; the Unicode license remains in `data/intl/LICENSE-CLDR`. The source
+readers/comparator are linked only into test tools. Production packs contain
+compiled section 38 and use the ranked comparison pipeline described below.
 
 `collation_groups.py` collects source group identities for the host semantic
 compiler. It joins FractionalUCA's synthetic boundaries with pinned CLDR script
