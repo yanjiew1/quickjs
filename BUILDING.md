@@ -37,6 +37,10 @@ LTO applies to engine code, including the VM, compiler and support algorithms.
 Generated Unicode tables compile as ordinary objects with LTO disabled, then
 join the same engine library. Their target architecture, sanitizer settings,
 visibility and shared-library PIC settings still match that library.
+Each build provides only its selected engine configuration. The installed
+`libquickjs.a` uses that configuration's LTO setting; there is no second LTO
+archive. `qjsc` applies the matching compiler/linker flags automatically when
+generating an executable.
 
 `--num-processes` controls concurrent repository tests. Use `--timeout-multiplier`
 for slow emulators or instrumentation. The `threading` suite selects concurrency
@@ -66,7 +70,9 @@ import library installs into `libdir`. On other platforms, the library
 installs into `libdir/quickjs` and installed tools have the configured runtime
 search path. Applications select their own runtime search path when linking.
 `pkg-config --cflags --libs quickjs` supplies include and link flags;
-`--static` also supplies support-library dependencies.
+`--static` also supplies support-library dependencies and the matching final-link
+LTO flag when the installed archive contains bitcode. Such archives require a
+compatible compiler/linker; ordinary shared-library consumers need no LTO flag.
 
 In `shared` mode, `qjsc` executable output links the shared engine with a runtime
 search path. In `static` and `both` modes, its executable output uses the static

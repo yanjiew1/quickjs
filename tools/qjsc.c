@@ -486,7 +486,7 @@ void help(void)
 #ifdef CONFIG_LTO
     {
         int i;
-        printf("-flto       use link time optimization\n");
+        printf("-flto       accepted for compatibility; LTO is configured at build time\n");
         printf("-fno-[");
         for(i = 0; i < countof(feature_list); i++) {
             if (i != 0)
@@ -521,10 +521,10 @@ int exec_cmd(char **argv)
 }
 
 static int output_executable(const char *out_filename, const char *cfilename,
-                             BOOL use_lto, BOOL verbose, const char *exename)
+                             BOOL verbose, const char *exename)
 {
     const char *argv[64];
-    const char **arg, *bn_suffix, *lto_suffix;
+    const char **arg;
     char libjsname[1024];
     char exe_dir[1024], inc_dir[1024], lib_dir[1024], buf[1024], *p;
     int ret;
@@ -557,9 +557,6 @@ static int output_executable(const char *out_filename, const char *cfilename,
         snprintf(lib_dir, sizeof(lib_dir), "%s/lib/quickjs", CONFIG_PREFIX);
 #endif
     }
-
-    lto_suffix = "";
-    bn_suffix = "";
 
     arg = argv;
 #ifdef CONFIG_CC_ARGS
@@ -596,10 +593,7 @@ static int output_executable(const char *out_filename, const char *cfilename,
     *arg++ = "-fno-omit-frame-pointer";
 #endif
 #ifdef CONFIG_LTO
-    if (use_lto) {
-        *arg++ = CONFIG_LTO_FLAG;
-        lto_suffix = ".lto";
-    }
+    *arg++ = CONFIG_LTO_FLAG;
 #endif
     /* XXX: use the executable path to find the includes files and
        libraries */
@@ -613,8 +607,7 @@ static int output_executable(const char *out_filename, const char *cfilename,
         *arg++ = "-rdynamic";
     *arg++ = cfilename;
 #ifdef CONFIG_SHARED_LIBRARY
-    /* A shared engine does not require the generated source to use LTO. */
-    lto_suffix = "";
+    /* Keep installed generated programs able to find the selected shared engine. */
     ret = snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
     if (ret < 0 || (size_t)ret >= sizeof(buf))
         goto path_too_long;
@@ -623,8 +616,8 @@ static int output_executable(const char *out_filename, const char *cfilename,
 #ifndef CONFIG_LIBRARY_SUFFIX
 #define CONFIG_LIBRARY_SUFFIX ".a"
 #endif
-    ret = snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s%s",
-                   lib_dir, bn_suffix, lto_suffix, CONFIG_LIBRARY_SUFFIX);
+    ret = snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s",
+                   lib_dir, CONFIG_LIBRARY_SUFFIX);
     if (ret < 0 || (size_t)ret >= sizeof(libjsname))
         goto path_too_long;
     *arg++ = libjsname;
@@ -650,7 +643,7 @@ static int output_executable(const char *out_filename, const char *cfilename,
 }
 #else
 static int output_executable(const char *out_filename, const char *cfilename,
-                             BOOL use_lto, BOOL verbose, const char *exename)
+                             BOOL verbose, const char *exename)
 {
     fprintf(stderr, "Executable output is not supported for this target\n");
     exit(1);
@@ -713,7 +706,6 @@ int main(int argc, char **argv)
     FILE *fo;
     JSRuntime *rt;
     JSContext *ctx;
-    BOOL use_lto;
     int module;
     OutputTypeEnum output_type;
     size_t stack_size;
@@ -727,7 +719,6 @@ int main(int argc, char **argv)
     byte_swap = FALSE;
     verbose = 0;
     strip_flags = JS_STRIP_SOURCE;
-    use_lto = FALSE;
     stack_size = 0;
     memset(&dynamic_module_list, 0, sizeof(dynamic_module_list));
 
@@ -780,9 +771,8 @@ int main(int argc, char **argv)
                 optarg = get_short_optarg(&optind, opt, arg, argc, argv);
                 p = optarg;
                 if (!strcmp(p, "lto")) {
-                    use_lto = TRUE;
+                    /* The configured engine and compiler flags already agree. */
                 } else if (strstart(p, "no-", &p)) {
-                    use_lto = TRUE;
                     for(i = 0; i < countof(feature_list); i++) {
                         if (!strcmp(p, feature_list[i].option_name)) {
                             feature_bitmap &= ~((uint64_t)1 << i);
@@ -1010,7 +1000,7 @@ int main(int argc, char **argv)
     fclose(fo);
 
     if (output_type == OUTPUT_EXECUTABLE) {
-        return output_executable(out_filename, cfilename, use_lto, verbose,
+        return output_executable(out_filename, cfilename, verbose,
                                  argv[0]);
     }
     namelist_free(&cname_list);
