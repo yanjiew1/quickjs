@@ -194,7 +194,6 @@ if intl_enabled
     'intl/datetime/name-data.c',
     'intl/datetime/name-select.c',
     'intl/datetime/local-time.c',
-    'intl/datetime/numeric.c',
     'intl/datetime/native.c',
     'intl/datetime/text.c',
     'intl/datetime/pattern.c',
