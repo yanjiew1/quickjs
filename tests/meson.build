@@ -114,6 +114,14 @@ default_time_zone_api_test = executable(
   override_options: ['b_ndebug=false'],
 )
 test(
+  'data-io',
+  python,
+  args: files('test_data_io.py'),
+  suite: ['repo', 'generator', 'unit'],
+  timeout: 30,
+)
+
+test(
   'default-time-zone-api',
   default_time_zone_api_test,
   suite: ['repo', 'embedding', 'integration'],
