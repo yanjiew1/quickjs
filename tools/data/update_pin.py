@@ -61,15 +61,16 @@ def resolve_tag(repository, tag):
     raise ValueError('upstream tag does not resolve to a commit')
 
 
-def release_assignments(args, template):
-    kind = source_pins.kind_of(template)
+def select_release(args, pin):
+    """Update known release fields; other provenance belongs in the JSON template."""
+    kind = source_pins.kind_of(pin)
     if not any((args.release, args.commit, args.resolve_tag, args.distribution)):
-        return []
+        return
     if kind == 'calendar':
-        raise ValueError('calendar publications have independent versions; use per-source --set fields')
-    prefix = '/cldr' if kind == 'cldr' else '/tz' if kind == 'timezone' else ''
-    source = template['cldr'] if kind == 'cldr' else template['tz'] if kind == 'timezone' else template
-    release = args.release or source['release']
+        raise ValueError('calendar publications have independent versions; edit source metadata in a template')
+    source = pin['cldr'] if kind == 'cldr' else pin['tz'] if kind == 'timezone' else pin
+    previous_release = source['release']
+    release = args.release or previous_release
     if not re.fullmatch('[0-9][0-9A-Za-z_.-]*', release):
         raise ValueError('invalid source release identifier')
     if args.distribution and kind != 'cldr':
@@ -81,36 +82,36 @@ def release_assignments(args, template):
         raise ValueError('choose --commit or --resolve-tag')
     commit = resolve_tag(repository, tag) if args.resolve_tag else args.commit
     if commit is None:
-        if release != source['release']:
+        if release != previous_release:
             raise ValueError('a new release requires --commit or --resolve-tag')
         commit = source['commit']
     if not re.fullmatch('[0-9a-f]{40}', commit):
         raise ValueError('source commit must have 40 lowercase hexadecimal digits')
-    values = {prefix + '/release': release, prefix + '/tag': tag, prefix + '/commit': commit}
+    source.update(release=release, tag=tag, commit=commit)
     if kind == 'cldr':
         distribution = args.distribution or source['distribution']
-        values[prefix + '/distribution'] = distribution
-        values[prefix + '/archive/format'] = 'zip' if distribution == 'common' else 'tar.gz'
-        values[prefix + '/archive/url'] = (
-            'https://unicode.org/Public/cldr/{0}/cldr-common-{0}.zip'.format(release)
-            if distribution == 'common' else
-            'https://codeload.github.com/unicode-org/cldr/tar.gz/' + commit)
+        source['distribution'] = distribution
+        source['archive'].update(
+            format='zip' if distribution == 'common' else 'tar.gz',
+            url=('https://unicode.org/Public/cldr/{0}/cldr-common-{0}.zip'.format(release)
+                 if distribution == 'common' else
+                 'https://codeload.github.com/unicode-org/cldr/tar.gz/' + commit))
     elif kind == 'timezone':
-        values[prefix + '/archive/url'] = 'https://codeload.github.com/eggert/tz/tar.gz/refs/tags/' + tag
-    # A new release must not inherit the previous release's publication date.
-    for field in ('published', 'released'):
-        if release != source['release'] and field in source:
-            values[prefix + '/' + field] = None
-    return [key + '=' + json.dumps(value) for key, value in values.items()]
+        source['archive']['url'] = 'https://codeload.github.com/eggert/tz/tar.gz/refs/tags/' + tag
+    # A new release must not inherit the previous publication date.
+    if release != previous_release:
+        for field in ('published', 'released'):
+            if field in source:
+                source[field] = None
 
 
-def cldr_assignments(args, template):
-    """Derive other data pins from one supplied CLDR snapshot."""
+def propagate_cldr(args, pin):
+    """Copy selected CLDR provenance and return the actual consumed member bytes."""
     if bool(args.cldr_pin) != bool(args.cldr_sources):
         raise ValueError('--cldr-pin and --cldr-sources are required together')
     if not args.cldr_pin:
-        return [], {}
-    kind = source_pins.kind_of(template)
+        return {}
+    kind = source_pins.kind_of(pin)
     if kind not in ('timezone', 'calendar'):
         raise ValueError('CLDR propagation applies to timezone/calendar pins')
     selected = json.loads(source_pins.read_file(args.cldr_pin).decode('utf-8'))
@@ -119,53 +120,42 @@ def cldr_assignments(args, template):
     cldr = selected['cldr']
     acquire = source_pins.load_tool('qjs_pin_cldr_propagation', 'tools/intl/acquire.py')
     sources = acquire.Sources(args.cldr_sources, cldr)
-    values, files = {}, {}
+    files = {}
     if kind == 'timezone':
-        values = {'/cldr/release': cldr['release'], '/cldr/commit': cldr['commit'],
-                  '/cldr/archive': cldr['archive'], '/cldr/released': cldr.get('published')}
-        for name, row in template['cldr']['files'].items():
+        pin['cldr'].update(release=cldr['release'], commit=cldr['commit'],
+                           archive=copy.deepcopy(cldr['archive']), released=cldr.get('published'))
+        for name, row in pin['cldr']['files'].items():
             files[name] = sources.read(row['path'])
-            base = '/cldr/files/' + name.replace('~', '~0').replace('/', '~1')
-            values[base + '/path'] = row['path']
-            values[base + '/sha256'] = source_pins.digest(files[name])
+            row['sha256'] = source_pins.digest(files[name])
     else:
-        for name, row in template['sources'].items():
+        for name, row in pin['sources'].items():
             if not (name.startswith('cldr-') or name == 'LICENSE-CLDR'):
                 continue
             files[name] = sources.read(row['path'])
-            base = '/sources/' + name.replace('~', '~0').replace('/', '~1')
-            values.update({base + '/url': cldr['archive']['url'],
-                           base + '/archive_sha256': cldr['archive']['sha256'],
-                           base + '/revision': cldr['commit'],
-                           base + '/path': row['path'],
-                           base + '/sha256': source_pins.digest(files[name])})
+            row.update(url=cldr['archive']['url'], archive_sha256=cldr['archive']['sha256'],
+                       revision=cldr['commit'], sha256=source_pins.digest(files[name]))
             if 'release' in row:
-                values[base + '/release'] = cldr['release']
+                row['release'] = cldr['release']
         if not files:
             raise ValueError('calendar pin contains no CLDR archive members')
-    supplied = {item.partition('=')[0] for item in args.set}
-    if any(left == right or left.startswith(right + '/') or right.startswith(left + '/')
-           for left in values for right in supplied):
-        raise ValueError('--set must not override provenance derived from --cldr-pin')
-    return [key + '=' + json.dumps(value) for key, value in values.items()], files
+    return files
 
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument('--pin', type=Path, required=True, help='accepted pin used as a schema/template')
+    result.add_argument('--pin', type=Path, required=True, help='source-lock template, including an edited copy for custom provenance')
     result.add_argument('--output', type=Path, required=True, help='candidate pin; accepted files are not implicit outputs')
     result.add_argument('--release', help='CLDR, IANA or ICU release; derives the standard tag and archive URL')
     result.add_argument('--commit', help='immutable source commit (offline alternative to --resolve-tag)')
     result.add_argument('--resolve-tag', action='store_true', help='explicitly resolve the release tag through the upstream GitHub API')
     result.add_argument('--distribution', choices=['common', 'git'], help='CLDR source distribution')
-    result.add_argument('--set', action='append', default=[], metavar='/POINTER=VALUE',
-                        help='change existing metadata, using a JSON Pointer and JSON or plain text')
     result.add_argument('--file', action='append', type=named_file, default=[],
                         help='hash a replacement calendar/dictionary/CLDR-timezone input')
     result.add_argument('--files-root', type=Path, help='directory containing every named raw file')
     result.add_argument('--source-tree', type=Path, help='ICU checkout with dictionary source paths')
+    result.add_argument('--data-dir', type=Path, help='calendar factual JSON directory to rehash')
     result.add_argument('--cldr-pin', type=Path, help='derive timezone/calendar CLDR metadata from this candidate pin')
-    result.add_argument('--cldr-sources', type=Path, help='authenticated source root matching --cldr-pin')
+    result.add_argument('--cldr-sources', type=Path, help='supplied source root for the selected CLDR metadata')
     result.add_argument('--archive', type=Path, help='local CLDR or tz Git archive; works offline')
     result.add_argument('--download', action='store_true', help='explicitly fetch the candidate archive URL')
     result.add_argument('--expected-sha256', help='independently obtained archive digest, when available')
@@ -177,11 +167,9 @@ def parser():
 def main(argv=None):
     args = parser().parse_args(argv)
     template = json.loads(source_pins.read_file(args.pin).decode('utf-8'))
-    cldr_metadata, cldr_files = cldr_assignments(args, template)
-    assignments = release_assignments(args, template) + cldr_metadata + args.set
     candidate = copy.deepcopy(template)
-    for assignment in assignments:
-        source_pins.set_pointer(candidate, assignment)
+    select_release(args, candidate)
+    cldr_files = propagate_cldr(args, candidate)
     kind = source_pins.kind_of(candidate)
     if args.archive is not None and args.download:
         raise ValueError('choose either --archive or --download')
@@ -219,8 +207,8 @@ def main(argv=None):
     inputs_by_name = downloaded_files or dict(args.file)
     inputs_by_name.update(cldr_files)
     pin, manifest, report = source_pins.refresh(
-        template, assignments, inputs_by_name, archive,
-        args.files_root, args.source_tree)
+        template, candidate, inputs_by_name, archive,
+        args.files_root, args.source_tree, args.data_dir)
     if args.manifest_output is not None and manifest is None:
         raise ValueError('--manifest-output applies only to CLDR')
     outputs = [args.output, args.report, args.manifest_output]
@@ -228,6 +216,8 @@ def main(argv=None):
     if len(paths) != len(set(paths)):
         raise ValueError('pin, manifest and report must have different output paths')
     inputs = [args.pin, args.archive, args.cldr_pin] + [path for _, path in args.file]
+    if args.data_dir:
+        inputs += [args.data_dir / name for name in candidate['normalized']]
     if args.cldr_sources:
         inputs += [args.cldr_sources / 'source-manifest.json']
         rows = template['cldr']['files'] if kind == 'timezone' else template['sources']

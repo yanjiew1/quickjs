@@ -32,47 +32,6 @@ def read_file(path, limit=MAX_FILE):
     return data
 
 
-def set_pointer(document, assignment):
-    """Set an existing JSON Pointer, avoiding ambiguous dotted filenames."""
-    pointer, separator, text = assignment.partition('=')
-    if not separator or not pointer.startswith('/'):
-        raise ValueError('--set requires /existing/json/pointer=value')
-    keys = pointer[1:].split('/')
-    if any(re.search(r'~(?![01])', key) for key in keys):
-        raise ValueError('invalid JSON Pointer escape')
-    keys = [key.replace('~1', '/').replace('~0', '~') for key in keys]
-    owner = document
-    for key in keys[:-1]:
-        if isinstance(owner, list):
-            if not re.fullmatch('0|[1-9][0-9]*', key):
-                raise ValueError('invalid JSON Pointer array index')
-            owner = owner[int(key)]
-        else:
-            owner = owner[key]
-    key = keys[-1]
-    if isinstance(owner, list):
-        if not re.fullmatch('0|[1-9][0-9]*', key):
-            raise ValueError('invalid JSON Pointer array index')
-        key = int(key)
-    # Unknown fields are normally typos; additions need an explicit schema change.
-    previous = owner[key]
-    try:
-        value = json.loads(text)
-    except ValueError:
-        value = text
-    # Release numbers and all-numeric Git IDs remain strings without requiring
-    # shell-escaped JSON quotation marks around every metadata assignment.
-    if value is None:
-        if keys[-1] not in ('reviewed', 'review_date', 'published', 'released'):
-            raise ValueError('only optional provenance dates can be cleared')
-    elif isinstance(previous, str) and not isinstance(value, str):
-        value = text
-    elif previous is not None and type(value) is not type(previous):
-        raise ValueError('metadata assignment changes field type')
-    owner[key] = value
-    return pointer
-
-
 def kind_of(pin):
     if not isinstance(pin, dict):
         raise ValueError('source pin must be a JSON object')
@@ -103,12 +62,13 @@ def cldr_inventory(pin, archive):
     return manifest
 
 
-def refresh(template, assignments=(), files=None, archive=None,
-            files_root=None, source_tree=None):
+def refresh(template, candidate=None, files=None, archive=None,
+            files_root=None, source_tree=None, data_dir=None):
     """Produce a candidate without editing the accepted lock or raw sources."""
-    pin = copy.deepcopy(template)
-    pointers = {set_pointer(pin, item) for item in assignments}
+    pin = copy.deepcopy(template if candidate is None else candidate)
     kind = kind_of(pin)
+    if kind != kind_of(template):
+        raise ValueError('candidate must use the template source family')
     supplied = dict(files or {})
     manifest = None
 
@@ -196,11 +156,22 @@ def refresh(template, assignments=(), files=None, archive=None,
                     sys.modules['acquire'] = previous
             tool.validate_pin(pin)
 
+    if data_dir is not None:
+        if kind != 'calendar' or not isinstance(pin.get('normalized'), dict) or not pin['normalized']:
+            raise ValueError('--data-dir requires a calendar template with normalized facts')
+        # Parsed facts are maintained inputs too. Their hashes must be computed
+        # from supplied JSON, rather than copied manually into the lock.
+        for name, row in pin['normalized'].items():
+            if (Path(name).name != name or name in ('', '.', '..') or
+                    '\\' in name or ':' in name or not isinstance(row, dict)):
+                raise ValueError('invalid normalized calendar input name/record')
+            row['sha256'] = digest(read_file(Path(data_dir) / name))
+
     # A calculated hash is not semantic review. Preserve dates only for an
-    # unchanged lock, or when the user explicitly supplies the review field.
+    # unchanged lock. Review dates are filled after inspecting the candidate.
     if pin != template:
         for name in ('reviewed', 'review_date'):
-            if name in pin and '/' + name not in pointers:
+            if name in pin:
                 pin[name] = None
     report = {'kind': kind, 'changed': pin != template,
               'semantic_review_performed': False,
