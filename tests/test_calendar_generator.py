@@ -13,6 +13,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+from test_data_io import Response
+
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'tools' / 'calendar'
 
@@ -48,7 +50,7 @@ class AcquisitionTests(unittest.TestCase):
             path = Path(directory) / 'source'
             path.write_bytes(b'valid')
             source = {'url': 'https://invalid.test', 'sha256': acquire.digest(b'valid')}
-            with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen') as network:
                 acquire.fetch(path, source, True)
                 network.assert_not_called()
             path.write_bytes(b'old')
@@ -61,13 +63,13 @@ class AcquisitionTests(unittest.TestCase):
             path = Path(directory) / 'source'
             path.write_bytes(b'old')
             source = {'url': 'https://invalid.test', 'sha256': acquire.digest(b'valid')}
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
-                                   return_value=io.BytesIO(b'invalid')):
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
+                                   return_value=Response(b'invalid')):
                 with self.assertRaises(ValueError):
                     acquire.fetch(path, source)
             self.assertEqual(path.read_bytes(), b'old')
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
-                                   return_value=io.BytesIO(b'valid')) as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
+                                   return_value=Response(b'valid')) as network:
                 acquire.fetch(path, source)
                 self.assertEqual(network.call_args[1]['timeout'], 30)
             self.assertEqual(path.read_bytes(), b'valid')
@@ -126,15 +128,13 @@ class AcquisitionTests(unittest.TestCase):
                   'sha256': acquire.digest(b'facts')}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'facts.xml'
-            response = mock.MagicMock()
-            response.__enter__.return_value.read.return_value = raw
-            with mock.patch.object(acquire.urllib.request, 'urlopen', return_value=response):
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen', side_effect=lambda *args, **kwargs: Response(raw)):
                 acquire.fetch(path, source)
             self.assertEqual(path.read_bytes(), b'facts')
             path.unlink()
             for field in ('archive_sha256', 'sha256'):
                 changed = dict(source, **{field: '0' * 64})
-                with mock.patch.object(acquire.urllib.request, 'urlopen', return_value=response):
+                with mock.patch.object(acquire.data_io.urllib.request, 'urlopen', side_effect=lambda *args, **kwargs: Response(raw)):
                     with self.assertRaises(ValueError):
                         acquire.fetch(path, changed)
                 self.assertFalse(path.exists())
