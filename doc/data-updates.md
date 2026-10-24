@@ -136,14 +136,15 @@ meson setup /path/to/custom-build -Dintl=native \
 ```
 
 The selected pack must match the minimal/native profile. Current builds embed
-it; they do not load or switch data at runtime. Dictionary preparation still
-uses its accepted repository pin, so a reviewed dictionary replacement must be
-staged in that pin before regeneration.
+it; they do not load or switch data at runtime. Dictionary preparation accepts
+supplied compatible text without matching pin hashes. Pass an optional
+`--dictionary-pin /path/to/candidate.json` for declared source metadata; no
+repository pin needs replacing merely to generate a candidate.
 
 ## Dictionaries, IANA rules and calendar publications
 
 The same pin command supports the other existing pin schemas. For dictionaries,
-it computes SHA-256, byte lengths and Git blob IDs for all six inputs, including
+it computes SHA-256 and byte lengths for all six inputs, including
 the complete license. A release change requires the complete source set:
 
 ```sh

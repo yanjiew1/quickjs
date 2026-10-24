@@ -73,8 +73,7 @@ Archive links, unsafe paths and source-cache symlinks are rejected.
 
 CLDR boundary rules do not supply the word dictionaries needed for CJK,
 Khmer, Lao, Myanmar and Thai. `segment-dictionary-pin.json` records released
-ICU 79.1 text inputs by immutable commit URL, byte count, SHA-256 and Git blob
-identity. This is data reuse; it does not link ICU or add an ICU backend.
+ICU 79.1 text inputs by immutable commit URL, byte count and SHA-256. This is data reuse; it does not link ICU or add an ICU backend.
 Acquire explicitly, outside normal builds:
 
 ```sh
@@ -83,14 +82,15 @@ python3 tools/intl/segment_dictionary_sources.py --cache /path/to/intl-cache --o
 ```
 
 The `icu-dictionaries-79.1` cache contains the five source dictionaries and
-full release license. Reads authenticate consumed bytes again and include the
-license in generation identity. Keep the complete dictionary notices in
+full release license. Acquisition authenticates pinned bytes. Generator reads
+accept supplied compatible text and record actual hashes, including the license,
+without matching expected sizes or digests. Keep the complete dictionary notices in
 `data/intl/LICENSE-SEGMENT-DICTIONARIES`, including libtabe/IPADIC and other
 third-party notices; the generic Unicode license is insufficient. These raw
 text inputs are for later owned binary compilation, not runtime parsing or
 proof that native dictionary segmentation is already implemented.
 
-`segment_dictionary.py` parses that authenticated cache using the pinned text
+`segment_dictionary.py` parses supplied text using the supported text
 profile: literal words for SEA, and words plus unsigned decimal path costs for
 CJK. It preserves costs (including zero), exact scalar keys, source comments
 and release/license identity. Keys are sorted without normalization. Explicit

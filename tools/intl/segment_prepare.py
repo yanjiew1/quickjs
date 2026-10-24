@@ -49,8 +49,6 @@ class Properties:
 
 def prepare(sources, dictionaries, resolver):
     """Return native archive, reproducible receipt and preserved source notices."""
-    if dictionaries.pin != segment_dictionary_sources.load_pin():
-        raise DataError('unreviewed segmentation dictionary source pin')
     cldr = Inputs(sources)
     dictionary_inputs = Inputs(dictionaries)
     cldr.read('LICENSE')
@@ -123,6 +121,7 @@ def main():
     parser.add_argument('--source-pin', type=Path,
                         help='explicit alternate source pin for release/Git comparison')
     parser.add_argument('--dictionaries', type=Path, required=True)
+    parser.add_argument('--dictionary-pin', type=Path, help='optional declared dictionary metadata')
     parser.add_argument('--property-tool', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
@@ -130,7 +129,9 @@ def main():
     parser.add_argument('--notices', type=Path, required=True)
     args = parser.parse_args()
     binary, manifest, license_bytes, notices = prepare(
-        acquire.Sources(args.sources, acquire.load_pin(args.source_pin)), segment_dictionary_sources.Sources(args.dictionaries),
+        acquire.Sources(args.sources, acquire.load_pin(args.source_pin)),
+        segment_dictionary_sources.Sources(
+            args.dictionaries, segment_dictionary_sources.load_pin(args.dictionary_pin)),
         PropertyResolver(args.property_tool))
     for path, contents in ((args.output, binary), (args.manifest, acquire.json_bytes(manifest)),
                             (args.license, license_bytes), (args.notices, notices)):
