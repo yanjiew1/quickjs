@@ -53,17 +53,21 @@ void qjs_intl_decimal_result_clear(const QJSIntlAllocator *a, QJSIntlDecimalResu
     memset(r, 0, sizeof(*r));
 }
 
-QJSIntlStatus qjs_intl_decimal_parse(const QJSIntlAllocator *a, QJSIntlBytes s,
-                                     QJSIntlDecimal *out)
+typedef struct DecimalScan {
+    size_t begin, end;
+    int64_t exponent;
+    int negative;
+} DecimalScan;
+
+/* Share grammar and exponent limits with validation-only consumers. Keep
+   coefficient normalization/allocation in the parser that actually needs it. */
+static QJSIntlStatus scan_decimal(QJSIntlBytes s, DecimalScan *out)
 {
-    size_t at = 0, begin, end, point = SIZE_MAX, digits = 0, first, n;
+    size_t at = 0, begin, end, point = SIZE_MAX, digits = 0;
     int negative = 0, exp_negative = 0;
     int64_t exp = 0, fraction;
-    char *p;
-    if (!out)
-        return QJS_INTL_INVALID_ARGUMENT;
-    memset(out, 0, sizeof(*out));
-    if (!allocator_valid(a) || !s.data || !s.length)
+
+    if (!s.data || !s.length)
         return QJS_INTL_INVALID_ARGUMENT;
     if (s.length > INT32_MAX)
         return QJS_INTL_OVERFLOW;
@@ -103,7 +107,40 @@ QJSIntlStatus qjs_intl_decimal_parse(const QJSIntlAllocator *a, QJSIntlBytes s,
     exp -= fraction;
     if (exp < -QJS_INTL_DECIMAL_EXPONENT_LIMIT || exp > QJS_INTL_DECIMAL_EXPONENT_LIMIT)
         return QJS_INTL_OVERFLOW;
-    first = begin;
+    if (out) {
+        out->begin = begin;
+        out->end = end;
+        out->exponent = exp;
+        out->negative = negative;
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_decimal_validate(QJSIntlBytes s)
+{
+    return scan_decimal(s, NULL);
+}
+
+QJSIntlStatus qjs_intl_decimal_parse(const QJSIntlAllocator *a, QJSIntlBytes s,
+                                     QJSIntlDecimal *out)
+{
+    DecimalScan scan;
+    QJSIntlStatus status;
+    size_t at, first, n, end;
+    int64_t exp;
+    char *p;
+
+    if (!out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    memset(out, 0, sizeof(*out));
+    if (!allocator_valid(a))
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = scan_decimal(s, &scan);
+    if (status)
+        return status;
+    first = scan.begin;
+    end = scan.end;
+    exp = scan.exponent;
     while (first < end && (s.data[first] == '0' || s.data[first] == '.'))
         first++;
     n = 0;
@@ -128,7 +165,7 @@ QJSIntlStatus qjs_intl_decimal_parse(const QJSIntlAllocator *a, QJSIntlBytes s,
     out->digits = p;
     out->length = n;
     out->exponent = (int32_t)exp;
-    out->negative = (uint8_t)negative;
+    out->negative = (uint8_t)scan.negative;
     return QJS_INTL_OK;
 }
 
