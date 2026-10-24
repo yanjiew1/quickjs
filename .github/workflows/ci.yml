@@ -70,28 +70,10 @@ jobs:
           --ordered "$CLDR_SOURCE/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt"
         timeout --kill-after=15s 180s build-collation/tests/test_intl_collation_minimal \
           --ordered-shifted "$CLDR_SOURCE/common/uca/CollationTest_CLDR_SHIFTED.txt"
-    - name: Prepare exact collation targets for each profile
-      run: |
-        for profile in minimal native; do
-          timeout --kill-after=15s 240s python3 tools/intl/collation_prepare.py \
-            --sources "$CLDR_SOURCE" \
-            --profile "$profile" --compiler build-collation/intl-collation-compile \
-            --output "$RUNNER_TEMP/collation-$profile.qjcl"
-        done
-    - name: Prepare pinned native segmentation rules and dictionaries
+    - name: Acquire pinned native segmentation dictionaries
       run: |
         timeout --kill-after=15s 180s python3 tools/data/acquire.py dictionaries \
           --cache "$RUNNER_TEMP/intl-cache"
-        timeout --kill-after=15s 180s python3 tools/intl/segment_prepare.py \
-          --sources "$CLDR_SOURCE" \
-          --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
-          --property-tool build-collation/intl-segment-property \
-          --output "$RUNNER_TEMP/native-segmentation.qjin" \
-          --manifest "$RUNNER_TEMP/native-segmentation.json" \
-          --license "$RUNNER_TEMP/LICENSE-SEGMENT-DICTIONARIES" \
-          --notices "$RUNNER_TEMP/NOTICE-SEGMENT-DICTIONARIES"
-        cmp data/intl/LICENSE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/LICENSE-SEGMENT-DICTIONARIES"
-        cmp data/intl/NOTICE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/NOTICE-SEGMENT-DICTIONARIES"
     - name: Audit pinned XML documents and DTD attribute schema
       run: |
         timeout 120s python3 tools/intl/cldr_xml.py \
@@ -226,29 +208,29 @@ jobs:
           --sources "$CLDR_SOURCE"
     - name: Reproduce prepared native and minimal Intl sections
       run: |
+        python3 tools/data/generate.py intl \
+          --sources "$CLDR_SOURCE" \
+          --dictionaries "$RUNNER_TEMP/intl-cache/icu-dictionaries-79.1" \
+          --collation-compiler build-collation/intl-collation-compile \
+          --property-tool build-collation/intl-segment-property \
+          --output-dir "$RUNNER_TEMP/intl-data"
+        cmp data/intl/LICENSE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/intl-data/LICENSE-SEGMENT-DICTIONARIES"
+        cmp data/intl/NOTICE-SEGMENT-DICTIONARIES "$RUNNER_TEMP/intl-data/NOTICE-SEGMENT-DICTIONARIES"
         for profile in minimal native; do
-          segmentation=()
-          if test "$profile" = native; then
-            segmentation=(--compiled-segmentation "$RUNNER_TEMP/native-segmentation.qjin"
-                          --segmentation-manifest "$RUNNER_TEMP/native-segmentation.json")
-          fi
-          timeout --kill-after=30s 600s python3 tools/intl/generate.py \
-            --sources "$CLDR_SOURCE" \
-            --profile "$profile" "${segmentation[@]}" \
-            --compiled-collation "$RUNNER_TEMP/collation-$profile.qjcl" \
-            --output "$RUNNER_TEMP/intl-$profile.bin" \
-            --manifest "$RUNNER_TEMP/intl-$profile.json"
-          python3 tools/intl/check_data.py --sources "$CLDR_SOURCE" \
-            --input "$RUNNER_TEMP/intl-$profile.bin" \
-            --manifest "$RUNNER_TEMP/intl-$profile.json"
-          cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-$profile.bin"
-          cmp "data/intl/$profile-manifest.json" "$RUNNER_TEMP/intl-$profile.json"
+          cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-data/$profile.bin"
+          cmp "data/intl/$profile-manifest.json" "$RUNNER_TEMP/intl-data/$profile-manifest.json"
         done
-        python3 tests/intl_collation_oracle.py --sources "$CLDR_SOURCE" \
-          --output "$RUNNER_TEMP/intl-collation-oracle.bin" \
-          --manifest "$RUNNER_TEMP/intl-collation-oracle.json"
-        cmp tests/data/intl-collation-oracle.bin "$RUNNER_TEMP/intl-collation-oracle.bin"
-        cmp tests/data/intl-collation-oracle.json "$RUNNER_TEMP/intl-collation-oracle.json"
+        cmp tests/data/intl-collation-oracle.bin "$RUNNER_TEMP/intl-data/intl-collation-oracle.bin"
+        cmp tests/data/intl-collation-oracle.json "$RUNNER_TEMP/intl-data/intl-collation-oracle.json"
+    - name: Preserve Intl generation diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: intl-production-generation
+        path: |
+          ${{ runner.temp }}/intl-data/*.log
+          ${{ runner.temp }}/intl-data/regeneration-report.json
+        if-no-files-found: ignore
   calendar-data:
     name: Native calendar data regeneration
     runs-on: ubuntu-latest
@@ -449,20 +431,7 @@ jobs:
     - name: Record source and runner identity
       if: always()
       run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
+        sh tools/ci/record_identity.sh
     - name: Preserve configuration and test diagnostics
       if: always()
       uses: actions/upload-artifact@v7
