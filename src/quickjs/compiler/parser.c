@@ -5907,7 +5907,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     if (js_parse_expect(s, ')'))
         return -1;
 
-    if (OPTIMIZE) {
+    {
         /* move the `next` code here */
         DynBuf *bc = &s->cur_func->byte_code;
         int chunk_size = pos_expr - pos_next;
@@ -6386,7 +6386,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             if (!is_using)
                 close_scopes(s, s->cur_func->scope_level, block_scope_level);
 
-            if (OPTIMIZE && label_test != label_body && label_cont != label_test) {
+            if (label_test != label_body && label_cont != label_test) {
                 /* move the increment code here */
                 DynBuf *bc = &s->cur_func->byte_code;
                 int chunk_size = pos_body - pos_cont;
