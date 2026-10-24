@@ -40,7 +40,8 @@ int qjs_temporal_zone_start_of_day(const QJSTemporalZone *zone,
 int qjs_temporal_zone_transition(const QJSTemporalZone *zone,
                                  QJSTemporalEpochNs epoch, int next,
                                  QJSTemporalEpochNs *result, int *found);
+/* Pure equality over already resolved zones. */
 int qjs_temporal_zones_equal(const QJSTemporalZone *a,
-                             const QJSTemporalZone *b, int *result);
+                             const QJSTemporalZone *b);
 
 #endif /* QUICKJS_TEMPORAL_TIME_ZONE_H */
