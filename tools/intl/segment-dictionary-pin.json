@@ -4,7 +4,6 @@
     {
       "bytes": 4195904,
       "family": "cjk",
-      "git_blob": "8d2bd6b8ac689bbc52a6dfe0b4c28d54ed5b9b77",
       "name": "cjdict.txt",
       "sha256": "e73fd72048981d0cc13e9dc436a7eaba07ffb6eff58c8a59dc75c1df746663a0",
       "source": "icu4c/source/data/brkitr/dictionaries/cjdict.txt",
@@ -13,7 +12,6 @@
     {
       "bytes": 2031114,
       "family": "khmer",
-      "git_blob": "83a649b2cc964cece0ffe06b931aebdb7b0cd717",
       "name": "khmerdict.txt",
       "sha256": "87bee2d17cd5148aa36957eb05409eefc124de8ad519b81b789298ef3e60b5d9",
       "source": "icu4c/source/data/brkitr/dictionaries/khmerdict.txt",
@@ -22,7 +20,6 @@
     {
       "bytes": 673894,
       "family": "lao",
-      "git_blob": "8eb43185e9ab6d00afe0f80e17891e33af976f06",
       "name": "laodict.txt",
       "sha256": "3c876934a3fa81031d2333525eafaca6a7c9f842e3b98f18c38880420afb5d36",
       "source": "icu4c/source/data/brkitr/dictionaries/laodict.txt",
@@ -31,7 +28,6 @@
     {
       "bytes": 1164408,
       "family": "myanmar",
-      "git_blob": "dd415141f562b1ba9ffb8bb67458fa735b9b3059",
       "name": "burmesedict.txt",
       "sha256": "61d8abc3d9102b2f9bf0c9f44db0d7ab89b18172d8cd26832e4c83174bd8673b",
       "source": "icu4c/source/data/brkitr/dictionaries/burmesedict.txt",
@@ -40,7 +36,6 @@
     {
       "bytes": 493054,
       "family": "thai",
-      "git_blob": "854b36e60f3fc2f01135ad3a23c153ea5643794d",
       "name": "thaidict.txt",
       "sha256": "3166abde40c0f44ab91c28f5ce96d7d1472cb7882e1c0bda0a72f8f69dba4274",
       "source": "icu4c/source/data/brkitr/dictionaries/thaidict.txt",
@@ -49,7 +44,6 @@
     {
       "bytes": 27718,
       "family": "license",
-      "git_blob": "fec99457b941a38283b6b2f6e128470182c73dc0",
       "name": "LICENSE",
       "sha256": "e09827667e0bb3c808b2a463548ba814a5e6249b67353234d70c8dfc2bcc417d",
       "source": "LICENSE",
