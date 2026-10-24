@@ -39,6 +39,16 @@ def json_bytes(value):
 
 def atomic_write(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Preserve Ninja restat when generated C is identical. Compare in chunks:
+    # large embedded packs must not require a second whole-file allocation.
+    if path.is_file():
+        with path.open('rb') as previous:
+            for at in range(0, len(data), 64 * 1024):
+                if previous.read(64 * 1024) != data[at:at + 64 * 1024]:
+                    break
+            else:
+                if not previous.read(1):
+                    return
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(dir=str(path.parent), delete=False) as f:
