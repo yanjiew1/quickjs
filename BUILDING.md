@@ -110,14 +110,9 @@ Array/TypedArray locale methods forward locale arguments to each element's
 observable `toLocaleString()` method. Date and enabled Temporal types use their
 date/time or duration formatters.
 
-The production common archive intentionally omits lower-coverage locale data.
-To generate a pack from all locales in the matching CLDR Git release, follow
-[the data tools guide](tools/intl/README.md), then configure
-`-Dintl_data_file=/absolute/path/to/prepared-pack.bin`. The pack must match the
-selected minimal/native profile. Missing common-release records are never
-silently filled from Git. Source pins, binary layouts and compatibility policies
-are documented in the [Intl design](doc/intl-design.md) and
-[data format guide](doc/intl-data-format.md).
+Production common data intentionally omits lower-coverage locales. See
+[Alternate Intl data](#alternate-intl-data) for explicit complete-Git generation
+and prepared-pack selection; source distributions are never silently mixed.
 
 Intl can be enabled independently of Temporal (`-Dtemporal=false`). The embedding
 entry point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
@@ -246,7 +241,7 @@ The optional `cosmo_binary` mode remains outside CI coverage.
 The committed Intl packs use the official CLDR common production release.
 `data/intl/pin-git.json` supports explicit generation from the complete matching
 Git source snapshot, including its additional locale data. Follow the generation
-commands in [tools/intl/README.md](tools/intl/README.md), then select the resulting
+commands in [the data maintenance guide](doc/data-updates.md), then select the resulting
 pack without replacing the committed production data:
 
 ```sh
