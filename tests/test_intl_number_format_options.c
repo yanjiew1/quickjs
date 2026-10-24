@@ -131,7 +131,7 @@ static void test_allocation_failures(int unit_style, int full)
         assert(ctx && !JS_AddIntrinsicBaseObjects(ctx));
         if (full) {
             QJSIntlAllocator native_allocator = js_intl_allocator(rt);
-            assert(!qjs_intl_number_open(&native_allocator, &service));
+            assert(!qjs_intl_number_open(&native_allocator, NULL, &service));
         }
         options = JS_NewObject(ctx);
         assert(!JS_IsException(options));
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     assert(ctx);
     {
         QJSIntlAllocator allocator = js_intl_allocator(rt);
-        assert(!qjs_intl_number_open(&allocator, &fixture_service));
+        assert(!qjs_intl_number_open(&allocator, NULL, &fixture_service));
     }
     global = JS_GetGlobalObject(ctx);
     assert(property(ctx, global, "readNumberUnitOptions",
