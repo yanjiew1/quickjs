@@ -8,12 +8,15 @@ import argparse
 import hashlib
 import io
 import json
-import os
 from pathlib import Path
-import tempfile
-import urllib.error
-import urllib.request
 import zipfile
+
+import sys
+
+# Keep sibling generator imports ahead of the shared maintenance helpers.
+sys.path.append(str(Path(__file__).resolve().parents[1] / 'data'))
+from _support import io as data_io
+from _support.io import write_atomic as atomic_write
 
 TOOLS = Path(__file__).resolve().parent
 SOURCES = TOOLS.parents[1] / 'data' / 'calendar' / 'sources'
@@ -26,23 +29,14 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def atomic_write(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=str(path.parent), delete=False) as out:
-            temporary = out.name
-            out.write(data)
-        os.replace(temporary, str(path))
-        temporary = None
-    finally:
-        if temporary is not None:
-            os.unlink(temporary)
-
-
 def fetch(path, source, offline=False):
-    if path.is_file() and digest(path.read_bytes()) == source['sha256']:
-        return
+    if path.is_file():
+        try:
+            cached = data_io.read_bytes(path, MAX_DOWNLOAD)
+        except ValueError:
+            cached = None
+        if cached is not None and digest(cached) == source['sha256']:
+            return
     if offline:
         raise ValueError('missing or modified calendar source: ' + path.name)
     if not source['url'].startswith('https://'):
@@ -51,16 +45,7 @@ def fetch(path, source, offline=False):
     # archive before opening it; materialize only the requested member.
     limit = MAX_ARCHIVE if 'path' in source else MAX_DOWNLOAD
     expected = source.get('archive_sha256', source['sha256'])
-    for attempt in range(3):
-        try:
-            request = urllib.request.Request(source['url'], headers={
-                'User-Agent': 'QuickJS-calendar-generator'})
-            with urllib.request.urlopen(request, timeout=30) as response:
-                raw = response.read(limit + 1)
-            break
-        except (OSError, urllib.error.URLError):
-            if attempt == 2:
-                raise
+    raw = data_io.download_bytes(source['url'], limit)
     if len(raw) > limit or digest(raw) != expected:
         raise ValueError('calendar download differs from pin: ' + path.name)
     if 'path' in source:
