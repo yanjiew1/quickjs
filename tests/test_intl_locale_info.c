@@ -31,7 +31,7 @@ int main(void)
     QJSIntlLocaleService *service;
     QJSIntlBytes list;
     uint32_t count, cursor;
-    assert(!qjs_intl_locale_open(&allocator, &service));
+    assert(!qjs_intl_locale_open(&allocator, NULL, &service));
     check(service, "en", "gregorian", 1); /* Likely US. */
     check(service, "en-TH", "oldfoo foo unavailable", 3);
     check(service, "fr-TH", "buddhist gregorian", 2);

@@ -29,6 +29,9 @@
 #define QUICKJS_RUNTIME_H
 
 #include "allocator-types.h"
+#ifdef CONFIG_INTL
+#include "../../intl/native/data.h"
+#endif
 
 #define JS_MODULE_LOADER_HAS_ATTR (1 << 0)
 #define JS_MODULE_NORMALIZE_HAS_ATTR (1 << 1)
@@ -151,6 +154,10 @@ struct JSRuntime {
 #endif
     struct JSRuntimeFinalizerState *finalizers;
     BOOL is_freeing : 8;
+#ifdef CONFIG_INTL
+    /* Borrow compiled immutable bytes; shared admission needs no teardown. */
+    QJSIntlData intl_data;
+#endif
 };
 
 
