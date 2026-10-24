@@ -71,6 +71,30 @@ def zip_fixture(extra=(), compression=zipfile.ZIP_STORED):
 
 
 class DownloadTests(unittest.TestCase):
+    def test_atomic_output_preserves_unchanged_mtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'output.c'
+            data = b'generated' * 20000
+            acquire.atomic_write(path, data)
+            os.utime(path, ns=(1000000000000000000, 1000000000000000000))
+            before = path.stat().st_mtime_ns
+            acquire.atomic_write(path, data)
+            self.assertEqual(path.stat().st_mtime_ns, before)
+            self.assertEqual(path.read_bytes(), data)
+
+    def test_atomic_output_replaces_changed_empty_and_prefix_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'output.c'
+            for previous, current in ((b'old', b'new'), (b'prefix-extra', b'prefix'),
+                                      (b'', b'value'), (b'value', b''),
+                                      (b'x' * 65536 + b'extra', b'x' * 65536)):
+                path.write_bytes(previous)
+                acquire.atomic_write(path, current)
+                self.assertEqual(path.read_bytes(), current)
+                entries = list(path.parent.iterdir())
+                self.assertEqual(len(entries), 1)
+                self.assertTrue(entries[0].samefile(path))
+
     def test_verified_cache_and_offline_rejection(self):
         archive, pin = fixture()
         with tempfile.TemporaryDirectory() as directory:
