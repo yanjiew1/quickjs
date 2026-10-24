@@ -103,7 +103,7 @@ int main(void)
     };
     QJSIntlBytes extension = bytes("-u-ca-buddhist-hc-h23-nu-arab");
     size_t i, calls, baseline;
-    assert(!qjs_intl_locale_open(&a, &identity));
+    assert(!qjs_intl_locale_open(&a, NULL, &identity));
     baseline = input.live;
     assert(!qjs_intl_resolve_locale_keys(identity, &b, bytes("en"), extension, keys, 3, &result));
     expected(&result, "en-u-ca-buddhist-hc-h23-nu-arab", "buddhist", "h23", "arab");
