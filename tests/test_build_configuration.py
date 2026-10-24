@@ -65,14 +65,18 @@ def main():
     intl = options.get('intl', 'disabled')
     temporal = options.get('temporal', False)
     calendars = temporal or intl != 'disabled'
-    prepared = {row['name'] for row in targets
-                if row['name'].startswith('intl-fixture-data-')}
-    if 'intl' in options:
-        expected = {'intl-fixture-data-' + intl} if intl != 'disabled' else set()
-    else:
-        # Prepared library tests precede the selectable JavaScript feature.
-        expected = {'intl-fixture-data-' + profile for profile in ('minimal', 'native')}
-    assert prepared == expected, (prepared, expected)
+    # Component tests borrow the runtime's actual selected data owner, including
+    # custom packs. No second prepared C array or profile fixture is needed.
+    assert not {row['name'] for row in targets
+                if row['name'].startswith(('intl-prepared-', 'intl-fixture-data-'))}
+    data = [row for row in targets if row['name'] == 'native-intl-data']
+    assert len(data) == (intl != 'disabled'), [row['name'] for row in data]
+    if data:
+        selected = options.get('intl_data_file') or 'data/intl/' + intl + '.bin'
+        expected = (source / selected).resolve()
+        inputs = {Path(name).resolve() for group in data[0]['target_sources']
+                  for name in group['sources']}
+        assert inputs == {expected}, (inputs, expected)
     if 'intl' in options and intl == 'disabled':
         # The public disabled-API contract remains tested; real components and
         # no-op feature OOM executables must not create extra configurations.
