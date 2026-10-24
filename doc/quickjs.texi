@@ -186,9 +186,9 @@ Add initialization code for an external C module. See the
 Byte swapped output (only used for cross compilation).
 
 @item -flto
-Use link time optimization. The compilation is slower but the
-executable is smaller and faster. This option is automatically set
-when the @code{-fno-x} options are used.
+Accepted for compatibility. Executable output uses the LTO setting selected
+when building @code{qjsc} and its engine library, without requiring this option.
+LTO builds install the selected @code{libquickjs.a}, not a second LTO archive.
 
 @item -fno-[eval|string-normalize|regexp|json|proxy|map|typedarray|promise|bigint]
 Disable selected language features to produce a smaller executable file.

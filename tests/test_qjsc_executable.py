@@ -13,6 +13,7 @@ if prefix and "/" in prefix[0] and not Path(prefix[0]).is_absolute():
 expected_flags = shlex.split(sys.argv[3])
 intl_enabled, temporal_enabled = (value == "y" for value in sys.argv[4:6])
 lto_flag = sys.argv[6] if len(sys.argv) > 6 else ""
+library_name = sys.argv[7]
 with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     scratch = Path(directory)
     source = scratch / "main.js"
@@ -24,8 +25,7 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
         'if ((typeof Temporal === "object") !== ' + str(temporal_enabled).lower() +
         ') throw Error("qjsc Temporal configuration mismatch");\n'
         'print("qjsc-executable-ok");\n')
-    compiled = subprocess.run(prefix + [qjsc] + (["-flto"] if lto_flag else []) +
-                              ["-v", "-o", str(executable),
+    compiled = subprocess.run(prefix + [qjsc, "-v", "-o", str(executable),
                                        str(source)], stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
@@ -35,6 +35,10 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                                              compiled.stdout, compiled.stderr)
     actual_lto = [arg for arg in arguments if arg.startswith("-flto")]
     assert actual_lto == ([lto_flag] if lto_flag else []), actual_lto
+    libraries = [Path(arg).name for arg in arguments if Path(arg).name in
+                 ("libquickjs.a", "libquickjs.so", "libquickjs.dylib",
+                  "libquickjs.lto.a")]
+    assert libraries == [library_name], libraries
     if any(arg.startswith("-fsanitize=") for arg in expected_flags):
         assert "-fno-omit-frame-pointer" in arguments, compiled.stdout
     source.unlink()

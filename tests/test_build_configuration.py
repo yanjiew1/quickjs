@@ -18,6 +18,21 @@ def main():
     source, build = args.source.resolve(), args.build.resolve()
     options = {row['name']: row['value'] for row in
                load(build, 'meson-info/intro-buildoptions.json')}
+    # Installed static bitcode must carry the same final-link mode as qjsc.
+    # Shared consumers need neither the plugin nor an LTO implementation detail.
+    fields = dict(line.split(':', 1) for line in
+                  (build / 'meson-private/quickjs.pc').read_text().splitlines()
+                  if line.startswith(('Libs:', 'Libs.private:')))
+    public_flags = shlex.split(fields.get('Libs', ''))
+    private_flags = shlex.split(fields.get('Libs.private', ''))
+    lto_flag = next(shlex.split(line)[2] for line in
+                    (build / 'qjsc-config.h').read_text().splitlines()
+                    if line.startswith('#define CONFIG_LTO_FLAG '))
+    expected_lto = [lto_flag] if options['b_lto'] and options['default_library'] != 'shared' else []
+    assert not any(flag.startswith('-flto') for flag in public_flags), public_flags
+    actual_lto = [flag for flag in private_flags if flag.startswith('-flto')]
+    assert actual_lto == expected_lto, (actual_lto, expected_lto)
+
     tests = load(build, 'meson-info/intro-tests.json')
     targets = load(build, 'meson-info/intro-targets.json')
     names = {row['name'] for row in tests}
