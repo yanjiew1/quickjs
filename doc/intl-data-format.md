@@ -70,7 +70,8 @@ tables contain many more records. Section 33 counts zone descriptors; section
 section 36 counts root collation mappings independently of locale count;
 section 37 counts their preceding-context metadata records; section 38 counts
 compiled executable collation programs, not locale bindings or root mappings.
-The section reference defines each case.
+Sections 36/37 are reserved for the independent test oracle and are absent
+from shipped packs. The section reference defines each case.
 
 The generation identity is not an authentication signature and is not checked
 as a content checksum by `qjs_intl_pack_open()`. Pinned source hashes and the
