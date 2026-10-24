@@ -2,7 +2,9 @@
 
 [`data/timezone/pin.json`](../../data/timezone/pin.json) selects released
 **IANA tzdata 2026e** and **CLDR 49 common release XML**.
-The IANA Git tag resolves to `039ef27cc5f062a2055cb67435d6d71adbefd27d`.
+The pin records IANA release commit
+`039ef27cc5f062a2055cb67435d6d71adbefd27d` as provenance. The release archive
+SHA-256 authenticates the exact bytes used for generation.
 CLDR is pinned to `96e54b273d2da4ec6fbad350ba19ff23fa24a588`.
 The vendored BCP47 aliases and Windows mappings are exact members of the
 authenticated official common archive; its URL/hash and member paths are recorded
@@ -17,19 +19,25 @@ python3 tools/timezone/acquire.py --cache /path/to/timezone-cache
 python3 tools/timezone/acquire.py --cache /path/to/timezone-cache --offline
 ```
 
-Acquisition uses HTTPS, checks the archive and every consumed source against
-SHA-256 pins, limits download size, and uses finite request timeouts and
-retries. It replaces verified files atomically. Archive extraction accepts
-only the named regular files, validates the complete source set before writing,
-and never follows archive paths or symlinks. Existing verified inputs need no
-network. Updating a release requires an explicit pin review.
+Acquisition uses HTTPS, verifies the release archive's SHA-256, limits download
+size, and uses finite request timeouts and retries. It replaces the archive
+atomically. Existing verified inputs need no network. Updating a release
+requires an explicit pin review.
 
-The cache contains `tz-2026e/` and its archive. Raw CLDR 49 common-release timezone metadata is
-versioned under `data/timezone/sources/cldr`, with the Unicode license. Acquisition verifies those
-vendored files without downloading duplicate cache copies. `timezone.xml`
-supplies geographic alias groups; `windowsZones.xml` supplies
-Windows-key/territory mappings. These are generator inputs, never runtime
-XML dependencies. The native backend's final data is a single binary pack.
+Only `tz-2026e.tar.gz` is needed in the cache. Generation rechecks that archive
+and materializes its required regular files into a fresh private work directory.
+It validates the complete set before writing any source, rejects duplicate or
+linked required members, and never uses archive paths as output paths. Old
+extracted `tz-2026e/` cache directories are ignored, so modifying a cached
+`zic.c` cannot change the compiler used by generation. Per-member IANA hashes
+are unnecessary because the authenticated archive is the source authority.
+
+Raw CLDR 49 common-release metadata remains under
+`data/timezone/sources/cldr`, with the Unicode license. Acquisition verifies
+these separately vendored files without downloading duplicate cache copies.
+`timezone.xml` supplies geographic alias groups; `windowsZones.xml` supplies
+Windows-key/territory mappings. These are generator inputs, never runtime XML
+dependencies. The native backend's final data is a single binary pack.
 
 Normal builds do not download data, read installed timezone files, or run
 this acquisition script. Pinned zic sources are available only for build-host
