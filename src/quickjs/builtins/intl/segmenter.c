@@ -36,9 +36,19 @@ static QJSIntlSegmentService *segment_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_segment) {
+#ifdef CONFIG_INTL_SEGMENT_MINIMAL
+        const struct QJSIntlData *data = NULL;
+#else
+        const QJSIntlData *data = js_intl_data(ctx);
+#endif
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlSegmentService *service;
-        if (js_intl_error(ctx, qjs_intl_segment_open(&allocator, &service), "segmentation initialization"))
+
+#ifndef CONFIG_INTL_SEGMENT_MINIMAL
+        if (!data)
+            return NULL;
+#endif
+        if (js_intl_error(ctx, qjs_intl_segment_open(&allocator, data, &service), "segmentation initialization"))
             return NULL;
         rt->intl_segment = service;
     }

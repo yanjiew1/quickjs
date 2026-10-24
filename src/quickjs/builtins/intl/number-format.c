@@ -49,9 +49,13 @@ static QJSIntlNumberService *number_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_number) {
+        const QJSIntlData *data = js_intl_data(ctx);
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlNumberService *service;
-        if (js_intl_error(ctx, qjs_intl_number_open(&allocator, &service), "number initialization"))
+
+        if (!data)
+            return NULL;
+        if (js_intl_error(ctx, qjs_intl_number_open(&allocator, data, &service), "number initialization"))
             return NULL;
         rt->intl_number = service;
     }

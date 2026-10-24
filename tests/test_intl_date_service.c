@@ -559,7 +559,7 @@ int main(int argc, char **argv)
     QJSIntlStatus status;
     size_t count, en;
     int supported;
-    status = qjs_intl_datetime_open(&allocator, &service);
+    status = qjs_intl_datetime_open(&allocator, NULL, &service);
     if (status)
         fprintf(stderr, "service open status %d\n", status);
     assert(!status);
