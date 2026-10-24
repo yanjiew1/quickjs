@@ -638,8 +638,9 @@ prefix/suffix trees, matcher integration and a 102,038-entry starred shape.
 Frozen executable storage and full instruction execution remain subsequent work.
 
 Collectors use `acquire.Sources` with the cache's `cldr-49` directory.
-The reader authenticates the manifest before use, verifies each consumed file,
-and tracks logical input paths for generated provenance. Cache paths and file
+The reader inventories actual supplied files and tracks consumed paths for
+provenance. It accepts custom data without repinning and rejects changes during
+one generation session; acquisition alone authenticates official pin hashes. Cache paths and file
 timestamps are not provenance. The XML interpretation, inheritance resolution
 and binary encoding are separate layers described in
 [the Intl design](../../doc/intl-design.md#cldr-xml-collection-and-resolution).
@@ -2485,3 +2486,15 @@ unaligned input and every reached allocation failure/retry. Prepared-profile
 tests query all field/width/alternate combinations; generator tests check English
 labels and the alternate AM/PM form. The shared owner establishes no service
 locale availability and applies no consumer formatting fallback.
+
+## Supplied CLDR source trees
+
+Acquisition verifies archives and their inventory against the selected pin.
+Collectors and generators instead inventory the actual `LICENSE` and `common/`
+files in the supplied source directory. They require no acquisition manifest
+and accept compatible edited files or added locales without changing the pin.
+The copied source metadata retains declared upstream provenance; its calculated
+inventory identity and consumed-file receipts describe the supplied bytes.
+Compiler stages use that identity to reject mixed intermediates. Inputs must
+remain unchanged within a generation session. Path, size, XML and semantic
+validation remain active; this is not an unchecked conversion mode.
