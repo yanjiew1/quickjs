@@ -86,11 +86,8 @@ def main():
         checked |= '-DCONFIG_CHECK_JSVALUE' in words
         if '-o' not in words:
             continue
-        output = Path(words[words.index('-o') + 1])
-        # Host data exporters remain available as explicit developer targets.
-        # Only the selected runtime's test objects participate in this check.
-        if not output.parts or output.parts[0] != 'tests':
-            continue
+        # The four provider paths distinguish selected backends regardless of
+        # whether their owners live beside the engine or the test drivers.
         filename = (Path(row['directory']) / row['file']).resolve()
         try:
             relative = filename.relative_to(source).as_posix()
