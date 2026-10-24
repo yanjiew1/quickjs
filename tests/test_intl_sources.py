@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline fixtures for authenticated CLDR input acquisition and consumption."""
+"""Offline acquisition authentication and supplied CLDR snapshot contracts."""
 import hashlib
 import importlib.util
 import io
@@ -71,6 +71,30 @@ def zip_fixture(extra=(), compression=zipfile.ZIP_STORED):
 
 
 class DownloadTests(unittest.TestCase):
+    def test_atomic_output_preserves_unchanged_mtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'output.c'
+            data = b'generated' * 20000
+            acquire.atomic_write(path, data)
+            os.utime(path, ns=(1000000000000000000, 1000000000000000000))
+            before = path.stat().st_mtime_ns
+            acquire.atomic_write(path, data)
+            self.assertEqual(path.stat().st_mtime_ns, before)
+            self.assertEqual(path.read_bytes(), data)
+
+    def test_atomic_output_replaces_changed_empty_and_prefix_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'output.c'
+            for previous, current in ((b'old', b'new'), (b'prefix-extra', b'prefix'),
+                                      (b'', b'value'), (b'value', b''),
+                                      (b'x' * 65536 + b'extra', b'x' * 65536)):
+                path.write_bytes(previous)
+                acquire.atomic_write(path, current)
+                self.assertEqual(path.read_bytes(), current)
+                entries = list(path.parent.iterdir())
+                self.assertEqual(len(entries), 1)
+                self.assertTrue(entries[0].samefile(path))
+
     def test_verified_cache_and_offline_rejection(self):
         archive, pin = fixture()
         with tempfile.TemporaryDirectory() as directory:
@@ -143,20 +167,41 @@ class DownloadTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
-    def test_manifest_identity_must_match_its_pin(self):
+    def test_supplied_tree_needs_no_acquisition_manifest_or_repin(self):
         archive, pin = zip_fixture()
-        for field in ('release', 'archive_sha256'):
-            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory) / 'sources'
-                acquire.materialize(archive, root, pin)
-                path = root / 'source-manifest.json'
-                manifest = json.loads(path.read_text())
-                manifest[field] = 'different'
-                encoded = acquire.json_bytes(manifest)
-                path.write_bytes(encoded)
-                changed = dict(pin, manifest_sha256=digest(encoded))
-                with self.assertRaisesRegex(ValueError, 'release/archive identity'):
-                    acquire.Sources(root, changed)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'sources'
+            acquire.materialize(archive, root, pin)
+            (root / 'source-manifest.json').unlink()
+            (root / 'common/main/en.xml').write_bytes(b'<ldml>custom</ldml>')
+            (root / 'common/main/fr.xml').write_bytes(b'<ldml>added</ldml>')
+            sources = acquire.Sources(root, pin)
+            self.assertEqual(sources.paths('common/main/'),
+                             ('common/main/en.xml', 'common/main/fr.xml'))
+            self.assertEqual(sources.read('common/main/en.xml'), b'<ldml>custom</ldml>')
+            self.assertEqual(sources.manifest['files']['common/main/en.xml'],
+                             digest(b'<ldml>custom</ldml>'))
+            self.assertNotEqual(sources.pin['manifest_sha256'], pin['manifest_sha256'])
+            self.assertFalse((root / 'source-manifest.json').exists())
+            # An obsolete acquisition receipt is not a generator whitelist.
+            (root / 'source-manifest.json').write_bytes(b'not an inventory')
+            self.assertEqual(acquire.Sources(root, pin).manifest, sources.manifest)
+
+    def test_source_snapshot_propagates_directory_read_errors(self):
+        archive, pin = zip_fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'sources'
+            acquire.materialize(archive, root, pin)
+            scandir = os.scandir
+
+            def scan(path):
+                if Path(path) == root / 'common/main':
+                    raise PermissionError('fixture unreadable directory')
+                return scandir(path)
+
+            with mock.patch.object(acquire.os, 'scandir', side_effect=scan):
+                with self.assertRaisesRegex(PermissionError, 'unreadable directory'):
+                    acquire.Sources(root, pin)
 
     def test_distribution_cache_owners_coexist(self):
         archive, common = zip_fixture()
@@ -181,7 +226,7 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(acquire.load_pin(path), pin)
             self.assertEqual(acquire.load_pin(str(path)), pin)
 
-    def test_authenticated_sources_and_repair(self):
+    def test_snapshot_consistency_and_acquisition_repair(self):
         archive, pin = fixture()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'sources'
@@ -192,7 +237,6 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(sources.pin['archive']['url'], 'https://example.invalid/cldr.tar.gz')
             self.assertEqual(sources.paths('common/main/'), ('common/main/en.xml',))
             self.assertEqual(sources.read('common/main/en.xml'), b'<ldml><identity/></ldml>')
-            self.assertEqual(sources.consumed, {'common/main/en.xml'})
             with self.assertRaises(ValueError):
                 sources.read('unlisted.xml')
             (root / 'common/main/en.xml').write_bytes(b'changed')
@@ -202,8 +246,8 @@ class SourceTests(unittest.TestCase):
             self.assertEqual((root / 'source-manifest.json').read_bytes(), before)
             self.assertEqual(sources.read('common/main/en.xml'), b'<ldml><identity/></ldml>')
             (root / 'source-manifest.json').write_bytes(b'{}')
-            with self.assertRaises(ValueError):
-                acquire.Sources(root, pin)
+            self.assertEqual(acquire.Sources(root, pin).manifest['files'],
+                             sources.manifest['files'])
 
     def test_invalid_inventory_does_not_create_output(self):
         archive, pin = fixture()
@@ -264,7 +308,7 @@ class ZipSourceTests(unittest.TestCase):
             self.assertEqual(sources.read('LICENSE'), b'fixture license')
             self.assertEqual(sources.read('common/dtd/ldml.dtd'), b'fixture DTD')
 
-    def test_authenticated_sources_repair_and_unselected_files(self):
+    def test_source_snapshot_repair_and_unselected_files(self):
         archive, pin = zip_fixture((('common/main/', b''), ('tool.c', b'not input data')))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'sources'
