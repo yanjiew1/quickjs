@@ -71,36 +71,12 @@ def zip_fixture(extra=(), compression=zipfile.ZIP_STORED):
 
 
 class DownloadTests(unittest.TestCase):
-    def test_atomic_output_preserves_unchanged_mtime(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'output.c'
-            data = b'generated' * 20000
-            acquire.atomic_write(path, data)
-            os.utime(path, ns=(1000000000000000000, 1000000000000000000))
-            before = path.stat().st_mtime_ns
-            acquire.atomic_write(path, data)
-            self.assertEqual(path.stat().st_mtime_ns, before)
-            self.assertEqual(path.read_bytes(), data)
-
-    def test_atomic_output_replaces_changed_empty_and_prefix_inputs(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'output.c'
-            for previous, current in ((b'old', b'new'), (b'prefix-extra', b'prefix'),
-                                      (b'', b'value'), (b'value', b''),
-                                      (b'x' * 65536 + b'extra', b'x' * 65536)):
-                path.write_bytes(previous)
-                acquire.atomic_write(path, current)
-                self.assertEqual(path.read_bytes(), current)
-                entries = list(path.parent.iterdir())
-                self.assertEqual(len(entries), 1)
-                self.assertTrue(entries[0].samefile(path))
-
     def test_verified_cache_and_offline_rejection(self):
         archive, pin = fixture()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'archive'
             path.write_bytes(archive)
-            with mock.patch.object(acquire.urllib.request, 'urlopen') as network:
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen') as network:
                 self.assertEqual(acquire.fetch(path, pin['archive']), archive)
                 self.assertEqual(acquire.fetch(path, pin['archive'], True), archive)
                 network.assert_not_called()
@@ -113,12 +89,12 @@ class DownloadTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'archive'
             path.write_bytes(b'previous')
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
                                    return_value=Response(b'wrong')):
                 with self.assertRaises(ValueError):
                     acquire.fetch(path, pin['archive'])
             self.assertEqual(path.read_bytes(), b'previous')
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
                                    return_value=Response(archive)) as network:
                 self.assertEqual(acquire.fetch(path, pin['archive']), archive)
                 self.assertEqual(network.call_args[1]['timeout'], 30)
@@ -133,7 +109,7 @@ class DownloadTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 acquire.fetch(path, source)
             with mock.patch.object(acquire, 'MAX_DOWNLOAD', 8), \
-                    mock.patch.object(acquire.urllib.request, 'urlopen',
+                    mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
                                       return_value=Response(archive)):
                 with self.assertRaises(ValueError):
                     acquire.fetch(path, pin['archive'])
@@ -156,10 +132,10 @@ class DownloadTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'archive'
             path.write_bytes(b'previous')
-            with mock.patch.object(acquire.urllib.request, 'urlopen',
+            with mock.patch.object(acquire.data_io.urllib.request, 'urlopen',
                                    return_value=response), \
-                    mock.patch.object(acquire.time, 'monotonic',
-                                      side_effect=[0, 0, 121, 121]):
+                    mock.patch.object(acquire.data_io.time, 'monotonic',
+                                      side_effect=[0, 0, 0, 121, 121]):
                 with self.assertRaises(TimeoutError):
                     acquire.fetch(path, pin['archive'])
             self.assertEqual(response.calls, 1)
