@@ -72,13 +72,15 @@ compiler_sources = files(
   'quickjs/compiler/parser.c',
   'quickjs/compiler/stack-analysis.c',
 )
-support_sources = files(
+support_library_sources = files(
   'libwait/wait-queue.c',
   'dtoa/dtoa.c',
   'regexp/compile.c',
   'regexp/exec.c',
   'unicode/libunicode.c',
   'cutils/cutils.c',
+)
+support_sources = support_library_sources + files(
   'quickjs-libc/event-loop.c',
   'quickjs-libc/host.c',
   'quickjs-libc/module-loader.c',
