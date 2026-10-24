@@ -244,6 +244,11 @@ jobs:
           cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-$profile.bin"
           cmp "data/intl/$profile-manifest.json" "$RUNNER_TEMP/intl-$profile.json"
         done
+        python3 tests/intl_collation_oracle.py --sources "$CLDR_SOURCE" \
+          --output "$RUNNER_TEMP/intl-collation-oracle.bin" \
+          --manifest "$RUNNER_TEMP/intl-collation-oracle.json"
+        cmp tests/data/intl-collation-oracle.bin "$RUNNER_TEMP/intl-collation-oracle.bin"
+        cmp tests/data/intl-collation-oracle.json "$RUNNER_TEMP/intl-collation-oracle.json"
   calendar-data:
     name: Native calendar data regeneration
     runs-on: ubuntu-latest
