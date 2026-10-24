@@ -23,6 +23,7 @@ typedef struct QJSIntlListFormatter QJSIntlListFormatter;
    copies the allocator; callbacks and opaque state must outlive all handles
    and results. Failure clears *out. Closing NULL is safe. No JS callbacks. */
 QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator,
+                                 const struct QJSIntlData *checked_data,
                                  QJSIntlListService **out);
 void qjs_intl_list_close(QJSIntlListService *service);
 /* Borrow a canonical, sorted, unique inventory without extensions or private

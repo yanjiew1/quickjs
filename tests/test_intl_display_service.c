@@ -180,7 +180,7 @@ int main(void)
     const QJSIntlBytes *available;
     size_t count, english = SIZE_MAX, source = 0, i, width, calls, fail, baseline;
     QJSIntlDisplayOptions options = {QJS_INTL_DISPLAY_LANGUAGE, QJS_INTL_NAME_LONG, 1, 4096};
-    assert(!qjs_intl_display_open(&allocator, &service));
+    assert(!qjs_intl_display_open(&allocator, NULL, &service));
     calls = state.calls;
     qjs_intl_display_close(service);
     assert(!state.live);
@@ -188,11 +188,11 @@ int main(void)
         state.calls = 0;
         state.fail_at = fail;
         failed = (void *)1;
-        assert(qjs_intl_display_open(&allocator, &failed) == QJS_INTL_NO_MEMORY);
+        assert(qjs_intl_display_open(&allocator, NULL, &failed) == QJS_INTL_NO_MEMORY);
         assert(!failed && !state.live);
     }
     state.fail_at = 0;
-    assert(!qjs_intl_display_open(&allocator, &service));
+    assert(!qjs_intl_display_open(&allocator, NULL, &service));
     assert(!qjs_intl_display_available(service, &available, &count));
     assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, &allocator, &data));
     assert(count == data.locales.count - 1);
@@ -296,8 +296,8 @@ int main(void)
     qjs_intl_name_text_clear(&allocator, &result);
     assert(qjs_intl_name_text_copy(&allocator, bytes("😀"), 1, &result) == QJS_INTL_OVERFLOW);
     zero(&result);
-    assert(qjs_intl_display_open(NULL, &failed) == QJS_INTL_INVALID_ARGUMENT && !failed);
-    assert(qjs_intl_display_open(&allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_display_open(NULL, NULL, &failed) == QJS_INTL_INVALID_ARGUMENT && !failed);
+    assert(qjs_intl_display_open(&allocator, NULL, NULL) == QJS_INTL_INVALID_ARGUMENT);
     available = (void *)1;
     count = 7;
     assert(qjs_intl_display_available(NULL, &available, &count) == QJS_INTL_INVALID_ARGUMENT);
@@ -306,7 +306,7 @@ int main(void)
     assert(qjs_intl_display_formatter_open(NULL, 0, &options, &trial) == QJS_INTL_INVALID_ARGUMENT && !trial);
     assert(qjs_intl_display_format(NULL, bytes("US"), &result) == QJS_INTL_INVALID_ARGUMENT);
     zero(&result);
-    assert(!qjs_intl_display_open(&allocator, &service));
+    assert(!qjs_intl_display_open(&allocator, NULL, &service));
     options.maximum_output_length = 0;
     assert(qjs_intl_display_formatter_open(service, english, &options, &trial) == QJS_INTL_INVALID_ARGUMENT && !trial);
     options.maximum_output_length = 4096;
