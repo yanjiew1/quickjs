@@ -122,30 +122,35 @@ static const JSCFunctionListEntry js_point_proto_funcs[] = {
 
 static int js_point_init(JSContext *ctx, JSModuleDef *m)
 {
-    JSValue point_proto, point_class;
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue point_class;
 
     /* create the Point class */
     JS_NewClassID(&js_point_class_id);
-    JS_NewClass(JS_GetRuntime(ctx), js_point_class_id, &js_point_class);
+    if (!JS_IsRegisteredClass(rt, js_point_class_id) &&
+        JS_NewClass(rt, js_point_class_id, &js_point_class) < 0) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
 
-    point_proto = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, point_proto, js_point_proto_funcs, countof(js_point_proto_funcs));
-
-    point_class = JS_NewCFunction2(ctx, js_point_ctor, "Point", 2, JS_CFUNC_constructor, 0);
-    /* set proto.constructor and ctor.prototype */
-    JS_SetConstructor(ctx, point_class, point_proto);
-    JS_SetClassProto(ctx, js_point_class_id, point_proto);
-
-    JS_SetModuleExport(ctx, m, "Point", point_class);
-    return 0;
+    /* Link proto.constructor and ctor.prototype with failure cleanup, without
+       creating a global Point binding. Other realms reuse the runtime class. */
+    point_class = JS_NewCConstructor(ctx, js_point_class_id, "Point",
+                                     js_point_ctor, 2, JS_CFUNC_constructor, 0,
+                                     JS_UNDEFINED, NULL, 0,
+                                     js_point_proto_funcs,
+                                     countof(js_point_proto_funcs),
+                                     JS_NEW_CTOR_NO_GLOBAL);
+    if (JS_IsException(point_class))
+        return -1;
+    return JS_SetModuleExport(ctx, m, "Point", point_class);
 }
 
 JSModuleDef *js_init_module(JSContext *ctx, const char *module_name)
 {
     JSModuleDef *m;
     m = JS_NewCModule(ctx, module_name, js_point_init);
-    if (!m)
+    if (!m || JS_AddModuleExport(ctx, m, "Point") < 0)
         return NULL;
-    JS_AddModuleExport(ctx, m, "Point");
     return m;
 }
