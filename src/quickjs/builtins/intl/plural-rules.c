@@ -31,9 +31,14 @@ static QJSIntlPluralService *plural_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_plural) {
+        const QJSIntlData *data = js_intl_data(ctx);
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlPluralService *service;
-        QJSIntlStatus status = qjs_intl_plural_open(&allocator, &service);
+        QJSIntlStatus status;
+
+        if (!data)
+            return NULL;
+        status = qjs_intl_plural_open(&allocator, data, &service);
         if (js_intl_error(ctx, status, "plural initialization"))
             return NULL;
         rt->intl_plural = service;
