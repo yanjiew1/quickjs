@@ -74,6 +74,7 @@ static QJSIntlDecimal parse(const QJSIntlAllocator *allocator, const char *text)
     QJSIntlDecimal value;
     QJSIntlBytes bytes = {text, strlen(text)};
 
+    assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_OK);
     assert(qjs_intl_decimal_parse(allocator, bytes, &value) == QJS_INTL_OK);
     return value;
 }
@@ -233,7 +234,8 @@ static void test_parse(const QJSIntlAllocator *allocator)
     static const char *invalid[] = {
         "", "+", ".", "1.2.3", "1e", "1e+", " 1", "1 ", "0x10", "NaN", "Infinity",
     };
-    static const char *overflow[] = {"1e1000000001", "1e-1000000001", "0.1e-1000000000"};
+    static const char *overflow[] = {"1e1000000001", "1e-1000000001", "0.1e-1000000000",
+                                     "0e1000000001", "0.0e-1000000000", "1e1000000001x"};
     QJSIntlDecimal value;
     QJSIntlDecimalResult output;
     QJSIntlBytes bytes;
@@ -245,16 +247,30 @@ static void test_parse(const QJSIntlAllocator *allocator)
         assert(qjs_intl_decimal_parse(allocator, bytes, &value) ==
                QJS_INTL_INVALID_ARGUMENT);
         assert(!value.digits);
+        assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_INVALID_ARGUMENT);
     }
     for (i = 0; i < sizeof(overflow) / sizeof(overflow[0]); i++) {
         bytes.data = overflow[i];
         bytes.length = strlen(overflow[i]);
         assert(qjs_intl_decimal_parse(allocator, bytes, &value) == QJS_INTL_OVERFLOW);
         assert(!value.digits);
+        assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_OVERFLOW);
     }
     bytes.data = "1\0";
     bytes.length = 2;
     assert(qjs_intl_decimal_parse(allocator, bytes, &value) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_INVALID_ARGUMENT);
+    bytes = (QJSIntlBytes){"x", (size_t)INT32_MAX + 1};
+    assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_OVERFLOW);
+    /* Validation and parsing share limits even when zero normalization would
+       otherwise erase the exponent. Accepted spelling remains unchanged. */
+    {
+        static const char *valid[] = {".1", "1.", "+0", "-000.000", "00.10e+2"};
+        for (i = 0; i < sizeof(valid) / sizeof(valid[0]); i++) {
+            bytes = (QJSIntlBytes){valid[i], strlen(valid[i])};
+            assert(qjs_intl_decimal_validate(bytes) == QJS_INTL_OK);
+        }
+    }
     value = parse(allocator, "-000.000");
     assert(value.negative && value.length == 1 && !strcmp(value.digits, "0"));
     qjs_intl_decimal_clear(allocator, &value);
