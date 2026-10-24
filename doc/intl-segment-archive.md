@@ -30,17 +30,16 @@ source origins. Dictionary and suppression graph construction remain independent
 of word/sentence matching policy.
 
 The archive generation identity and both rule/list fingerprints contain the
-SHA-256 of a reproducible JSON recipe. The recipe includes the exact CLDR and
-dictionary pins, selected locales, Unicode/semantic versions and hashes of
-deterministic producer C/Python sources and Unicode tables. Only source CRLF
-newlines normalize to LF; other producer bytes and whitespace remain significant.
-Executable paths, compiler binaries, timestamps and local cache history are
-excluded. Successful Unicode property-query range counts and hashes are recorded
-separately in the preparation manifest, using only facts requested by this
-invocation even when the underlying resolver already has cached queries.
+SHA-256 of a small data-input recipe: actual CLDR inventory, actual dictionary
+file hashes (including the license), selected locales and supported Unicode /
+semantic profile. Declared release provenance is recorded separately.
+Generator source comments, compiler binaries, paths and timestamps are not
+inputs to this identity. A producer code change affects artifacts only when
+its output changes; archive and section hashes identify that output.
+Successful Unicode property-query facts remain in the preparation manifest.
 
 `source_inputs.Inputs` tracks reads for this invocation independently of a
-reader's previous activity. The manifest records authenticated CLDR/dictionary
+reader's previous activity. The manifest records consumed CLDR/dictionary
 file hashes, explicit source corrections, captured streams/routes, raw ordered
 suppression origins, section payload hashes and license/notice hashes.
 These identities support pairing and reproduction; they are not signatures or
@@ -62,7 +61,7 @@ every retained graph/program and their own resource limits.
 The local archive string IDs may differ from the final formatter pool. Locale
 IDs must not differ: silently renumbering just one section would select another
 locale's program or list. Final generation must pair the exact completed registry
-and source/compiler recipe instead of copying arbitrary prepared sections.
+and data-input recipe instead of copying arbitrary prepared sections.
 
 ## Licenses and explicit host command
 
@@ -88,10 +87,12 @@ Normal engine builds consume the prepared final binary offline.
 
 ## Final pack integration
 
-For a production native pack, pass `--compiled-segmentation` to
-`tools/intl/generate.py` together with its compiled collation archive. The
-producer recomputes the completed registry and recipe before transferring
-sections 39/40/41. The enclosing manifest records the segmentation recipe and
+For a production native pack, pass `--compiled-segmentation` and its existing
+`--segmentation-manifest` to `tools/intl/generate.py`, together with compiled
+collation. Final generation verifies the sidecar's archive size/hash, recomputes
+its input fingerprint and matches the current CLDR inventory and locale
+registry before transferring sections 39/40/41. This binds stages without
+requiring final generation to reopen dictionary text. The enclosing manifest records the segmentation recipe and
 the final generation identity includes every transferred payload hash.
 Minimal generation accepts no segmentation archive and retains no dictionaries.
 
