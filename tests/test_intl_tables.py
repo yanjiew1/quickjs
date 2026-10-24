@@ -39,6 +39,7 @@ from test_intl_relative_patterns import Sources as RelativeSources
 from test_intl_duration_patterns import Sources as DurationSources
 from test_intl_dayperiod_rules import Sources as DayPeriodSources
 import dayperiod_rules
+import dayperiod_tables
 from test_intl_timezone_presentation import DTD as TIMEZONE_PRESENTATION_DTD
 import number_patterns
 import number_pattern_syntax
@@ -262,22 +263,21 @@ class VerifiedFixture(Sources):
 
 class TableTests(unittest.TestCase):
 
-    def test_generated_source_registry_and_global_preferences(self):
+    def test_generated_source_registry_and_selected_preferences(self):
         for profile in ('minimal', 'native'):
             source = VerifiedFixture()
             binary, manifest = generate.generate(source, profile)
             result = check_data.verify(source, binary, manifest)
             self.assertEqual(result['profile'], profile)
-            self.assertGreaterEqual(result['global_numbering_locales'], result['locales'])
-        # A consistent, structurally valid minimal pack can still lose an
-        # unselected locale's global preferences. The source audit must notice.
+            self.assertEqual(result['numbering_locales'], result['locales'])
+        # A structurally valid pack can still lose a selected locale's default
+        # preferences. The source audit must notice, independently of framing.
         source = VerifiedFixture()
         binary, manifest = generate.generate(source, 'minimal')
         decoded = tables.validate(binary)
         parts = dict(decoded['envelope']['sections'])
         count, payload = parts[bundle.NUMBERING_PREFERENCES]
-        dropped = next(row[0] for row in decoded['numbering']['locales']
-                       if row[0] not in decoded['locales'])
+        dropped = 'en'
         rows = [payload[at:at + 20] for at in range(0, len(payload), 20)
                 if decoded['strings'][struct.unpack_from('<I', payload, at)[0]] != dropped]
         self.assertEqual(len(rows), count - 1)
@@ -288,7 +288,7 @@ class TableTests(unittest.TestCase):
         generation = acquire.digest(acquire.json_bytes(changed['inputs']))
         binary = bundle.pack(parts, bytes.fromhex(generation), 'minimal')
         changed.update(generation=generation, sha256=acquire.digest(binary), bytes=len(binary))
-        with self.assertRaisesRegex(ValueError, 'global source numbering locales'):
+        with self.assertRaisesRegex(ValueError, 'selected numbering locales'):
             check_data.verify(source, binary, changed)
 
 
@@ -387,10 +387,16 @@ class TableTests(unittest.TestCase):
                 self.fail('prepared English interval source is missing yMd/d')
             rules = view['dayperiod_rules']
             self.assertIsNotNone(rules)
-            self.assertEqual(len(rules['rows']), 178)
             groups = {(kind, tag): values for kind, tag, values in rules['rows']}
-            self.assertIn(('midnight', 'at', 0, 0), groups['selection', 'gsw'])
-            self.assertIn(('format', 'hi-Latn'), groups)
+            if profile == 'native':
+                self.assertEqual(len(groups), 178)
+                self.assertIn(('midnight', 'at', 0, 0), groups['selection', 'gsw'])
+                self.assertIn(('format', 'hi-Latn'), groups)
+            else:
+                self.assertEqual(set(groups), {(kind, tag) for kind in ('format', 'selection')
+                                               for tag in ('en', 'root')})
+            self.assertIn(('midnight', 'at', 0, 0), groups['format', 'en'])
+            self.assertNotIn(('midnight', 'at', 0, 0), groups['selection', 'en'])
             self.assertNotIn(('format', 'sr-Latn'), groups)
             eras = view['calendar_eras']
             self.assertIsNotNone(eras)
@@ -614,9 +620,13 @@ class TableTests(unittest.TestCase):
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
         self.assertEqual(full_view['preferences'], minimal_view['preferences'])
-        self.assertEqual(full_view['numbering'], minimal_view['numbering'])
+        self.assertEqual(full_view['numbering']['systems'], minimal_view['numbering']['systems'])
+        self.assertEqual(minimal_view['numbering']['locales'],
+                         tuple(row for row in full_view['numbering']['locales']
+                               if row[0] in minimal_view['locales']))
         self.assertEqual(full_view['timezone_presentation'], minimal_view['timezone_presentation'])
-        self.assertEqual(full_view['dayperiod_rules'], minimal_view['dayperiod_rules'])
+        self.assertEqual(minimal_view['dayperiod_rules'],
+                         dayperiod_tables.select(full_view['dayperiod_rules'], minimal_view['locales']))
         self.assertEqual(full_view['calendar_eras'], {'rows': ()})
         self.assertEqual(full_view['calendar_eras'], minimal_view['calendar_eras'])
         self.assertEqual(full_view['collation_root'], minimal_view['collation_root'])

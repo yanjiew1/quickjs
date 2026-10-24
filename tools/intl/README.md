@@ -952,8 +952,9 @@ For the last two fields, `0xffffffff` means absent and `0xfffffffe` means
 explicitly blocked. Required fields cannot use either sentinel. All words are
 little-endian. The decoder checks both sections together, including canonical
 order, numeric scalar uniqueness, rule syntax and mandatory Latin/root data.
-Both profiles retain complete numbering metadata, including synthetic regional
-fallbacks. Rule references are not formatter support declarations.
+Both profiles retain every explicit numbering definition. Native retains all
+source defaults, including synthetic regional fallbacks; minimal keeps defaults
+only for its selected formatter identities. Rule references are not formatter support declarations.
 
 `src/intl/locale/numbering-data.c` owns the C schema validation and borrowed
 definition/preference queries. It checks exact-key ordering, Unicode digit
@@ -1902,9 +1903,11 @@ work with an independent build directory.
 
 The sections contain sorted UTF-8 strings, a checked locale-parent registry,
 locale identity metadata, regional/script preferences, and deduplicated sets
-of resolved list templates. Both profiles retain all identity and preference
-metadata. `--profile minimal` selects English and its parents for formatter
-records; `native` retains the full graph. Section IDs
+of resolved list templates. Both profiles retain global identity, regional
+preferences and explicit numbering definitions. Minimal keeps numbering defaults
+only for its selected formatter identities and day-period rules for their simple
+prefix/root fallback closure, including both format and selection rule kinds.
+Minimal offers `en` and `en-US`; native retains the full graph. Section IDs
 and string IDs are stable within a generation, not across source upgrades.
 The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
