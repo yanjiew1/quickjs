@@ -198,7 +198,7 @@ int main(void)
     QJSIntlDatePattern pattern;
     QJSIntlFormatted result;
     size_t locale, count;
-    assert(!qjs_intl_number_open(&allocator, &service));
+    assert(!qjs_intl_number_open(&allocator, NULL, &service));
     assert(!qjs_intl_number_available(service, &tags, &count));
     for (locale = 0; locale < count; locale++)
         if (tags[locale].length == 2 && !memcmp(tags[locale].data, "en", 2))
