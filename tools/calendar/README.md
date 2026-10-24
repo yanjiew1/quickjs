@@ -13,6 +13,9 @@ revisions and hashes remain in the pin, with the complete Unicode license.
 They are acquired and parsed only by the explicit update importer below.
 Normal builds are offline and do not parse source documents or run source code.
 
+See the [calendar JSON format](../../doc/calendar-json-format.md) for field
+definitions, row examples, epoch-day conventions and coverage requirements.
+
 ## Persian leap years
 
 The University of Tehran calendar authority publishes leap markers for
