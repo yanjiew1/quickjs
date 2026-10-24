@@ -1564,8 +1564,9 @@ Rounding, fractional exact-point eligibility, `a`/`b`/`B` token policy and missi
 AM/PM fallback belong to the formatter. Profile and formatter integration follow;
 source collection alone does not establish DateTimeFormat capability.
 
-Optional section 34 retains explicit day-period origins in global kind/locale
-rows and interns shared immutable rule lists. The version-1 closed code enum
+Optional section 34 retains explicit day-period origins in kind/locale rows
+and interns shared immutable rule lists. Native keeps all source rows; minimal
+keeps both kinds for its selected locales and their simple-prefix/root closure. The version-1 closed code enum
 follows `dayperiod_codes.CODES`; forms distinguish exact points and half-open
 intervals. Its header is `(version, map_count, rule_count)`; directory count is
 the number of three-word kind/locale/map rows. Two-word map spans address
