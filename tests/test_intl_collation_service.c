@@ -289,7 +289,7 @@ int main(void)
     qjs_intl_collator_close(NULL);
     assert(!qjs_intl_collation_open(&allocator, &service));
     assert(!qjs_intl_collation_available(service, &available, &count));
-    assert(TEST_INTL_PROFILE ? count > 2 : count == 2);
+    assert(TEST_INTL_PROFILE ? count > 2 : count == 1);
     en = find(available, count, "en");
 
     /* Sweep persistent service owners and an early validation allocation.

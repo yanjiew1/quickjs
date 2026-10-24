@@ -84,7 +84,7 @@ int main(void)
         assert(tag.length == 4 && !memcmp(tag.data, "root", 4));
     }
     assert(defaults + 1 == data.locales.count);
-    assert(TEST_INTL_PROFILE ? defaults > 2 : defaults == 2);
+    assert(TEST_INTL_PROFILE ? defaults > 2 : defaults == 1);
 
     for (i = 0; i < compiled.program_count; i++) {
         assert(used[i]);

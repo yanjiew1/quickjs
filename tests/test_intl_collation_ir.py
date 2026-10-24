@@ -115,7 +115,8 @@ class IRTests(unittest.TestCase):
         expected = {target for row in ir.collation_bindings.from_catalog(c, 'minimal')
                     for target in (row.sort, row.search) if target is not None}
         self.assertEqual(set(identities(minimal)), expected)
-        self.assertIn(('en-US', 'special', ''), expected)
+        self.assertNotIn(('en-US', 'special', ''), expected)
+        self.assertIn(('en-US', 'special', ''), identities(native))
         self.assertIn(('root', 'search', ''), expected)
         self.assertIn(('root', 'emoji', ''), expected)
         self.assertNotIn(('fr', 'private-helper', ''), expected)

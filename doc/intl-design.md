@@ -302,8 +302,8 @@ Use `icu4c`, not an ambiguous `icu` alias, for the ICU4C profile and correspondi
 provider selections. These names describe planned options, not existing ones.
 Initially keep the default disabled to preserve the current feature set until
 the implementation gates pass. `minimal` is a native data profile using the
-same algorithms, initially with `en` and `en-US`; it is not a third algorithm
-backend. Include all required semantics, numbering systems and appropriate
+same algorithms, offering only `en` with internal root inheritance; it is not
+a third algorithm backend. Include all required semantics, numbering systems and appropriate
 calendar/zone coverage even in that profile.
 
 | Profile | Delivery | Intl algorithms/data | Unicode operations | Calendar extensions | Named zones |
@@ -434,7 +434,7 @@ required; changing a default does not retroactively change existing formatters.
 
 Prefer a supported canonical host locale in the intersection of enabled
 Intl service constructors' available locale sets, with an explicitly documented common fallback such as
-`en-US`. Validate embedder overrides against that intersection. Other requested
+`en`. Validate embedder overrides against that intersection. Other requested
 locale sets may differ across constructors; preserve specified nested negotiation.
 Keep API capabilities and metadata consistent with executable behavior.
 See [service locale requirements](https://tc39.es/ecma402/#sec-internal-slots).
@@ -762,9 +762,9 @@ combine all their changes into one commit or defer an independent ready module.
 
 ### Initial Segmenter profile
 
-The `minimal` build exposes `Intl.Segmenter` with module-specific `en`/`en-US`
-availability. Its plain C contract lives in `src/intl/segment/segment.h`; the
-Unicode-default backend delegates grapheme, word and sentence boundaries to the
+The `minimal` build exposes `Intl.Segmenter` with `en` availability. Regional
+English requests use standard prefix matching to `en`. Its plain C contract
+lives in `src/intl/segment/segment.h`; the Unicode-default backend delegates grapheme, word and sentence boundaries to the
 shared Unicode 18 algorithms. It does not claim to execute CLDR break rules or
 dictionary tailoring. Minimal word-like status means the segment contains a
 Unicode Letter or Decimal_Number. Native uses the same status policy after

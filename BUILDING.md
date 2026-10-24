@@ -64,11 +64,14 @@ into the interpreter used by runtime tests.
 For version upgrades, alternate data sources and candidate-pin generation, see
 the [data maintenance guide](doc/data-updates.md).
 
-Intl is disabled by default. `-Dintl=minimal` enables English/root locale data;
-`-Dintl=native` enables the locale data in CLDR 49's official common release.
+Intl is disabled by default. `-Dintl=minimal` offers only `en`, with internal
+root data for inheritance. `-Dintl=native` enables the locale data in CLDR 49's official common release.
 Both profiles use native C algorithms, without an ICU dependency, source-data
 download or runtime XML parser. Prepared data is embedded in one compilation
-unit. Generated data objects remain outside LTO.
+unit. Generated data objects remain outside LTO. Regional requests such as
+`en-US` resolve to `en` in minimal through standard prefix matching; their
+identities remain valid for `Intl.Locale`. See the [Test262 locale notes](doc/test262-locales.md)
+for the corresponding descriptor-test adaptation.
 
 Both profiles provide `Intl.getCanonicalLocales()`, `Intl.supportedValuesOf()`,
 `Intl.Locale`, `Intl.Collator`, `Intl.ListFormat`, `Intl.PluralRules`,
@@ -78,7 +81,7 @@ standard methods. Locale inventories and supported values reflect the selected
 module, data profile and calendar/timezone configuration.
 
 Native segmentation uses compiled CLDR rules and dictionaries for scripts that
-require word dictionaries. Minimal segmentation supports `en`/`en-US` with
+require word dictionaries. Minimal segmentation offers `en` with
 Unicode 18 default grapheme, word and sentence boundaries. String locale case
 conversion implements Unicode's Turkish, Azeri and Lithuanian context-sensitive
 rules. Number and BigInt locale methods use the intrinsic NumberFormat;

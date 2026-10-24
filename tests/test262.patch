@@ -187,3 +187,84 @@ diff --git a/test/intl402/Temporal/ZonedDateTime/links.js b/test/intl402/Tempora
 +  assert.sameValue(instance.timeZoneId, zone);
 +  assert.sameValue(instance.equals(new Temporal.ZonedDateTime(0n, formerTarget)), false);
 +}
+diff --git a/test/intl402/DisplayNames/prototype/resolvedOptions/return-object.js b/test/intl402/DisplayNames/prototype/resolvedOptions/return-object.js
+--- a/test/intl402/DisplayNames/prototype/resolvedOptions/return-object.js
++++ b/test/intl402/DisplayNames/prototype/resolvedOptions/return-object.js
+@@ -50,12 +50,12 @@
+   3. Let newDesc be the PropertyDescriptor { [[Value]]: V, [[Writable]]: true, [[Enumerable]]: true,
+     [[Configurable]]: true }.
+   ...
+-locale: [en-US]
++locale: [en]
+ features: [Intl.DisplayNames-v2, Reflect]
+ includes: [propertyHelper.js, compareArray.js]
+ ---*/
+
+-const dn = new Intl.DisplayNames('en-US', {type: 'language'});
++const dn = new Intl.DisplayNames('EN', {type: 'language'});
+
+ const options = dn.resolvedOptions();
+ const other = dn.resolvedOptions();
+@@ -72,7 +72,7 @@
+ );
+
+ verifyProperty(options, 'locale', {
+-  value: 'en-US',
++  value: 'en',
+   writable: true,
+   enumerable: true,
+   configurable: true
+diff --git a/test/intl402/ListFormat/prototype/resolvedOptions/type.js b/test/intl402/ListFormat/prototype/resolvedOptions/type.js
+--- a/test/intl402/ListFormat/prototype/resolvedOptions/type.js
++++ b/test/intl402/ListFormat/prototype/resolvedOptions/type.js
+@@ -14,12 +14,12 @@
+ features: [Intl.ListFormat]
+ ---*/
+
+-const lf = new Intl.ListFormat("en-us", { "style": "short", "type": "unit" });
++const lf = new Intl.ListFormat("EN", { "style": "short", "type": "unit" });
+ const options = lf.resolvedOptions();
+ assert.sameValue(Object.getPrototypeOf(options), Object.prototype, "Prototype");
+
+ verifyProperty(options, "locale", {
+-  value: "en-US",
++  value: "en",
+   writable: true,
+   enumerable: true,
+   configurable: true,
+diff --git a/test/intl402/RelativeTimeFormat/prototype/resolvedOptions/type.js b/test/intl402/RelativeTimeFormat/prototype/resolvedOptions/type.js
+--- a/test/intl402/RelativeTimeFormat/prototype/resolvedOptions/type.js
++++ b/test/intl402/RelativeTimeFormat/prototype/resolvedOptions/type.js
+@@ -14,12 +14,12 @@
+ features: [Intl.RelativeTimeFormat]
+ ---*/
+
+-const rtf = new Intl.RelativeTimeFormat("en-us", { "style": "short", "numeric": "auto" });
++const rtf = new Intl.RelativeTimeFormat("EN", { "style": "short", "numeric": "auto" });
+ const options = rtf.resolvedOptions();
+ assert.sameValue(Object.getPrototypeOf(options), Object.prototype, "Prototype");
+
+ verifyProperty(options, "locale", {
+-  value: "en-US",
++  value: "en",
+   writable: true,
+   enumerable: true,
+   configurable: true,
+diff --git a/test/intl402/Segmenter/prototype/resolvedOptions/type-without-lbs.js b/test/intl402/Segmenter/prototype/resolvedOptions/type-without-lbs.js
+--- a/test/intl402/Segmenter/prototype/resolvedOptions/type-without-lbs.js
++++ b/test/intl402/Segmenter/prototype/resolvedOptions/type-without-lbs.js
+@@ -15,12 +15,12 @@
+ features: [Intl.Segmenter]
+ ---*/
+
+-const rtf = new Intl.Segmenter("en-us", { "lineBreakStyle": "loose", "granularity": "word" });
++const rtf = new Intl.Segmenter("EN", { "lineBreakStyle": "loose", "granularity": "word" });
+ const options = rtf.resolvedOptions();
+ assert.sameValue(Object.getPrototypeOf(options), Object.prototype, "Prototype");
+
+ verifyProperty(options, "locale", {
+-  value: "en-US",
++  value: "en",
+   writable: true,
+   enumerable: true,
+   configurable: true,

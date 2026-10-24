@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     uint8_t *script;
     assert(argc == 2 && rt);
     ctx = JS_NewContext(rt);
-    assert(ctx && !JS_SetIntlDefaultLocale(ctx, "en-US"));
+    assert(ctx && !JS_SetIntlDefaultLocale(ctx, "en"));
     global = JS_GetGlobalObject(ctx);
     assert(JS_SetPropertyStr(ctx, global, "readLocaleOptions",
                              JS_NewCFunction(ctx, read_options, "readLocaleOptions", 2)) >= 0);
