@@ -83,34 +83,29 @@ def persian(text):
             'rows': rows}
 
 
-def ummalqura(text):
-    pattern = re.compile(r'PackedHijriYearData::try_new\((\d{4}), '
-                         r'\[([ls, ]+)\], gregorian\((\d+), (\d+), (\d+)\)\)\.unwrap\(\),')
-    rows = []
+def ummalqura(data):
+    """Validate the maintained ICU4X-derived facts, including both civil joins."""
+    if (type(data) is not dict or type(data.get('schema')) is not int or
+            data['schema'] != 1 or data.get('calendar') != 'islamic-umalqura' or
+            type(data.get('first_year')) is not int or data['first_year'] != 1300 or
+            type(data.get('end_epoch_day')) is not int or
+            type(data.get('rows')) is not list or len(data['rows']) != 301):
+        raise ValueError('invalid Umm al-Qura factual data')
     previous_end = None
-    for line in text.split('#[test]', 1)[0].splitlines():
-        if not line.strip().startswith('PackedHijriYearData::try_new('):
-            continue
-        match = pattern.fullmatch(line.strip())
-        if match is None:
-            raise ValueError('malformed ICU4X Umm al-Qura row')
-        year, months, gy, gm, gd = match.groups()
-        lengths = months.split(', ')
-        if len(lengths) != 12 or any(m not in ('l', 's') for m in lengths):
-            raise ValueError('invalid Umm al-Qura month sequence')
-        if int(year) != 1300 + len(rows):
-            raise ValueError('Umm al-Qura years missing, duplicated or unordered')
-        day = (datetime.date(int(gy), int(gm), int(gd)) - EPOCH).days
-        days = 348 + lengths.count('l')
+    for index, row in enumerate(data['rows']):
+        if type(row) is not list or len(row) != 3 or any(type(v) is not int for v in row):
+            raise ValueError('invalid Umm al-Qura row')
+        year, day, mask = row
+        if year != 1300 + index or not 0 <= mask < 4096:
+            raise ValueError('invalid Umm al-Qura year or month mask')
+        days = 348 + sum((mask >> bit) & 1 for bit in range(12))
         if days not in (354, 355) or previous_end is not None and previous_end != day:
             raise ValueError('inconsistent Umm al-Qura year boundaries')
-        mask = sum((m == 'l') << (11 - i) for i, m in enumerate(lengths))
-        rows.append([int(year), day, mask])
         previous_end = day + days
-    if len(rows) != 301 or rows[0][1] != -31826 or previous_end != 74839:
+    if (data['rows'][0][1] != -31826 or previous_end != 74839 or
+            data['end_epoch_day'] != previous_end):
         raise ValueError('Umm al-Qura publication coverage or epoch mismatch')
-    return {'schema': 1, 'calendar': 'islamic-umalqura', 'first_year': 1300,
-            'end_epoch_day': previous_end, 'rows': rows}
+    return data
 
 
 def official_persian_rows(text):
@@ -152,8 +147,7 @@ def main():
     parser.add_argument('--verify-persian-pdf', type=Path)
     args = parser.parse_args()
     pin = checked_sources()
-    datasets = [persian((SOURCES / 'kabise.txt').read_text(encoding='utf-8')),
-                ummalqura((SOURCES / 'ummalqura_data.rs').read_text(encoding='utf-8'))]
+    datasets = [persian((SOURCES / 'kabise.txt').read_text(encoding='utf-8'))]
     if args.verify_persian_pdf:
         verify_publication(args.verify_persian_pdf, pin, datasets[0])
     for data in datasets:

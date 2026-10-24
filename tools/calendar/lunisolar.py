@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from acquire import SOURCES, atomic_write, checked_sources, digest
+from acquire import SOURCES, atomic_write, checked_sources, digest, read_normalized
 
 EPOCH = datetime.date(1970, 1, 1)
 
@@ -112,44 +112,40 @@ def approximate_months(row):
     return result
 
 
-def korea_precomputed(text):
-    """Decode pinned ICU4X records without executing Rust or its astronomy code."""
-    pattern = re.compile(r'PackedEastAsianTraditionalYearData::new\((\d{4}), '
-                         r'\[([ls, ]+)\], (None|Some\((\d+)\)), '
-                         r'gregorian\((\d+), (\d+), (\d+)\)\),')
-    rows = []
+def korea_precomputed(data):
+    """Validate all factual years, including the two non-emitted padding years."""
+    require(type(data) is dict and type(data.get('schema')) is int and
+            data['schema'] == 1 and data.get('calendar') == 'dangi' and
+            type(data.get('first_year')) is int and data['first_year'] == 1912 and
+            type(data.get('end_epoch_day')) is int and
+            type(data.get('rows')) is list and len(data['rows']) == 191,
+            'invalid ICU4X Korean factual data')
     previous_end = None
-    for line in text.split('#[test]', 1)[0].splitlines():
-        if not line.strip().startswith('PackedEastAsianTraditionalYearData::new('):
-            continue
-        match = pattern.fullmatch(line.strip())
-        require(match is not None, 'malformed ICU4X Korean year')
-        year, words, kind, leap, gy, gm, gd = match.groups()
-        year = int(year)
-        bits = words.split(', ')
-        require(year == 1912 + len(rows) and len(bits) == 13 and
-                all(bit in ('l', 's') for bit in bits),
-                'incomplete ICU4X Korean years or months')
-        # ICU4X stores the ordinal of the inserted month, not its nominal code.
-        leap = int(leap) - 1 if leap is not None else 0
-        require(kind == 'None' or 1 <= leap <= 12, 'invalid Korean leap month')
-        lengths = [29 + (bit == 'l') for bit in bits[:12 + bool(leap)]]
-        date = datetime.date(int(gy), int(gm), int(gd))
-        require(date.year == year and date.month in (1, 2), 'invalid Korean new year')
-        day = (date - EPOCH).days
+    for index, row in enumerate(data['rows']):
+        require(type(row) is list and len(row) == 4, 'invalid Korean row')
+        year, day, lengths, leap = row
+        require(all(type(v) is int for v in (year, day, leap)) and
+                year == 1912 + index and 0 <= leap <= 12 and
+                type(lengths) is list and len(lengths) == 12 + bool(leap) and
+                all(type(n) is int and n in (29, 30) for n in lengths),
+                'invalid Korean year or month sequence')
+        first = (datetime.date(year, 1, 1) - EPOCH).days
+        march = (datetime.date(year, 3, 1) - EPOCH).days
+        require(first <= day < march, 'invalid Korean new year')
         require(previous_end is None or day == previous_end,
                 'discontinuous ICU4X Korean years')
-        previous_end = day + sum(lengths)
-        rows.append([year, day, lengths, leap])
-    # The source includes two padding years beyond its advertised 2100 range.
-    require([r[0] for r in rows] == list(range(1912, 2103)),
-            'incomplete ICU4X Korean precomputed coverage')
-    return rows
+        # Padding years never reach pack validation; check their full shape too.
+        days = sum(lengths)
+        require(days in ((383, 384, 385) if leap else (353, 354, 355)),
+                'invalid Korean year length')
+        previous_end = day + days
+    require(previous_end == data['end_epoch_day'], 'invalid Korean terminal boundary')
+    return data['rows']
 
 
-def extend_dangi(data, text):
+def extend_dangi(data, facts):
     """Keep KASI dates and add explicitly identified precomputed future years."""
-    rows = korea_precomputed(text)
+    rows = korea_precomputed(facts)
     existing = {r[0]: r for r in data['rows']}
     for row in rows:
         if row[0] in existing:
@@ -158,7 +154,7 @@ def extend_dangi(data, text):
     result['rows'] = data['rows'] + [r for r in rows if 2051 <= r[0] <= 2100]
     last = result['rows'][-1]
     result['end_epoch_day'] = last[1] + sum(last[2])
-    result['precomputed_source'] = 'icu4x-korea-data.rs'
+    result['precomputed_source'] = 'icu4x-korea-data.json'
     result['precomputed_span'] = [data['primary_span'][1], result['end_epoch_day']]
     # The former approximate 2050 M12 also agrees with the precomputed source.
     result['approximate_months'] = []
@@ -230,7 +226,7 @@ def normalize(cache, boundary_tool):
     require(boundary['schema'] == 1 and boundary['role'] == 'approximation' and
             len(boundary['years']) == 2, 'invalid boundary export')
     approx = {r['calendar']: approximate_months(r) for r in boundary['years']}
-    korean = (SOURCES / 'icu4x-korea-data.rs').read_text(encoding='utf-8')
+    korean = read_normalized(pin, 'icu4x-korea-data.json')
     result = [merge('chinese', primary_pmo, approx['chinese']),
               extend_dangi(merge('dangi', primary_kasi, approx['dangi']), korean)]
     for data in result:

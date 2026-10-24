@@ -6,7 +6,7 @@ import datetime
 import json
 from pathlib import Path
 
-from acquire import SOURCES, atomic_write, checked_sources, digest
+from acquire import SOURCES, atomic_write, checked_sources, digest, read_normalized
 from bundle import pack, unpack
 from normalize import EPOCH, japanese_eras, persian, ummalqura
 from lunisolar import korea_precomputed
@@ -15,11 +15,11 @@ from lunisolar import korea_precomputed
 def datasets():
     pin = checked_sources()
     normalized = [persian((SOURCES / 'kabise.txt').read_text(encoding='utf-8')),
-                  ummalqura((SOURCES / 'ummalqura_data.rs').read_text(encoding='utf-8'))]
+                  ummalqura(read_normalized(pin, 'islamic-umalqura.json'))]
     result = []
     for data in normalized:
         saved = SOURCES.parent / (data['calendar'] + '.json')
-        if json.loads(saved.read_text()) != data:
+        if data['calendar'] == 'persian' and json.loads(saved.read_text()) != data:
             raise ValueError('normalized calendar differs from source: ' + data['calendar'])
         years = []
         if data['calendar'] == 'persian':
@@ -34,10 +34,7 @@ def datasets():
                        'end_epoch_day': data['end_epoch_day'], 'version': version, 'years': years})
     for name in ('chinese', 'dangi'):
         path = SOURCES.parent / (name + '.json')
-        raw = path.read_bytes()
-        if digest(raw) != pin['normalized'][path.name]['sha256']:
-            raise ValueError('modified normalized lunisolar publication: ' + name)
-        data = json.loads(raw.decode('ascii'))
+        data = read_normalized(pin, path.name)
         first, end = data['primary_span']
         required_first, required_end = data['required_span']
         if data['schema'] != 1 or data['calendar'] != name or not first <= required_first < required_end <= end:
@@ -49,15 +46,15 @@ def datasets():
             raise ValueError('incomplete normalized calendar years')
         version = name + '-publications-20261019-model1'
         if name == 'dangi':
-            source = 'icu4x-korea-data.rs'
-            expected = korea_precomputed((SOURCES / source).read_text(encoding='utf-8'))
+            source = 'icu4x-korea-data.json'
+            expected = korea_precomputed(read_normalized(pin, source))
             saved = {r[0]: r for r in data['rows']}
             if (data.get('precomputed_source') != source or
                     data.get('precomputed_span') != [end, data['end_epoch_day']] or
                     data['approximate_months'] or
                     any(saved[row[0]] != row for row in expected if row[0] <= 2100)):
                 raise ValueError('normalized Dangi differs from precomputed source')
-            version = 'dangi-kasi-icu4x-' + pin['sources'][source]['revision']
+            version = 'dangi-kasi-icu4x-' + pin['sources']['icu4x-korea-data.rs']['revision']
         years = [(day, months, leap) for year, day, months, leap in data['rows']]
         result.append({'calendar': name, 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'years': years,

@@ -7,6 +7,9 @@ Its required publication ranges take precedence over arithmetic approximations.
 [`data/calendar/pin.json`](../../data/calendar/pin.json) records exact source
 identities. Raw redistributable receipts live
 in `data/calendar/sources`; normalized factual records live in `data/calendar`.
+The maintained ICU4X inputs are parsed JSON, not Rust source. Original Rust
+revisions and hashes remain in the pin, with the complete Unicode license.
+They are acquired and parsed only by the explicit update importer below.
 Normal builds are offline and do not parse source documents or run source code.
 
 ## Persian leap years
@@ -57,9 +60,7 @@ old Japanese calendar and are not interpreted as Gregorian dates.
 To update eras, review a new released CLDR source against the government
 announcement and specification, replace the vendored source/license, and
 update their revision and byte hashes in
-[`data/calendar/pin.json`](../../data/calendar/pin.json). Then run
-normalization
-and generation below, and commit the source, `japanese.json`, binary and
+[`data/calendar/pin.json`](../../data/calendar/pin.json). Then run normalization and generation below, and commit the source, `japanese.json`, binary and
 manifest together. No C lookup change is needed for another era. CI compares
 the regenerated JSON and binary; a synthetic sixth-era test verifies lookup
 and year resolution with additional data. Updates require rebuilding the
@@ -79,9 +80,29 @@ Reproduce normalized records offline, then compare them with the repository:
 ```sh
 python3 tools/calendar/normalize.py --output-dir /path/to/build/calendar
 cmp data/calendar/persian.json /path/to/build/calendar/persian.json
-cmp data/calendar/islamic-umalqura.json /path/to/build/calendar/islamic-umalqura.json
 cmp data/calendar/japanese.json /path/to/build/calendar/japanese.json
 ```
+
+To update the ICU4X facts, acquire only the original source receipts, then
+import into a separate candidate directory:
+
+```sh
+python3 tools/calendar/acquire.py --cache /path/to/calendar-cache \
+  --source ummalqura_data.rs --source icu4x-korea-data.rs
+python3 tools/calendar/import_icu4x.py --cache /path/to/calendar-cache \
+  --output-dir /path/to/build/calendar-facts
+cmp data/calendar/islamic-umalqura.json /path/to/build/calendar-facts/islamic-umalqura.json
+cmp data/calendar/icu4x-korea-data.json /path/to/build/calendar-facts/icu4x-korea-data.json
+```
+
+The importer authenticates the cache against the original source hashes before
+parsing. Review source updates and their candidate facts before replacing the
+maintained JSON and its normalized hash in the data pin. Ordinary generation
+validates and consumes those authenticated JSON bytes directly. Korean facts
+retain all 1912–2102 records, including padding years and the nominal leap-month
+number converted from ICU4X's inserted ordinal. They are algorithmic precomputed
+data, not additional official KASI publication. The KASI overlaps remain checked
+when reconstructing the composite Dangi dataset.
 
 To independently compare all official PDF leap markers, install `pdftotext`
 and add `--verify-persian-pdf /path/to/calendar-cache/persian-official.pdf`.
@@ -123,9 +144,10 @@ every precomputed year join. Native and JavaScript regression tests check the
 return to our approximation in 2101.
 `primary_span` and `required_span` retain their original coverage, while
 `precomputed_source` and `precomputed_span` identify the extension separately.
-The vendored Rust source is only parsed as data by Python; no Rust toolchain
-or ICU library is needed to build or run QuickJS. Its Unicode License V3
-receipt is `data/calendar/sources/LICENSE-ICU4X`.
+Ordinary generation reads the maintained JSON facts. Only the explicit update
+importer parses the authenticated original Rust as data; no Rust toolchain or
+ICU library is needed. The Unicode License V3 receipt remains at
+`data/calendar/sources/LICENSE-ICU4X`.
 
 [Pinned Korean precomputed source](https://github.com/unicode-org/icu4x/blob/e078031999870d4f263635c319a79cb19543ccfc/components/calendar/src/cal/east_asian_traditional/korea_data.rs)
 

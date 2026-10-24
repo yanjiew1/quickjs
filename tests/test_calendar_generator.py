@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Calendar source identity, normalization and bounded acquisition contracts."""
+import copy
 import importlib.util
 import io
 import json
@@ -31,6 +32,7 @@ with mock.patch.dict(sys.modules, {'acquire': acquire, 'normalize': normalize,
                                   'bundle': bundle, 'lunisolar': lunisolar}):
     generate = load_tool('generate')
     embed = load_tool('embed')
+    icu4x = load_tool('import_icu4x')
 
 
 class AcquisitionTests(unittest.TestCase):
@@ -69,12 +71,64 @@ class AcquisitionTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b'valid')
             self.assertEqual([p.name for p in path.parent.iterdir()], ['source'])
 
+    def test_selected_source_acquisition_is_offline_and_rejects_unknown_names(self):
+        sources = {'chosen': {'vendored': False}, 'ignored': {'vendored': False}}
+        with tempfile.TemporaryDirectory() as directory:
+            argv = ['acquire', '--cache', directory, '--source', 'chosen', '--offline']
+            with mock.patch.object(sys, 'argv', argv), \
+                    mock.patch.object(acquire, 'checked_sources', return_value={'sources': sources}), \
+                    mock.patch.object(acquire, 'fetch') as fetch:
+                acquire.main()
+                fetch.assert_called_once_with(Path(directory) / 'chosen', sources['chosen'], True)
+            argv[4] = 'unknown'
+            with mock.patch.object(sys, 'argv', argv), \
+                    mock.patch.object(acquire, 'checked_sources', return_value={'sources': sources}), \
+                    mock.patch.object(acquire, 'fetch') as fetch:
+                with self.assertRaises(ValueError):
+                    acquire.main()
+                fetch.assert_not_called()
+
+    def test_normalized_json_authentication_and_duplicate_keys(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'facts.json'
+            raw = b'{"schema":1}'
+            path.write_bytes(raw)
+            pin = {'normalized': {'facts.json': {'sha256': acquire.digest(raw)}}}
+            with mock.patch.object(acquire, 'SOURCES', root / 'sources'):
+                self.assertEqual(acquire.read_normalized(pin, 'facts.json'), {'schema': 1})
+                path.write_bytes(b'{"schema":2}')
+                with self.assertRaises(ValueError):
+                    acquire.read_normalized(pin, 'facts.json')
+                raw = b'{"schema":1,"schema":2}'
+                path.write_bytes(raw)
+                pin['normalized']['facts.json']['sha256'] = acquire.digest(raw)
+                with self.assertRaises(ValueError):
+                    acquire.read_normalized(pin, 'facts.json')
+
+    def test_icu4x_import_authenticates_before_parsing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'ummalqura_data.rs').write_bytes(b'changed')
+            pin = {'sources': {'ummalqura_data.rs': {'sha256': acquire.digest(b'expected')}}}
+            with mock.patch.object(icu4x, 'parse_ummalqura_rust') as parse:
+                with self.assertRaises(ValueError):
+                    icu4x.import_records(root, pin)
+                parse.assert_not_called()
+        with self.assertRaises(ValueError):
+            icu4x.parse_ummalqura_rust(
+                'PackedHijriYearData::try_new(1300, [l, s], '
+                'gregorian(1883, 11, 1)).unwrap(),')
+        with self.assertRaises(ValueError):
+            icu4x.parse_korean_rust('')
+
 
 class NormalizationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.persian_text = (acquire.SOURCES / 'kabise.txt').read_text(encoding='utf-8')
-        cls.umm_text = (acquire.SOURCES / 'ummalqura_data.rs').read_text(encoding='utf-8')
+        cls.umm_facts = acquire.read_normalized(acquire.checked_sources(),
+                                                'islamic-umalqura.json')
 
     def test_complete_persian_coverage_and_derived_boundary(self):
         data = normalize.persian(self.persian_text)
@@ -95,7 +149,7 @@ class NormalizationTests(unittest.TestCase):
                 normalize.persian(text)
 
     def test_complete_ummalqura_and_civil_join(self):
-        data = normalize.ummalqura(self.umm_text)
+        data = normalize.ummalqura(self.umm_facts)
         self.assertEqual(len(data['rows']), 301)
         self.assertEqual(data['rows'][0], [1300, -31826, 0xAAA])
         self.assertEqual(data['end_epoch_day'], 74839)
@@ -106,12 +160,18 @@ class NormalizationTests(unittest.TestCase):
         self.assertEqual(data, json.loads((ROOT / 'data/calendar/islamic-umalqura.json').read_text()))
 
     def test_ummalqura_rejects_corrupt_records(self):
-        for text in (self.umm_text.replace('try_new(1300,', 'try_new(1301,'),
-                     self.umm_text.replace('gregorian(1883, 11, 1)', 'gregorian(1883, 11, 2)'),
-                     self.umm_text.replace('[l, s, l, s, l, s, l, s, l, s, l, s]', '[l, s]'),
-                     self.umm_text.replace('try_new(1600,', 'try_new(1601,')):
+        mutations = [(0, 0, 1301), (0, 1, -31825), (0, 2, 4096),
+                     (0, 2, True), (0, 1, -31826.0), (-1, 0, 1601)]
+        for row, field, value in mutations:
+            data = copy.deepcopy(self.umm_facts)
+            data['rows'][row][field] = value
             with self.assertRaises(ValueError):
-                normalize.ummalqura(text)
+                normalize.ummalqura(data)
+        for field, value in [('schema', True), ('end_epoch_day', 74840),
+                             ('rows', self.umm_facts['rows'][:-1])]:
+            data = dict(self.umm_facts, **{field: value})
+            with self.assertRaises(ValueError):
+                normalize.ummalqura(data)
 
     def test_pdf_normalization_preserves_star_meaning(self):
         rows = normalize.persian(self.persian_text)['rows']
@@ -270,7 +330,8 @@ class LunisolarTests(unittest.TestCase):
             actual = lunisolar.merge(name, primary, boundary)
             if name == 'dangi':
                 actual = lunisolar.extend_dangi(actual,
-                    (acquire.SOURCES / 'icu4x-korea-data.rs').read_text())
+                    acquire.read_normalized(acquire.checked_sources(),
+                                            'icu4x-korea-data.json'))
             self.assertEqual(actual, saved)
             self.assertEqual(len(approximate), 11 if name == 'chinese' else 0)
             with self.assertRaises(ValueError):
@@ -282,7 +343,8 @@ class LunisolarTests(unittest.TestCase):
                 lunisolar.merge(name, primary, changed)
 
     def test_korean_precomputed_coverage_and_conflict_rejection(self):
-        source = (acquire.SOURCES / 'icu4x-korea-data.rs').read_text()
+        source = acquire.read_normalized(acquire.checked_sources(),
+                                         'icu4x-korea-data.json')
         rows = lunisolar.korea_precomputed(source)
         self.assertEqual([r[0] for r in rows], list(range(1912, 2103)))
         data = json.loads((ROOT / 'data/calendar/dangi.json').read_text())
@@ -299,12 +361,28 @@ class LunisolarTests(unittest.TestCase):
         bad['rows'][-1][1] += 1
         with self.assertRaises(ValueError):
             lunisolar.extend_dangi(bad, source)
-        for text in (source.replace('new(2051,', 'new(2052,'),
-                     source.replace('gregorian(2051, 2, 11)', 'gregorian(2051, 2, 12)'),
-                     source.replace('Some(3)', 'Some(1)', 1),
-                     source.replace('new(2102,', 'new(2103,')):
+        leap_row = next(i for i, row in enumerate(rows) if row[3])
+        mutations = [(2051 - 1912, 0, 2052), (2051 - 1912, 1, 29627),
+                     (leap_row, 3, 0), (-1, 0, 2103), (0, 3, True),
+                     (0, 1, float(rows[0][1])), (-1, 1, rows[-1][1] + 1)]
+        for row, field, value in mutations:
+            changed = copy.deepcopy(source)
+            changed['rows'][row][field] = value
             with self.assertRaises(ValueError):
-                lunisolar.korea_precomputed(text)
+                lunisolar.korea_precomputed(changed)
+        changed = copy.deepcopy(source)
+        changed['rows'][0][2][0] = 31
+        with self.assertRaises(ValueError):
+            lunisolar.korea_precomputed(changed)
+        with self.assertRaises(ValueError):
+            lunisolar.korea_precomputed(dict(source, schema=1.0))
+        # A matching terminal boundary must not hide an impossible padding year.
+        changed = copy.deepcopy(source)
+        padding = changed['rows'][-1]
+        padding[2][padding[2].index(29)] = 30
+        changed['end_epoch_day'] += 1
+        with self.assertRaises(ValueError):
+            lunisolar.korea_precomputed(changed)
 
     def test_pmo_literal_grammar_and_expected_record(self):
         data = json.loads((ROOT / 'data/calendar/chinese.json').read_text())
