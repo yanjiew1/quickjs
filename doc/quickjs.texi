@@ -292,7 +292,11 @@ The following features are not supported yet:
 
 @subsection ECMA402
 
-ECMA402 (Internationalization API) is not supported.
+ECMA-402 (Internationalization API) is optional. Build with
+@code{-Dintl=minimal} for English data or @code{-Dintl=native} for the compiled
+CLDR locale data. Both profiles use native C implementations without ICU.
+Intl is disabled by default. See @file{BUILDING.md} for the supported APIs,
+data profiles and calendar/timezone options.
 
 @section Modules
 
