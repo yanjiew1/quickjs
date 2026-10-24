@@ -153,8 +153,6 @@ if intl_enabled
     'quickjs/builtins/intl/supported-values.c',
   )
   support_sources += files(
-    'intl/collation/contexts.c',
-    'intl/collation/elements.c',
     'intl/collation/match.c',
     'intl/collation/keys.c',
     'intl/collation/base.c',
@@ -163,9 +161,6 @@ if intl_enabled
     'intl/collation/ranked-elements.c',
     'intl/collation/ranked-compare.c',
     'intl/collation/trie.c',
-    'intl/collation/logical.c',
-    'intl/collation/root-data.c',
-    'intl/collation/weights.c',
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
     'intl/common/range-compose.c',
