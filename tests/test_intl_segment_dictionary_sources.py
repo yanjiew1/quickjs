@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Offline source integrity, release identity and dictionary-license retention."""
 import copy
-import hashlib
 from pathlib import Path
 import sys
 import tempfile
@@ -26,7 +25,6 @@ class DictionarySourcesTests(unittest.TestCase):
             data = ('license\n' if row['name'] == 'LICENSE' else 'ภาษา\n').encode('utf-8')
             row['bytes'] = len(data)
             row['sha256'] = acquire.digest(data)
-            row['git_blob'] = hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
             (self.root / row['name']).write_bytes(data)
 
     def test_offline_preparation_and_consumed_identity(self):
@@ -40,29 +38,41 @@ class DictionarySourcesTests(unittest.TestCase):
         self.pin['files'][0]['sha256'] = '0' * 64
         self.assertNotEqual(sources.pin['files'][0]['sha256'], '0' * 64)
 
-    def test_consumption_rechecks_bytes_and_length(self):
-        sources = dictionaries.Sources(self.root, self.pin)
+    def test_supplied_bytes_and_length_need_not_match_pin(self):
         path = self.root / 'thaidict.txt'
-        original = path.read_bytes()
-        path.write_bytes(b'x' * len(original))
-        with self.assertRaises(ValueError):
+        path.write_bytes(b'custom words of another size\n')
+        sources = dictionaries.Sources(self.root, self.pin)
+        self.assertEqual(sources.read('thaidict.txt'), path.read_bytes())
+        self.assertEqual(sources.identity()['files']['thaidict.txt'],
+                         acquire.digest(path.read_bytes()))
+        # A single generation cannot mix versions of one consumed input.
+        path.write_bytes(b'changed after the first read')
+        with self.assertRaisesRegex(ValueError, 'changed during generation'):
             sources.read('thaidict.txt')
-        self.assertNotIn('thaidict.txt', sources.consumed)
-        path.write_bytes(original[:-1])
-        with self.assertRaises(ValueError):
-            dictionaries.prepare(self.cache, True, self.pin)
-        path.write_bytes(original)
-        self.assertEqual(sources.read('thaidict.txt'), original)
-
-    def test_missing_license_is_not_a_usable_cache(self):
-        (self.root / 'LICENSE').unlink()
-        with self.assertRaises(ValueError):
-            dictionaries.Sources(self.root, self.pin)
         with self.assertRaises(ValueError):
             dictionaries.prepare(self.cache, True, self.pin)
 
-    def test_release_urls_inventory_and_blob_identity(self):
-        for change in ['url', 'name', 'duplicate', 'blob']:
+    def test_supplied_files_keep_their_size_bound(self):
+        path = self.root / 'thaidict.txt'
+        path.write_bytes(b'x' * (dictionaries.MAX_FILE + 1))
+        with self.assertRaisesRegex(ValueError, 'byte limit'):
+            dictionaries.Sources(self.root, self.pin).read('thaidict.txt')
+
+    def test_missing_or_empty_license_is_not_a_usable_cache(self):
+        path = self.root / 'LICENSE'
+        for content in (None, b''):
+            if content is None:
+                path.unlink()
+            else:
+                path.write_bytes(content)
+            with self.subTest(content=content):
+                with self.assertRaises(ValueError):
+                    dictionaries.Sources(self.root, self.pin)
+                with self.assertRaises(ValueError):
+                    dictionaries.prepare(self.cache, True, self.pin)
+
+    def test_acquisition_requires_release_urls_inventory_and_hashes(self):
+        for change in ['url', 'name', 'duplicate', 'hash']:
             pin = copy.deepcopy(self.pin)
             if change == 'url':
                 pin['files'][0]['url'] = pin['files'][0]['url'].replace(pin['commit'], 'main')
@@ -71,7 +81,7 @@ class DictionarySourcesTests(unittest.TestCase):
             elif change == 'duplicate':
                 pin['files'][0] = copy.deepcopy(pin['files'][1])
             else:
-                pin['files'][0]['git_blob'] = '0' * 40
+                pin['files'][0]['sha256'] = '0' * 64
             with self.subTest(change=change), self.assertRaises(ValueError):
                 dictionaries.prepare(self.cache, True, pin)
 
