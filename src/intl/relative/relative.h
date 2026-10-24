@@ -22,7 +22,9 @@ typedef struct QJSIntlRelativeFormatter QJSIntlRelativeFormatter;
    required, realloc unused. They outlive all corresponding handles/results.
    Validate selected profile and numeric/plural dependencies. Errors reset *out;
    NULL closes are harmless. No matching, JS callbacks or option coercion. */
-QJSIntlStatus qjs_intl_relative_open(const QJSIntlAllocator *, QJSIntlRelativeService **);
+QJSIntlStatus qjs_intl_relative_open(const QJSIntlAllocator *allocator,
+                                     const struct QJSIntlData *checked_data,
+                                     QJSIntlRelativeService **out);
 void qjs_intl_relative_close(QJSIntlRelativeService *);
 /* Borrow sorted, extension-free available tags, excluding root, until close.
    Queries allocate nothing. Non-NULL outputs reset on failure. */
