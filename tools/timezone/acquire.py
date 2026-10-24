@@ -15,7 +15,14 @@ import tempfile
 import urllib.error
 import urllib.request
 
+ROOT = Path(__file__).resolve().parents[2]
+PIN = ROOT / 'data' / 'timezone' / 'pin.json'
 MAX_DOWNLOAD = 8 * 1024 * 1024
+SOURCE_NAMES = (
+    'africa', 'antarctica', 'asia', 'australasia', 'europe', 'northamerica',
+    'southamerica', 'etcetera', 'factory', 'backward', 'backzone', 'zone.tab',
+    'ziguard.awk', 'zic.c', 'private.h', 'tzfile.h', 'LICENSE',
+)
 
 
 def digest(data):
@@ -39,8 +46,9 @@ def atomic_write(path, data):
 def fetch(path, source, offline=False):
     expected = source['sha256']
     if path.is_file():
-        cached = path.read_bytes()
-        if digest(cached) == expected:
+        with path.open('rb') as source_file:
+            cached = source_file.read(MAX_DOWNLOAD + 1)
+        if len(cached) <= MAX_DOWNLOAD and digest(cached) == expected:
             return cached
     if offline:
         raise ValueError('missing or modified pinned input: ' + str(path))
@@ -62,27 +70,38 @@ def fetch(path, source, offline=False):
     return data
 
 
-def extract_sources(archive, destination, release, files):
-    """Extract only named, hash-checked regular files, never archive paths."""
+def extract_sources(archive, destination, release, names):
+    """Materialize only required regular files from authenticated archive bytes."""
     prefix = 'tz-' + release + '/'
+    wanted = {}
+    for name in names:
+        if Path(name).name != name or name in ('', '.', '..') or name in wanted.values():
+            raise ValueError('invalid required source name')
+        wanted[prefix + name] = name
     staged = {}
+    members = total = 0
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:gz') as tar:
-        for name, expected in files.items():
-            if Path(name).name != name or name in ('', '.', '..'):
-                raise ValueError('invalid pinned source name')
-            member = tar.getmember(prefix + name)
-            if not member.isfile() or member.size > MAX_DOWNLOAD:
-                raise ValueError('source is not a bounded regular file: ' + name)
+        for member in tar:
+            members += 1
+            total += member.size
+            # Bound traversal too: unrelated archive entries never become paths.
+            if member.size < 0 or members > 4096 or total > 8 * MAX_DOWNLOAD:
+                raise ValueError('timezone archive exceeds source bounds')
+            name = wanted.get(member.name)
+            if name is None:
+                continue
+            if name in staged or not member.isfile() or not 0 <= member.size <= MAX_DOWNLOAD:
+                raise ValueError('duplicate or invalid timezone source: ' + name)
             with tar.extractfile(member) as stream:
                 data = stream.read(MAX_DOWNLOAD + 1)
-            if digest(data) != expected:
-                raise ValueError('archive source differs from pin: ' + name)
+            if len(data) != member.size:
+                raise ValueError('incomplete timezone source: ' + name)
             staged[name] = data
-    # Validate the entire input set before replacing any extracted source.
+    if len(staged) != len(wanted):
+        raise ValueError('timezone archive is missing required sources')
+    # Validate the complete set before publishing any path, ignoring archive paths.
     for name, data in staged.items():
-        path = destination / name
-        if not path.is_file() or path.read_bytes() != data:
-            atomic_write(path, data)
+        atomic_write(destination / name, data)
 
 
 def main():
@@ -90,13 +109,11 @@ def main():
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
     args = parser.parse_args()
-    pin = json.loads(Path(__file__).with_name('pin.json').read_text())
+    pin = json.loads(PIN.read_text())
     tz = pin['tz']
-    archive = fetch(args.cache / ('tz-' + tz['release'] + '.tar.gz'),
-                    tz['archive'], args.offline)
-    extract_sources(archive, args.cache / ('tz-' + tz['release']),
-                    tz['release'], tz['files'])
-    metadata = Path(__file__).resolve().parents[2] / 'data' / 'timezone' / 'sources' / 'cldr'
+    fetch(args.cache / ('tz-' + tz['release'] + '.tar.gz'),
+          tz['archive'], args.offline)
+    metadata = ROOT / 'data' / 'timezone' / 'sources' / 'cldr'
     for name, source in pin['cldr']['files'].items():
         if digest((metadata / name).read_bytes()) != source['sha256']:
             raise ValueError('vendored CLDR source differs from pin: ' + name)
