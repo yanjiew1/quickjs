@@ -29,6 +29,8 @@
 #include <time.h>
 
 #if !defined(__EMSCRIPTEN__)
+#include "pool-padding.h"
+
 typedef struct TestLog {
     char text[128];
     size_t length;
@@ -238,24 +240,6 @@ static void test_realm_and_nonblocking_owner(void)
     JS_FreeRuntime(rt);
 }
 
-/* Retain spare small blocks while host allocations are forbidden. Memory
-   limits alone cannot reject allocations served by an existing arena. */
-static void *exhaust_pooled_free_blocks(JSRuntime *rt)
-{
-    void *padding = NULL, *ptr;
-    size_t size;
-
-    JS_SetMemoryLimit(rt, 0);
-    for (size = sizeof(void *); size <= 512; size += sizeof(void *)) {
-        while ((ptr = js_malloc_rt(rt, size)) != NULL) {
-            memcpy(ptr, &padding, sizeof(padding));
-            padding = ptr;
-        }
-    }
-    JS_SetMemoryLimit(rt, (size_t)-1);
-    return padding;
-}
-
 static void test_oom_does_not_publish_a_wait(void)
 {
     size_t budget;
@@ -273,7 +257,7 @@ static void test_oom_does_not_publish_a_wait(void)
         /* Keep intrinsic autoinitialization outside the calibrated operation. */
         eval_void(ctx, "void Atomics.waitAsync; var words = new Int32Array(shared)");
         function = eval(ctx, "(function () { return Atomics.waitAsync(words, 0, 0) })");
-        padding = exhaust_pooled_free_blocks(rt);
+        padding = test_pool_padding(rt);
         JS_ComputeMemoryUsage(rt, &usage);
         /* An unrestricted final call proves success independently of the
            number and sizes of arenas required by this architecture. */
@@ -299,12 +283,7 @@ static void test_oom_does_not_publish_a_wait(void)
         }
         JS_FreeValue(ctx, result);
         JS_FreeValue(ctx, function);
-        while (padding) {
-            void *next;
-            memcpy(&next, padding, sizeof(next));
-            js_free_rt(rt, padding);
-            padding = next;
-        }
+        test_pool_padding_free(rt, padding);
         JS_FreeContext(ctx);
         JS_FreeRuntime(rt);
     }
