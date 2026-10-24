@@ -30,6 +30,33 @@ static void release(void *opaque, void *ptr)
     free(ptr);
 }
 
+/* Keep authored text fixtures borrowed while giving the production composer
+   the owned text buffer required by its consuming contract. */
+static QJSIntlStatus join_fixture(const QJSIntlAllocator *allocator,
+                                  const QJSIntlFormatted *list,
+                                  const QJSIntlDurationComponent *components,
+                                  size_t count, size_t limit,
+                                  QJSIntlDurationFormatted *out)
+{
+    QJSIntlFormatted owned = *list;
+    QJSIntlStatus status;
+
+    if (!allocator)
+        return qjs_intl_duration_join_parts(NULL, &owned, components, count, limit, out);
+    owned.text = allocator->malloc(allocator->opaque,
+                                    (list->length ? list->length : 1) * sizeof(*owned.text));
+    if (!owned.text) {
+        memset(out, 0, sizeof(*out));
+        return QJS_INTL_NO_MEMORY;
+    }
+    if (list->length)
+        memcpy(owned.text, list->text, list->length * sizeof(*owned.text));
+    status = qjs_intl_duration_join_parts(allocator, &owned, components, count, limit, out);
+    if (owned.text)
+        allocator->free(allocator->opaque, owned.text);
+    return status;
+}
+
 static void check_parts(const QJSIntlDurationFormatted *result)
 {
     static const QJSIntlDurationPart expected[] = {
@@ -65,7 +92,7 @@ static void test_composition(const QJSIntlAllocator *allocator, Allocation *allo
     QJSIntlDurationFormatted result, zero = {0};
     size_t step;
 
-    assert(!qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result));
+    assert(!join_fixture(allocator, &list, components, 2, 9, &result));
     assert(!memcmp(result.text, text, sizeof(text)));
     check_parts(&result);
     text[0] = '9';
@@ -80,42 +107,42 @@ static void test_composition(const QJSIntlAllocator *allocator, Allocation *allo
         allocation->calls = 0;
         allocation->fail_at = step;
         memset(&result, 0xff, sizeof(result));
-        assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_NO_MEMORY);
+        assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_NO_MEMORY);
         assert(!memcmp(&result, &zero, sizeof(result)) && !allocation->live);
         allocation->fail_at = 0;
-        assert(!qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result));
+        assert(!join_fixture(allocator, &list, components, 2, 9, &result));
         qjs_intl_duration_result_clear(allocator, &result);
     }
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 8, &result) == QJS_INTL_OVERFLOW);
+    assert(join_fixture(allocator, &list, components, 2, 8, &result) == QJS_INTL_OVERFLOW);
     assert(!memcmp(&result, &zero, sizeof(result)) && !allocation->live);
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 1, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 1, 9, &result) == QJS_INTL_DATA_ERROR);
     list_parts[1].type = QJS_INTL_PART_INTEGER;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
     list_parts[1].type = QJS_INTL_PART_LITERAL;
     day[0].unit = QJS_TEMPORAL_UNIT_UNSET;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
     day[0].unit = QJS_TEMPORAL_DAY;
     day[1].start = 0;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
     day[1].start = 1;
     day[0].type = QJS_INTL_PART_ELEMENT;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
     day[0].type = QJS_INTL_PART_INTEGER;
     components[0].part_count = SIZE_MAX;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_OVERFLOW);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_OVERFLOW);
     components[0].part_count = 3;
     components[0].text.length = 2;
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+    assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
     components[0].text.length = 3;
     {
         uint16_t other[] = {'9', ' ', 'd'};
         components[0].text.data = other;
-        assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
+        assert(join_fixture(allocator, &list, components, 2, 9, &result) == QJS_INTL_DATA_ERROR);
         components[0].text.data = text;
     }
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 2, 0, &result) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_duration_join_parts(allocator, &list, components, 11, 9, &result) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_duration_join_parts(NULL, &list, components, 2, 9, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(join_fixture(allocator, &list, components, 2, 0, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(join_fixture(allocator, &list, components, 11, 9, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(join_fixture(NULL, &list, components, 2, 9, &result) == QJS_INTL_INVALID_ARGUMENT);
     assert(!allocation->live);
 }
 
@@ -129,7 +156,7 @@ static void test_equal_and_empty_elements(const QJSIntlAllocator *allocator)
     QJSIntlDurationPart last = {0, 1, QJS_INTL_PART_UNIT, QJS_TEMPORAL_HOUR};
     QJSIntlDurationComponent components[] = {{{text, 1}, &first, 1}, {{text + 2, 1}, &last, 1}};
     QJSIntlDurationFormatted result;
-    assert(!qjs_intl_duration_join_parts(allocator, &list, components, 2, 3, &result));
+    assert(!join_fixture(allocator, &list, components, 2, 3, &result));
     assert(result.part_count == 3 && result.parts[0].unit == QJS_TEMPORAL_DAY &&
            result.parts[2].unit == QJS_TEMPORAL_HOUR);
     qjs_intl_duration_result_clear(allocator, &result);
@@ -140,7 +167,7 @@ static void test_equal_and_empty_elements(const QJSIntlAllocator *allocator)
     parts[1].start = 0;
     parts[1].end = parts[2].start = parts[2].end = 1;
     components[0] = components[1] = (QJSIntlDurationComponent){{NULL, 0}, NULL, 0};
-    assert(!qjs_intl_duration_join_parts(allocator, &list, components, 2, 1, &result));
+    assert(!join_fixture(allocator, &list, components, 2, 1, &result));
     assert(result.length == 1 && result.part_count == 1 && result.text[0] == '|');
     assert(result.parts[0].unit == QJS_TEMPORAL_UNIT_COUNT);
     qjs_intl_duration_result_clear(allocator, &result);
@@ -148,13 +175,13 @@ static void test_equal_and_empty_elements(const QJSIntlAllocator *allocator)
         QJSIntlDurationPart empty = {0, 0, QJS_INTL_PART_LITERAL, QJS_TEMPORAL_DAY};
         components[0].parts = &empty;
         components[0].part_count = 1;
-        assert(!qjs_intl_duration_join_parts(allocator, &list, components, 2, 1, &result));
+        assert(!join_fixture(allocator, &list, components, 2, 1, &result));
         assert(result.part_count == 2 && result.parts[0].start == 0 && result.parts[0].end == 0);
         assert(result.parts[0].unit == QJS_TEMPORAL_DAY && result.parts[1].unit == QJS_TEMPORAL_UNIT_COUNT);
         qjs_intl_duration_result_clear(allocator, &result);
     }
     list = (QJSIntlFormatted){0};
-    assert(!qjs_intl_duration_join_parts(allocator, &list, NULL, 0, 1, &result));
+    assert(!join_fixture(allocator, &list, NULL, 0, 1, &result));
     assert(!result.length && !result.part_count && result.text && !result.parts);
     qjs_intl_duration_result_clear(allocator, &result);
 }
@@ -167,17 +194,51 @@ static void test_utf16(const QJSIntlAllocator *allocator)
     QJSIntlDurationPart number = {0, 4, QJS_INTL_PART_INTEGER, QJS_TEMPORAL_SECOND};
     QJSIntlDurationComponent component = {{text, 4}, &number, 1};
     QJSIntlDurationFormatted result;
-    assert(!qjs_intl_duration_join_parts(allocator, &list, &component, 1, 4, &result));
+    assert(!join_fixture(allocator, &list, &component, 1, 4, &result));
     assert(result.length == 4 && !memcmp(result.text, text, sizeof(text)));
     text[0] = 0;
     assert(result.text[0] == 0xd800);
     qjs_intl_duration_result_clear(allocator, &result);
 }
 
+static void test_text_transfer(const QJSIntlAllocator *allocator, Allocation *state)
+{
+    QJSIntlPart part = {0, 1, QJS_INTL_PART_ELEMENT};
+    QJSIntlDurationPart number = {0, 1, QJS_INTL_PART_INTEGER, QJS_TEMPORAL_HOUR};
+    QJSIntlDurationFormatted result, zero = {0};
+    QJSIntlFormatted list;
+    QJSIntlDurationComponent component;
+    uint16_t *text = allocator->malloc(allocator->opaque, sizeof(*text));
+
+    assert(text);
+    text[0] = '7';
+    list = (QJSIntlFormatted){text, 1, &part, 1};
+    component = (QJSIntlDurationComponent){{text, 1}, &number, 1};
+    state->fail_at = state->calls + 1;
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_duration_join_parts(allocator, &list, &component, 1, 1,
+                                        &result) == QJS_INTL_NO_MEMORY);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(list.text == text && list.length == 1 && list.parts == &part && text[0] == '7');
+    assert(state->live == 1);
+    state->fail_at = 0;
+    assert(!qjs_intl_duration_join_parts(allocator, &list, &component, 1, 1, &result));
+    assert(result.text == text && !list.text && !list.length && list.parts == &part);
+    assert(result.part_count == 1 && result.parts[0].unit == QJS_TEMPORAL_HOUR);
+    qjs_intl_duration_result_clear(allocator, &result);
+    assert(!state->live);
+
+    list = (QJSIntlFormatted){0};
+    assert(!qjs_intl_duration_join_parts(allocator, &list, NULL, 0, 1, &result));
+    assert(!result.text && !result.parts && !result.length && !result.part_count);
+    assert(!state->live);
+}
+
 int main(void)
 {
     Allocation allocation = {0};
     QJSIntlAllocator allocator = {&allocation, allocate, NULL, release};
+    test_text_transfer(&allocator, &allocation);
     test_composition(&allocator, &allocation);
     test_equal_and_empty_elements(&allocator);
     test_utf16(&allocator);

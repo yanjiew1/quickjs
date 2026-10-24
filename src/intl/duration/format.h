@@ -26,12 +26,15 @@ typedef struct QJSIntlDurationFormatted {
 
 /* ListFormatParts: replace element parts in order with their typed component
    parts, retaining number-origin units and untyped list/digital separators.
-   Borrow unchanged UTF-16 inputs, preserving NUL, lone surrogates and empty
+   Borrow component text/parts, preserving NUL, lone surrogates and empty
    elements. Require matching element text and complete part partitions.
    At most UNIT_COUNT components; allocator malloc/free and a nonzero UTF-16
-   limit are required. Fresh disjoint output owns two buffers at most, survives
-   all inputs, and resets on failure. No locale or formatting policy here. */
-QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *, const QJSIntlFormatted *list,
+   limit are required. list->text is owned by that allocator (or NULL when
+   empty); list->parts remains borrowed. Success transfers text to the fresh,
+   disjoint output and clears list->text/length; the caller still releases any
+   owned list parts. Failure resets output and leaves list unchanged. Results
+   survive the other inputs. No locale or formatting policy here. */
+QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *, QJSIntlFormatted *list,
                                          const QJSIntlDurationComponent *, size_t count,
                                          size_t limit, QJSIntlDurationFormatted *);
 void qjs_intl_duration_result_clear(const QJSIntlAllocator *, QJSIntlDurationFormatted *);

@@ -32,7 +32,7 @@ static QJSIntlStatus component_valid(const QJSIntlDurationComponent *component)
     return end == component->text.length ? QJS_INTL_OK : QJS_INTL_DATA_ERROR;
 }
 
-QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *allocator, const QJSIntlFormatted *list,
+QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *allocator, QJSIntlFormatted *list,
                                          const QJSIntlDurationComponent *components, size_t count,
                                          size_t limit, QJSIntlDurationFormatted *out)
 {
@@ -76,18 +76,11 @@ QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *allocator, co
     }
     if (end != list->length || element != count)
         return QJS_INTL_DATA_ERROR;
-    result.text = allocator->malloc(allocator->opaque, (list->length ? list->length : 1) * sizeof(*result.text));
-    if (!result.text)
-        return QJS_INTL_NO_MEMORY;
     if (parts) {
         result.parts = allocator->malloc(allocator->opaque, parts * sizeof(*result.parts));
-        if (!result.parts) {
-            qjs_intl_duration_result_clear(allocator, &result);
+        if (!result.parts)
             return QJS_INTL_NO_MEMORY;
-        }
     }
-    if (list->length)
-        memcpy(result.text, list->text, list->length * sizeof(*result.text));
     result.length = list->length;
     element = 0;
     for (i = 0; i < list->part_count; i++) {
@@ -105,6 +98,11 @@ QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *allocator, co
                 part->start, part->end, QJS_INTL_PART_LITERAL, QJS_TEMPORAL_UNIT_COUNT};
         }
     }
+    /* The list already owns the final text. Move it only after all fallible
+       validation/allocation, keeping the source intact on every error path. */
+    result.text = list->text;
+    list->text = NULL;
+    list->length = 0;
     *out = result;
     return QJS_INTL_OK;
 }
