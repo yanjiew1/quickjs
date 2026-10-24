@@ -29,13 +29,14 @@ no implicit Japanese `$FE` definition or other source correction.
 correction. The pinned Japanese tailoring still uses `$FE` after CLDR-18917
 removed that declaration from root in favor of ignore remaps. The explicit
 correction restores the historical `[$Format $Extend $ZWJ]` union before the
-first Japanese wrapper. It requires the exact CLDR commit, root/Japanese
-source hashes and declaration sequence; changed inputs require another review.
-Its input is the unmodified collector output; explicit declaration checks also
-guard the three inherited dependencies used by the inserted union.
+first Japanese wrapper. It matches the precise declaration sequence and its
+three inherited dependencies, without restricting source revisions or hashes.
+Already-correct or unrelated source is left to ordinary strict compilation.
+Its input is unmodified collector output; source hashes in the receipt describe
+the actual bytes used rather than an acceptance whitelist.
 
 This produces derived records and an immutable correction receipt. It never
-rewrites authenticated XML or changes strict raw compilation. The receipt marks
+rewrites supplied XML or changes strict raw compilation. The receipt marks
 the inserted declaration as synthetic despite the derived group's retained
 source identity. No other unresolved variable receives a fallback definition.
 The historical definition can be inspected in
