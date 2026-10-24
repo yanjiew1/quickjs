@@ -6,6 +6,7 @@ semantics. The C compiler and runtime reader retain that responsibility.
 import collation_archive as archive
 import collation_bindings
 import collation_groups
+import collation_root
 from cldr_xml import DataError
 
 
@@ -59,6 +60,7 @@ def pair(sources, profile, fingerprint, data):
 
     # Rule collection accounts for XML/keyword/inheritance inputs. Also record
     # the compiler's shared-root inputs even though pairing does not rebuild it.
+    sources.read(collation_root.SOURCE)
     sources.read(collation_groups.SOURCE)
     sources.read(collation_groups.SCRIPTS)
     return section
