@@ -39,7 +39,9 @@ typedef struct QJSIntlDisplayFormatter QJSIntlDisplayFormatter;
 /* Open the compile-time backend. Copy malloc/free callbacks and opaque state,
    which outlive all corresponding handles and results; realloc is unused.
    Failure resets *out. Closing NULL is harmless. No JS callbacks. */
-QJSIntlStatus qjs_intl_display_open(const QJSIntlAllocator *, QJSIntlDisplayService **);
+QJSIntlStatus qjs_intl_display_open(const QJSIntlAllocator *allocator,
+                                    const struct QJSIntlData *checked_data,
+                                    QJSIntlDisplayService **out);
 void qjs_intl_display_close(QJSIntlDisplayService *);
 /* Borrow sorted, unique extension-free available locales until service close.
    Exclude root; availability does not promise a name for every valid code.
