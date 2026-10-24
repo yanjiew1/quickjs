@@ -141,7 +141,9 @@ python3 tools/data/generate.py intl \
 ```
 
 The command compiles collation, prepares native segmentation, generates each
-requested pack and runs the source/manifest verifier. It retains per-stage logs
+requested pack and runs the source/manifest verifier. It also generates one
+independent raw collation oracle and manifest for `tests/data`; promote those
+with the corresponding production packs after review. It retains per-stage logs
 and `regeneration-report.json`, with finite stage timeouts and child cleanup.
 Output/log aliases into source trees are rejected before execution; existing
 logs must be regular files. Use `--profiles minimal` to omit native
