@@ -136,10 +136,11 @@ are separate formats, not QJIN encodings.
 
 1. Read the encoder, Python decoder, C reader and owning header together.
    Numeric enum order, field widths and each count's meaning are wire contracts.
-2. For an incompatible section change, update its section version and reader
-   rejection. Sections 1 through 16 have no local version word: changing their
-   layout needs an explicit compatibility design rather than inserting a word.
-   Change the outer version when changing the envelope contract.
+2. Change the writer, Python decoder, C reader and current format description
+   together. Development packs have no old-format compatibility guarantee;
+   do not add migration readers or version-negotiation machinery merely to
+   retain discarded layouts. Keep actual format identifiers and structural
+   rejection rules consistent across the current producers and consumers.
 3. Update authored fixtures, Python round-trip/corruption checks and C bounds,
    corruption, ownership and allocation-failure tests. Check 32-bit, unaligned
    and big-endian reads. Do not infer safety from a valid envelope alone.
@@ -147,6 +148,6 @@ are separate formats, not QJIN encodings.
    pinned inputs. Verify reproducible bytes and unchanged source semantics;
    update this document and the affected section reference together.
 
-[The generator guide](../tools/intl/README.md) describes acquisition, collectors,
-regeneration and tests. [The design](intl-design.md) defines the separation
-between ECMAScript bindings, functional services, shared modules and backends.
+[Data maintenance](data-updates.md) owns acquisition, pin updates and regeneration.
+[The tool map](../tools/intl/README.md) identifies collectors and diagnostics.
+[The architecture](intl-design.md) defines bindings, modules and ownership.
