@@ -5,7 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
-import sys
+from .io import read_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 MAX_FILE = 64 * 1024 * 1024
@@ -24,12 +24,7 @@ def digest(data):
 
 
 def read_file(path, limit=MAX_FILE):
-    # Bound the read itself: a size check alone races a growing local file.
-    with Path(path).open('rb') as stream:
-        data = stream.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError('input exceeds byte limit: ' + str(path))
-    return data
+    return read_bytes(path, limit)
 
 
 def kind_of(pin):
@@ -140,20 +135,8 @@ def refresh(template, candidate=None, files=None, archive=None,
                 row['bytes'] = len(data)
                 row.pop('git_blob', None)
         if kind == 'dictionaries':
-            # Existing tools are standalone scripts with a sibling acquire import.
-            # Bind that dependency only during loading, without changing sys.path
-            # or leaking an alias into another source family's maintenance work.
-            previous = sys.modules.get('acquire')
-            sys.modules['acquire'] = load_tool('qjs_pin_dictionary_acquire',
-                                               'tools/intl/acquire.py')
-            try:
-                tool = load_tool('qjs_pin_dictionary_sources',
-                                 'tools/intl/segment_dictionary_sources.py')
-            finally:
-                if previous is None:
-                    del sys.modules['acquire']
-                else:
-                    sys.modules['acquire'] = previous
+            tool = load_tool('qjs_pin_dictionary_sources',
+                             'tools/intl/segment_dictionary_sources.py')
             tool.validate_pin(pin)
 
     if data_dir is not None:
