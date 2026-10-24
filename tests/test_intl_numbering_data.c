@@ -154,20 +154,25 @@ int main(void)
         assert(preferences.finance == QJS_INTL_NUMBERING_ABSENT);
     } else {
         uint32_t locale;
-        /* Formatter projection may be minimal, while numbering metadata keeps
-           every source locale. Validate all selected formatter bindings here;
-           the authenticated source audit checks the complete global registry. */
-        assert(owner.preferences.count >= data.locales.count);
+        /* Defaults follow selected formatter identities. Explicit numbering
+           definitions remain global in both profiles. */
+        assert(owner.preferences.count == data.locales.count);
         for (locale = 0; locale < data.locales.count; locale++) {
             QJSIntlBytes tag;
             uint32_t parent;
             assert(!qjs_intl_data_locale(&data, locale, &tag, &parent));
             assert(!qjs_intl_numbering_preferences(&owner, tag, &preferences));
         }
-        assert(!qjs_intl_numbering_preferences(&owner, bytes("ar"), &preferences));
-        assert(preferences.standard == latin);
-        assert(!qjs_intl_numbering_system_at(&owner, preferences.native, &system));
-        equal(system.name, "arab");
+        if (data.pack.profile) {
+            assert(!qjs_intl_numbering_preferences(&owner, bytes("ar"), &preferences));
+            assert(preferences.standard == latin);
+            assert(!qjs_intl_numbering_system_at(&owner, preferences.native, &system));
+            equal(system.name, "arab");
+        } else {
+            assert(qjs_intl_numbering_preferences(&owner, bytes("ar"), &preferences) ==
+                   QJS_INTL_UNSUPPORTED);
+            assert(!qjs_intl_numbering_system_find(&owner, bytes("arab"), &index));
+        }
     }
     assert(qjs_intl_numbering_preferences(&owner, bytes("zz"), &preferences) ==
            QJS_INTL_UNSUPPORTED);
