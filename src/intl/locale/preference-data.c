@@ -129,35 +129,53 @@ static int key_at(const QJSIntlLocalePreferences *data, const QJSIntlSection *ta
            !qjs_intl_data_string(&data->data, key, out);
 }
 
+typedef struct PreferenceList {
+    uint32_t id, count;
+} PreferenceList;
+
+static int compare_lists(const void *left, const void *right)
+{
+    const PreferenceList *a = left, *b = right;
+    return (a->id > b->id) - (a->id < b->id);
+}
+
 static QJSIntlStatus validate_lists(const QJSIntlLocalePreferences *data,
                                     const QJSIntlAllocator *allocator,
                                     const QJSIntlSection *table, int hours,
-                                    uint32_t *checked)
+                                    PreferenceList *lists)
 {
     uint32_t i;
     int world = 0;
 
-    memset(checked, 0, (size_t)data->data.strings.count * sizeof(*checked));
     for (i = 0; i < table->count; i++) {
         QJSIntlBytes key, value;
-        QJSIntlStatus status;
         uint32_t id = field(table, 3, i, 1), count = field(table, 3, i, 2);
         if (!key_at(data, table, 3, i, &key) || !target(key) ||
             qjs_intl_data_string(&data->data, id, &value) || !count)
             return QJS_INTL_DATA_ERROR;
         world |= key.length == 3 && !memcmp(key.data, "001", 3);
-        /* Validate each pooled list once, so repeated references cannot make
-           validation quadratic in the total table/string-pool size. */
-        if (!checked[id]) {
-            status = tokens(allocator, value, count, hours);
-            if (status)
-                return status;
-            checked[id] = count;
-        } else if (checked[id] != count) {
-            return QJS_INTL_DATA_ERROR;
-        }
+        lists[i] = (PreferenceList){id, count};
     }
-    return world ? QJS_INTL_OK : QJS_INTL_DATA_ERROR;
+    if (!world)
+        return QJS_INTL_DATA_ERROR;
+
+    /* Group only referenced lists, not the entire string pool. Each grammar
+       gets its own pass: a valid calendar name need not be an hour cycle. */
+    qsort(lists, table->count, sizeof(*lists), compare_lists);
+    for (i = 0; i < table->count; i++) {
+        QJSIntlBytes value;
+        QJSIntlStatus status;
+        if (i && lists[i].id == lists[i - 1].id) {
+            if (lists[i].count != lists[i - 1].count)
+                return QJS_INTL_DATA_ERROR;
+            continue;
+        }
+        qjs_intl_data_string(&data->data, lists[i].id, &value);
+        status = tokens(allocator, value, lists[i].count, hours);
+        if (status)
+            return status;
+    }
+    return QJS_INTL_OK;
 }
 
 QJSIntlStatus qjs_intl_locale_preferences_open(const QJSIntlData *data,
@@ -165,7 +183,8 @@ QJSIntlStatus qjs_intl_locale_preferences_open(const QJSIntlData *data,
                                                QJSIntlLocalePreferences *out)
 {
     QJSIntlLocalePreferences result;
-    uint32_t i, *checked;
+    PreferenceList *lists;
+    uint32_t i, capacity;
     int world = 0;
     QJSIntlStatus status;
 
@@ -200,16 +219,18 @@ QJSIntlStatus qjs_intl_locale_preferences_open(const QJSIntlData *data,
             field(&result.scripts, 2, i, 1) > QJS_INTL_DIRECTION_RTL)
             return QJS_INTL_DATA_ERROR;
     }
-    if (sizeof(*checked) > SIZE_MAX / data->strings.count)
+    capacity = result.calendars.count > result.hours.count
+                   ? result.calendars.count : result.hours.count;
+    if (sizeof(*lists) > SIZE_MAX / capacity)
         return QJS_INTL_OVERFLOW;
-    checked = allocator->malloc(allocator->opaque,
-                                (size_t)data->strings.count * sizeof(*checked));
-    if (!checked)
+    lists = allocator->malloc(allocator->opaque,
+                              (size_t)capacity * sizeof(*lists));
+    if (!lists)
         return QJS_INTL_NO_MEMORY;
-    status = validate_lists(&result, allocator, &result.calendars, 0, checked);
+    status = validate_lists(&result, allocator, &result.calendars, 0, lists);
     if (!status)
-        status = validate_lists(&result, allocator, &result.hours, 1, checked);
-    allocator->free(allocator->opaque, checked);
+        status = validate_lists(&result, allocator, &result.hours, 1, lists);
+    allocator->free(allocator->opaque, lists);
     if (!status)
         *out = result;
     return status;
