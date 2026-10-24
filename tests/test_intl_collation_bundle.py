@@ -66,7 +66,8 @@ class BundleTests(unittest.TestCase):
             with patch.object(compiled.collation_bindings, 'collect', return_value=self.rows) as collect:
                 self.assertEqual(compiled.pair(source, profile, FINGERPRINT, self.data), (2, self.data))
             collect.assert_called_once_with(source, profile)
-            self.assertEqual(source.consumed, [compiled.collation_groups.SOURCE, compiled.collation_groups.SCRIPTS])
+            self.assertEqual(source.consumed, [compiled.collation_root.SOURCE, compiled.collation_groups.SOURCE,
+                                              compiled.collation_groups.SCRIPTS])
 
         for rows in ((self.rows[0]._replace(search=self.en),),
                      (self.rows[0]._replace(locale='fr'),),
