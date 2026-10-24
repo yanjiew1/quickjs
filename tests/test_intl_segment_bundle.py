@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Archive pairing, complete coverage and portable producer identities."""
+"""Archive pairing, complete coverage and data-input identities."""
 from pathlib import Path
 import sys
 import unittest
@@ -7,6 +7,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import bundle
+import acquire
+import copy
+import segment_dictionary_sources
 from cldr_xml import DataError
 import segment_bundle
 import segment_catalog
@@ -148,6 +151,15 @@ class SegmentBundleTests(unittest.TestCase):
             lists.assert_not_called()
             dictionaries.assert_not_called()
 
+    @staticmethod
+    def dictionary_receipt():
+        return {name: 'a' * 64 for name in segment_dictionary_sources.FAMILIES}
+
+    @staticmethod
+    def receipt(data, inputs):
+        return {'inputs': inputs, 'bytes': len(data), 'sha256': acquire.digest(data),
+                'fingerprint': segment_bundle.fingerprint(inputs).hex()}
+
     def test_pair_records_reads_and_uses_final_registry(self):
         class Reader:
             def __init__(self):
@@ -161,29 +173,58 @@ class SegmentBundleTests(unittest.TestCase):
                 return b'fixture'
 
         reader = Reader()
-        recipe = {'fixture': 1}
-        identity = segment_bundle.fingerprint(recipe)
+        files = {'common/segments/root.xml': acquire.digest(b'fixture')}
+        inputs = segment_bundle.recipe(files, self.dictionary_receipt(), self.tags)
+        identity = segment_bundle.fingerprint(inputs)
         parts = dict(self.parts)
         parts[bundle.SEGMENT_PROGRAMS] = segment_program_tables.encode(
             self.catalog.profiles, self.catalog.program_bindings, identity, 2)
         parts[bundle.SEGMENT_SUPPRESSIONS] = segment_suppression_tables.encode(
             self.catalog.lists, self.catalog.suppression_bindings, identity, 2)
-        with patch.object(segment_bundle, 'recipe', return_value=recipe):
-            sections, inputs = segment_bundle.pair(reader, {}, graph(), self.tags, self.pack(parts, identity))
-        self.assertEqual(inputs, recipe)
+        data = self.pack(parts, identity)
+        manifest = self.receipt(data, inputs)
+        sections, paired = segment_bundle.pair(reader, files, graph(), self.tags, data, manifest)
+        self.assertEqual(paired, inputs)
         self.assertEqual(set(sections), set(segment_bundle.SECTIONS))
         self.assertEqual(reader.reads, ['common/segments/root.xml', 'common/dtd/ldml.dtd'])
 
-    def test_recipe_ignores_checkout_newline_difference_only(self):
-        with patch.object(Path, 'read_bytes', return_value=b'source\n'):
-            lf = segment_bundle.recipe({'fixture': 1}, self.tags)
-        with patch.object(Path, 'read_bytes', return_value=b'source\r\n'):
-            crlf = segment_bundle.recipe({'fixture': 1}, self.tags)
-        with patch.object(Path, 'read_bytes', return_value=b'source \n'):
-            changed = segment_bundle.recipe({'fixture': 1}, self.tags)
-        self.assertEqual(lf, crlf)
-        self.assertNotEqual(segment_bundle.fingerprint(lf), segment_bundle.fingerprint(changed))
+        # A sidecar cannot authorize different bytes, data sources or registries.
+        for key, value in [('sha256', '0' * 64), ('bytes', len(data) + 1),
+                           ('fingerprint', '0' * 64)]:
+            with self.subTest(key=key), self.assertRaises(DataError):
+                segment_bundle.pair(reader, files, graph(), self.tags, data,
+                                    dict(manifest, **{key: value}))
+        for key, value in [('cldr_inventory', '0' * 64), ('locales', ['fr', 'root']),
+                           ('dictionaries', dict(self.dictionary_receipt(), LICENSE='b' * 64))]:
+            changed = copy.deepcopy(manifest)
+            changed['inputs'][key] = value
+            with self.subTest(key=key), self.assertRaises(DataError):
+                segment_bundle.pair(reader, files, graph(), self.tags, data, changed)
+        with self.assertRaises(DataError):
+            segment_bundle.pair(reader, dict(files, extra='0' * 64), graph(),
+                                self.tags, data, manifest)
+        for bad in (None, [], {}, dict(manifest, inputs=None), dict(manifest, inputs=[])):
+            with self.subTest(manifest=bad), self.assertRaises(DataError):
+                segment_bundle.pair(reader, files, graph(), self.tags, data, bad)
+        for bad in ({}, dict(self.dictionary_receipt(), extra='0' * 64),
+                    dict(self.dictionary_receipt(), LICENSE='z' * 64)):
+            changed = copy.deepcopy(manifest)
+            changed['inputs']['dictionaries'] = bad
+            with self.subTest(dictionaries=bad), self.assertRaises(DataError):
+                segment_bundle.pair(reader, files, graph(), self.tags, data, changed)
+        # A real sidecar is read from JSON, where tuples become lists.
+        import json
+        segment_bundle.pair(reader, files, graph(), self.tags, data,
+                            json.loads(json.dumps(manifest)))
 
+    def test_input_identity_ignores_producer_source_edits(self):
+        files = {'common/main/en.xml': 'b' * 64}
+        # Producer source files are not data inputs; comment/checkout changes
+        # need not churn otherwise identical compiled output.
+        with patch.object(Path, 'read_bytes', side_effect=AssertionError('producer read')):
+            before = segment_bundle.recipe(files, self.dictionary_receipt(), self.tags)
+        changed = segment_bundle.recipe(files, dict(self.dictionary_receipt(), LICENSE='c' * 64), self.tags)
+        self.assertNotEqual(segment_bundle.fingerprint(before), segment_bundle.fingerprint(changed))
 
     def test_final_pack_transfers_paired_sections_without_second_inventory(self):
         import availability
@@ -196,7 +237,7 @@ class SegmentBundleTests(unittest.TestCase):
         source = VerifiedFixture()
         final_graph, _ = availability.complete(parents.load(source))
         tags = availability.profile_locales(final_graph, 'native')
-        inputs = segment_bundle.recipe(source.pin, tags)
+        inputs = segment_bundle.recipe(source.manifest['files'], self.dictionary_receipt(), tags)
         identity = segment_bundle.fingerprint(inputs)
         programs = tuple(profile(kind, ()) for kind in
                          ('GraphemeClusterBreak', 'WordBreak', 'SentenceBreak'))
@@ -212,7 +253,8 @@ class SegmentBundleTests(unittest.TestCase):
                 (None,), tuple((locale, 0) for locale in range(len(tags))), identity, len(tags)),
         }
         archive = bundle.pack(parts, identity, 'native')
-        binary, manifest = generate.generate(source, 'native', compiled_segmentation=archive)
+        binary, manifest = generate.generate(source, 'native', compiled_segmentation=archive,
+                                             segmentation_manifest=self.receipt(archive, inputs))
         envelope = bundle.unpack(binary)
         for key in segment_bundle.SECTIONS:
             self.assertEqual(envelope['sections'][key], parts[key])
@@ -227,6 +269,10 @@ class SegmentBundleTests(unittest.TestCase):
             embed.render(binary, 'minimal')
         with self.assertRaisesRegex(ValueError, 'native profile'):
             generate.generate(source, 'minimal', compiled_segmentation=archive)
+        for arguments in ({'segmentation_manifest': self.receipt(archive, inputs)},
+                          {'compiled_segmentation': archive}):
+            with self.assertRaisesRegex(ValueError, 'required together'):
+                generate.generate(source, 'native', **arguments)
 
 
 class SourceInputsTests(unittest.TestCase):
