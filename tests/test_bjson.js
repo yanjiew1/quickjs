@@ -137,6 +137,23 @@ function bjson_test_empty_input()
     }
 }
 
+function bjson_test_truncated_bigint()
+{
+    /* The larger value also bypasses small allocation pools, so LSan can
+       observe missing decode cleanup even after the runtime is freed. */
+    for (const bits of [100n, 10000n]) {
+        const value = -(1n << bits);
+        const buf = bjson.write(value);
+        assert(bjson.read(buf, 0, buf.byteLength), value);
+        for (let length = 0; length < buf.byteLength; length++) {
+            let error;
+            try { bjson.read(buf, 0, length); }
+            catch (caught) { error = caught; }
+            assert(error instanceof SyntaxError);
+        }
+    }
+}
+
 function bjson_test_arraybuffer()
 {
     var buf, array_buffer;
@@ -273,6 +290,7 @@ function bjson_test_all()
     }
 
     bjson_test_empty_input();
+    bjson_test_truncated_bigint();
     bjson_test_arraybuffer();
     bjson_test_reference();
     bjson_test_tracking_typed_array();
