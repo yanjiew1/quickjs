@@ -21,7 +21,7 @@ def render(binary, profile=None):
              '#if defined(__has_attribute)', '#if __has_attribute(nonstring)',
              '__attribute__((nonstring))', '#endif', '#endif',
              'const uint8_t qjs_intl_native_bytes[%d] =' % len(binary)]
-    if bundle.SEGMENT_DICTIONARIES in bundle.unpack(binary)['sections']:
+    if bundle.SEGMENT_DICTIONARIES in decoded['envelope']['sections']:
         lines[3:3] = [
             ' * Dictionary data derived from ICU; see data/intl/LICENSE-SEGMENT-DICTIONARIES',
             ' * and data/intl/NOTICE-SEGMENT-DICTIONARIES for complete source attributions.',
