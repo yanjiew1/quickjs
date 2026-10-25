@@ -1,5 +1,6 @@
 /* Native named-zone behavior, independent of Intl and system zoneinfo. */
 import { assert, assertThrows } from "./assert.js";
+import * as std from "std";
 
 const ZDT = Temporal.ZonedDateTime;
 const hour = 3600000000000n;
@@ -26,6 +27,23 @@ function test_identities() {
     }
     assertThrows(RangeError, () => new ZDT(0n, "America/Not_A_Zone"));
     assertThrows(RangeError, () => new ZDT(0n, "America/New_York\0"));
+}
+
+function test_arithmetic_preserves_zone_identity() {
+    // Arithmetic consumes parsed rules; the separately owned spelling survives
+    // derived objects and GC, including a UTC alias versus a numeric offset.
+    let alias = ZDT.from("2024-03-10T00:00[uS/eAsTeRn]");
+    const shifted = alias.add({ days: 1 }).round("hour");
+    alias = null;
+    std.gc();
+    assert(shifted.timeZoneId, "US/Eastern");
+    assert(shifted.offset, "-04:00");
+    assert(shifted.toString().includes("[US/Eastern]"), true);
+    const utc = new ZDT(0n, "gMt").add({ hours: 1 }).round("hour");
+    const numeric = new ZDT(0n, "+00:00").add({ hours: 1 }).round("hour");
+    assert(utc.timeZoneId, "GMT");
+    assert(numeric.timeZoneId, "+00:00");
+    assert(utc.equals(numeric), false);
 }
 
 function test_gap_and_overlap() {
@@ -89,6 +107,7 @@ function test_history_and_transitions() {
 }
 
 test_identities();
+test_arithmetic_preserves_zone_identity();
 test_gap_and_overlap();
 test_day_arithmetic();
 test_history_and_transitions();
