@@ -222,8 +222,10 @@ int js_module_test_json(JSContext *ctx, JSValueConst attributes)
     if (JS_IsUndefined(attributes))
         return FALSE;
     str = JS_GetPropertyStr(ctx, attributes, "type");
-    if (!JS_IsString(str))
+    if (!JS_IsString(str)) {
+        JS_FreeValue(ctx, str);
         return FALSE;
+    }
     cstr = JS_ToCStringLen(ctx, &len, str);
     JS_FreeValue(ctx, str);
     if (!cstr)

@@ -36,6 +36,7 @@
 #define js_realloc2(ctx, ptr, size, pslack) js_realloc2_inline(ctx, ptr, size, pslack)
 #define js_malloc_usable_size(ctx, ptr) js_malloc_usable_size_inline(ctx, ptr)
 #include "quickjs.h"
+#include "quickjs-libc.h"
 #undef js_malloc
 #undef js_mallocz
 #undef js_free
@@ -2211,6 +2212,44 @@ static void test_utf16_public_api_oom(void)
     free(input);
 }
 
+static void test_module_attribute_value_ownership(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue attributes, exception;
+    JSMemoryUsage before, after;
+    double number;
+    const char *source = "({ get type() { throw 42; } })";
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &before);
+    attributes = JS_NewObject(ctx);
+    assert(!JS_IsException(attributes));
+    assert(JS_SetPropertyStr(ctx, attributes, "type", JS_NewObject(ctx)) >= 0);
+    assert(js_module_test_json(ctx, attributes) == 0);
+    assert(!JS_HasException(ctx));
+    JS_FreeValue(ctx, attributes);
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &after);
+    /* The helper's temporary reference must not keep the non-string alive. */
+    assert(after.obj_count == before.obj_count);
+
+    attributes = JS_Eval(ctx, source, strlen(source), "<attribute-getter>", 0);
+    assert(!JS_IsException(attributes));
+    assert(js_module_test_json(ctx, attributes) == 0);
+    assert(JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    assert(JS_IsNumber(exception));
+    assert(JS_ToFloat64(ctx, &number, exception) == 0 && number == 42);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, attributes);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 typedef struct ModuleAttributeIdentityState {
     int normalize_calls;
     int loader_calls;
@@ -3948,6 +3987,7 @@ int main(int argc, char **argv)
         { "module-normalize-rejection", test_module_normalize_rejection },
         { "module-normalize-setters", test_module_normalize_setters },
         { "module-normalize-bytecode", test_module_normalize_bytecode },
+        { "module-attribute-value-ownership", test_module_attribute_value_ownership },
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
