@@ -21,7 +21,7 @@
 
 fs = import('fs')
 
-if intl_enabled
+if intl_native
   test(
     'data-source-pins',
     python,
@@ -511,7 +511,7 @@ component_helpers = static_library(
   override_options: ['b_ndebug=false'],
   install: false,
 )
-if intl_enabled
+if intl_native
   intl_test_tools = static_library(
     'test-intl-tools',
     files(
@@ -618,7 +618,7 @@ if intl_enabled
   )
 endif
 
-if intl_enabled
+if intl_native
   intl_plural_rules_test = executable(
     'test_intl_plural_rules',
     files(
@@ -3472,7 +3472,7 @@ endif
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
-if intl_enabled
+if intl_native
   standalone += {
     'test_intl_date_local': files(
       'test_intl_date_local.c',
@@ -4235,27 +4235,31 @@ else
 endif
 if intl_enabled
   js_tests += {
-    'intl-profile': ['-m', 'tests/test_intl_profile.js', get_option('intl')],
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
-    'intl-supported-values': ['-m', 'tests/test_intl_supported_values.js', get_option('calendars'), get_option('timezone_backend')],
+    'intl-supported-values': ['-m', 'tests/test_intl_supported_values.js', get_option('calendars'), get_option('timezone_backend'), get_option('intl')],
     'intl-string-case': ['-m', 'tests/test_intl_string_case.js'],
     'intl-to-locale-string': ['-m', 'tests/test_intl_to_locale_string.js'],
-    'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
+    'intl-list-format': ['-m', 'tests/test_intl_list_format.js', get_option('intl')],
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-collator': ['-m', 'tests/test_intl_collator.js'],
-    'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js'],
-    'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js', get_option('calendars'), get_option('timezone_backend')],
+    'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js', get_option('intl')],
+    'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js', get_option('calendars'), get_option('timezone_backend'), get_option('intl')],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
-    'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
-    'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
+    'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js', get_option('intl')],
+    'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js', get_option('intl')],
   }
 endif
 if intl_enabled
   js_tests += {
     'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js'],
+  }
+endif
+if intl_native
+  js_tests += {
+    'intl-profile': ['-m', 'tests/test_intl_profile.js', get_option('intl')],
     'intl-segmenter-profile': ['-m', 'tests/test_intl_segmenter_profile.js', get_option('intl')],
   }
 endif
@@ -4403,7 +4407,7 @@ if native_calendars
   )
 endif
 
-if intl_enabled
+if intl_native
   foreach python_case : [
     ['intl-number-symbols', 'test_intl_number_symbols.py'],
     ['intl-currencies', 'test_intl_currencies.py'],
@@ -4444,7 +4448,7 @@ if get_option('intl') == 'native'
   endforeach
 endif
 
-if intl_enabled
+if intl_native
   test(
     'intl-scalar-trie',
     python,
@@ -4919,7 +4923,7 @@ if get_option('intl') == 'native'
   )
 endif
 
-if intl_enabled
+if intl_native
   foreach python_case : [
     ['intl-dayperiod-tables', 'test_intl_dayperiod_tables.py'],
     ['intl-date-style-tables', 'test_intl_date_style_tables.py'],
@@ -5249,7 +5253,7 @@ test(
 )
 
 # Exercise the actual C compiler's initialization of opaque prepared bytes.
-if intl_enabled
+if intl_native
   intl_embedding_fixture = custom_target(
     'intl-embedding-fixture',
     output: 'intl-embedding-fixture.c',
@@ -5296,3 +5300,43 @@ test(
   suite: ['repo', 'unit', 'build'],
   timeout: 30,
 )
+
+if intl_icu4c
+  icu4c_test_helpers = static_library(
+    'test-icu4c-helpers',
+    'icu4c/helpers.c',
+    c_args: host_args,
+    include_directories: inc,
+    override_options: ['b_ndebug=false'],
+    install: false,
+  )
+  foreach module : [
+    'support',
+    'locale',
+    'collation',
+    'list',
+    'segment',
+    'display',
+    'number',
+    'plural',
+    'relative',
+    'duration',
+    'datetime',
+  ]
+    app = executable(
+      'test_intl_icu4c_' + module,
+      'icu4c/' + module + '.c',
+      c_args: host_args,
+      include_directories: inc,
+      dependencies: host_deps,
+      link_with: component_libraries + [icu4c_test_helpers],
+      override_options: ['b_ndebug=false'],
+    )
+    test(
+      'intl-icu4c-' + module,
+      app,
+      suite: ['repo', 'unit', 'icu4c'],
+      timeout: 90,
+    )
+  endforeach
+endif

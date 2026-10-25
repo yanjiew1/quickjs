@@ -78,9 +78,9 @@ option(
 option(
   'intl',
   type: 'combo',
-  choices: ['disabled', 'minimal', 'native'],
+  choices: ['disabled', 'minimal', 'native', 'icu4c'],
   value: 'disabled',
-  description: 'Intl support: disabled, minimal English data, or native locale data',
+  description: 'Intl provider: disabled, minimal English data, native locale data, or ICU4C',
 )
 option(
   'intl_data_file',

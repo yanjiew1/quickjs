@@ -70,7 +70,7 @@ def main():
     assert not {row['name'] for row in targets
                 if row['name'].startswith(('intl-prepared-', 'intl-fixture-data-'))}
     data = [row for row in targets if row['name'] == 'native-intl-data']
-    assert len(data) == (intl != 'disabled'), [row['name'] for row in data]
+    assert len(data) == (intl in ('minimal', 'native')), [row['name'] for row in data]
     if data:
         selected = options.get('intl_data_file') or 'data/intl/' + intl + '.bin'
         expected = (source / selected).resolve()
@@ -125,6 +125,14 @@ def main():
                 selected = 'minimal'
             expected.add('src/' + family + '/' + family + '-' + selected + '.c')
     assert providers & controlled == expected, (providers & controlled, expected)
+    # Library providers must not embed or compile the native QJIN pack reader.
+    if intl == 'icu4c':
+        assert options['calendars'] == 'icu4c'
+        assert options['timezone_backend'] == 'icu4c'
+        filenames = {(Path(row['directory']) / row['file']).resolve() for row in commands}
+        assert not {path for path in filenames if source / 'src/intl/native' in path.parents}
+        assert (source / 'src/intl/collation/icu4c.c') in filenames
+        assert (source / 'src/intl/datetime/icu4c-format.cpp') in filenames
     assert checked == options['check_jsvalue'], (checked, options['check_jsvalue'])
     print('Selected configuration and repository suite partition verified.')
 

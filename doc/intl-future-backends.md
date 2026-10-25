@@ -23,10 +23,10 @@ THE SOFTWARE.
 
 # Future Intl backends
 
-These are retained plans, not available build profiles. Current builds select
-`disabled`, `minimal` or `native`; see [current architecture](intl-design.md).
-Version two adds **ICU4C**; version three considers **ICU4X** after feasibility
-work. Keep these option names distinct. Native builds acquire no ICU or Rust
+This document retains the backend design and ICU4X feasibility requirements.
+Current builds select `disabled`, `minimal`, `native` or `icu4c`; see the
+[current architecture](intl-design.md) and [ICU4C implementation notes](intl-icu4c.md).
+ICU4X follows after its API and full-domain feasibility work. Keep these option names distinct. Native builds acquire no ICU or Rust
 dependency, and normal builds never download a backend implicitly.
 
 ISO arithmetic, UTC, numeric-offset identifiers and the host clock remain common.

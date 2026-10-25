@@ -35,6 +35,7 @@ project(
   default_options: [
     'buildtype=debugoptimized',
     'c_std=gnu11',
+    'cpp_std=c++17',
     'warning_level=1',
     'b_ndebug=false',
     'b_staticpic=false',
@@ -55,6 +56,20 @@ build_cc = meson.get_compiler(
   native: true,
 )
 python = find_program('python3', 'python')
+intl_enabled = get_option('intl') != 'disabled'
+intl_native = get_option('intl') in ['minimal', 'native']
+intl_icu4c = get_option('intl') == 'icu4c'
+if intl_icu4c
+  if get_option('calendars') != 'icu4c' or get_option('timezone_backend') != 'icu4c'
+    error('intl=icu4c requires calendars=icu4c and timezone_backend=icu4c')
+  endif
+  # Only this optional provider uses the public ICU C++ Locale/DateFormat APIs.
+  # Timezone/calendar-only ICU configurations continue to require only C.
+  add_languages('cpp', native: false, required: true)
+  # Older supported Meson versions need explicit registration of both
+  # machines even in a native build; the dependency loop queries each one.
+  add_languages('cpp', native: true, required: true)
+endif
 subdir('tools/intl')
 inc = include_directories(
   '.',
@@ -66,12 +81,12 @@ inc = include_directories(
 )
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
-intl_enabled = get_option('intl') != 'disabled'
-if not intl_enabled and get_option('intl_data_file') != ''
-  error('intl_data_file requires an enabled Intl profile')
+if not intl_native and get_option('intl_data_file') != ''
+  error('intl_data_file requires the minimal or native Intl profile')
 endif
 if intl_enabled
-  common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER', '-DCONFIG_INTL_NATIVE']
+  common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER']
+  common_args += intl_native ? '-DCONFIG_INTL_NATIVE' : '-DCONFIG_INTL_ICU4C'
   if get_option('intl') == 'minimal'
     common_args += '-DCONFIG_INTL_SEGMENT_MINIMAL'
   endif
@@ -152,7 +167,7 @@ foreach native : [false, true]
       native: native,
     ),
   ]
-  if (get_option('temporal') or intl_enabled) and (get_option('timezone_backend') == 'icu4c' or get_option('calendars') == 'icu4c')
+  if intl_icu4c or ((get_option('temporal') or intl_enabled) and (get_option('timezone_backend') == 'icu4c' or get_option('calendars') == 'icu4c'))
     icu_uc = dependency('icu-uc', version: '>=74', native: native)
     icu_i18n = dependency('icu-i18n', version: '>=74', native: native)
     deps += [icu_uc, icu_i18n]
@@ -177,6 +192,32 @@ foreach native : [false, true]
       env: pkg_env,
       check: true,
     ).stdout()
+    if intl_icu4c
+      cpp_compiler = meson.get_compiler('cpp', native: native)
+      if not native and get_option('b_sanitize') != 'none' and compiler.get_id() != cpp_compiler.get_id()
+        error('Sanitized ICU4C Intl builds require matching C/C++ compiler families; set both CC and CXX or use a Meson machine file')
+      endif
+      if cpp_compiler.get_id() not in ['msvc', 'clang-cl']
+        # Detect the selected standard library rather than assuming that every
+        # Clang machine uses libstdc++. The archive and qjsc's C link both need it.
+        cpp_runtime = cpp_compiler.get_define('_LIBCPP_VERSION', prefix: '#include <cstddef>') != '' ? 'c++' : 'stdc++'
+        deps += cpp_compiler.find_library(cpp_runtime)
+        icu_flags += ' -l' + cpp_runtime
+        if not native and compiler.get_id() == 'clang' and get_option('b_sanitize') != 'none'
+          # qjsc compiles generated C with the C driver. Its archive contains
+          # instrumented C++ too, including UBSan vptr checks on older Clang.
+          # Request that driver's C++ sanitizer component explicitly.
+          sanitizer_cpp = ['-fsanitize-link-c++-runtime']
+          if not compiler.has_multi_link_arguments(
+            sanitizer_cpp[0], '-fsanitize=' + get_option('b_sanitize'), '-l' + cpp_runtime,
+          )
+            error('The selected Clang cannot link the sanitized C++ provider from generated C')
+          endif
+          deps += declare_dependency(link_args: sanitizer_cpp)
+          icu_flags += ' ' + ' '.join(sanitizer_cpp)
+        endif
+      endif
+    endif
     icu_rpath = system == 'windows' ? '' : icu_i18n.get_variable(pkgconfig: 'libdir')
     extra_libs = run_command(
       python, files('tools/build/quote_link_args.py'), icu_flags, icu_rpath,
@@ -314,7 +355,7 @@ collation_compile = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: collation_compile_overrides,
-  build_by_default: get_option('tests') and intl_enabled,
+  build_by_default: get_option('tests') and intl_native,
 )
 segment_property_sources = files(
   'tools/intl/segment-property.c',
@@ -438,7 +479,7 @@ windows_timezone_data = custom_target(
   ),
   build_by_default: false,
 )
-if intl_enabled
+if intl_native
   intl_data_path = get_option('intl_data_file')
   if intl_data_path == ''
     intl_data_path = 'data/intl/' + get_option('intl') + '.bin'
@@ -586,6 +627,7 @@ foreach variant : variants
     variant_support_sources,
     native: native,
     c_args: args,
+    cpp_args: args,
     include_directories: inc,
     dependencies: deps,
     pic: tag == 'shared',
@@ -907,8 +949,11 @@ if get_option('temporal') or intl_enabled
     'Default-zone fallback': get_option('system_timezone_policy'),
   }
 endif
-if intl_enabled
+if intl_native
   features += {'Intl data': get_option('intl_data_file') == '' ? 'bundled' : get_option('intl_data_file')}
+endif
+if intl_icu4c
+  features += {'Intl data': 'linked ICU4C dependency'}
 endif
 summary(features, section: 'Features', bool_yn: true)
 summary(

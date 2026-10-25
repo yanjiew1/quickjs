@@ -545,9 +545,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc, clang]
+        include:
+        - compiler: gcc
+          cxx: g++
+        - compiler: clang
+          cxx: clang++
     env:
       CC: ${{ matrix.compiler }}
+      CXX: ${{ matrix.cxx }}
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       ICU_VERSION: '79.1'
@@ -587,11 +592,11 @@ jobs:
       run: |
         echo "PKG_CONFIG_PATH=$ICU_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
         echo "LD_LIBRARY_PATH=$ICU_PREFIX/lib" >> "$GITHUB_ENV"
-    - name: Configure ICU4C timezone and calendar backends
+    - name: Configure ICU4C Intl, timezone and calendar backends
       run: |
         pkg-config --modversion icu-uc icu-i18n
         meson setup build -Dwerror=true -Ddefault_library=both \
-          -Db_sanitize=address,undefined -Dintl=disabled \
+          -Db_sanitize=address,undefined -Dintl=icu4c \
           -Dtemporal=true -Dcalendars=icu4c -Dtimezone_backend=icu4c
     - name: Compile selected build
       id: compile
@@ -607,15 +612,27 @@ jobs:
         meson test -C build --no-rebuild --suite integration --logbase repo-integration \
           --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
     - name: Install pinned Test262
+      id: test262
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
       run: |
         python3 tools/build/test262.py bootstrap
     - name: Run Test262
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.test262.outcome == 'success' }}
       run: |
         set -o pipefail
         timeout --kill-after=30s 3600s ./build/run-test262 \
           -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a \
           --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
           2>&1 | tee test262_runtime.log
+    - name: Run all Intl Test262 entry points
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.test262.outcome == 'success' }}
+      run: |
+        set -o pipefail
+        timeout --kill-after=30s 1800s ./build/run-test262 \
+          -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c tests/intl-icu-test262.conf \
+          --timing-log test262_intl_timings.jsonl \
+          --progress-log test262_intl_progress.jsonl \
+          2>&1 | tee test262_intl_runtime.log
     - name: Report repository test results
       if: always()
       run: |
@@ -623,11 +640,7 @@ jobs:
     - name: Report Test262 timings
       if: always()
       run: |
-        if test -f test262_timings.jsonl; then
-          python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-            --csv test262_timings.csv --markdown test262_timings.md
-          cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
-        fi
+        sh tools/ci/report_test262_summaries.sh test262 test262_intl
     - name: Preserve ICU4C diagnostics
       if: always()
       uses: actions/upload-artifact@v7
@@ -637,5 +650,8 @@ jobs:
           build/meson-info/intro-buildoptions.json
           build/meson-logs/*
           test262_runtime.log
+          test262_intl_runtime.log
+          test262_intl_progress.jsonl
+          test262_intl_timings.*
           test262_progress.jsonl
           test262_timings.*

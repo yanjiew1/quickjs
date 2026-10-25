@@ -23,7 +23,8 @@ THE SOFTWARE.
 
 # Intl architecture and ownership
 
-Intl has native C implementations with `minimal` and `native` data profiles.
+Intl has native C implementations with `minimal` and `native` data profiles,
+and an optional `icu4c` implementation.
 Bindings expose ECMAScript APIs; independent C modules own locale algorithms,
 formatting and data. Meson selects direct implementations at build time. There
 is no runtime backend registry, replacement mechanism or provider vtable.
@@ -34,7 +35,8 @@ ECMA-262/ECMA-402 living drafts; unmerged Stage 4 features use their Stage 4 PR
 text. Exact reviewed revisions, source versions and deliberate interpretation
 choices belong with the affected code, manifests and
 [native implementation notes](intl-native-notes.md).
-[ICU4C v2 and prospective ICU4X v3](intl-future-backends.md) remain separate plans.
+[ICU4C notes](intl-icu4c.md) describe its adapter boundary and limitations;
+[the backend roadmap](intl-future-backends.md) retains the ICU4X feasibility plan.
 
 ## Architecture and ownership
 
@@ -50,7 +52,7 @@ The layers are:
 1. `src/quickjs/builtins/intl/` owns JS coercion/getter order, slots, realms,
    bound functions, exceptions, GC and result objects.
 2. `src/intl/` owns engine-independent C contracts, fixed standard algorithms,
-   module composition and native computation. It receives already-coerced values.
+   module composition and the selected provider. It receives already-coerced values.
 3. Owning data readers admit immutable typed views; native implementations
    interpret them. Extraction and source resolution run in host tools, not JS.
 
@@ -66,6 +68,7 @@ The layers are:
 | `intl/segment` | Native CLDR/dictionary boundaries or minimal Unicode-default boundaries, retaining original UTF-16 indexes |
 | `intl/common` | Shared exact values, text/parts builders, template grammars and errors; no generic module dispatcher |
 | `intl/native` | QJIN envelope and shared immutable string/locale views |
+| `intl/icu4c` | ICU-only identity, resource access and numeric field adapters shared by actual consumers |
 | `src/calendar`, `src/timezone` | Calendar arithmetic and timezone identity/rules, independently used by Date, Temporal and Intl |
 | `src/unicode` | Normalization, properties, case operations and default boundaries, also available with Intl disabled |
 
@@ -79,7 +82,7 @@ proof, and catalog indexes from different owners are not interchangeable.
 
 Fixed standard algorithms and common policies have shared owners; a selected
 implementation may execute a whole operation when its observable semantics are
-equivalent. This applies equally to future native/ICU adapters. Avoid artificial
+equivalent. This applies equally to native and ICU adapters. Avoid artificial
 one-file wrappers and common directories containing unrelated responsibilities.
 
 ## Private contracts and lifetime
@@ -130,7 +133,7 @@ coordinator, with one host-discovery/fallback policy. See
 
 ## Build profiles and data
 
-`intl=disabled|minimal|native` selects one coherent build profile. Minimal uses
+`intl=disabled|minimal|native|icu4c` selects the Intl implementation. Minimal uses
 reduced native formatting data for `en`/`en-US`, retaining required numeric
 systems and calendar/zone semantics. Segmenter is the explicit algorithm
 exception: minimal uses Unicode-default boundaries; native executes compiled

@@ -120,6 +120,38 @@ after base objects are initialized. It is idempotent, reports exceptions on
 failure and throws TypeError in a disabled build. Normal `JS_NewContext()`
 contexts initialize the compiled feature automatically.
 
+### ICU4C Intl
+
+`-Dintl=icu4c` selects ICU4C 74 or newer instead of the prepared native Intl
+pack. It requires the ICU `icu-uc` and `icu-i18n` development packages, a C++17
+compiler and its runtime library. Native and minimal builds remain C-only and
+acquire no ICU dependency. Normal builds never download ICU.
+
+For a complete ICU-backed configuration, select the calendar and timezone
+providers explicitly as well. The profile rejects native calendar/timezone
+providers; `calendars=iso` and `timezone_backend=minimal` can instead omit those
+optional extensions while retaining core ISO, UTC and numeric offsets:
+
+```sh
+CC=gcc CXX=g++ meson setup build-icu4c -Dintl=icu4c \
+  -Dcalendars=icu4c -Dtimezone_backend=icu4c \
+  -Db_sanitize=address,undefined -Dwerror=true
+meson compile -C build-icu4c
+meson test -C build-icu4c --print-errorlogs
+```
+
+For Clang, set both `CC=clang` and `CXX=clang++`. Sanitized builds require
+matching compiler families. Cross builds specify the C and C++ compilers for
+both host and build machines in their Meson machine files. An external ICU
+installation is selected through `PKG_CONFIG_PATH` (or the corresponding
+machine-file properties); its C++ ABI must match the selected C++ runtime.
+Generated package metadata and `qjsc` retain the required C++ link dependency.
+
+ICU supplies the locale inventories, data and algorithms. Its heap is separate
+from QuickJS's allocator and memory limit. See [ICU4C implementation
+notes](doc/intl-icu4c.md) for ownership, deliberate source-policy differences
+and external-library limitations.
+
 ## Temporal
 
 Temporal is enabled by default on this branch with all standard native calendars
