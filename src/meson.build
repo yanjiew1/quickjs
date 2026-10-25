@@ -340,7 +340,7 @@ if get_option('temporal') or intl_enabled
       'calendar/eras-native.c',
       'calendar/hebrew.c',
       'calendar/islamic.c',
-      'calendar/native-months.c',
+      'calendar/months.c',
       'calendar/persian.c',
       'calendar/solar.c',
     )

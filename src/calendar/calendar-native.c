@@ -19,15 +19,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "native-internal.h"
+#include "calendar-backend.h"
 #include "arithmetic.h"
 #include "data.h"
 #include "eras.h"
 #include "iso.h"
 #include "lunisolar.h"
+#include "months.h"
 #include <string.h>
 
-int qjs_cal_native_lunar(QJSCalendarId calendar)
+static int qjs_cal_native_lunar(QJSCalendarId calendar)
 {
     return calendar == QJS_CAL_CHINESE || calendar == QJS_CAL_DANGI;
 }
@@ -59,10 +60,10 @@ static int year_start(QJSCalendarId calendar, int32_t year, int64_t *result)
     return qjs_cal_solar_year_start(calendar, year, result);
 }
 
-int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
-                        QJSNativeCalendarYear *result)
+static int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
+                               QJSCalendarYearLayout *result)
 {
-    QJSNativeCalendarYear value = {0};
+    QJSCalendarYearLayout value = {0};
     int error, month, sum = 0;
 
     if (year < QJS_CAL_MIN_YEAR || year > QJS_CAL_MAX_YEAR)
@@ -126,36 +127,11 @@ int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
     return QJS_CAL_OK;
 }
 
-int64_t qjs_cal_native_month_start(const QJSNativeCalendarYear *year, int month)
-{
-    int64_t day = year->first_day;
-    int i;
-
-    for (i = 1; i < month; i++)
-        day += year->lengths[i - 1];
-    return day;
-}
-
-static void month_code(const QJSNativeCalendarYear *year, int month, char code[5])
-{
-    int nominal = month, leap = 0;
-
-    if (year->leap_month && month > year->leap_month) {
-        nominal--;
-        leap = month == year->leap_month + 1;
-    }
-    code[0] = 'M';
-    code[1] = '0' + nominal / 10;
-    code[2] = '0' + nominal % 10;
-    code[3] = leap ? 'L' : 0;
-    code[4] = 0;
-}
-
 int qjs_calendar_backend_month_info(QJSCalendarId calendar, int32_t year,
                                     int month, int *months, int *days,
                                     char code[5])
 {
-    QJSNativeCalendarYear info;
+    QJSCalendarYearLayout info;
     int error = qjs_cal_native_year(calendar, year, &info);
 
     if (error)
@@ -164,26 +140,26 @@ int qjs_calendar_backend_month_info(QJSCalendarId calendar, int32_t year,
         return QJS_CAL_RANGE;
     *months = info.months;
     *days = info.lengths[month - 1];
-    month_code(&info, month, code);
+    qjs_cal_layout_month_code(&info, month, code);
     return QJS_CAL_OK;
 }
 
 int qjs_calendar_backend_to_epoch_day(QJSCalendarId calendar, int32_t year,
                                       int month, int day, int64_t *result)
 {
-    QJSNativeCalendarYear info;
+    QJSCalendarYearLayout info;
     int error = qjs_cal_native_year(calendar, year, &info);
 
     if (error)
         return error;
     if (month < 1 || month > info.months || day < 1 || day > info.lengths[month - 1])
         return QJS_CAL_RANGE;
-    *result = qjs_cal_native_month_start(&info, month) + day - 1;
+    *result = qjs_cal_layout_month_start(&info, month) + day - 1;
     return QJS_CAL_OK;
 }
 
 static int year_containing_day(QJSCalendarId calendar, int64_t day,
-                                int32_t *result, QJSNativeCalendarYear *info)
+                                int32_t *result, QJSCalendarYearLayout *info)
 {
     int32_t low = QJS_CAL_MIN_YEAR, high = QJS_CAL_MAX_YEAR + 1, year;
     int64_t first, end;
@@ -242,7 +218,7 @@ static int year_containing_day(QJSCalendarId calendar, int64_t day,
 int qjs_calendar_backend_from_epoch_day(QJSCalendarId calendar, int64_t day,
                                         QJSCalendarDate *result)
 {
-    QJSNativeCalendarYear info;
+    QJSCalendarYearLayout info;
     QJSCalendarDate value = {0};
     int month = 1, remaining, error;
 
@@ -264,7 +240,7 @@ int qjs_calendar_backend_from_epoch_day(QJSCalendarId calendar, int64_t day,
                          info.months == 13 :
                          islamic(calendar) ? value.days_in_year > 354 :
                          value.days_in_year > 365;
-    month_code(&info, month, value.month_code);
+    qjs_cal_layout_month_code(&info, month, value.month_code);
     error = qjs_cal_set_era(calendar, day, &value);
     if (error)
         return error;
@@ -282,7 +258,7 @@ int qjs_calendar_backend_month_ordinal(QJSCalendarId calendar, int32_t year,
                                        int nominal, int leap, int constrain,
                                        int *result)
 {
-    QJSNativeCalendarYear info;
+    QJSCalendarYearLayout info;
     int error, month = nominal;
 
     if (nominal < 1 || nominal > (qjs_cal_native_lunar(calendar) ||
@@ -309,4 +285,12 @@ int qjs_calendar_backend_month_ordinal(QJSCalendarId calendar, int32_t year,
     }
     *result = month;
     return QJS_CAL_OK;
+}
+
+int qjs_calendar_backend_add_months(QJSCalendarId calendar, int32_t year,
+                                    int month, int64_t delta,
+                                    int32_t *result_year, int *result_month)
+{
+    return qjs_cal_add_months(calendar, year, month, delta, qjs_cal_native_year,
+                             result_year, result_month);
 }

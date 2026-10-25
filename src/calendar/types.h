@@ -69,6 +69,10 @@ typedef struct QJSCalendarYearLayout {
     int months, leap_month;
 } QJSCalendarYearLayout;
 
+/* Authoritative complete-year reader used by bounded month-index searches. */
+typedef int QJSCalendarReadYear(QJSCalendarId calendar, int32_t year,
+                               QJSCalendarYearLayout *out);
+
 typedef struct QJSCalendarEra {
     int32_t first_day, year_offset;
     const char *name;

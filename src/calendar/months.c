@@ -1,4 +1,4 @@
-/* Bounded native month arithmetic; never iterate once per requested month.
+/* Bounded shared month arithmetic; never iterate once per requested month.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,25 +19,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "native-internal.h"
-#include "arithmetic.h"
+#include "months.h"
 #include "arithmetic-internal.h"
 #include "lunisolar.h"
 #include <limits.h>
 
-int qjs_calendar_backend_add_months(QJSCalendarId calendar, int32_t year,
-                                    int month, int64_t delta,
-                                    int32_t *result_year, int *result_month)
+int64_t qjs_cal_hebrew_months_before_year(int32_t year)
 {
-    QJSNativeCalendarYear info;
+    return qjs_cal_floor_divide(235LL * year - 234, 19);
+}
+
+int qjs_cal_add_months(QJSCalendarId calendar, int32_t year, int month,
+                       int64_t delta, QJSCalendarReadYear *read_year,
+                       int32_t *result_year, int *result_month)
+{
+    QJSCalendarYearLayout info;
     int64_t index, target, new_year;
     int32_t low, high;
     int new_month, error;
 
-    if (qjs_cal_native_lunar(calendar))
+    if (calendar == QJS_CAL_CHINESE || calendar == QJS_CAL_DANGI)
         return qjs_cal_lunisolar_add_months(calendar, year, month, delta,
-                                            qjs_cal_native_year, result_year, result_month);
-    error = qjs_cal_native_year(calendar, year, &info);
+                                            read_year, result_year, result_month);
+    error = read_year(calendar, year, &info);
     if (error)
         return error;
     if (month < 1 || month > info.months)

@@ -20,20 +20,11 @@
  * THE SOFTWARE.
  */
 #include "lunisolar.h"
+#include "months.h"
 #include "astronomy.h"
 #include "iso.h"
 #include <limits.h>
 #include <math.h>
-
-static int64_t month_start(const QJSCalendarYearLayout *record, int month)
-{
-    int64_t day = record->first_day;
-    int i;
-
-    for (i = 0; i < month - 1; i++)
-        day += record->lengths[i];
-    return day;
-}
 
 static int month_index(QJSCalendarId calendar, int64_t day, int64_t *result)
 {
@@ -47,7 +38,7 @@ static int month_index(QJSCalendarId calendar, int64_t day, int64_t *result)
 }
 
 int qjs_cal_lunisolar_add_months(QJSCalendarId calendar, int32_t year, int month,
-                                 int64_t delta, QJSLunisolarReadYear *read_year,
+                                 int64_t delta, QJSCalendarReadYear *read_year,
                                  int32_t *result_year, int *result_month)
 {
     QJSCalendarYearLayout source, target;
@@ -70,7 +61,7 @@ int qjs_cal_lunisolar_add_months(QJSCalendarId calendar, int32_t year, int month
         *result_month = month;
         return QJS_CAL_OK;
     }
-    source_day = month_start(&source, month);
+    source_day = qjs_cal_layout_month_start(&source, month);
     error = month_index(calendar, source_day, &index);
     if (error)
         return error;
@@ -109,7 +100,7 @@ int qjs_cal_lunisolar_add_months(QJSCalendarId calendar, int32_t year, int month
             year++;
         } else {
             target_month = (int)(wanted - first_index) + 1;
-            error = month_index(calendar, month_start(&target,
+            error = month_index(calendar, qjs_cal_layout_month_start(&target,
                                  target_month), &index);
             if (error)
                 return error;

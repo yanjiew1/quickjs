@@ -23,6 +23,7 @@
 
 /* Hebrew postponement equalities and bounded proleptic invariants. */
 #include "../src/calendar/arithmetic.h"
+#include "../src/calendar/months.h"
 #include "../src/calendar/iso.h"
 #include <assert.h>
 #include <limits.h>

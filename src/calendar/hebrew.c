@@ -26,16 +26,12 @@
  * THE SOFTWARE.
  */
 #include "arithmetic.h"
+#include "months.h"
 #include "arithmetic-internal.h"
 
 int qjs_cal_hebrew_leap(int32_t year)
 {
     return qjs_cal_floor_modulo(12LL * year + 17, 19) >= 12;
-}
-
-int64_t qjs_cal_hebrew_months_before_year(int32_t year)
-{
-    return qjs_cal_floor_divide(235LL * year - 234, 19);
 }
 
 static int64_t year_start(int32_t year)
