@@ -83,6 +83,36 @@ function test_leap_months_and_reference_dates() {
             {calendar: "gregory", year, month, day}));
 }
 
+function test_month_arithmetic_edges() {
+    // Until compares the original day before constraining a target month.
+    // Check decompositions directly: add/until round trips alone can miss it.
+    for (const [start, end, forward, backward] of [
+        ["2024-01-31", "2024-02-29", "P29D", "-P29D"],
+        ["2020-02-29", "2021-02-28", "P11M30D", "-P11M28D"],
+    ]) {
+        const a = Date.from(start).withCalendar("gregory");
+        const b = Date.from(end).withCalendar("gregory");
+        for (const largestUnit of ["month", "year"]) {
+            assert(a.until(b, {largestUnit}).toString(), forward);
+            assert(b.until(a, {largestUnit}).toString(), backward);
+        }
+    }
+    const leap = Date.from({calendar: "hebrew", year: 5784, monthCode: "M05L", day: 30});
+    const next = leap.add({years: 1});
+    assert(leap.until(next, {largestUnit: "year"}).toString(), "P12M29D");
+    assert(next.until(leap, {largestUnit: "year"}).toString(), "-P1Y29D");
+
+    // Its intermediate first-of-month lies outside Temporal bounds, while
+    // the requested final dates remain valid.
+    const minimum = Date.from("-271821-04-19").withCalendar("gregory");
+    assert(minimum.add({days: 0}).equals(minimum), true);
+    const following = minimum.add({days: 1});
+    assert(following.toString(), "-271821-04-20[u-ca=gregory]");
+    assert(minimum.until(following, {largestUnit: "month"}).toString(), "P1D");
+    assert(following.until(minimum, {largestUnit: "month"}).toString(), "-P1D");
+    assertThrows(RangeError, () => minimum.subtract({days: 1}));
+}
+
 function test_field_order() {
     const log = [];
     const values = {calendar: "hebrew", day: 1, era: "am", eraYear: 5784,
@@ -120,6 +150,7 @@ function test_dangi_precomputed_extension() {
 if (test_profiles()) {
     test_publications_and_eras();
     test_leap_months_and_reference_dates();
+    test_month_arithmetic_edges();
     test_field_order();
     test_dangi_precomputed_extension();
 }
