@@ -85,20 +85,20 @@ def render(binary, records, spans, descriptors):
     indices = {span: index for index, span in enumerate(used)}
     lines = [
         '/* Generated from the complete QJTZ pack; do not edit. */',
-        '#include "src/timezone/timezone-native.h"',
-        '', 'const unsigned char qjs_native_timezone_data[] = {',
+        '#include "src/timezone/iana.h"',
+        '', 'const unsigned char qjs_iana_timezone_data[] = {',
     ]
     for start in range(0, len(binary), 16):
         lines.append('    ' + ', '.join('0x%02x' % b for b in binary[start:start + 16]) + ',')
-    lines += ['};', 'const size_t qjs_native_timezone_data_size =',
-              '    sizeof(qjs_native_timezone_data);', '']
+    lines += ['};', 'const size_t qjs_iana_timezone_data_size =',
+              '    sizeof(qjs_iana_timezone_data);', '']
     if used:
         lines.append('static const QJSTimeZoneRules rules[] = {')
         for span in used:
             state = states[span]
             lines.append('    { .tzif = {')
             for field in ('times', 'indices', 'types', 'characters'):
-                lines.append('        .%s = qjs_native_timezone_data + %d,' % (field, state[field]))
+                lines.append('        .%s = qjs_iana_timezone_data + %d,' % (field, state[field]))
             for field in ('time_count', 'type_count', 'character_count', 'future',
                           'standard_offset', 'daylight_offset'):
                 lines.append('        .%s = %d,' % (field, state[field]))
@@ -107,25 +107,25 @@ def render(binary, records, spans, descriptors):
                              (field, ', '.join(str(v) for v in state[field])))
             lines.append('    } },')
         lines += ['};', '']
-    lines.append('const QJSTimeZone qjs_native_timezone_zones[] = {')
+    lines.append('const QJSTimeZone qjs_iana_timezone_zones[] = {')
     for row in named:
         rule = 'NULL' if row['primary'] == 'UTC' else '&rules[%d]' % indices[(row['offset'], row['length'])]
         lines += ['    {',
-            '        (const char *)qjs_native_timezone_data + %d,' % row['identifier_offset'],
-            '        (const char *)qjs_native_timezone_data + %d,' % row['primary_offset'],
+            '        (const char *)qjs_iana_timezone_data + %d,' % row['identifier_offset'],
+            '        (const char *)qjs_iana_timezone_data + %d,' % row['primary_offset'],
             '        %s,' % rule, '    },']
     if not named:
         lines.append('    { NULL, NULL, NULL }, /* Portable empty-backend storage. */')
-    lines += ['};', 'const size_t qjs_native_timezone_zone_count = %d;' % len(named), '',
-              'const uint16_t qjs_native_timezone_lookup_order[] = {']
+    lines += ['};', 'const size_t qjs_iana_timezone_zone_count = %d;' % len(named), '',
+              'const uint16_t qjs_iana_timezone_lookup_order[] = {']
     folded = sorted(range(len(named)), key=lambda i: named[i]['identifier'].lower())
     for start in range(0, len(folded), 16):
         lines.append('    ' + ', '.join(str(i) for i in folded[start:start + 16]) + ',')
     if not folded:
         lines.append('    0,')
     version_at = HEADER.size + len(records) * INDEX.size
-    lines += ['};', 'const char *const qjs_native_timezone_data_version =',
-              '    (const char *)qjs_native_timezone_data + %d;' % version_at, '']
+    lines += ['};', 'const char *const qjs_iana_timezone_data_version =',
+              '    (const char *)qjs_iana_timezone_data + %d;' % version_at, '']
     return WRAPPER_LICENSE + '\n'.join(lines)
 
 

@@ -394,13 +394,17 @@ if get_option('temporal') or intl_enabled
     'timezone/system-zone.c',
     'timezone/timezone.c',
   )
+  if get_option('timezone_backend') != 'minimal'
+    windows_timezone_sources += files('timezone/windows-system.c')
+  endif
   if get_option('timezone_backend') == 'native'
     support_sources += files(
       'timezone/timezone-native.c',
+      'timezone/iana.c',
       'timezone/tzif.c',
     )
     data_sources += timezone_data
-    windows_timezone_sources = files('timezone/windows-zone.c')
+    windows_timezone_sources += files('timezone/windows-zone.c')
     windows_timezone_data_sources += windows_timezone_data
   elif get_option('timezone_backend') == 'icu4c'
     support_sources += files(

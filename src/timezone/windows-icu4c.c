@@ -23,14 +23,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <unicode/ucal.h>
-#ifdef _WIN32
-#if !defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0600
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#endif
-#include <windows.h>
-#endif
-
 int qjs_tz_windows_lookup_identifier(const char *key, const char *territory,
                                      char *output, size_t capacity)
 {
@@ -64,36 +56,3 @@ int qjs_tz_windows_lookup_identifier(const char *key, const char *territory,
     output[length] = 0;
     return 0;
 }
-
-#ifdef _WIN32
-int qjs_tz_windows_system_identifier(char *output, size_t capacity)
-{
-    DYNAMIC_TIME_ZONE_INFORMATION zone;
-    GEOID geo;
-    WCHAR country[3];
-    char key[128], region[3] = {0};
-    size_t i;
-
-    if (GetDynamicTimeZoneInformation(&zone) == TIME_ZONE_ID_INVALID)
-        return -1;
-    for (i = 0; i < 128 && zone.TimeZoneKeyName[i]; i++) {
-        if (zone.TimeZoneKeyName[i] > 127)
-            return -1;
-        key[i] = (char)zone.TimeZoneKeyName[i];
-    }
-    if (i == 128)
-        return -1;
-    key[i] = 0;
-    /* This pair remains available on older Windows versions, unlike
-       GetUserDefaultGeoName. ICU applies CLDR's 001 mapping if no match exists. */
-    geo = GetUserGeoID(GEOCLASS_NATION);
-    if (geo != GEOID_NOT_AVAILABLE &&
-        GetGeoInfoW(geo, GEO_ISO2, country, 3, 0) == 3 &&
-        country[0] >= 'A' && country[0] <= 'Z' &&
-        country[1] >= 'A' && country[1] <= 'Z') {
-        region[0] = (char)country[0];
-        region[1] = (char)country[1];
-    }
-    return qjs_tz_windows_lookup_identifier(key, region, output, capacity);
-}
-#endif

@@ -21,7 +21,7 @@
  */
 #include <assert.h>
 #include <string.h>
-#include "../src/timezone/timezone-native.h"
+#include "../src/timezone/iana.h"
 
 static uint32_t read32(const unsigned char *p)
 {
@@ -58,8 +58,8 @@ static void compare_view(const QJSTzifState *a, const QJSTzifState *b)
 
 static void test_embedded_records(void)
 {
-    const unsigned char *data = qjs_native_timezone_data;
-    size_t size = qjs_native_timezone_data_size;
+    const unsigned char *data = qjs_iana_timezone_data;
+    size_t size = qjs_iana_timezone_data_size;
     uint32_t count, index, strings, payload;
     size_t i, utc_count = 0, primary_count = 0;
 

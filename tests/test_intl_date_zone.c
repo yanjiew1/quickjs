@@ -21,7 +21,7 @@
  */
 #include "../src/intl/datetime/zone-name.h"
 #ifdef CONFIG_TIMEZONE_NATIVE
-#include "../src/timezone/timezone-native.h"
+#include "../src/timezone/iana.h"
 #endif
 #include "../src/cutils/cutils.h"
 #include <assert.h>

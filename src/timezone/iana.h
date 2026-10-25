@@ -1,4 +1,4 @@
-/* Native rule descriptors over one generated immutable binary owner.
+/* Shared IANA rule descriptors over one generated immutable binary owner.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,8 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_TIMEZONE_NATIVE_H
-#define QUICKJS_TIMEZONE_NATIVE_H
+#ifndef QUICKJS_TIMEZONE_IANA_H
+#define QUICKJS_TIMEZONE_IANA_H
 
 #include "timezone-backend.h"
 #include "tzif.h"
@@ -29,12 +29,17 @@ struct QJSTimeZoneRules {
     QJSTzifState tzif;
 };
 
-extern const unsigned char qjs_native_timezone_data[];
-extern const size_t qjs_native_timezone_data_size;
+extern const unsigned char qjs_iana_timezone_data[];
+extern const size_t qjs_iana_timezone_data_size;
 /* Canonical UTC is excluded; core supplies it. UTC aliases have NULL rules. */
-extern const QJSTimeZone qjs_native_timezone_zones[];
-extern const size_t qjs_native_timezone_zone_count;
-extern const uint16_t qjs_native_timezone_lookup_order[];
-extern const char *const qjs_native_timezone_data_version;
+extern const QJSTimeZone qjs_iana_timezone_zones[];
+extern const size_t qjs_iana_timezone_zone_count;
+extern const uint16_t qjs_iana_timezone_lookup_order[];
+extern const char *const qjs_iana_timezone_data_version;
 
-#endif /* QUICKJS_TIMEZONE_NATIVE_H */
+int qjs_iana_timezone_lookup(const QJSTimeZone **result, const char *identifier, size_t length);
+const char *qjs_iana_timezone_version(void);
+size_t qjs_iana_timezone_count(void);
+const QJSTimeZone *qjs_iana_timezone_at(size_t index);
+
+#endif /* QUICKJS_TIMEZONE_IANA_H */

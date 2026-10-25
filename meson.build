@@ -551,7 +551,7 @@ timezone_describe = executable(
   build_by_default: false,
 )
 timezone_data = custom_target(
-  'native-timezone-data',
+  'iana-timezone-data',
   input: files('data/timezone/timezone-data.bin'),
   output: 'timezone-data.c',
   command: [
