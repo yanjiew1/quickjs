@@ -17,15 +17,19 @@ static int add_checked(int64_t *result, int64_t a, int64_t b)
     return 0;
 }
 
+typedef struct TargetMonth {
+    int32_t year;
+    int month, maximum_day;
+} TargetMonth;
+
 static int year_month(QJSCalendarId calendar, QJSTemporalCalendarDate record,
-                       int64_t years, int64_t months, QJSTemporalOverflow overflow,
-                       QJSTemporalISODate *first, int *maximum_day)
+                      int64_t years, int64_t months, QJSTemporalOverflow overflow,
+                      TargetMonth *result)
 {
-    int64_t year, epoch;
+    int64_t year;
     int32_t target_year;
     int month, target_month, count, maximum, error;
     char code[5];
-    QJSTemporalISODate date;
 
     if (add_checked(&year, record.year, years) ||
         year < QJS_CAL_MIN_YEAR || year > QJS_CAL_MAX_YEAR)
@@ -43,13 +47,7 @@ static int year_month(QJSCalendarId calendar, QJSTemporalCalendarDate record,
                                     &count, &maximum, code);
     if (error)
         return error;
-    error = qjs_calendar_to_epoch_day(calendar, target_year, target_month, 1, &epoch);
-    if (error)
-        return error;
-    if (qjs_iso_date_from_days(&date, epoch))
-        return RANGE;
-    *first = date;
-    *maximum_day = maximum;
+    *result = (TargetMonth){target_year, target_month, maximum};
     return 0;
 }
 
@@ -59,9 +57,10 @@ int qjs_temporal_noniso_date_add(QJSCalendarId calendar, QJSTemporalISODate date
                                  QJSTemporalISODate *result)
 {
     QJSTemporalCalendarDate record;
-    QJSTemporalISODate first, target;
-    int64_t days, extra;
-    int maximum, day, error;
+    TargetMonth month;
+    QJSTemporalISODate target;
+    int64_t days, extra, first_day;
+    int day, error;
 
     if (overflow != QJS_TEMPORAL_OVERFLOW_CONSTRAIN &&
         overflow != QJS_TEMPORAL_OVERFLOW_REJECT)
@@ -70,19 +69,24 @@ int qjs_temporal_noniso_date_add(QJSCalendarId calendar, QJSTemporalISODate date
     if (error)
         return error;
     error = year_month(calendar, record, duration.years, duration.months,
-                        overflow, &first, &maximum);
+                        overflow, &month);
+    if (error)
+        return error;
+    /* Comparisons need only the checked month; addition also needs its origin. */
+    error = qjs_calendar_to_epoch_day(calendar, month.year, month.month, 1, &first_day);
     if (error)
         return error;
     day = record.day;
-    if (day > maximum) {
+    if (day > month.maximum_day) {
         if (overflow == QJS_TEMPORAL_OVERFLOW_REJECT)
             return RANGE;
-        day = maximum;
+        day = month.maximum_day;
     }
+    /* A month start may precede Temporal bounds; constrain only the final date. */
     if (duration.weeks < INT64_MIN / 7 || duration.weeks > INT64_MAX / 7 ||
         add_checked(&extra, duration.weeks * 7, duration.days) ||
         add_checked(&extra, extra, day - 1) ||
-        qjs_iso_date_to_days(&days, first) || add_checked(&days, days, extra) ||
+        add_checked(&days, first_day, extra) ||
         qjs_iso_date_from_days(&target, days) ||
         !qjs_temporal_iso_date_within_limits(target))
         return RANGE;
@@ -90,23 +94,13 @@ int qjs_temporal_noniso_date_add(QJSCalendarId calendar, QJSTemporalISODate date
     return 0;
 }
 
-static int compare(QJSTemporalCalendarDate a, QJSTemporalCalendarDate b)
-{
-    if (a.year != b.year)
-        return a.year < b.year ? -1 : 1;
-    if (a.month != b.month)
-        return a.month < b.month ? -1 : 1;
-    return a.day < b.day ? -1 : a.day > b.day;
-}
-
 static int surpasses(QJSCalendarId calendar, int sign,
                       QJSTemporalCalendarDate from, QJSTemporalCalendarDate to,
                       int64_t years, int64_t months, int *result)
 {
-    QJSTemporalISODate first;
-    QJSTemporalCalendarDate current;
+    TargetMonth month;
     int64_t year;
-    int maximum, error;
+    int error, order;
 
     if (add_checked(&year, from.year, years) ||
         year < QJS_CAL_MIN_YEAR || year > QJS_CAL_MAX_YEAR) {
@@ -129,20 +123,22 @@ static int surpasses(QJSCalendarId calendar, int sign,
         }
     }
     error = year_month(calendar, from, years, months,
-                        QJS_TEMPORAL_OVERFLOW_CONSTRAIN, &first, &maximum);
+                        QJS_TEMPORAL_OVERFLOW_CONSTRAIN, &month);
     if (error) {
         if (error != RANGE)
             return error;
         *result = 1;
         return 0;
     }
-    error = qjs_temporal_noniso_fields(calendar, first, &current);
-    if (error)
-        return error;
-    /* Without weeks/days, the comparison deliberately retains an impossible
-       day such as February 30 rather than clamping it early. */
-    current.day = from.day;
-    *result = compare(current, to) * sign > 0;
+    /* Without weeks/days, retain an impossible day such as February 30
+       instead of clamping it or rebuilding a full calendar field record. */
+    if (month.year != to.year)
+        order = month.year < to.year ? -1 : 1;
+    else if (month.month != to.month)
+        order = month.month < to.month ? -1 : 1;
+    else
+        order = from.day < to.day ? -1 : from.day > to.day;
+    *result = order * sign > 0;
     return 0;
 }
 
