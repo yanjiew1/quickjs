@@ -190,6 +190,12 @@ int main(void)
     duration.fields[QJS_TEMPORAL_NANOSECOND] = 1;
     expect(&allocator, formatter, &duration, "1:02:03.000000001");
     sweep(&allocator, &state, formatter, &duration);
+    for (i = QJS_TEMPORAL_HOUR; i < QJS_TEMPORAL_UNIT_COUNT; i++)
+        duration.fields[i] = -duration.fields[i];
+    expect(&allocator, formatter, &duration, "-1:02:03.000000001");
+    sweep(&allocator, &state, formatter, &duration);
+    for (i = QJS_TEMPORAL_HOUR; i < QJS_TEMPORAL_UNIT_COUNT; i++)
+        duration.fields[i] = -duration.fields[i];
     duration.fields[QJS_TEMPORAL_YEAR] = 1;
     duration.fields[QJS_TEMPORAL_DAY] = 2;
     expect(&allocator, formatter, &duration, "1 yr, 2 days, 1:02:03.000000001");
@@ -242,6 +248,12 @@ int main(void)
         assert(part < result.part_count);
     }
     qjs_intl_duration_result_clear(&allocator, &result);
+    for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++)
+        duration.fields[i] = -duration.fields[i];
+    expect(&allocator, formatter, &duration,
+           "-1 year, 2 months, 3 weeks, 4 days, 5 hours, 6 minutes, 7 seconds, "
+           "8 milliseconds, 9 microseconds, 10 nanoseconds");
+    sweep(&allocator, &state, formatter, &duration);
     qjs_intl_duration_formatter_close(formatter);
     options.units[QJS_TEMPORAL_YEAR].display = QJS_INTL_DURATION_ALWAYS;
     formatter = open_formatter(service, english, &options);
@@ -311,7 +323,17 @@ int main(void)
         if (result.parts[i].type == QJS_INTL_PART_INTEGER)
             assert(result.text[result.parts[i].start] == 0x660);
     qjs_intl_duration_result_clear(&allocator, &result);
+    duration.fields[QJS_TEMPORAL_MINUTE] = -2;
+    duration.fields[QJS_TEMPORAL_NANOSECOND] = -1;
+    assert(!qjs_intl_duration_format(formatter, &duration, &result));
+    assert(result.text[0] == 0x61c && result.text[1] == '-');
+    assert(result.parts[0].type == QJS_INTL_PART_MINUS_SIGN && result.parts[0].unit == QJS_TEMPORAL_HOUR);
+    for (i = 1; i < result.part_count; i++)
+        assert(result.parts[i].type != QJS_INTL_PART_MINUS_SIGN);
+    qjs_intl_duration_result_clear(&allocator, &result);
+    sweep(&allocator, &state, formatter, &duration);
     qjs_intl_duration_formatter_close(formatter);
+    duration = (QJSTemporalDuration){{0}};
     state.calls = 0;
     formatter = open_formatter(service, english, &options);
     calls = state.calls;
