@@ -86,7 +86,10 @@ def generate(cache, output, manifest, host_cc, awk, archive=None, cldr_dir=None,
                 links[fields[2]] = fields[1]
         primaries = available_named_primaries(zones, links, table_countries,
             country_rows, countries, historical)
-        compiled = {name: (primary, (zoneinfo / primary).read_bytes())
+        # Aliases share their primary's immutable payload for this generation.
+        payloads = {name: (zoneinfo / name).read_bytes()
+                    for name in sorted(set(primaries.values()))}
+        compiled = {name: (primary, payloads[primary])
                     for name, primary in primaries.items()}
         binary = pack(compiled, pin['tz']['release'], pin['cldr']['release'])
         parsed = unpack(binary)
