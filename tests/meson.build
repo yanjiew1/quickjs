@@ -733,6 +733,10 @@ if intl_enabled
     output: 'intl-collation-program-fixture.c',
     command: [python, files('intl_collation_program_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: intl_tool_dependencies + files(
+      '../tools/intl/collation_ir.py',
+      '../tools/intl/collation_root_input.py',
+      '../tools/intl/collation_ordinals.py',
+      '../tools/intl/collation_fractional.py',
       'test_intl_collation_ir.py',
       'intl_collation_root_input_fixture.py',
       'test_intl_collation_root_input.py',
@@ -2214,6 +2218,8 @@ if intl_enabled
     output: 'intl-timezone-name-authored-fixture.c',
     command: [python, files('intl_timezone_name_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: intl_tool_dependencies + files(
+      'test_intl_date_patterns.py',
+      'test_intl_date_intervals.py',
       'test_intl_timezone_name_tables.py',
       'test_intl_timezone_names.py',
       'test_intl_list_patterns.py',
@@ -2485,7 +2491,12 @@ if intl_enabled
     'intl-date-zone-authored-fixture',
     output: 'intl-date-zone-authored-fixture.c',
     command: [python, files('intl_date_zone_fixture.py'), '--output', '@OUTPUT@'],
-    depend_files: intl_tool_dependencies + files('test_intl_timezone_names.py', 'test_intl_list_patterns.py'),
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_timezone_names.py',
+      'test_intl_list_patterns.py',
+      'test_intl_date_patterns.py',
+      'test_intl_date_intervals.py',
+    ),
   )
   intl_date_zone_fixture_objects = static_library(
     ('intl-date-zone-authored-fixture') + '-objects',
@@ -2503,6 +2514,7 @@ if intl_enabled
     output: 'intl-date-text-authored-fixture.c',
     command: [python, files('intl_date_text_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: intl_tool_dependencies + files(
+      'test_intl_date_patterns.py',
       'test_intl_calendar_names.py',
       'test_intl_list_patterns.py',
     ),
