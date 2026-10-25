@@ -1,7 +1,6 @@
-# Shared explicit dependencies for native Intl generation and validation.
-# Fixtures add their authored source modules at the call site. Keep this
-# broader than individual imports so new codec dependencies cannot leave
-# a generated pack fixture stale.
+# Prepared-pack codecs, embedding and authored fixtures share this conservative
+# import closure. Acquisition and final source-preparation commands are not
+# dependencies of these targets; fixtures add their own source helpers below.
 intl_tool_dependencies = files(
   '../data/_support/io.py',
   'acquire.py',
@@ -46,7 +45,6 @@ intl_tool_dependencies = files(
   'duration_patterns.py',
   'duration_tables.py',
   'embed.py',
-  'generate.py',
   'list_patterns.py',
   'literal_template.py',
   'locale_metadata.py',
@@ -71,31 +69,24 @@ intl_tool_dependencies = files(
   'scalar_trie.py',
   'scalar_trie_tables.py',
   'segment_alphabet.py',
-  'segment_bundle.py',
-  'segment_catalog.py',
   'segment_dfa.py',
   'segment_dictionary.py',
   'segment_dictionary_sources.py',
   'segment_dictionary_tables.py',
   'segment_dictionary_trie.py',
   'segment_expression.py',
-  'segment_inheritance.py',
   'segment_lower.py',
   'segment_nfa.py',
-  'segment_prepare.py',
   'segment_profile.py',
   'segment_program.py',
   'segment_program_tables.py',
   'segment_rules.py',
   'segment_sets.py',
   'segment_sources.py',
-  'segment_suppressions.py',
   'segment_suppression_tables.py',
-  'source_inputs.py',
   'tables.py',
   'timezone_name_tables.py',
   'timezone_names.py',
-  'timezone_presentation.py',
   'timezone_presentation_tables.py',
   'timezone_syntax.py',
   'unit_grammar.py',
