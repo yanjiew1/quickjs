@@ -4,7 +4,6 @@
 #include "data.h"
 #include "decimal.h"
 #include "native-digital.h"
-#include "../common/format-builder.h"
 #include "../number/number.h"
 #include "../list/list.h"
 #include "../../temporal/duration.h"
@@ -337,63 +336,6 @@ static QJSIntlStatus component(const QJSIntlDurationFormatter *formatter, const 
     return QJS_INTL_OK;
 }
 
-/* Treat the digital group as a positional list with explicit separator parts.
-   Reuse the same typed component composer as the outer locale ListFormat. */
-static QJSIntlStatus digital_group(const QJSIntlDurationFormatter *formatter,
-                                   const QJSIntlDurationComponent *components, size_t count,
-                                   const unsigned int *units, QJSIntlDurationFormatted *out)
-{
-    QJSIntlFormatBuilder builder = {0};
-    QJSIntlPart list_parts[5];
-    QJSIntlStatus status;
-    size_t i, pass;
-    builder.limit = formatter->options.maximum_output_length;
-    for (pass = 0; pass < 2; pass++) {
-        builder.length = builder.count = 0;
-        for (i = 0; i < count; i++) {
-            QJSIntlFormatted body = {0};
-            size_t start = builder.length;
-            if (i) {
-                QJSIntlBytes separator = units[i] == QJS_TEMPORAL_MINUTE ?
-                    formatter->digital.hour_minute : formatter->digital.minute_second;
-                status = qjs_intl_format_builder_text(&builder, separator, NULL, NULL);
-                if (!status)
-                    status = qjs_intl_format_builder_part(&builder, start, builder.length, QJS_INTL_PART_LITERAL, 1);
-                if (status)
-                    goto done;
-            }
-            start = builder.length;
-            body.text = (uint16_t *)components[i].text.data;
-            body.length = components[i].text.length;
-            status = qjs_intl_format_builder_body(&builder, &body);
-            if (!status)
-                status = qjs_intl_format_builder_part(&builder, start, builder.length, QJS_INTL_PART_ELEMENT, 1);
-            if (status)
-                goto done;
-        }
-        if (!pass) {
-            if (builder.length > SIZE_MAX / sizeof(*builder.result.text)) {
-                status = QJS_INTL_OVERFLOW;
-                goto done;
-            }
-            builder.result.text = formatter->allocator.malloc(formatter->allocator.opaque,
-                                        (builder.length ? builder.length : 1) * sizeof(*builder.result.text));
-            if (!builder.result.text) {
-                status = QJS_INTL_NO_MEMORY;
-                goto done;
-            }
-            builder.result.parts = list_parts;
-        }
-    }
-    builder.result.length = builder.length;
-    builder.result.part_count = builder.count;
-    status = qjs_intl_duration_join_parts(&formatter->allocator, &builder.result, components, count, builder.limit, out);
-done:
-    if (builder.result.text)
-        formatter->allocator.free(formatter->allocator.opaque, builder.result.text);
-    return status;
-}
-
 QJSIntlStatus qjs_intl_duration_format(const QJSIntlDurationFormatter *formatter, const QJSTemporalDuration *duration,
                                       QJSIntlDurationFormatted *out)
 {
@@ -414,7 +356,8 @@ QJSIntlStatus qjs_intl_duration_format(const QJSIntlDurationFormatter *formatter
         QJSIntlDurationUnitOptions options = formatter->options.units[unit];
         if (numeric(options.style)) {
             int shown[3] = {0};
-            unsigned int units[3], current;
+            QJSIntlBytes separators[2];
+            unsigned int current;
             size_t group_count = 0;
             shown[0] = unit == QJS_TEMPORAL_HOUR &&
                 (duration->fields[QJS_TEMPORAL_HOUR] != 0 || options.display == QJS_INTL_DURATION_ALWAYS);
@@ -426,14 +369,17 @@ QJSIntlStatus qjs_intl_duration_format(const QJSIntlDurationFormatter *formatter
             for (current = QJS_TEMPORAL_HOUR; current <= QJS_TEMPORAL_SECOND; current++) {
                 if (!shown[current - QJS_TEMPORAL_HOUR])
                     continue;
-                units[group_count] = current;
+                if (group_count)
+                    separators[group_count - 1] = current == QJS_TEMPORAL_MINUTE ?
+                        formatter->digital.hour_minute : formatter->digital.minute_second;
                 status = component(formatter, duration, current, &show_sign, &numbers[current],
                                     &parts[current], &group[group_count++]);
                 if (status)
                     goto done;
             }
             if (group_count) {
-                status = digital_group(formatter, group, group_count, units, &digital);
+                status = qjs_intl_duration_join_digital(&formatter->allocator,
+                    group, group_count, separators, formatter->options.maximum_output_length, &digital);
                 if (status)
                     goto done;
                 components[count++] = (QJSIntlDurationComponent){{digital.text, digital.length}, digital.parts, digital.part_count};
