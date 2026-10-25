@@ -5,8 +5,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include "../src/quickjs/internal/runtime.h"
-#include "../src/quickjs/internal/allocator.h"
+#include "raw-allocator.h"
 
 typedef struct OOMTestAllocator {
     size_t calls, fail_at, live;
@@ -29,7 +28,7 @@ static void *oom_test_malloc(JSMallocState *ms, size_t size)
 
     if (oom_test_fail(s))
         return NULL;
-    ptr = def_malloc_funcs.js_malloc(ms, size);
+    ptr = test_raw_malloc(ms, size);
     if (ptr)
         s->live++;
     return ptr;
@@ -43,7 +42,7 @@ static void oom_test_free(JSMallocState *ms, void *ptr)
         assert(s->live > 0);
         s->live--;
     }
-    def_malloc_funcs.js_free(ms, ptr);
+    test_raw_free(ms, ptr);
 }
 
 static void *oom_test_realloc(JSMallocState *ms, void *ptr, size_t size)
@@ -54,7 +53,7 @@ static void *oom_test_realloc(JSMallocState *ms, void *ptr, size_t size)
 
     if (size && oom_test_fail(s))
         return NULL;
-    result = def_malloc_funcs.js_realloc(ms, ptr, size);
+    result = test_raw_realloc(ms, ptr, size);
     if (!had_ptr && result)
         s->live++;
     else if (had_ptr && !size) {
@@ -66,13 +65,12 @@ static void *oom_test_realloc(JSMallocState *ms, void *ptr, size_t size)
 
 static inline JSRuntime *oom_test_runtime(OOMTestAllocator *s)
 {
-    JSMallocFunctions mf = def_malloc_funcs;
+    const JSMallocFunctions mf = {
+        oom_test_malloc, oom_test_free, oom_test_realloc, test_raw_usable_size,
+    };
     JSRuntime *rt;
 
     memset(s, 0, sizeof(*s));
-    mf.js_malloc = oom_test_malloc;
-    mf.js_free = oom_test_free;
-    mf.js_realloc = oom_test_realloc;
     rt = JS_NewRuntime2(&mf, s);
     assert(rt);
     return rt;

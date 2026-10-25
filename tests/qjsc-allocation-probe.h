@@ -23,7 +23,7 @@
  */
 #ifndef QUICKJS_TEST_QJSC_ALLOCATION_PROBE_H
 #define QUICKJS_TEST_QJSC_ALLOCATION_PROBE_H
-#include "../src/quickjs/internal/allocator.h"
+#include "raw-allocator.h"
 typedef struct AllocationProbe {
     size_t live;
     size_t attempts;
@@ -48,7 +48,7 @@ static void *probe_malloc(JSMallocState *state, size_t size)
     void *ptr;
     if (should_fail(probe))
         return NULL;
-    ptr = def_malloc_funcs.js_malloc(state, size);
+    ptr = test_raw_malloc(state, size);
     if (ptr)
         probe->live++;
     return ptr;
@@ -61,7 +61,7 @@ static void probe_free(JSMallocState *state, void *ptr)
         assert(probe->live);
         probe->live--;
     }
-    def_malloc_funcs.js_free(state, ptr);
+    test_raw_free(state, ptr);
 }
 
 static void *probe_realloc(JSMallocState *state, void *ptr, size_t size)
@@ -76,7 +76,7 @@ static void *probe_realloc(JSMallocState *state, void *ptr, size_t size)
     }
     if (should_fail(probe))
         return NULL;
-    result = def_malloc_funcs.js_realloc(state, ptr, size);
+    result = test_raw_realloc(state, ptr, size);
     return result;
 }
 
