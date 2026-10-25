@@ -85,7 +85,6 @@ def pack(sections, generation, profile):
         offset += len(data)
     binary = HEADER.pack(b'QJIN', *VERSION, offset, len(sections), generation,
                          PROFILES[profile], 0, 0, 0) + entries + payload
-    unpack(binary)
     return binary
 
 
