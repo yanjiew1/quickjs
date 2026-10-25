@@ -99,6 +99,50 @@ static void generic(void)
     qjs_intl_list_formatter_close(list);
     assert(!s.live);
 }
+static void mixed_orders(void)
+{
+    static const struct {
+        const char *start, *middle, *end, *text, *empty_text;
+        unsigned int order[4];
+    } cases[] = {
+        {"S{1}/{0}s", "M{0}+{1}m", "E{1}&{0}e", "SMB+ED&Cem/As", "SM+ED&Cem/As", {1, 3, 2, 0}},
+        {"S{0}/{1}s", "M{1}+{0}m", "E{0}&{1}e", "SA/MEC&De+Bms", "SA/MEC&De+ms", {0, 2, 3, 1}},
+    };
+    FailAllocator state = {0};
+    QJSIntlAllocator a = allocator(&state);
+    uint16_t letters[] = {'A', 'B', 'C', 'D'};
+    size_t c, empty;
+
+    /* Mixed operand orders defer different items until the tail is complete. */
+    for (c = 0; c < sizeof(cases) / sizeof(*cases); c++) {
+        QJSIntlListTemplates t = simple("{0}|{1}", cases[c].start, cases[c].middle, cases[c].end);
+        QJSIntlListFormatter *list;
+        assert(!qjs_intl_native_list_open(&a, &t, &list));
+        for (empty = 0; empty < 2; empty++) {
+            QJSIntlUTF16 items[4] = {{letters, 1}, {letters + 1, !empty},
+                                     {letters + 2, 1}, {letters + 3, 1}};
+            QJSIntlFormatted out;
+            size_t i, element = 0;
+            assert(!qjs_intl_list_format(list, items, 4, &out));
+            text_is(&out, empty ? cases[c].empty_text : cases[c].text);
+            assert(out.part_count == 13);
+            partition(&out);
+            for (i = 0; i < out.part_count; i++) {
+                if (out.parts[i].type == QJS_INTL_PART_ELEMENT) {
+                    unsigned int which = cases[c].order[element++];
+                    assert(out.parts[i].end - out.parts[i].start == items[which].length);
+                    if (items[which].length)
+                        assert(out.text[out.parts[i].start] == letters[which]);
+                }
+            }
+            assert(element == 4);
+            qjs_intl_list_result_clear(&a, &out);
+        }
+        qjs_intl_list_formatter_close(list);
+    }
+    assert(!state.live);
+}
+
 static void exact_elements(void)
 {
     FailAllocator s = {0};
@@ -416,6 +460,7 @@ static void failures(void)
 int main(void)
 {
     generic();
+    mixed_orders();
     exact_elements();
     contexts();
     contextual_chain();
