@@ -163,8 +163,10 @@ for (const [duration, expected] of [
 }
 const arabLong = new DF('en', {numberingSystem: 'arab', style: 'long', yearsDisplay: 'always'});
 assert(arabLong.format({months: -2}), '\u061c-٠ years, ٢ months');
+// Bidi controls may belong to the sign symbol or an adjacent literal. Keep
+// the exact rendered text above while checking the typed minus-sign value.
 assertArrayEquals(arabLong.formatToParts({months: -2}).filter(p => p.type === 'minusSign')
-    .map(p => p.value), ['\u061c-']);
+    .map(p => p.value.replace(/\u061c/g, '')), ['-']);
 for (const numberingSystem of ['arab', 'arabext', 'beng', 'deva', 'fullwide',
                                'hanidec', 'latn', 'mathbold', 'thai'])
     assert(new DF('en', {numberingSystem}).resolvedOptions().numberingSystem, numberingSystem);
