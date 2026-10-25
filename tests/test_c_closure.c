@@ -130,8 +130,8 @@ static void test_calls_and_realm(void)
     assert(!JS_IsException(source));
     chained = JS_PromiseThen(caller, source, function, JS_UNDEFINED);
     assert(!JS_IsException(chained));
-    /* The job belongs to the caller; the native callback switches realms. */
-    assert(JS_ExecutePendingJob(rt, &job_ctx) == 1 && job_ctx == caller);
+    /* Promise reaction jobs capture their handler's realm when enqueued. */
+    assert(JS_ExecutePendingJob(rt, &job_ctx) == 1 && job_ctx == creator);
     assert(!JS_IsJobPending(rt));
     assert(JS_PromiseState(caller, chained) == JS_PROMISE_FULFILLED);
     value = JS_PromiseResult(caller, chained);

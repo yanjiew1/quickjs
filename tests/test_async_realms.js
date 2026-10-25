@@ -156,9 +156,52 @@ async function test_builtin_callback_creation_realm()
     std.gc();
 }
 
+async function test_promise_resolver_and_job_realms()
+{
+    const result = run_in_realms(async function () {
+        function check(actual, expected) {
+            if (actual !== expected) throw Error("Promise job realm mismatch");
+        }
+        const cap = foreign.Promise.withResolvers();
+        const self = cap.promise.then(
+            () => { throw Error("self resolution was accepted"); },
+            error => Object.getPrototypeOf(error) === foreign.TypeError.prototype);
+        cap.resolve(cap.promise);
+        check(await self, true);
+
+        const then = foreign.Function("resolve", "reject",
+            "globalThis.resolverRealm = Object.getPrototypeOf(resolve) === Function.prototype; resolve(37)");
+        check(await Promise.resolve({ then }), 37);
+        check(foreign.resolverRealm, true);
+
+        // The job keeps the then action's realm even if its Proxy is revoked
+        // before the queued call. An already revoked Proxy uses the caller's
+        // realm instead, because GetFunctionRealm is abrupt while enqueueing.
+        for (const revokeBefore of [false, true]) {
+            const pair = foreign.Proxy.revocable(foreign.Function(), {});
+            if (revokeBefore) pair.revoke();
+            const pending = Promise.resolve({ then: pair.proxy });
+            if (!revokeBefore) pair.revoke();
+            const expected = revokeBefore ? TypeError.prototype : foreign.TypeError.prototype;
+            check(await pending.then(
+                () => false, error => Object.getPrototypeOf(error) === expected), true);
+        }
+        const handler = foreign.Proxy.revocable(foreign.Function(), {});
+        const reaction = Promise.resolve(1).then(handler.proxy);
+        handler.revoke();
+        check(await reaction.then(
+            () => false,
+            error => Object.getPrototypeOf(error) === foreign.TypeError.prototype), true);
+        return true;
+    });
+    check(await result, true, "Promise resolving functions and jobs keep their realms");
+    std.gc();
+}
+
 export async function test_async_realms()
 {
     await test_array_from_async_realm();
     await test_promise_capability_realms();
     await test_builtin_callback_creation_realm();
+    await test_promise_resolver_and_job_realms();
 }

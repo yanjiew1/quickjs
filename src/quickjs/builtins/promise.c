@@ -64,6 +64,7 @@ typedef struct JSPromiseFunctionDataResolved {
 } JSPromiseFunctionDataResolved;
 
 typedef struct JSPromiseFunctionData {
+    JSContext *realm; /* one owned context reference per resolving function */
     JSValue promise;
     JSPromiseFunctionDataResolved *presolved;
 } JSPromiseFunctionData;
@@ -100,6 +101,23 @@ static void promise_reaction_data_free(JSRuntime *rt,
     JS_FreeValueRT(rt, rd->resolving_funcs[1]);
     JS_FreeValueRT(rt, rd->handler);
     js_free_rt(rt, rd);
+}
+
+/* Both Promise job algorithms use the handler's realm, falling back to the
+   current realm if GetFunctionRealm is abrupt. Undefined reactions perform no
+   user code and may keep the enqueueing context as the host's job context. */
+static JSContext *promise_job_realm(JSContext *ctx, JSValueConst handler)
+{
+    JSContext *realm;
+
+    if (JS_IsUndefined(handler))
+        return ctx;
+    realm = JS_GetFunctionRealm(ctx, handler);
+    if (!realm) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        realm = ctx;
+    }
+    return realm;
 }
 
 static JSValue promise_reaction_job(JSContext *ctx, int argc,
@@ -184,7 +202,8 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         args[2] = rd->handler;
         args[3] = JS_NewBool(ctx, is_reject);
         args[4] = value;
-        JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
+        JS_EnqueueJob(promise_job_realm(ctx, rd->handler),
+                      promise_reaction_job, 5, args);
         list_del(&rd->link);
         promise_reaction_data_free(rt, rd);
     }
@@ -269,6 +288,7 @@ static int js_create_resolving_functions(JSContext *ctx,
         }
         sr->ref_count++;
         s->presolved = sr;
+        s->realm = JS_DupContext(ctx);
         s->promise = JS_DupValue(ctx, promise);
         JS_SetOpaque(obj, s);
         if (js_function_set_properties(ctx, obj, JS_ATOM_empty_string, 1) < 0) {
@@ -287,6 +307,7 @@ static void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
     if (s) {
         js_promise_resolve_function_free_resolved(rt, s->presolved);
         JS_FreeValueRT(rt, s->promise);
+        JS_FreeContext(s->realm);
         js_free_rt(rt, s);
     }
 }
@@ -297,7 +318,15 @@ static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
     if (s) {
         JS_MarkValue(rt, s->promise, mark_func);
+        mark_func(rt, &s->realm->header);
     }
+}
+
+JSContext *js_promise_resolve_function_realm(JSValueConst func)
+{
+    JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(func)->u.promise_function_data;
+
+    return s->realm;
 }
 
 static JSValue js_promise_resolve_function_call(JSContext *ctx,
@@ -316,6 +345,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     s = p->u.promise_function_data;
     if (!s || s->presolved->already_resolved)
         return JS_UNDEFINED;
+    ctx = s->realm;
     s->presolved->already_resolved = TRUE;
     is_reject = p->class_id - JS_CLASS_PROMISE_RESOLVE_FUNCTION;
     if (argc > 0)
@@ -348,7 +378,8 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
         args[0] = s->promise;
         args[1] = resolution;
         args[2] = then;
-        ret = JS_EnqueueJob(ctx, js_promise_resolve_thenable_job, 3, args);
+        ret = JS_EnqueueJob(promise_job_realm(ctx, then),
+                            js_promise_resolve_thenable_job, 3, args);
         JS_FreeValue(ctx, then);
         if (ret < 0) {
             /* No assimilation was published. Let the caller reject or retry
@@ -995,7 +1026,8 @@ __exception int perform_promise_then(JSContext *ctx,
         args[2] = rd->handler;
         args[3] = JS_NewBool(ctx, i);
         args[4] = s->promise_result;
-        ret = JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
+        ret = JS_EnqueueJob(promise_job_realm(ctx, rd->handler),
+                            promise_reaction_job, 5, args);
         for(i = 0; i < 2; i++)
             promise_reaction_data_free(rt, rd_array[i]);
     }
