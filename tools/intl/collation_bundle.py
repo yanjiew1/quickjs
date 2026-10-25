@@ -30,18 +30,22 @@ def bindings(view, programs):
     return tuple(rows)
 
 
-def decode(section):
-    """Check nested framing/counts; an absent optional section stays absent."""
-    if section is None:
-        return None
-    count, data = section
-    view = archive.unpack(data)
+def _decode_checked(view, count):
+    """Interpret one validated archive, retaining the bundled record contract."""
     if not count or count != view['program_count'] or not view['counts'][11]:
         raise DataError('invalid bundled collation program/binding count')
 
     programs = identities(view)
     return {'fingerprint': view['fingerprint'], 'programs': programs,
             'bindings': bindings(view, programs)}
+
+
+def decode(section):
+    """Check nested framing/counts; an absent optional section stays absent."""
+    if section is None:
+        return None
+    count, data = section
+    return _decode_checked(archive.unpack(data), count)
 
 
 def pair(sources, profile, fingerprint, data):
@@ -52,7 +56,7 @@ def pair(sources, profile, fingerprint, data):
     """
     view = archive.unpack(data, fingerprint)
     section = view['program_count'], data
-    decoded = decode(section)
+    decoded = _decode_checked(view, section[0])
     expected = collation_bindings.collect(sources, profile)
     if (decoded['bindings'] != expected or
             decoded['programs'] != collation_bindings.program_targets(expected)):
