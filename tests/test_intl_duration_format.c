@@ -146,6 +146,70 @@ static void test_composition(const QJSIntlAllocator *allocator, Allocation *allo
     assert(!allocation->live);
 }
 
+static void test_digital_composition(const QJSIntlAllocator *allocator, Allocation *state)
+{
+    uint16_t text[] = {'1', '0', '2', '0', '3'};
+    const uint16_t expected[] = {'1', ':', '0', '2', ':', '0', '3'};
+    QJSIntlDurationPart parts[] = {
+        {0, 1, QJS_INTL_PART_INTEGER, QJS_TEMPORAL_HOUR},
+        {0, 2, QJS_INTL_PART_INTEGER, QJS_TEMPORAL_MINUTE},
+        {0, 2, QJS_INTL_PART_INTEGER, QJS_TEMPORAL_SECOND},
+    };
+    QJSIntlDurationComponent components[] = {
+        {{text, 1}, &parts[0], 1}, {{text + 1, 2}, &parts[1], 1}, {{text + 3, 2}, &parts[2], 1},
+    };
+    QJSIntlBytes separators[] = {{":", 1}, {":", 1}};
+    QJSIntlDurationFormatted result, zero = {0};
+    size_t calls, i;
+
+    state->calls = 0;
+    assert(!qjs_intl_duration_join_digital(allocator, components, 3, separators, 7, &result));
+    calls = state->calls;
+    assert(result.length == 7 && !memcmp(result.text, expected, sizeof(expected)));
+    assert(result.part_count == 5 && result.parts[0].unit == QJS_TEMPORAL_HOUR &&
+           result.parts[2].unit == QJS_TEMPORAL_MINUTE && result.parts[4].unit == QJS_TEMPORAL_SECOND);
+    assert(result.parts[1].type == QJS_INTL_PART_LITERAL &&
+           result.parts[1].unit == QJS_TEMPORAL_UNIT_COUNT && result.parts[1].start == 1 && result.parts[1].end == 2);
+    text[0] = '9';
+    parts[0].unit = QJS_TEMPORAL_YEAR;
+    assert(result.text[0] == '1' && result.parts[0].unit == QJS_TEMPORAL_HOUR);
+    qjs_intl_duration_result_clear(allocator, &result);
+    text[0] = '1';
+    parts[0].unit = QJS_TEMPORAL_HOUR;
+
+    for (i = 1; i <= calls; i++) {
+        state->calls = 0;
+        state->fail_at = i;
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_duration_join_digital(allocator, components, 3, separators, 7, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)) && !state->live);
+        state->fail_at = 0;
+    }
+    assert(qjs_intl_duration_join_digital(allocator, components, 3, separators, 6, &result) == QJS_INTL_OVERFLOW);
+    assert(!memcmp(&result, &zero, sizeof(result)) && !state->live);
+
+    /* Empty separator parts still identify the boundary, without a unit field. */
+    separators[0] = separators[1] = (QJSIntlBytes){NULL, 0};
+    assert(!qjs_intl_duration_join_digital(allocator, components, 3, separators, 5, &result));
+    assert(result.length == 5 && !memcmp(result.text, text, sizeof(text)) && result.part_count == 5);
+    assert(result.parts[1].start == 1 && result.parts[1].end == 1 &&
+           result.parts[3].start == 3 && result.parts[3].end == 3 &&
+           result.parts[1].unit == QJS_TEMPORAL_UNIT_COUNT && result.parts[3].unit == QJS_TEMPORAL_UNIT_COUNT);
+    qjs_intl_duration_result_clear(allocator, &result);
+
+    components[0] = (QJSIntlDurationComponent){{NULL, 0}, NULL, 0};
+    assert(!qjs_intl_duration_join_digital(allocator, components, 1, NULL, 1, &result));
+    assert(result.text && !result.length && !result.parts && !result.part_count);
+    qjs_intl_duration_result_clear(allocator, &result);
+    components[0] = (QJSIntlDurationComponent){{text, 1}, &parts[0], SIZE_MAX};
+    assert(qjs_intl_duration_join_digital(allocator, components, 1, NULL, 7, &result) == QJS_INTL_OVERFLOW);
+    assert(!memcmp(&result, &zero, sizeof(result)) && !state->live);
+    components[0].part_count = 1;
+    separators[0] = (QJSIntlBytes){"\xc0", 1};
+    assert(qjs_intl_duration_join_digital(allocator, components, 2, separators, 7, &result) == QJS_INTL_DATA_ERROR);
+    assert(!memcmp(&result, &zero, sizeof(result)) && !state->live);
+}
+
 static void test_equal_and_empty_elements(const QJSIntlAllocator *allocator)
 {
     uint16_t text[] = {'x', '|', 'x'};
@@ -240,6 +304,7 @@ int main(void)
     QJSIntlAllocator allocator = {&allocation, allocate, NULL, release};
     test_text_transfer(&allocator, &allocation);
     test_composition(&allocator, &allocation);
+    test_digital_composition(&allocator, &allocation);
     test_equal_and_empty_elements(&allocator);
     test_utf16(&allocator);
     assert(!allocation.live);
