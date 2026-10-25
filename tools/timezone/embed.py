@@ -10,14 +10,13 @@ from acquire import atomic_write
 from bundle import HEADER, INDEX, unpack
 
 
-def render(binary, spans, descriptors):
-    contents = unpack(binary)
+def render(binary, records, spans, descriptors):
+    """Render records already checked by unpack() against these binary bytes."""
     if len(spans) != len(descriptors):
         raise ValueError('incomplete C reader result')
     states = dict(zip(spans, descriptors))
     if len(states) != len(spans):
         raise ValueError('duplicate descriptor extent')
-    records = contents['records']
     utc = [row for row in records if row['identifier'].lower() == 'utc']
     if len(utc) != 1 or utc[0]['identifier'] != 'UTC' or utc[0]['primary'] != 'UTC':
         raise ValueError('core requires canonical UTC resolving to itself')
@@ -91,7 +90,7 @@ def generate(input_path, output_path, describe_path):
     request = ''.join('%d:%d\n' % row for row in spans).encode('ascii')
     result = subprocess.run([str(describe_path.resolve()), str(input_path.resolve())],
                             input=request, stdout=subprocess.PIPE, check=True, timeout=60)
-    source = render(binary, spans, json.loads(result.stdout))
+    source = render(binary, contents['records'], spans, json.loads(result.stdout))
     atomic_write(output_path, source.encode('ascii'))
 
 
