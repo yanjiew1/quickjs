@@ -65,7 +65,7 @@ int qjs_cal_persian_year_start(int32_t year, int64_t *result)
 
     if (year < QJS_CAL_MIN_YEAR - 1 || year > QJS_CAL_MAX_YEAR + 1)
         return QJS_CAL_RANGE;
-    status = qjs_calendar_data_year(&qjs_native_calendar_data, QJS_CAL_PERSIAN,
+    status = qjs_calendar_data_year(&qjs_calendar_publication_data, QJS_CAL_PERSIAN,
                                     year, &published);
     if (!status) {
         *result = published.first_day;
@@ -75,7 +75,7 @@ int qjs_cal_persian_year_start(int32_t year, int64_t *result)
         return status;
     /* The final published year's successor is derived from its leap marker,
        rather than replacing that boundary with an independent approximation. */
-    status = qjs_calendar_data_year(&qjs_native_calendar_data, QJS_CAL_PERSIAN,
+    status = qjs_calendar_data_year(&qjs_calendar_publication_data, QJS_CAL_PERSIAN,
                                     year - 1, &published);
     if (!status) {
         *result = published.end_day;

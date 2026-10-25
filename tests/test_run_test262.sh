@@ -25,6 +25,8 @@ set -eu
 test262_runner=${MESON_EXE_WRAPPER:-}
 test262_binary=${1:-./run-test262}
 test262_temporal=${2:-n}
+test262_extended_calendars=${3:-n}
+test262_named_timezones=${4:-n}
 case "$test262_binary" in
     /*) ;;
     *) test262_binary="$(pwd)/$test262_binary" ;;
@@ -616,6 +618,39 @@ with open(sys.argv[1]) as stream:
 assert len(rows) == 1
 assert rows[0]['status'] == ('pass' if sys.argv[2] == 'y' else 'skipped')
 PYCODE
+
+# Provider-backed capabilities must not be tied to the native implementation:
+# otherwise an ICU build can report success while silently skipping its tests.
+for test262_feature in Intl.Era-monthcode canonical-tz; do
+    case "$test262_feature" in
+        Intl.Era-monthcode) test262_enabled=$test262_extended_calendars ;;
+        canonical-tz) test262_enabled=$test262_named_timezones ;;
+    esac
+    cat > "$test262_tmp/provider-config" <<CONFIG
+[config]
+style=new
+harnessdir=harness
+[features]
+$test262_feature=auto
+CONFIG
+    cat > "$test262_tmp/provider.js" <<JS
+/*---
+features: [$test262_feature]
+flags: [noStrict]
+---*/
+true;
+JS
+    invoke_runner no -q -c "$test262_tmp/provider-config" \
+        --timing-log "$test262_tmp/provider.jsonl" -f "$test262_tmp/provider.js"
+    test "$test262_status" -eq 0
+    python3 - "$test262_tmp/provider.jsonl" "$test262_enabled" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1
+assert rows[0]['status'] == ('pass' if sys.argv[2] == 'y' else 'skipped')
+PYCODE
+done
 
 # Path capabilities replace a broad rule at a narrower directory or exact
 # file. Metadata requirements remain independent and conjunctive.

@@ -104,6 +104,7 @@ def main():
         if relative in {
             'src/calendar/calendar-minimal.c',
             'src/calendar/calendar-native.c',
+            'src/calendar/calendar-icu4c.c',
             'src/timezone/timezone-minimal.c',
             'src/timezone/timezone-native.c',
             'src/timezone/timezone-icu4c.c',

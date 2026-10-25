@@ -23,11 +23,7 @@
 #define QUICKJS_CALENDAR_NATIVE_INTERNAL_H
 #include "calendar-backend.h"
 
-typedef struct QJSNativeCalendarYear {
-    int64_t first_day, end_day;
-    unsigned char lengths[13];
-    int months, leap_month;
-} QJSNativeCalendarYear;
+typedef QJSCalendarYearLayout QJSNativeCalendarYear;
 
 int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
                         QJSNativeCalendarYear *result);

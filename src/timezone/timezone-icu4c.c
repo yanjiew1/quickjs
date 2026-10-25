@@ -26,11 +26,7 @@
 #include <unicode/ucal.h>
 #include <unicode/uenum.h>
 #include <unicode/ustring.h>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <pthread.h>
-#endif
+#include "../icu4c/once.h"
 
 struct QJSTimeZoneRules {
     UChar *identifier;
@@ -209,24 +205,12 @@ fail:
     inventory_error = icu_error(status);
 }
 
-#ifdef _WIN32
-static INIT_ONCE inventory_once = INIT_ONCE_STATIC_INIT;
-static BOOL CALLBACK initialize_once(PINIT_ONCE once, PVOID parameter, PVOID *context)
-{
-    initialize_inventory();
-    return TRUE;
-}
+static QJSICUOnce inventory_once = QJS_ICU_ONCE_INIT;
+
 static void ensure_inventory(void)
 {
-    InitOnceExecuteOnce(&inventory_once, initialize_once, NULL, NULL);
+    qjs_icu4c_once(&inventory_once, initialize_inventory);
 }
-#else
-static pthread_once_t inventory_once = PTHREAD_ONCE_INIT;
-static void ensure_inventory(void)
-{
-    pthread_once(&inventory_once, initialize_inventory);
-}
-#endif
 
 static int folded_equal(const char *a, const char *b, size_t length)
 {

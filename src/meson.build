@@ -281,6 +281,17 @@ if intl_enabled
   data_sources += intl_data
 endif
 if get_option('temporal') or intl_enabled
+  if get_option('calendars') != 'iso'
+    support_sources += files(
+      'calendar/eras.c',
+      'calendar/astronomy.c',
+      'calendar/lunisolar.c',
+      'calendar/lunisolar-months.c',
+    )
+  endif
+  if get_option('timezone_backend') == 'icu4c' or get_option('calendars') == 'icu4c'
+    support_sources += files('icu4c/once.c')
+  endif
   engine_sources += files('quickjs/builtins/duration-value.c')
   support_sources += files(
     'calendar/calendar.c',
@@ -289,20 +300,25 @@ if get_option('temporal') or intl_enabled
     'temporal/epoch.c',
     'temporal/options.c',
   )
+  if get_option('calendars') != 'iso'
+    support_sources += files('calendar/data.c')
+    data_sources += calendar_data
+  endif
   if get_option('calendars') == 'native'
     support_sources += files(
-      'calendar/astronomy.c',
       'calendar/calendar-native.c',
-      'calendar/data.c',
-      'calendar/eras.c',
+      'calendar/eras-native.c',
       'calendar/hebrew.c',
       'calendar/islamic.c',
-      'calendar/lunisolar.c',
       'calendar/native-months.c',
       'calendar/persian.c',
       'calendar/solar.c',
     )
-    data_sources += calendar_data
+  elif get_option('calendars') == 'icu4c'
+    support_sources += files(
+      'calendar/calendar-icu4c.c',
+      'calendar/eras-icu4c.c',
+    )
   else
     support_sources += files('calendar/calendar-minimal.c')
   endif

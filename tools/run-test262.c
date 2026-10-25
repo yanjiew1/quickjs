@@ -1400,11 +1400,11 @@ static BOOL automatic_feature(const char *name)
     if (str_equal(name, "Temporal"))
         return TRUE;
 #endif
-#ifdef CONFIG_CALENDAR_NATIVE
+#ifdef CONFIG_CALENDAR_EXTENDED
     if (str_equal(name, "Intl.Era-monthcode"))
         return TRUE;
 #endif
-#ifdef CONFIG_TIMEZONE_NATIVE
+#ifdef CONFIG_TIMEZONE_NAMED
     if (str_equal(name, "canonical-tz"))
         return TRUE;
 #endif

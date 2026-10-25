@@ -42,7 +42,7 @@ int qjs_cal_islamic_year_start(QJSCalendarId calendar, int32_t year, int64_t *re
     if (year < QJS_CAL_MIN_YEAR - 1 || year > QJS_CAL_MAX_YEAR + 1)
         return QJS_CAL_RANGE;
     if (calendar == QJS_CAL_ISLAMIC_UMALQURA) {
-        status = qjs_calendar_data_year(&qjs_native_calendar_data, calendar, year,
+        status = qjs_calendar_data_year(&qjs_calendar_publication_data, calendar, year,
                                         &published);
         if (!status) {
             *result = published.first_day;
@@ -69,7 +69,7 @@ int qjs_cal_islamic_month_length(QJSCalendarId calendar, int32_t year, int month
         month > 12)
         return 0;
     if (calendar == QJS_CAL_ISLAMIC_UMALQURA) {
-        status = qjs_calendar_data_year(&qjs_native_calendar_data, calendar, year,
+        status = qjs_calendar_data_year(&qjs_calendar_publication_data, calendar, year,
                                         &published);
         if (!status)
             return 29 + ((published.month_lengths >> (2 * (month - 1))) & 3);

@@ -37,12 +37,12 @@ static uint32_t u32(const uint8_t *p)
 
 static void reject(const uint8_t *bytes, size_t size)
 {
-    QJSCalendarData result = qjs_native_calendar_data;
+    QJSCalendarData result = qjs_calendar_publication_data;
 
     assert(qjs_calendar_data_open(&result, bytes, size) == QJS_CAL_BACKEND);
-    assert(result.bytes == qjs_native_calendar_data.bytes);
-    assert(result.size == qjs_native_calendar_data.size);
-    assert(result.count == qjs_native_calendar_data.count);
+    assert(result.bytes == qjs_calendar_publication_data.bytes);
+    assert(result.size == qjs_calendar_publication_data.size);
+    assert(result.count == qjs_calendar_publication_data.count);
 }
 
 static void check_years(const QJSCalendarData *data, QJSCalendarId calendar,
@@ -55,7 +55,7 @@ static void check_years(const QJSCalendarData *data, QJSCalendarId calendar,
         int month, days = 0;
 
         assert(!qjs_calendar_data_year(data, calendar, year, &actual));
-        assert(!qjs_calendar_data_year(&qjs_native_calendar_data, calendar, year, &embedded));
+        assert(!qjs_calendar_data_year(&qjs_calendar_publication_data, calendar, year, &embedded));
         assert(actual.first_day == expected && actual.first_day == embedded.first_day);
         assert(actual.end_day == embedded.end_day);
         assert(actual.month_lengths == embedded.month_lengths);
@@ -137,7 +137,7 @@ static void published_lunar_years(const QJSCalendarData *data,
 
 int main(void)
 {
-    const QJSCalendarData *compiled = &qjs_native_calendar_data;
+    const QJSCalendarData *compiled = &qjs_calendar_publication_data;
     QJSCalendarData opened, unaligned;
     QJSCalendarYear saved = {1, 2, 3, 4, 5}, result = saved;
     uint8_t *copy = malloc(compiled->size + 1);

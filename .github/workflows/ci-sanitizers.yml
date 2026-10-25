@@ -587,12 +587,12 @@ jobs:
       run: |
         echo "PKG_CONFIG_PATH=$ICU_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
         echo "LD_LIBRARY_PATH=$ICU_PREFIX/lib" >> "$GITHUB_ENV"
-    - name: Configure ICU4C timezone backend
+    - name: Configure ICU4C timezone and calendar backends
       run: |
         pkg-config --modversion icu-uc icu-i18n
         meson setup build -Dwerror=true -Ddefault_library=both \
           -Db_sanitize=address,undefined -Dintl=disabled \
-          -Dtemporal=true -Dcalendars=native -Dtimezone_backend=icu4c
+          -Dtemporal=true -Dcalendars=icu4c -Dtimezone_backend=icu4c
     - name: Compile selected build
       id: compile
       run: |

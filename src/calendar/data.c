@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include "data.h"
+#include "iso.h"
 #include "arithmetic.h"
 #include <limits.h>
 #include <string.h>
@@ -238,6 +239,74 @@ int qjs_calendar_data_year(const QJSCalendarData *data, QJSCalendarId calendar,
     value.month_lengths = read_u32(row + 4);
     value.months = row[8];
     value.leap_month = row[9];
+    *result = value;
+    return QJS_CAL_OK;
+}
+
+int qjs_calendar_official_year(QJSCalendarId calendar, int32_t year,
+                                QJSCalendarYear *result)
+{
+    int last, error;
+
+    if (calendar == QJS_CAL_CHINESE)
+        last = 2100;
+    else if (calendar == QJS_CAL_DANGI)
+        last = 2050;
+    else
+        return QJS_CAL_UNSUPPORTED;
+    if (year < 1900 || year > last)
+        return QJS_CAL_UNSUPPORTED;
+    error = qjs_calendar_data_year(&qjs_calendar_publication_data, calendar, year, result);
+    return error == QJS_CAL_RANGE || error == QJS_CAL_UNSUPPORTED ? QJS_CAL_BACKEND : error;
+}
+
+int qjs_calendar_official_date(QJSCalendarId calendar, int64_t epoch_day,
+                                QJSCalendarDate *result)
+{
+    QJSISODate iso;
+    QJSCalendarYear year;
+    QJSCalendarDate value = {0};
+    int i, error, length, nominal;
+    int64_t day;
+
+    if (qjs_iso_date_from_days(&iso, epoch_day))
+        return QJS_CAL_RANGE;
+    /* Lunar New Year is in the first part of its related ISO year. Include
+       the last official lunar year's January/February tail as one whole row. */
+    error = qjs_calendar_official_year(calendar, iso.year, &year);
+    if (error == QJS_CAL_UNSUPPORTED || (!error && epoch_day < year.first_day)) {
+        if (iso.year == INT32_MIN)
+            return QJS_CAL_UNSUPPORTED;
+        iso.year--;
+        error = qjs_calendar_official_year(calendar, iso.year, &year);
+    }
+    if (error)
+        return error;
+    if (epoch_day < year.first_day || epoch_day >= year.end_day)
+        return QJS_CAL_UNSUPPORTED;
+    day = year.first_day;
+    for (i = 0; i < year.months; i++) {
+        length = 29 + ((year.month_lengths >> (2 * i)) & 3);
+        if (epoch_day < day + length)
+            break;
+        day += length;
+    }
+    if (i == year.months)
+        return QJS_CAL_BACKEND;
+    value.year = iso.year;
+    value.month = i + 1;
+    value.day = (int)(epoch_day - day + 1);
+    value.day_of_year = (int)(epoch_day - year.first_day + 1);
+    value.days_in_year = year.end_day - year.first_day;
+    value.days_in_month = length;
+    value.months_in_year = year.months;
+    value.in_leap_year = year.months == 13;
+    nominal = value.month - (year.leap_month && value.month > year.leap_month);
+    value.month_code[0] = 'M';
+    value.month_code[1] = '0' + nominal / 10;
+    value.month_code[2] = '0' + nominal % 10;
+    if (year.leap_month && value.month == year.leap_month + 1)
+        value.month_code[3] = 'L';
     *result = value;
     return QJS_CAL_OK;
 }

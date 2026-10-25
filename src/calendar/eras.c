@@ -20,7 +20,6 @@
  * THE SOFTWARE.
  */
 #include "eras.h"
-#include "data.h"
 #include <string.h>
 
 int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out)
@@ -38,10 +37,14 @@ int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out)
     case QJS_CAL_PERSIAN: first = "ap"; break;
     case QJS_CAL_ROC: first = "roc"; second = "broc"; break;
     case QJS_CAL_JAPANESE: {
-        size_t count = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        size_t count;
+        int error = qjs_cal_japanese_era_count(&count);
+
+        if (error)
+            return error;
         if (index < count) {
             QJSCalendarEra era;
-            int error = qjs_calendar_data_japanese_era(&qjs_native_calendar_data, index, &era);
+            int error = qjs_cal_japanese_era_at(index, &era);
             if (error)
                 return error;
             *out = era.name;
@@ -60,12 +63,13 @@ int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out)
     return QJS_CAL_OK;
 }
 
-void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
+int qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
                      QJSCalendarDate *date)
 {
     const char *name = NULL;
     int32_t year = date->year, era_year = year;
     size_t i;
+    int error;
 
     switch (calendar) {
     case QJS_CAL_BUDDHIST: name = "be"; break;
@@ -77,12 +81,16 @@ void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
             era_year += 5500;
         break;
     case QJS_CAL_JAPANESE:
-        i = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        error = qjs_cal_japanese_era_count(&i);
+        if (error)
+            return error;
         while (i) {
             QJSCalendarEra era;
 
-            if (!qjs_calendar_data_japanese_era(&qjs_native_calendar_data, --i, &era) &&
-                epoch_day >= era.first_day) {
+            error = qjs_cal_japanese_era_at(--i, &era);
+            if (error)
+                return error;
+            if (epoch_day >= era.first_day) {
                 name = era.name;
                 era_year -= era.year_offset;
                 break;
@@ -118,6 +126,7 @@ void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
     date->era[0] = 0;
     if (name)
         strcpy(date->era, name);
+    return QJS_CAL_OK;
 }
 
 int qjs_cal_year_from_era(QJSCalendarId calendar, const char *era,
@@ -125,6 +134,7 @@ int qjs_cal_year_from_era(QJSCalendarId calendar, const char *era,
 {
     int64_t year = era_year;
     size_t i, count;
+    int error;
 
     switch (calendar) {
     case QJS_CAL_BUDDHIST:
@@ -167,12 +177,16 @@ int qjs_cal_year_from_era(QJSCalendarId calendar, const char *era,
             return QJS_CAL_RANGE;
         break;
     case QJS_CAL_JAPANESE:
-        count = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        error = qjs_cal_japanese_era_count(&count);
+        if (error)
+            return error;
         for (i = 0; i < count; i++) {
             QJSCalendarEra record;
 
-            if (!qjs_calendar_data_japanese_era(&qjs_native_calendar_data, i, &record) &&
-                !strcmp(era, record.name)) {
+            error = qjs_cal_japanese_era_at(i, &record);
+            if (error)
+                return error;
+            if (!strcmp(era, record.name)) {
                 year += record.year_offset;
                 goto resolved;
             }

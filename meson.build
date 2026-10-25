@@ -79,8 +79,12 @@ endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
 endif
-if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'
-  common_args += '-DCONFIG_CALENDAR_NATIVE'
+if get_option('temporal') or intl_enabled
+  if get_option('calendars') == 'native'
+    common_args += '-DCONFIG_CALENDAR_NATIVE'
+  elif get_option('calendars') == 'icu4c'
+    common_args += '-DCONFIG_CALENDAR_ICU4C'
+  endif
 endif
 if get_option('temporal') or intl_enabled
   if get_option('timezone_backend') != 'minimal'
@@ -148,7 +152,7 @@ foreach native : [false, true]
       native: native,
     ),
   ]
-  if (get_option('temporal') or intl_enabled) and get_option('timezone_backend') == 'icu4c'
+  if (get_option('temporal') or intl_enabled) and (get_option('timezone_backend') == 'icu4c' or get_option('calendars') == 'icu4c')
     icu_uc = dependency('icu-uc', version: '>=74', native: native)
     icu_i18n = dependency('icu-i18n', version: '>=74', native: native)
     deps += [icu_uc, icu_i18n]
@@ -362,7 +366,7 @@ calendar_boundary = executable(
 
 # A validated byte pack has one C owner, generated without target execution.
 calendar_data = custom_target(
-  'native-calendar-data',
+  'calendar-publication-data',
   input: files('data/calendar/calendar-data.bin'),
   output: 'calendar-data.c',
   command: [
@@ -808,10 +812,14 @@ qjs = executable(
   export_dynamic: host_machine.system() != 'windows',
   install: true,
 )
+test262_args = host_args
+if (get_option('temporal') or intl_enabled) and get_option('calendars') != 'iso'
+  test262_args += '-DCONFIG_CALENDAR_EXTENDED'
+endif
 run_test262 = executable(
   'run-test262',
   ['tools/run-test262.c', tool_support],
-  c_args: host_args,
+  c_args: test262_args,
   include_directories: inc,
   dependencies: host_deps,
   link_whole: engine_whole,

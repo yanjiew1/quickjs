@@ -54,6 +54,26 @@ enum {
     QJS_CAL_BACKEND = -5,
 };
 
+typedef struct QJSCalendarYear {
+    int32_t first_day, end_day;
+    /* Two bits per ordinal month, starting at bit zero; add 29 for days. */
+    uint32_t month_lengths;
+    /* Nominal month repeated by the inserted month, 1..12; zero if absent. */
+    uint8_t months, leap_month;
+} QJSCalendarYear;
+
+/* Checked month layout used by provider-independent month searches. */
+typedef struct QJSCalendarYearLayout {
+    int64_t first_day, end_day;
+    unsigned char lengths[13];
+    int months, leap_month;
+} QJSCalendarYearLayout;
+
+typedef struct QJSCalendarEra {
+    int32_t first_day, year_offset;
+    const char *name;
+} QJSCalendarEra;
+
 typedef struct QJSCalendarDate {
     int32_t year, month, day, era_year;
     char month_code[5], era[32];

@@ -35,7 +35,7 @@ static void check(QJSCalendarId calendar, int32_t year, const char *era,
     int32_t resolved = 123;
 
     date.year = year;
-    qjs_cal_set_era(calendar, 0, &date);
+    assert(!qjs_cal_set_era(calendar, 0, &date));
     assert(date.has_era && !strcmp(date.era, era) && date.era_year == era_year);
     assert(!qjs_cal_year_from_era(calendar, era, era_year, &resolved));
     assert(resolved == year);
@@ -78,12 +78,12 @@ int main(void)
 
         assert(!qjs_iso_date_to_days(&day, boundaries[i].iso));
         date.year = boundaries[i].iso.year;
-        qjs_cal_set_era(QJS_CAL_JAPANESE, day, &date);
+        assert(!qjs_cal_set_era(QJS_CAL_JAPANESE, day, &date));
         assert(!strcmp(date.era, boundaries[i].after));
         assert(date.era_year == boundaries[i].after_year);
         assert(!qjs_iso_date_from_days(&before, day - 1));
         date.year = before.year;
-        qjs_cal_set_era(QJS_CAL_JAPANESE, day - 1, &date);
+        assert(!qjs_cal_set_era(QJS_CAL_JAPANESE, day - 1, &date));
         assert(!strcmp(date.era, boundaries[i].before));
         assert(date.era_year == boundaries[i].before_year);
     }
@@ -99,7 +99,7 @@ int main(void)
     assert(qjs_cal_year_from_era(QJS_CAL_GREGORY, "bce", INT32_MIN, &year) == QJS_CAL_RANGE);
     assert(year == 123);
     for (i = QJS_CAL_CHINESE; i <= QJS_CAL_DANGI; i += QJS_CAL_DANGI - QJS_CAL_CHINESE) {
-        qjs_cal_set_era((QJSCalendarId)i, 0, &date);
+        assert(!qjs_cal_set_era((QJSCalendarId)i, 0, &date));
         assert(!date.has_era && !date.era[0] && !date.era_year);
     }
     return 0;

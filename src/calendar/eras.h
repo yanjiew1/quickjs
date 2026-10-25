@@ -1,4 +1,4 @@
-/* Native calendar era identities; no locale or JS state.
+/* Calendar era identities; no locale or JS state.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,13 +24,20 @@
 #include "types.h"
 #include <stddef.h>
 
+/* The selected provider owns Japanese era records. Names/records remain
+   borrowed for process lifetime; failures preserve outputs. Shared code below
+   owns the normative Gregorian fallback and lenient era-year resolution. */
+int qjs_cal_japanese_era_count(size_t *out);
+int qjs_cal_japanese_era_at(size_t index, QJSCalendarEra *out);
+
 /* Enumerate only canonical codes that set_era can emit, including data-driven
    modern Japanese codes and their Gregorian historical fallback. */
 int qjs_cal_era_at(QJSCalendarId calendar, size_t index, const char **out);
 
 /* date already contains a checked arithmetic year; epoch_day is its date.
-   Calendars without eras leave has_era zero and both era outputs empty. */
-void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
+   Calendars without eras leave has_era zero and both era outputs empty.
+   Provider errors preserve date instead of silently selecting a fallback era. */
+int qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
                      QJSCalendarDate *date);
 /* Resolve lenient out-of-era years before recomputing the resulting era.
    era is borrowed, case-sensitive and NUL-terminated. Preserve output on error. */

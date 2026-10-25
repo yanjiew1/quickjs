@@ -60,6 +60,14 @@ function test_profiles() {
 }
 
 function test_publications_and_eras() {
+    // Very early Indian dates expose negative-Julian-day truncation in some
+    // calendar libraries; conversion and field construction must agree.
+    const indian = new Date(-271821, 4, 19, "indian");
+    assert(indian.year, -271899);
+    assert(indian.month, 1);
+    assert(indian.day, 29);
+    assert(Date.from({calendar: "indian", year: -271899, month: 1, day: 29})
+        .equals(indian), true);
     const persian = Date.from({calendar: "persian", year: 1404, month: 1, day: 1});
     assert(persian.withCalendar("iso8601").toString(), "2025-03-21");
     for (const calendar of ["chinese", "dangi"]) {
@@ -70,6 +78,17 @@ function test_publications_and_eras() {
         assert(date.era, undefined);
         assert(date.eraYear, undefined);
     }
+    // Official records are required even when an astronomical library gives
+    // a different leap-month label or a different length for the whole year.
+    for (const [calendar, iso, code] of [["chinese", "1987-07-26", "M06L"],
+        ["dangi", "2017-06-24", "M05L"]]) {
+        const value = Date.from(iso).withCalendar(calendar);
+        assert(value.monthCode, code);
+        assert(value.day, 1);
+        assert(Date.from({calendar, year: value.year, monthCode: code, day: 1})
+            .withCalendar("iso8601").toString(), iso);
+    }
+    assert(Date.from("2018-11-08").withCalendar("chinese").daysInYear, 354);
     const umm = Date.from({calendar: "islamic-umalqura", year: 1446, month: 1, day: 1});
     const civil = Date.from({calendar: "islamic-civil", year: 1446, month: 1, day: 1});
     assert(umm.withCalendar("iso8601").toString(), "2024-07-07");
@@ -162,11 +181,34 @@ function test_dangi_precomputed_extension() {
     ];
     for (const [iso, year, monthCode, day] of cases) {
         const value = Date.from(iso).withCalendar("dangi");
-        assert(value.year, year, iso);
-        assert(value.monthCode, monthCode, iso);
-        assert(value.day, day, iso);
-        assert(Date.from({calendar: "dangi", year, monthCode, day})
+        // These exact labels belong to the native precomputed data policy.
+        // Calendar Types permits Dangi approximations outside 1900..2050;
+        // all providers must still round-trip their own fields on these dates.
+        if (scriptArgs[1] === "native") {
+            assert(value.year, year, iso);
+            assert(value.monthCode, monthCode, iso);
+            assert(value.day, day, iso);
+        }
+        assert(Date.from({calendar: "dangi", year: value.year,
+            monthCode: value.monthCode, day: value.day})
             .withCalendar("iso8601").toString(), iso);
+    }
+}
+
+function test_extreme_lunar_dates() {
+    // Supported calendar conversion must return records throughout Temporal's
+    // ISO interval, even where a provider needs a permitted distant model.
+    for (const calendar of ["chinese", "dangi"]) {
+        for (const [year, month, day] of [[-271821, 6, 1], [275760, 6, 5]]) {
+            const value = new Date(year, month, day, calendar);
+            const copy = Date.from({calendar, year: value.year,
+                monthCode: value.monthCode, day: value.day});
+            assert(copy.equals(value), true);
+            assert(value.add({months: 1}).subtract({months: 1}).equals(value), true);
+        }
+        const start = Date.from({calendar, year: -200000, monthCode: "M01", day: 1});
+        const end = start.add({months: 5000000});
+        assert(end.subtract({months: 5000000}).equals(start), true);
     }
 }
 
@@ -176,4 +218,5 @@ if (test_profiles()) {
     test_month_arithmetic_edges();
     test_field_order();
     test_dangi_precomputed_extension();
+    test_extreme_lunar_dates();
 }

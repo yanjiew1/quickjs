@@ -67,7 +67,7 @@ def render(binary):
              'static const uint8_t calendar_bytes[] = {']
     for n in range(0, len(binary), 16):
         lines.append('    ' + ', '.join('0x%02x' % b for b in binary[n:n + 16]) + ',')
-    lines += ['};', '', 'const QJSCalendarData qjs_native_calendar_data = {',
+    lines += ['};', '', 'const QJSCalendarData qjs_calendar_publication_data = {',
               '    calendar_bytes, sizeof(calendar_bytes), %d,' % len(datasets), '};', '']
     return WRAPPER_LICENSE + '\n'.join(lines)
 

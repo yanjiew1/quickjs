@@ -320,7 +320,7 @@ class BinaryTests(unittest.TestCase):
             generate.generate(out, manifest)
             self.assertEqual(out.read_bytes(), binary)
             self.assertEqual(manifest.read_bytes(), (ROOT / 'data/calendar/calendar-data-manifest.json').read_bytes())
-        self.assertIn('qjs_native_calendar_data', embed.render(binary))
+        self.assertIn('qjs_calendar_publication_data', embed.render(binary))
 
     def test_generator_accepts_custom_json_and_records_actual_hash(self):
         with tempfile.TemporaryDirectory() as directory:

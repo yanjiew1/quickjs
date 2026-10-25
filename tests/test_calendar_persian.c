@@ -58,7 +58,7 @@ int main(void)
     for (year = 1206; year <= 1498; year++) {
         QJSCalendarYear published;
 
-        assert(!qjs_calendar_data_year(&qjs_native_calendar_data, QJS_CAL_PERSIAN,
+        assert(!qjs_calendar_data_year(&qjs_calendar_publication_data, QJS_CAL_PERSIAN,
                                        year, &published));
         assert(!qjs_cal_persian_year_start(year, &first));
         assert(!qjs_cal_persian_year_start(year + 1, &next));

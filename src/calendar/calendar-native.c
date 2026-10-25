@@ -72,7 +72,7 @@ int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
     if (qjs_cal_native_lunar(calendar)) {
         QJSCalendarYear packed;
 
-        error = qjs_calendar_data_year(&qjs_native_calendar_data, calendar,
+        error = qjs_calendar_data_year(&qjs_calendar_publication_data, calendar,
                                        year, &packed);
         if (error) {
             /* Never replace a missing stored year with an approximation,
@@ -265,7 +265,9 @@ int qjs_calendar_backend_from_epoch_day(QJSCalendarId calendar, int64_t day,
                          islamic(calendar) ? value.days_in_year > 354 :
                          value.days_in_year > 365;
     month_code(&info, month, value.month_code);
-    qjs_cal_set_era(calendar, day, &value);
+    error = qjs_cal_set_era(calendar, day, &value);
+    if (error)
+        return error;
     *result = value;
     return QJS_CAL_OK;
 }

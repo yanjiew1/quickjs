@@ -31,7 +31,7 @@
 /* One Japanese dataset, a padded source-version string and six era records.
    Fill this test fixture before exposing its immutable compiled view. */
 static uint8_t bytes[72 + 6 * 40];
-const QJSCalendarData qjs_native_calendar_data = {bytes, sizeof(bytes), 1};
+const QJSCalendarData qjs_calendar_publication_data = {bytes, sizeof(bytes), 1};
 
 static void put_u32(size_t at, uint32_t value)
 {
@@ -84,9 +84,9 @@ int main(void)
     assert(!qjs_calendar_data_open(&checked, bytes, sizeof(bytes)));
     assert(qjs_calendar_data_japanese_era_count(&checked) == 6);
     date.year = 2035;
-    qjs_cal_set_era(QJS_CAL_JAPANESE, day - 1, &date);
+    assert(!qjs_cal_set_era(QJS_CAL_JAPANESE, day - 1, &date));
     assert(!strcmp(date.era, "five") && date.era_year == 76);
-    qjs_cal_set_era(QJS_CAL_JAPANESE, day, &date);
+    assert(!qjs_cal_set_era(QJS_CAL_JAPANESE, day, &date));
     assert(!strcmp(date.era, "future") && date.era_year == 1);
     assert(!qjs_cal_year_from_era(QJS_CAL_JAPANESE, "future", 3, &year));
     assert(year == 2037);

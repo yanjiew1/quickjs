@@ -97,9 +97,9 @@ option(
 option(
   'calendars',
   type: 'combo',
-  choices: ['native', 'iso'],
+  choices: ['native', 'iso', 'icu4c'],
   value: 'native',
-  description: 'Calendar arithmetic: core ISO only, or native calendar extensions',
+  description: 'Calendar arithmetic: core ISO only, native extensions or ICU4C',
 )
 option(
   'timezone_backend',

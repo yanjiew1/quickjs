@@ -127,6 +127,20 @@ and embedded IANA timezone rules. It has no ICU or installed timezone-data
 dependency. Use `-Dcalendars=iso` to omit non-ISO calendar implementations and
 their publication data. ISO arithmetic always remains in core; this option is
 independent of the timezone backend selection.
+
+`-Dcalendars=icu4c` selects ICU4C 74 or newer for non-ISO calendars and omits
+the native publication pack. ISO remains in core. Japanese era dates and names
+come from ICU; arithmetic years, month codes and canonical era identifiers follow
+the common calendar contract.
+
+Stock ICU cannot construct every distant Chinese/Dangi year. This backend uses
+the shared ICU-derived approximation for coherent far-date regions outside
+checked seams near years -10000 and 10000. Both seams require exact agreement
+between ICU and model year boundaries. Required Chinese 1900–2100 and Dangi
+1900–2050 publication intervals stay entirely in ICU. Individual failing-year
+fallback is avoided because it can create gaps or overlaps between years.
+ICU allocation and data errors in the retained interval remain errors.
+
 `-Dtimezone_backend=icu4c` selects ICU4C 74 or newer for named-zone data and
 algorithms. Install its `icu-uc` and `icu-i18n` development packages, or expose
 an alternate prefix through `PKG_CONFIG_PATH`. Native timezone and Windows-map

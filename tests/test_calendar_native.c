@@ -77,7 +77,7 @@ static void publication_months(QJSCalendarId calendar, int first, int last)
         int64_t epoch;
         int month;
 
-        assert(!qjs_calendar_data_year(&qjs_native_calendar_data, calendar, year, &packed));
+        assert(!qjs_calendar_data_year(&qjs_calendar_publication_data, calendar, year, &packed));
         epoch = packed.first_day;
         for (month = 1; month <= packed.months; month++) {
             int32_t next_year, old_year;
@@ -127,7 +127,7 @@ static void check_era_domain(QJSCalendarId calendar)
     int error, found = 0;
 
     if (calendar == QJS_CAL_JAPANESE)
-        limit += qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        limit += qjs_calendar_data_japanese_era_count(&qjs_calendar_publication_data);
     assert(!qjs_calendar_from_epoch_day(calendar, 0, &date));
     for (count = 0; count <= limit; count++) {
         previous = name;

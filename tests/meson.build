@@ -411,11 +411,16 @@ component_tests = []
 if get_option('temporal') and native_calendars
   component_tests += 'test_temporal_noniso_calendars'
 endif
+if calendar_enabled and get_option('calendars') != 'iso'
+  component_tests += ['test_calendar_eras', 'test_calendar_era_failure']
+endif
+if calendar_enabled and get_option('calendars') == 'icu4c'
+  component_tests += 'test_calendar_icu4c'
+endif
 if native_calendars
   component_tests += [
     'test_calendar_native',
     'test_calendar_eras_future',
-    'test_calendar_eras',
     'test_calendar_lunisolar',
     'test_calendar_astronomy',
     'test_calendar_persian',
@@ -425,7 +430,7 @@ if native_calendars
     'test_calendar_solar',
   ]
 endif
-if calendar_enabled and not native_calendars
+if calendar_enabled and get_option('calendars') == 'iso'
   component_tests += 'test_calendar_core'
 endif
 if calendar_enabled
@@ -4353,6 +4358,8 @@ test(
     files('test_run_test262.sh'),
     run_test262,
     get_option('temporal') ? 'y' : 'n',
+    (calendar_enabled and get_option('calendars') != 'iso') ? 'y' : 'n',
+    (calendar_enabled and get_option('timezone_backend') != 'minimal') ? 'y' : 'n',
   ],
   suite: ['repo', 'tools', 'integration'],
   workdir: test_workdir,
