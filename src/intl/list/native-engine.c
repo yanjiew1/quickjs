@@ -12,7 +12,6 @@
 
 typedef struct ListPattern {
     uint16_t *text;
-    size_t length;
     QJSIntlUTF16 literal[3];
     unsigned char order[2];
 } ListPattern;
@@ -24,10 +23,6 @@ struct QJSIntlListFormatter {
     QJSIntlListScriptRange *hebrew_script;
     size_t hebrew_script_count;
 };
-typedef struct ListFrame {
-    size_t item;
-    unsigned char step;
-} ListFrame;
 
 static int add_size(size_t a, size_t b, size_t *out)
 {
@@ -123,7 +118,6 @@ static QJSIntlStatus load_pattern(const QJSIntlAllocator *a, QJSIntlBytes input,
     out->text = a->malloc(a->opaque, bytes);
     if (!out->text)
         return QJS_INTL_NO_MEMORY;
-    out->length = length;
     cursor = 0;
     i = 0;
     while (next_scalar(input, &cursor, &c) > 0) {
@@ -220,6 +214,8 @@ static QJSIntlStatus emit(QJSIntlUTF16 piece, QJSIntlPartType type,
                           int write)
 {
     size_t end, next;
+    if (!piece.length && type == QJS_INTL_PART_LITERAL)
+        return QJS_INTL_OK;
     if (!add_size(*length, piece.length, &end) || !add_size(*parts, 1, &next))
         return QJS_INTL_OVERFLOW;
     if (write) {
@@ -309,71 +305,64 @@ static int use_alternate(const QJSIntlListFormatter *list, QJSIntlUTF16 next)
     }
     return 1;
 }
-/* Expand the right-tail expression iteratively. An O(n) explicit stack avoids
- * recursion and repeated copies of already formatted tails. The measure and
- * write traversals are identical; allocation is checked between them.
- */
+static const ListPattern *pattern_at(const QJSIntlListFormatter *list,
+                                     size_t item, size_t count, int alternate)
+{
+    size_t index = count == 2 ? 0 : item == 0 ? 1 : item == count - 2 ? 3 : 2;
+
+    if (alternate && (index == 0 || index == 3))
+        index = index == 0 ? 4 : 5;
+    return &list->patterns[index];
+}
+
+/* Each node has one item and one tail. Descend through prefixes and any item
+   before the tail, emit the final item, then ascend through deferred items
+   and suffixes. Recompute the immutable pattern by index instead of retaining
+   a count-sized frame stack. Measure and write follow the same order. */
 static QJSIntlStatus traverse(const QJSIntlListFormatter *list, const QJSIntlUTF16 *items,
-                              size_t count, ListFrame *stack, QJSIntlFormatted *out,
+                              size_t count, QJSIntlFormatted *out,
                               size_t *length, size_t *parts, int write)
 {
-    size_t depth = 1;
+    size_t i;
     int alternate = use_alternate(list, items[count - 1]);
     QJSIntlStatus status;
-    stack[0].item = 0;
-    stack[0].step = 0;
-    while (depth) {
-        ListFrame *f = &stack[depth - 1];
-        const ListPattern *p;
-        QJSIntlUTF16 piece;
-        unsigned char step, which;
-        if (f->item == count - 1) {
-            status =
-                emit(items[f->item], QJS_INTL_PART_ELEMENT, out, length, parts, write);
-            depth--;
-            if (status != QJS_INTL_OK)
+
+    for (i = 0; i + 1 < count; i++) {
+        const ListPattern *p = pattern_at(list, i, count, alternate);
+
+        status = emit(p->literal[0], QJS_INTL_PART_LITERAL, out, length, parts, write);
+        if (!status && p->order[0] == 0) {
+            status = emit(items[i], QJS_INTL_PART_ELEMENT, out, length, parts, write);
+            if (!status)
+                status = emit(p->literal[1], QJS_INTL_PART_LITERAL, out, length, parts, write);
+        }
+        if (status)
+            return status;
+    }
+    status = emit(items[count - 1], QJS_INTL_PART_ELEMENT, out, length, parts, write);
+    if (status)
+        return status;
+    for (i = count - 1; i; ) {
+        const ListPattern *p = pattern_at(list, --i, count, alternate);
+
+        if (p->order[0] == 1) {
+            status = emit(p->literal[1], QJS_INTL_PART_LITERAL, out, length, parts, write);
+            if (!status)
+                status = emit(items[i], QJS_INTL_PART_ELEMENT, out, length, parts, write);
+            if (status)
                 return status;
-            continue;
         }
-        {
-            size_t pattern_index = count == 2             ? 0
-                                   : f->item == 0         ? 1
-                                   : f->item == count - 2 ? 3
-                                                          : 2;
-            if (alternate && (pattern_index == 0 || pattern_index == 3))
-                pattern_index = pattern_index == 0 ? 4 : 5;
-            p = &list->patterns[pattern_index];
-        }
-        step = f->step++;
-        if (step == 5) {
-            depth--;
-            continue;
-        }
-        if (!(step & 1)) {
-            piece = p->literal[step / 2];
-            if (!piece.length)
-                continue;
-            status = emit(piece, QJS_INTL_PART_LITERAL, out, length, parts, write);
-        } else {
-            which = p->order[step / 2];
-            if (which == 1) {
-                stack[depth].item = f->item + 1;
-                stack[depth++].step = 0;
-                continue;
-            }
-            status =
-                emit(items[f->item], QJS_INTL_PART_ELEMENT, out, length, parts, write);
-        }
-        if (status != QJS_INTL_OK)
+        status = emit(p->literal[2], QJS_INTL_PART_LITERAL, out, length, parts, write);
+        if (status)
             return status;
     }
     return QJS_INTL_OK;
 }
+
 QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *list,
                                           const QJSIntlUTF16 *items, size_t count,
                                           QJSIntlFormatted *out)
 {
-    ListFrame *stack = NULL;
     QJSIntlStatus status = QJS_INTL_OK;
     size_t i, length = 0, parts = 0, bytes, text_bytes, parts_bytes;
     const QJSIntlAllocator *a;
@@ -393,12 +382,7 @@ QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *list,
     }
     if (!count)
         return QJS_INTL_OK;
-    if (!mul_size(count, sizeof(*stack), &bytes))
-        return QJS_INTL_OVERFLOW;
-    stack = a->malloc(a->opaque, bytes);
-    if (!stack)
-        return QJS_INTL_NO_MEMORY;
-    status = traverse(list, items, count, stack, out, &length, &parts, 0);
+    status = traverse(list, items, count, out, &length, &parts, 0);
     if (status != QJS_INTL_OK)
         goto fail;
     if (!mul_size(length, sizeof(uint16_t), &text_bytes) ||
@@ -421,13 +405,11 @@ QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *list,
     out->length = length;
     out->part_count = parts;
     length = parts = 0;
-    status = traverse(list, items, count, stack, out, &length, &parts, 1);
+    status = traverse(list, items, count, out, &length, &parts, 1);
     if (status != QJS_INTL_OK)
         goto fail;
-    a->free(a->opaque, stack);
     return QJS_INTL_OK;
 fail:
-    a->free(a->opaque, stack);
     qjs_intl_list_result_clear(a, out);
     return status;
 }
