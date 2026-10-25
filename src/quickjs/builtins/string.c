@@ -39,7 +39,11 @@
 #include "regexp.h"
 #ifdef CONFIG_INTL
 #include "intl.h"
+#ifdef CONFIG_INTL_NATIVE
 #include "../../unicode/case-conversion.h"
+#else
+#include "../../intl/locale/case.h"
+#endif
 #endif
 
 /* String */
@@ -1396,16 +1400,21 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
 static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val,
                                            int argc, JSValueConst *argv, int to_lower)
 {
-    static const QJSIntlBytes available[] = {{"az", 2}, {"lt", 2}, {"tr", 2}};
     JSIntlLocaleList requested;
-    QJSIntlLocaleMatch match;
     QJSIntlBytes first;
+#ifdef CONFIG_INTL_NATIVE
+    static const QJSIntlBytes available[] = {{"az", 2}, {"lt", 2}, {"tr", 2}};
+    QJSIntlLocaleMatch match;
     UnicodeCaseLocale locale = UNICODE_CASE_DEFAULT;
+    DynBuf output;
+#else
+    QJSIntlAllocator allocator = js_intl_allocator(ctx->rt);
+    QJSIntlCaseResult output;
+#endif
     JSValue string, result = JS_EXCEPTION;
     const char *tag;
     const uint16_t *input;
     size_t length;
-    DynBuf output;
 
     /* Receiver conversion precedes locale access, even for an empty string.
        Canonicalize the entire list, then match only its first requested tag. */
@@ -1420,6 +1429,7 @@ static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val
         goto done;
     }
     first = (QJSIntlBytes){tag, strlen(tag)};
+#ifdef CONFIG_INTL_NATIVE
     if (js_intl_error(ctx, qjs_intl_lookup_matching_locale(available, countof(available),
                                                          &first, 1, &match), "case locale")) {
         js_intl_locale_list_clear(ctx->rt, &requested);
@@ -1443,6 +1453,22 @@ static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val
                                   output.size / sizeof(uint16_t));
     dbuf_free(&output);
     JS_FreeCStringUTF16(ctx, input);
+#else
+    /* Keep the first locale alive through the provider call. Library-backed
+       casing uses the same selected Unicode data as its Intl algorithms. */
+    input = JS_ToCStringLenUTF16(ctx, &length, string);
+    if (input) {
+        QJSIntlStatus status = qjs_intl_case_map(&allocator, first,
+            (QJSIntlUTF16){input, length}, to_lower, JS_STRING_LEN_MAX, &output);
+
+        if (!js_intl_error(ctx, status, "case conversion")) {
+            result = JS_NewStringUTF16(ctx, output.text, output.length);
+            qjs_intl_case_result_clear(&allocator, &output);
+        }
+        JS_FreeCStringUTF16(ctx, input);
+    }
+    js_intl_locale_list_clear(ctx->rt, &requested);
+#endif
  done:
     JS_FreeValue(ctx, string);
     return result;
