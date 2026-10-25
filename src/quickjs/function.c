@@ -440,6 +440,10 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
             }
         }
         break;
+    case JS_CLASS_ASYNC_FUNCTION_RESOLVE:
+    case JS_CLASS_ASYNC_FUNCTION_REJECT:
+        realm = p->u.async_function_data->realm;
+        break;
     case JS_CLASS_PROMISE_RESOLVE_FUNCTION:
     case JS_CLASS_PROMISE_REJECT_FUNCTION:
         realm = js_promise_resolve_function_realm(func_obj);

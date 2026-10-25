@@ -363,6 +363,7 @@ static void mark_children(JSRuntime *rt, JSGCObjectHeader *gp,
             }
             JS_MarkValue(rt, s->resolving_funcs[0], mark_func);
             JS_MarkValue(rt, s->resolving_funcs[1], mark_func);
+            mark_func(rt, &s->realm->header);
         }
         break;
     case JS_GC_OBJ_TYPE_SHAPE:

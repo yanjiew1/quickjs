@@ -52,6 +52,7 @@ static JSAsyncFunctionState *async_func_init(JSContext *ctx,
         return NULL;
     memset(s, 0, sizeof(*s));
     js_rc(s)->ref_count = 1;
+    s->realm = JS_DupContext(b->realm);
     add_gc_object(ctx->rt, &s->header, JS_GC_OBJ_TYPE_ASYNC_FUNCTION);
 
     sf = &s->frame;
@@ -139,6 +140,7 @@ void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s)
 
     JS_FreeValueRT(rt, s->resolving_funcs[0]);
     JS_FreeValueRT(rt, s->resolving_funcs[1]);
+    JS_FreeContext(s->realm);
 
     remove_gc_object(&s->header);
     if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && js_rc(s)->ref_count != 0) {
@@ -298,6 +300,8 @@ JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
     JSValue obj, func_ret;
     JSGeneratorData *s;
 
+    ctx = JS_VALUE_GET_OBJ(func_obj)->u.func.function_bytecode->realm;
+
     s = js_mallocz(ctx, sizeof(*s));
     if (!s)
         return JS_EXCEPTION;
@@ -435,6 +439,8 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
     BOOL is_reject = p->class_id - JS_CLASS_ASYNC_FUNCTION_RESOLVE;
     JSValueConst arg;
 
+    ctx = s->realm;
+
     if (argc > 0)
         arg = argv[0];
     else
@@ -456,6 +462,8 @@ JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
 {
     JSValue promise;
     JSAsyncFunctionState *s;
+
+    ctx = JS_VALUE_GET_OBJ(func_obj)->u.func.function_bytecode->realm;
 
     s = async_func_init(ctx, func_obj, this_obj, argc, argv);
     if (!s)
@@ -583,6 +591,8 @@ static int js_async_generator_await(JSContext *ctx,
 {
     JSValue promise, resolving_funcs[2], resolving_funcs1[2];
     int i, res;
+
+    ctx = s->func_state->realm;
 
     promise = js_promise_resolve(ctx, ctx->promise_ctor,
                                  1, &value, 0);
@@ -887,6 +897,8 @@ JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
 {
     JSValue obj, func_ret;
     JSAsyncGeneratorData *s;
+
+    ctx = JS_VALUE_GET_OBJ(func_obj)->u.func.function_bytecode->realm;
 
     s = js_mallocz(ctx, sizeof(*s));
     if (!s)

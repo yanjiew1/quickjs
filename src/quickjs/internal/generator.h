@@ -29,6 +29,8 @@
 
 typedef struct JSAsyncFunctionState {
     JSGCObjectHeader header;
+    /* Await continuations can outlive the completed function frame. */
+    JSContext *realm; /* owned for the entire async-state lifetime */
     JSValue this_val; /* 'this' argument */
     int argc; /* number of function arguments */
     BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */

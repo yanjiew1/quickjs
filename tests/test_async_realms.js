@@ -198,10 +198,54 @@ async function test_promise_resolver_and_job_realms()
     std.gc();
 }
 
+async function test_async_function_creation_realm()
+{
+    const result = run_in_realms(async function () {
+        const callback = foreign.Function(
+            "return async function () { await 0; return {}; }")();
+        const promise = callback();
+        if (Object.getPrototypeOf(promise) !== foreign.Promise.prototype)
+            throw Error("async result Promise used the caller realm");
+        runGC();
+        const value = await promise;
+        if (Object.getPrototypeOf(value) !== foreign.Object.prototype)
+            throw Error("async continuation lost its function realm");
+        runGC();
+        const generator = foreign.Function(
+            "return async function* () { await 0; yield {}; }")()();
+        const item = await generator.next();
+        if (Object.getPrototypeOf(item.value) !== foreign.Object.prototype)
+            throw Error("async generator body lost its function realm");
+        await generator.return();
+
+        // Borrow a local next method for a foreign generator. Await must use
+        // the suspended body's %Promise%, not the method's current realm.
+        let thenReads = 0;
+        const source = Promise.resolve(0);
+        Object.defineProperty(source, "then", {
+            get() { thenReads++; return Promise.prototype.then; },
+        });
+        const foreignGenerator = foreign.Function(
+            "return async function*(value) { await value; yield 1; }")()(source);
+        const localNext = Object.getPrototypeOf(
+            Object.getPrototypeOf((async function*() {})())).next;
+        const nextPromise = localNext.call(foreignGenerator);
+        if (Object.getPrototypeOf(nextPromise) !== Promise.prototype)
+            throw Error("borrowed next method lost its own result Promise realm");
+        if ((await nextPromise).value !== 1 || thenReads !== 1)
+            throw Error("foreign async-generator Await used the method realm");
+        await foreignGenerator.return();
+        return true;
+    });
+    check(await result, true, "async function and continuation creation realms");
+    std.gc();
+}
+
 export async function test_async_realms()
 {
     await test_array_from_async_realm();
     await test_promise_capability_realms();
     await test_builtin_callback_creation_realm();
     await test_promise_resolver_and_job_realms();
+    await test_async_function_creation_realm();
 }
