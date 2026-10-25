@@ -121,6 +121,7 @@ struct JSRuntime {
 #endif
     struct JSRuntimeFinalizerState *finalizers;
     BOOL is_freeing : 8;
+    JSContext *current_realm; /* borrowed during calls; NULL while idle */
 };
 
 

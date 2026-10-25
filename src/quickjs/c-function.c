@@ -117,6 +117,7 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
                            int argc, JSValueConst *argv, int flags)
 {
     JSRuntime *rt = ctx->rt;
+    JSContext *previous_realm;
     JSCFunctionType func;
     JSObject *p;
     JSStackFrame sf_s, *sf = &sf_s, *prev_sf;
@@ -135,8 +136,8 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
 
     prev_sf = rt->current_stack_frame;
     sf->prev_frame = prev_sf;
-    rt->current_stack_frame = sf;
     ctx = p->u.cfunc.realm; /* change the current realm */
+    previous_realm = rt->current_realm;
     sf->js_mode = 0;
     sf->cur_func = (JSValue)func_obj;
     sf->arg_count = argc;
@@ -153,6 +154,8 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
     }
     sf->arg_buf = (JSValue*)arg_buf;
 
+    rt->current_stack_frame = sf;
+    rt->current_realm = ctx;
     func = p->u.cfunc.c_function;
     switch(cproto) {
     case JS_CFUNC_constructor:
@@ -242,6 +245,7 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
     }
 
     rt->current_stack_frame = sf->prev_frame;
+    rt->current_realm = previous_realm;
     return ret_val;
 }
 
@@ -330,13 +334,17 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
                                 JSValueConst this_val,
                                 int argc, JSValueConst *argv, int flags)
 {
+    JSRuntime *rt = ctx->rt;
+    JSContext *previous_realm;
     JSCFunctionDataRecord *s = JS_GetOpaque(func_obj, JS_CLASS_C_FUNCTION_DATA);
     JSValueConst *arg_buf;
+    JSValue result;
     int i;
 
     ctx = s->realm;
+    if (js_check_stack_overflow(rt, sizeof(argv[0]) * s->length))
+        return JS_ThrowStackOverflow(ctx);
 
-    /* XXX: could add the function on the stack for debug */
     if (unlikely(argc < s->length)) {
         arg_buf = alloca(sizeof(arg_buf[0]) * s->length);
         for(i = 0; i < argc; i++)
@@ -347,7 +355,11 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
         arg_buf = argv;
     }
 
-    return s->func(ctx, this_val, argc, arg_buf, s->magic, s->data);
+    previous_realm = rt->current_realm;
+    rt->current_realm = ctx;
+    result = s->func(ctx, this_val, argc, arg_buf, s->magic, s->data);
+    rt->current_realm = previous_realm;
+    return result;
 }
 
 void js_c_function_data_finalizer(JSRuntime *rt, JSValue val)
@@ -416,6 +428,7 @@ JSValue js_call_c_closure(JSContext *ctx, JSValueConst func_obj,
                          JSValueConst *argv, int flags)
 {
     JSRuntime *rt = ctx->rt;
+    JSContext *previous_realm;
     JSCClosureRecord *s = JS_GetOpaque(func_obj, JS_CLASS_C_CLOSURE);
     JSStackFrame sf;
     JSValueConst *arg_buf = argv;
@@ -433,13 +446,16 @@ JSValue js_call_c_closure(JSContext *ctx, JSValueConst func_obj,
             arg_buf[i] = JS_UNDEFINED;
     }
     sf.prev_frame = rt->current_stack_frame;
+    previous_realm = rt->current_realm;
     sf.cur_func = (JSValue)func_obj;
     sf.arg_count = max_int(argc, s->length);
     sf.arg_buf = (JSValue *)arg_buf;
     sf.js_mode = 0;
     rt->current_stack_frame = &sf;
+    rt->current_realm = ctx;
     result = s->func(ctx, this_val, argc, arg_buf, s->magic, s->opaque);
     rt->current_stack_frame = sf.prev_frame;
+    rt->current_realm = previous_realm;
     return result;
 }
 

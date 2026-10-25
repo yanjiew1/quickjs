@@ -418,6 +418,9 @@ JS_EXTERN JSContext *JS_DupContext(JSContext *ctx);
 JS_EXTERN void *JS_GetContextOpaque(JSContext *ctx);
 JS_EXTERN void JS_SetContextOpaque(JSContext *ctx, void *opaque);
 JS_EXTERN JSRuntime *JS_GetRuntime(JSContext *ctx);
+/* Borrowed active function realm, or NULL outside a call. Use
+   JS_DupContext() to retain it; this query does not allocate or throw. */
+JS_EXTERN JSContext *JS_GetCurrentRealm(JSRuntime *rt);
 JS_EXTERN void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
 JS_EXTERN JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
 

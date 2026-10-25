@@ -851,6 +851,11 @@ JSRuntime *JS_GetRuntime(JSContext *ctx)
     return ctx->rt;
 }
 
+JSContext *JS_GetCurrentRealm(JSRuntime *rt)
+{
+    return rt->current_realm;
+}
+
 static void update_stack_limit(JSRuntime *rt)
 {
     if (rt->stack_size == 0) {

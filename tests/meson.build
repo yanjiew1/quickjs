@@ -658,6 +658,21 @@ test(
   timeout: 120,
 )
 
+current_realm_test = executable(
+  'test_current_realm',
+  'test_current_realm.c',
+  c_args: host_args,
+  include_directories: include_directories('../include'),
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
+)
+test(
+  'current-realm',
+  current_realm_test,
+  suite: ['repo', 'embedding', 'integration'],
+  timeout: 120,
+)
+
 public_api_test = executable(
   'test_shared_api',
   'test_shared_api.c',

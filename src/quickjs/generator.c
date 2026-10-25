@@ -438,8 +438,12 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
     JSAsyncFunctionState *s = p->u.async_function_data;
     BOOL is_reject = p->class_id - JS_CLASS_ASYNC_FUNCTION_RESOLVE;
     JSValueConst arg;
+    JSRuntime *rt = ctx->rt;
+    JSContext *previous_realm;
 
     ctx = s->realm;
+    previous_realm = rt->current_realm;
+    rt->current_realm = ctx;
 
     if (argc > 0)
         arg = argv[0];
@@ -453,6 +457,7 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
         s->frame.cur_sp[-1] = JS_DupValue(ctx, arg);
     }
     js_async_function_resume(ctx, s);
+    rt->current_realm = previous_realm;
     return JS_UNDEFINED;
 }
 

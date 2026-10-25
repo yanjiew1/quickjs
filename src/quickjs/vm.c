@@ -2492,7 +2492,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         int argc, JSValue *argv, int flags)
 {
     JSRuntime *rt = caller_ctx->rt;
-    JSContext *ctx;
+    JSContext *ctx, *previous_realm;
     JSObject *p;
     JSFunctionBytecode *b;
     JSStackFrame sf_s, *sf = &sf_s;
@@ -2549,7 +2549,9 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             sf->cur_sp = NULL; /* cur_sp is NULL if the function is running */
             pc = sf->cur_pc;
             sf->prev_frame = rt->current_stack_frame;
+            previous_realm = rt->current_realm;
             rt->current_stack_frame = sf;
+            rt->current_realm = ctx;
             if (s->throw_flag)
                 goto exception;
             else
@@ -2613,8 +2615,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     sp = stack_buf;
     pc = b->byte_code_buf;
     sf->prev_frame = rt->current_stack_frame;
+    previous_realm = rt->current_realm;
     rt->current_stack_frame = sf;
     ctx = b->realm; /* set the current realm */
+    rt->current_realm = ctx;
 
  restart:
     for(;;) {
@@ -5686,6 +5690,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         }
     }
     rt->current_stack_frame = sf->prev_frame;
+    rt->current_realm = previous_realm;
     return ret_val;
 }
 
