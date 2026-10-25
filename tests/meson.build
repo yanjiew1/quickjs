@@ -34,6 +34,27 @@ if shared_modules
   )
 endif
 
+# Public consumers reuse the selected shared engine after its LTO link. Their
+# small harnesses need no cross-DSO LTO; static consumers retain the selected LTO.
+public_test_overrides = ['b_ndebug=false']
+if shared_build
+  public_test_overrides += 'b_lto=false'
+endif
+public_native_test_names = [
+  'test_api',
+  'test_builtin_brands',
+  'test_embedding_helpers',
+  'test_c_function_data',
+  'test_c_closure',
+  'test_regexp_oom',
+  'test_host_loop',
+  'test_fuzz_json',
+  'test_fuzz_exception_ownership',
+  'test_wait_async',
+  'test_promise_oom',
+  'test_qjsc_json_preload',
+]
+
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_api',
@@ -66,13 +87,14 @@ native_test_names = [
   'test_qjsc_json_preload',
 ]
 foreach name : native_test_names
+  public_consumer = name in public_native_test_names
   app = executable(
     name,
     name + '.c',
     c_args: host_args,
     include_directories: [inc, include_directories('..')],
-    dependencies: test_engine_dep,
-    override_options: ['b_ndebug=false'],
+    dependencies: public_consumer ? engine_dep : test_engine_dep,
+    override_options: public_consumer ? public_test_overrides : ['b_ndebug=false'],
   )
   suites = ['repo', 'native']
   if name in ['test_api', 'test_allocator', 'test_native_jobs']
@@ -109,8 +131,8 @@ allocation_fuzz_test = executable(
   ],
   c_args: host_args,
   include_directories: [inc, include_directories('..')],
-  dependencies: test_engine_dep,
-  override_options: ['b_ndebug=false'],
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
 )
 test(
   'test_fuzz_allocations',
@@ -190,8 +212,8 @@ context_test = executable(
   ['test_qjsc_context_failures.c', context_c],
   c_args: host_args,
   include_directories: [inc, include_directories('.')],
-  dependencies: test_engine_dep,
-  override_options: ['b_ndebug=false'],
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
 )
 test(
   'test_qjsc_context_failures',
@@ -215,8 +237,8 @@ probe_test = executable(
   c_args: host_args,
   include_directories: inc,
   link_with: probe,
-  dependencies: test_engine_dep,
-  override_options: ['b_ndebug=false'],
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
 )
 test(
   'test_qjsc_json_probe',
@@ -261,8 +283,8 @@ fuzz_support = executable(
   ],
   c_args: host_args,
   include_directories: [inc, include_directories('..')],
-  dependencies: test_engine_dep,
-  override_options: ['b_ndebug=false'],
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
 )
 test(
   'test_fuzz_support',
@@ -576,7 +598,7 @@ promise_api_test = executable(
   c_args: host_args,
   include_directories: include_directories('../include'),
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'promise-api',
@@ -591,7 +613,7 @@ runtime_finalizers_test = executable(
   c_args: host_args,
   include_directories: include_directories('../include'),
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'runtime-finalizers',
@@ -606,7 +628,7 @@ error_api_test = executable(
   c_args: host_args,
   include_directories: include_directories('../include'),
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'error-api',
@@ -621,7 +643,7 @@ public_api_test = executable(
   c_args: host_args,
   include_directories: include_directories('../include'),
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'public-embedding-api',
