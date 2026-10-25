@@ -322,7 +322,7 @@ static void JS_WriteString(BCWriterState *s, JSString *p)
     }
 }
 
-static int JS_WriteBigInt(BCWriterState *s, JSValueConst obj)
+static void JS_WriteBigInt(BCWriterState *s, JSValueConst obj)
 {
     JSBigIntBuf buf;
     JSBigInt *p;
@@ -368,7 +368,6 @@ static int JS_WriteBigInt(BCWriterState *s, JSValueConst obj)
             bc_put_u8(s, (p->tab[p->len - 1] >> (i * 8)) & 0xff);
         }
     }
-    return 0;
 }
 
 static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj);
@@ -828,8 +827,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
         break;
     case JS_TAG_SHORT_BIG_INT:
     case JS_TAG_BIG_INT:
-        if (JS_WriteBigInt(s, obj))
-            goto fail;
+        JS_WriteBigInt(s, obj);
         break;
     default:
     invalid_tag:
