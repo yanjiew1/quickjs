@@ -66,6 +66,7 @@ if shared_build
   public_test_overrides += 'b_lto=false'
 endif
 public_native_test_names = [
+  'test_temporal_oom',
   'test_api',
   'test_builtin_brands',
   'test_embedding_helpers',
@@ -78,6 +79,7 @@ public_native_test_names = [
   'test_wait_async',
   'test_qjsc_json_preload',
 ]
+
 # Reuse the selected support archives when assertions already match. A release
 # build needs an assertion-enabled algorithm owner for these white-box tests;
 # immutable tables still use the selected non-LTO data archive in either case.
@@ -110,7 +112,7 @@ default_time_zone_api_test = executable(
   c_args: host_args,
   include_directories: inc,
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'data-io',
@@ -151,7 +153,7 @@ temporal_api_test = executable(
   c_args: host_args,
   include_directories: inc,
   dependencies: engine_dep,
-  override_options: ['b_ndebug=false'],
+  override_options: public_test_overrides,
 )
 test(
   'temporal-api',
