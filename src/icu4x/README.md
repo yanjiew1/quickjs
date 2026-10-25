@@ -37,8 +37,9 @@ locked dependencies have been fetched.
 ## C boundary
 
 - Calendar IDs mirror `QJSCalendarId`; ISO arithmetic remains in C core.
-- Arguments and results are fixed-layout C records. No Rust reference, string,
-  enum representation or object handle crosses the boundary.
+- Arguments and calendar results are fixed-layout C records. Formatters use
+  owned opaque handles with explicit close functions. Rust references, strings
+  and enum layouts never become C-visible values.
 - Calls publish outputs only after success, including caught Rust panics.
   Borrowed Japanese era names have process lifetime; failed initialization is
   retryable. Concurrent initialization cannot publish a partial record.
@@ -79,3 +80,11 @@ IANA 2026e and CLDR 49 match the selected ICU4X data release. Obsolete ICU-only
 names are rejected; `Factory` is a valid current IANA zone supplied by that
 companion, not a substitute for unknown input. Raw DST flags come from TZif,
 independently of ICU4X's display-name variants.
+
+The private List provider uses ICU4X's actual list-marker inventories and
+contextual patterns. Its parts sink copies original UTF-16 elements directly,
+including empty strings, NUL and lone surrogates; only contextual inspection
+uses replacement scalars. C allocates final text and parts in two checked
+passes. Rust library allocations retain the bridge's documented foreign-OOM
+policy. This module is a foundation for the complete Intl profile; adding it
+does not silently change the currently selected engine backend.

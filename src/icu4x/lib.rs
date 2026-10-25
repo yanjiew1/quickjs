@@ -23,10 +23,13 @@
 
 #[cfg(feature = "calendars")]
 mod calendar;
+#[cfg(feature = "lists")]
+mod list;
 #[cfg(feature = "timezones")]
 mod timezone;
 
 const RANGE: i32 = -1;
+#[cfg(any(feature = "calendars", feature = "timezones"))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(feature = "calendars")]
 const MEMORY: i32 = -4;
