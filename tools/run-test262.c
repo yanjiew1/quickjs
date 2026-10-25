@@ -1,7 +1,7 @@
 /*
  * ECMA Test 262 Runner for QuickJS
  *
- * Copyright (c) 2017-2021 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2021 Charlie Gordon
  *
@@ -602,6 +602,49 @@ static JSValue js_print_to(JSContext *ctx, FILE *outfile,
     return JS_UNDEFINED;
 }
 
+/* Diagnostic conversion must not retain a secondary exception. */
+static const char *test262_exception_to_cstring(JSContext *ctx, size_t *plen,
+                                               JSValueConst value)
+{
+    const char *str = NULL;
+
+    if (!JS_IsException(value))
+        str = JS_ToCStringLen(ctx, plen, value);
+    if (!str)
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    return str;
+}
+
+/* Use ToString so that Test262Error objects display their intended message.
+   Write directly: diagnostics must not enter the async print-marker parser. */
+static void test262_dump_value(JSContext *ctx, FILE *file, JSValueConst value)
+{
+    if (JS_IsError(ctx, value)) {
+        JS_PrintValue(ctx, js_print_value_write, file, value, NULL);
+        if (JS_HasException(ctx))
+            JS_FreeValue(ctx, JS_GetException(ctx));
+    } else {
+        size_t len;
+        const char *str = test262_exception_to_cstring(ctx, &len, value);
+
+        if (str) {
+            fwrite(str, 1, len, file);
+            JS_FreeCString(ctx, str);
+        } else {
+            fputs("[exception]", file);
+        }
+    }
+    fputc('\n', file);
+}
+
+static void test262_dump_error(JSContext *ctx)
+{
+    JSValue exception = JS_GetException(ctx);
+
+    test262_dump_value(ctx, stderr, exception);
+    JS_FreeValue(ctx, exception);
+}
+
 static JSValue js_print(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv)
 {
@@ -782,7 +825,7 @@ static void *agent_start(void *arg)
     free(agent->script);
     agent->script = NULL;
     if (JS_IsException(ret_val))
-        js_std_dump_error(ctx);
+        test262_dump_error(ctx);
     JS_FreeValue(ctx, ret_val);
 
     for(;;) {
@@ -794,7 +837,7 @@ static void *agent_start(void *arg)
             break;
         ret = JS_ExecutePendingJob(JS_GetRuntime(ctx), NULL);
         if (ret < 0) {
-            js_std_dump_error(ctx);
+            test262_dump_error(ctx);
             break;
         } else if (ret == 0) {
             JSValue args[2];
@@ -820,7 +863,7 @@ static void *agent_start(void *arg)
             if (!pending) {
                 if (agent_wait(agent, rt) < 0) {
                     JS_ThrowInternalError(ctx, "agent polling failed");
-                    js_std_dump_error(ctx);
+                    test262_dump_error(ctx);
                     break;
                 }
                 continue;
@@ -833,7 +876,7 @@ static void *agent_start(void *arg)
             JS_FreeValue(ctx, args[0]);
             JS_FreeValue(ctx, args[1]);
             if (JS_IsException(ret_val))
-                js_std_dump_error(ctx);
+                test262_dump_error(ctx);
             JS_FreeValue(ctx, ret_val);
             JS_FreeValue(ctx, agent->broadcast_func);
             agent->broadcast_func = JS_UNDEFINED;
@@ -1948,22 +1991,20 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
         is_error = JS_IsError(ctx, exception_val);
         /* XXX: should get the filename and line number */
         if (outfile) {
-            JSValueConst args[1] = { exception_val };
-
             if (!is_error)
                 fprintf(outfile, "%sThrow: ", (eval_flags & JS_EVAL_FLAG_STRICT) ?
                         "strict mode: " : "");
-            js_print_to(ctx, outfile, 1, args);
+            test262_dump_value(ctx, outfile, exception_val);
         }
         if (is_error) {
             JSValue name, stack;
             const char *stack_str;
 
             name = JS_GetPropertyStr(ctx, exception_val, "name");
-            error_name = JS_ToCString(ctx, name);
+            error_name = test262_exception_to_cstring(ctx, NULL, name);
             stack = JS_GetPropertyStr(ctx, exception_val, "stack");
             if (!JS_IsUndefined(stack)) {
-                stack_str = JS_ToCString(ctx, stack);
+                stack_str = test262_exception_to_cstring(ctx, NULL, stack);
                 if (stack_str) {
                     const char *p;
                     int len;
@@ -1988,15 +2029,13 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
             if (error_type) {
                 const char *msg;
 
-                msg = JS_ToCString(ctx, exception_val);
+                msg = test262_exception_to_cstring(ctx, NULL, exception_val);
                 if (msg) {
                     size_t len = strcspn(msg, ":");
                     if (strlen(error_type) != len || memcmp(msg, error_type, len))
                         ret = -1;
                     JS_FreeCString(ctx, msg);
                 } else {
-                    /* Diagnostic coercion must not replace the test result. */
-                    JS_FreeValue(ctx, JS_GetException(ctx));
                     ret = -1;
                 }
             }
@@ -2011,34 +2050,34 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
     }
 
     if (verbose && is_test) {
-        JSValue msg_val = JS_UNDEFINED;
         const char *msg = NULL;
+        const char *error_text = NULL;
         int s_line;
         char *s = find_error(filename, &s_line, eval_flags & JS_EVAL_FLAG_STRICT);
         const char *strict_mode = (eval_flags & JS_EVAL_FLAG_STRICT) ? "strict mode: " : "";
 
-        if (!JS_IsUndefined(exception_val)) {
-            msg_val = JS_ToString(ctx, exception_val);
-            msg = JS_ToCString(ctx, msg_val);
+        if (JS_IsException(res_val)) {
+            msg = test262_exception_to_cstring(ctx, NULL, exception_val);
+            error_text = msg ? msg : "[exception]";
         }
         if (is_negative) {  // expect error
             if (ret == 0) {
-                if (msg && s &&
+                if (error_text && s &&
                     (str_equal(s, "expected error") ||
                      strstart(s, "unexpected error type:", NULL) ||
-                     str_equal(s, msg))) {     // did not have error yet
+                     str_equal(s, error_text))) {     // did not have error yet
                     if (!has_error_line) {
-                        longest_match(buf, msg, pos, &pos, pos_line, &error_line);
+                        longest_match(buf, error_text, pos, &pos, pos_line, &error_line);
                     }
                     printf("%s:%d: %sOK, now has error %s\n",
-                           filename, error_line, strict_mode, msg);
+                           filename, error_line, strict_mode, error_text);
                     fixed_errors++;
                 }
             } else {
                 if (!s) {   // not yet reported
-                    if (msg) {
+                    if (error_text) {
                         print_error("%s:%d: %sunexpected error type: %s\n",
-                                    filename, error_line, strict_mode, msg);
+                                    filename, error_line, strict_mode, error_text);
                     } else {
                         print_error("%s:%d: %sexpected error\n",
                                     filename, error_line, strict_mode);
@@ -2047,10 +2086,10 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 }
             }
         } else {            // should not have error
-            if (msg) {
-                if (!s || !str_equal(s, msg)) {
+            if (error_text) {
+                if (!s || !str_equal(s, error_text)) {
                     if (!has_error_line) {
-                        char *p = skip_prefix(msg, "Test262 Error: ");
+                        char *p = skip_prefix(error_text, "Test262 Error: ");
                         if (strstr(p, "Test case returned non-true value!")) {
                             longest_match(buf, "runTestCase", pos, &pos, pos_line, &error_line);
                         } else {
@@ -2058,9 +2097,9 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                         }
                     }
                     print_error("%s:%d: %s%s%s\n", filename, error_line, strict_mode,
-                                error_file ? "unexpected error: " : "", msg);
+                                error_file ? "unexpected error: " : "", error_text);
 
-                    if (s && (!str_equal(s, msg) || error_line != s_line)) {
+                    if (s && (!str_equal(s, error_text) || error_line != s_line)) {
                         printf("%s:%d: %sprevious error: %s\n", filename, s_line, strict_mode, s);
                         changed_errors++;
                     } else {
@@ -2074,7 +2113,6 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 }
             }
         }
-        JS_FreeValue(ctx, msg_val);
         JS_FreeCString(ctx, msg);
         free(s);
     }
@@ -2601,7 +2639,7 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
     res_val = JS_Eval(ctx, buf, buf_len, filename, eval_flags);
     ret_code = 0;
     if (JS_IsException(res_val)) {
-       js_std_dump_error(ctx);
+       test262_dump_error(ctx);
        ret_code = 1;
     } else {
         JSValue promise = JS_UNDEFINED;
@@ -2613,13 +2651,13 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
         for(;;) {
             ret = JS_ExecutePendingJob(JS_GetRuntime(ctx), NULL);
             if (ret < 0) {
-                js_std_dump_error(ctx);
+                test262_dump_error(ctx);
                 ret_code = 1;
             } else if (ret == 0) {
                 if (JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
                     if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
                         JS_ThrowInternalError(ctx, "native job polling failed");
-                        js_std_dump_error(ctx);
+                        test262_dump_error(ctx);
                         ret_code = 1;
                         break;
                     }
@@ -2633,7 +2671,7 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
             JSPromiseStateEnum state = JS_PromiseState(ctx, promise);
             if (state == JS_PROMISE_REJECTED) {
                 JS_Throw(ctx, JS_PromiseResult(ctx, promise));
-                js_std_dump_error(ctx);
+                test262_dump_error(ctx);
                 ret_code = 1;
             }
         }

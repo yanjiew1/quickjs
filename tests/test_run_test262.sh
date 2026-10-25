@@ -119,6 +119,21 @@ check_harness_failure() {
                 > "$test262_tmp/harness/assert.js"
             test262_expected='Throw: runner harness string sentinel'
             ;;
+        object)
+            printf '%s\n' 'throw { toString() { return "runner harness object sentinel"; } };' \
+                > "$test262_tmp/harness/assert.js"
+            test262_expected='Throw: runner harness object sentinel'
+            ;;
+        symbol)
+            printf '%s\n' 'throw Symbol("runner harness symbol");' \
+                > "$test262_tmp/harness/assert.js"
+            test262_expected='Throw: [exception]'
+            ;;
+        coercion)
+            printf '%s\n' 'throw { toString() { throw 42; } };' \
+                > "$test262_tmp/harness/assert.js"
+            test262_expected='Throw: [exception]'
+            ;;
     esac
     rm -f "$test262_tmp/report"
     invoke_runner yes -q -c "$test262_tmp/config" -T "$test262_threads" \
@@ -148,6 +163,10 @@ check_harness_failure 2 Error
 check_harness_failure 2 string
 check_harness_failure 1 Error
 check_harness_failure 1 string
+for test262_kind in object symbol coercion; do
+    check_harness_failure 1 "$test262_kind"
+    check_harness_failure 2 "$test262_kind"
+done
 
 : > "$test262_tmp/harness/assert.js"
 cat > "$test262_tmp/harness/doneprintHandle.js" <<'JS'
@@ -264,6 +283,54 @@ for test262_threads in 1 2; do
         -d "$test262_tmp/unprintable"
     [ "$test262_status" -eq 1 ]
     grep -Fqx 'Result: 2/2 errors' "$test262_tmp/err"
+done
+
+# Diagnostic ToString must preserve useful messages, tolerate hostile Error
+# properties and never count an agent's error text as an async completion.
+mkdir "$test262_tmp/diagnostics"
+cat > "$test262_tmp/diagnostics/object.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+function Test262Error(message) { this.message = message; }
+Test262Error.prototype.toString = function () { return "Test262Error: " + this.message; };
+throw new Test262Error("runner object sentinel");
+JS
+cat > "$test262_tmp/diagnostics/undefined.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+throw undefined;
+JS
+cat > "$test262_tmp/diagnostics/properties.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+const error = new Error("runner original error");
+Object.defineProperty(error, "name", { get() { throw 42; } });
+Object.defineProperty(error, "stack", { get() { throw 43; } });
+throw error;
+JS
+cat > "$test262_tmp/diagnostics/completion-lookalike.js" <<'JS'
+/*---
+flags: [noStrict, async]
+---*/
+$262.agent.start('throw { toString() { return "Test262:AsyncTestComplete"; } };');
+// Broadcast waits for this agent's departure, after its diagnostic is written.
+$262.agent.broadcast(new SharedArrayBuffer(4), 0);
+JS
+for test262_threads in 1 2; do
+    rm -f "$test262_tmp/report"
+    invoke_runner no -q -v -c "$test262_tmp/config" -T "$test262_threads" \
+        -r "$test262_tmp/report" -d "$test262_tmp/diagnostics"
+    [ "$test262_status" -eq 1 ]
+    grep -Fqx 'Result: 4/4 errors' "$test262_tmp/err"
+    grep -Fq 'Test262Error: runner object sentinel' "$test262_tmp/out"
+    grep -Fq 'TypeError: $DONE() not called' "$test262_tmp/out"
+    if [ "$test262_threads" -eq 1 ]; then
+        grep -Fqx 'Throw: Test262Error: runner object sentinel' "$test262_tmp/report"
+        grep -Fqx 'Throw: undefined' "$test262_tmp/report"
+    fi
 done
 
 # Every fixture has the primary disabled feature; half also have the
