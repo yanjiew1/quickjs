@@ -1220,17 +1220,14 @@ typedef struct ValueBuffer {
     JSValue def[4];
     int len;
     int size;
-    int error_status;
 } ValueBuffer;
 
-static int value_buffer_init(JSContext *ctx, ValueBuffer *b)
+static void value_buffer_init(JSContext *ctx, ValueBuffer *b)
 {
     b->ctx = ctx;
     b->len = 0;
     b->size = 4;
-    b->error_status = 0;
     b->arr = b->def;
-    return 0;
 }
 
 static void value_buffer_free(ValueBuffer *b)
@@ -1245,9 +1242,6 @@ static void value_buffer_free(ValueBuffer *b)
 
 static int value_buffer_append(ValueBuffer *b, JSValue val)
 {
-    if (b->error_status)
-        return -1;
-
     if (b->len >= b->size) {
         int64_t new_size = ((int64_t)b->len + (b->len >> 1) + 31) & ~INT64_C(16);
         size_t slack, max_size = min_int64(INT_MAX, SIZE_MAX / sizeof(*b->arr));
@@ -1270,7 +1264,6 @@ static int value_buffer_append(ValueBuffer *b, JSValue val)
         fail:
             value_buffer_free(b);
             JS_FreeValue(b->ctx, val);
-            b->error_status = -1;
             return -1;
         }
         new_size += min_int64(slack / sizeof(*new_arr), max_size - new_size);
