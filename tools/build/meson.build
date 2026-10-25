@@ -8,7 +8,18 @@ foreach entry : [
     command: [qjs] + entry[1],
   )
 endforeach
-foreach mode : ['bootstrap', 'run', 'default', 'check', 'update', 'legacy']
+# Downloading test data does not require a compiled engine or runner.
+run_target(
+  'test262-bootstrap',
+  command: [
+    python,
+    files('test262.py'),
+    'bootstrap',
+    '--source',
+    meson.project_source_root(),
+  ],
+)
+foreach mode : ['run', 'default', 'check', 'update', 'legacy']
   run_target(
     'test262-' + mode,
     command: [
