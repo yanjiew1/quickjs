@@ -100,8 +100,8 @@ int js_temporal_zoned_difference_round(JSContext *ctx,
                                      settings->largest_unit, &duration)) return -1;
     if (settings->smallest_unit == QJS_TEMPORAL_NANOSECOND &&
         settings->rounding_increment == 1) { *result = duration; return 0; }
-    if (js_temporal_time_zone_to_native(ctx, zone, &native) ||
-        js_temporal_time_zone_datetime(ctx, zone, start, &origin)) return -1;
+    js_temporal_time_zone_view(zone, &native);
+    if (js_temporal_time_zone_datetime(ctx, zone, start, &origin)) return -1;
     return js_temporal_calendar_error(ctx, qjs_temporal_relative_round(duration,
              start, end, origin, &native, calendar, settings, result));
 }
@@ -120,8 +120,8 @@ int js_temporal_zoned_difference_total(JSContext *ctx,
     }
     if (js_temporal_zoned_difference_raw(ctx, start, end, zone, calendar,
                                      unit, &duration)) return -1;
-    if (js_temporal_time_zone_to_native(ctx, zone, &native) ||
-        js_temporal_time_zone_datetime(ctx, zone, start, &origin)) return -1;
+    js_temporal_time_zone_view(zone, &native);
+    if (js_temporal_time_zone_datetime(ctx, zone, start, &origin)) return -1;
     return js_temporal_calendar_error(ctx, qjs_temporal_relative_total(duration,
              start, end, origin, &native, calendar, unit, result));
 }
