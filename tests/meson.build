@@ -85,6 +85,16 @@ if shared_build
   public_test_overrides += 'b_lto=false'
 endif
 public_native_test_names = [
+  'test_intl_api',
+  'test_intl_supported_values_oom',
+  'test_intl_case_oom',
+  'test_intl_plural_oom',
+  'test_intl_number_oom',
+  'test_intl_collator_oom',
+  'test_intl_date_time_oom',
+  'test_intl_relative_oom',
+  'test_intl_duration_oom',
+  'test_intl_display_oom',
   'test_temporal_oom',
   'test_api',
   'test_builtin_brands',
