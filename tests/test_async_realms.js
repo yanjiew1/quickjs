@@ -135,8 +135,30 @@ async function test_promise_capability_realms()
     std.gc();
 }
 
+async function test_builtin_callback_creation_realm()
+{
+    const result = run_in_realms(async function () {
+        let rejectElement;
+        foreign.Promise.resolve = value => value;
+        // Capture the builtin reject-element closure, then invoke it from a
+        // different realm instead of through the usual Promise job path.
+        const promise = foreign.Promise.any([{
+            then(resolve, reject) { rejectElement = reject; },
+        }]);
+        const checked = promise.then(
+            () => { throw Error("unexpected fulfillment"); },
+            error => Object.getPrototypeOf(error) === foreign.AggregateError.prototype);
+        runGC();
+        rejectElement("reason");
+        return await checked;
+    });
+    check(await result, true, "builtin callback retains its creation realm");
+    std.gc();
+}
+
 export async function test_async_realms()
 {
     await test_array_from_async_realm();
     await test_promise_capability_realms();
+    await test_builtin_callback_creation_realm();
 }

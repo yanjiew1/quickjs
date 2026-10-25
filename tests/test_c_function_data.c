@@ -235,6 +235,55 @@ static void test_named_callback_oom(void)
     assert(failures > 0 && successes > 0);
 }
 
+/* Data callbacks implement standard builtin closures too. Keep their creation
+   realm even when only a callback from another context remains reachable. */
+static JSValue callback_global(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv, int magic,
+                               JSValue *data)
+{
+    return JS_GetGlobalObject(ctx);
+}
+
+static void test_creation_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *creator = JS_NewContext(rt), *caller = JS_NewContext(rt);
+    JSValue function, expected_global, constructor, object, prototype, expected;
+
+    assert(creator && caller);
+    expected_global = JS_GetGlobalObject(creator);
+    function = JS_NewCFunctionData(creator, callback_global, 0, 0, 0, NULL);
+    assert(!JS_IsException(function));
+    assert(JS_SetConstructorBit(creator, function, 1));
+    assert(JS_SetPropertyStr(creator, function, "prototype", JS_NULL) >= 0);
+    expected = JS_Eval(creator, "Object.prototype", 16, "<realm>",
+                       JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(expected));
+    JS_FreeContext(creator);
+    JS_RunGC(rt);
+
+    object = JS_Call(caller, function, JS_UNDEFINED, 0, NULL);
+    assert(JS_StrictEq(caller, object, expected_global));
+    JS_FreeValue(caller, object);
+    constructor = JS_Eval(caller, "Object", 6, "<realm>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(constructor));
+    /* A non-object prototype uses GetFunctionRealm(newTarget), independently
+       of the callback's ordinary call path. */
+    object = JS_CallConstructor2(caller, constructor, function, 0, NULL);
+    assert(!JS_IsException(object));
+    prototype = JS_GetPrototype(caller, object);
+    assert(JS_StrictEq(caller, prototype, expected));
+    JS_FreeValue(caller, prototype);
+    JS_FreeValue(caller, object);
+    JS_FreeValue(caller, constructor);
+    JS_FreeValue(caller, expected);
+    JS_FreeValue(caller, expected_global);
+    JS_FreeValue(caller, function);
+    JS_FreeContext(caller);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     JSClassDef def = {
@@ -257,5 +306,6 @@ int main(void)
     JS_FreeRuntime(rt);
     assert(finalized == 2);
     test_named_callback_oom();
+    test_creation_realm();
     return 0;
 }

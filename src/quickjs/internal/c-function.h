@@ -40,6 +40,7 @@ static inline JSAtom *js_c_function_initial_name(JSObject *p)
 
 typedef struct JSCFunctionDataRecord {
     JSCFunctionData *func;
+    JSContext *realm; /* owned creation realm, including standard builtin closures */
     uint8_t length;
     uint16_t magic;
     int data_len;

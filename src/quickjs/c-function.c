@@ -289,6 +289,7 @@ static JSValue js_new_c_function_data(JSContext *ctx, JSCFunctionData *func,
         return JS_EXCEPTION;
     }
     s->func = func;
+    s->realm = JS_DupContext(ctx);
     s->length = length;
     s->data_len = data_len;
     s->magic = magic;
@@ -333,6 +334,8 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
     JSValueConst *arg_buf;
     int i;
 
+    ctx = s->realm;
+
     /* XXX: could add the function on the stack for debug */
     if (unlikely(argc < s->length)) {
         arg_buf = alloca(sizeof(arg_buf[0]) * s->length);
@@ -356,6 +359,7 @@ void js_c_function_data_finalizer(JSRuntime *rt, JSValue val)
         for(i = 0; i < s->data_len; i++) {
             JS_FreeValueRT(rt, s->data[i]);
         }
+        JS_FreeContext(s->realm);
         js_free_rt(rt, s);
     }
 }
@@ -370,6 +374,7 @@ void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
         for(i = 0; i < s->data_len; i++) {
             JS_MarkValue(rt, s->data[i], mark_func);
         }
+        mark_func(rt, &s->realm->header);
     }
 }
 

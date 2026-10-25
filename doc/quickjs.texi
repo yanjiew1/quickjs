@@ -1066,6 +1066,11 @@ nonnegative and its allocation must fit in @code{size_t}; a positive count
 requires a data array. The callback pointer must be non-null, and the minimum
 readable argument count @code{length} must be between 0 and 255.
 
+The callback also retains and traces its creation context. Calls from another
+context in the same runtime execute in that creation realm, as ordinary native
+functions do. Releasing the host's context reference does not invalidate a live
+callback.
+
 @code{JS_NewCFunctionData2} adds a function name to the same capture and callback
 contract. A null or empty name selects the empty string. The @code{name} and
 @code{length} properties are configurable, non-writable and non-enumerable.
