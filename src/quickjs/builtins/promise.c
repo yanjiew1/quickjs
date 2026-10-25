@@ -337,6 +337,8 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
 {
     JSObject *p = JS_VALUE_GET_OBJ(func_obj);
     JSPromiseFunctionData *s;
+    JSRuntime *rt = ctx->rt;
+    JSStackFrame sf;
     JSValueConst resolution, args[3];
     JSValue then;
     BOOL is_reject;
@@ -346,6 +348,15 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     if (!s || s->presolved->already_resolved)
         return JS_UNDEFINED;
     ctx = s->realm;
+    if (js_check_stack_overflow(rt, 0))
+        return JS_ThrowStackOverflow(ctx);
+    sf.prev_frame = rt->current_stack_frame;
+    sf.realm = ctx;
+    sf.cur_func = (JSValue)func_obj;
+    sf.arg_count = argc;
+    sf.arg_buf = (JSValue *)argv;
+    sf.js_mode = 0;
+    rt->current_stack_frame = &sf;
     s->presolved->already_resolved = TRUE;
     is_reject = p->class_id - JS_CLASS_PROMISE_RESOLVE_FUNCTION;
     if (argc > 0)
@@ -385,9 +396,11 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
             /* No assimilation was published. Let the caller reject or retry
                instead of ignoring the failure through the resolved guard. */
             s->presolved->already_resolved = FALSE;
+            rt->current_stack_frame = sf.prev_frame;
             return JS_EXCEPTION;
         }
     }
+    rt->current_stack_frame = sf.prev_frame;
     return JS_UNDEFINED;
 }
 

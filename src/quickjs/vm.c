@@ -2540,7 +2540,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             sf = &s->frame;
             p = JS_VALUE_GET_OBJ(sf->cur_func);
             b = p->u.func.function_bytecode;
-            ctx = b->realm;
+            ctx = sf->realm;
             var_refs = p->u.func.var_refs;
             local_buf = arg_buf = sf->arg_buf;
             var_buf = sf->var_buf;
@@ -2583,6 +2583,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     if (js_check_stack_overflow(rt, alloca_size))
         return JS_ThrowStackOverflow(caller_ctx);
 
+    sf->realm = b->realm;
     sf->js_mode = b->js_mode;
     arg_buf = argv;
     sf->arg_count = argc;
@@ -2614,7 +2615,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     pc = b->byte_code_buf;
     sf->prev_frame = rt->current_stack_frame;
     rt->current_stack_frame = sf;
-    ctx = b->realm; /* set the current realm */
+    ctx = sf->realm; /* set the current realm */
 
  restart:
     for(;;) {

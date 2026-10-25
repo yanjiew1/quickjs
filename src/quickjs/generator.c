@@ -56,6 +56,7 @@ static JSAsyncFunctionState *async_func_init(JSContext *ctx,
     add_gc_object(ctx->rt, &s->header, JS_GC_OBJ_TYPE_ASYNC_FUNCTION);
 
     sf = &s->frame;
+    sf->realm = s->realm;
     sf->js_mode = b->js_mode | JS_MODE_ASYNC;
     sf->cur_pc = b->byte_code_buf;
     sf->arg_buf = (JSValue *)(s + 1);
@@ -438,8 +439,17 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
     JSAsyncFunctionState *s = p->u.async_function_data;
     BOOL is_reject = p->class_id - JS_CLASS_ASYNC_FUNCTION_RESOLVE;
     JSValueConst arg;
+    JSRuntime *rt = ctx->rt;
+    JSStackFrame sf;
 
     ctx = s->realm;
+    sf.prev_frame = rt->current_stack_frame;
+    sf.realm = ctx;
+    sf.cur_func = (JSValue)func_obj;
+    sf.arg_count = argc;
+    sf.arg_buf = (JSValue *)argv;
+    sf.js_mode = 0;
+    rt->current_stack_frame = &sf;
 
     if (argc > 0)
         arg = argv[0];
@@ -453,6 +463,7 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
         s->frame.cur_sp[-1] = JS_DupValue(ctx, arg);
     }
     js_async_function_resume(ctx, s);
+    rt->current_stack_frame = sf.prev_frame;
     return JS_UNDEFINED;
 }
 

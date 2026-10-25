@@ -866,6 +866,17 @@ several JSContexts per JSRuntime and they can share objects, similar
 to frames of the same origin sharing Javascript objects in a
 web browser.
 
+@code{JS_GetCurrentRealm(rt)} returns the context of the currently active engine
+execution frame, or @code{NULL} if there is no active frame. Bytecode functions,
+native functions and resumed generators/async functions expose their executing
+realm; nested calls restore the previous realm on return or exception. The result
+is borrowed: use @code{JS_DupContext()} to retain it beyond the active call.
+The query does not allocate or throw and must run on the runtime's owner thread.
+A raw host job or host-defined exotic callback does not create a function frame
+of its own; it observes an existing active frame, or @code{NULL} outside one.
+This query does not replace the explicit context argument of compilation and
+host-job APIs.
+
 @code{JS_AddRuntimeFinalizer(rt, callback, opaque)} registers native cleanup
 on the runtime's owner thread. It returns zero on success or @code{-1} without
 registering on allocation failure, a null callback or runtime teardown.

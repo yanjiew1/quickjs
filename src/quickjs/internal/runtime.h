@@ -141,6 +141,8 @@ typedef struct JSStackFrame {
     /* only used in generators. Current stack pointer value. NULL if
        the function is running. */
     JSValue *cur_sp;
+    /* Borrowed; the active callee/caller or async state keeps it alive. */
+    JSContext *realm;
 } JSStackFrame;
 
 typedef enum {
