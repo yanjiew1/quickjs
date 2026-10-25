@@ -1,6 +1,7 @@
 /* ListFormat binding failures with warmed native services and real allocation. */
 #include "oom-allocator.h"
 #ifdef CONFIG_INTL
+#include "../src/quickjs/internal/runtime.h"
 #include "../src/quickjs/internal/string.h"
 #include "pool-padding.h"
 #include "../src/quickjs/builtins/intl.h"
