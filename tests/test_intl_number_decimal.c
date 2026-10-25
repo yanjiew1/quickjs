@@ -87,6 +87,18 @@ static void distinct_rounding(const QJSIntlAllocator *a)
 }
 static void extremes(const QJSIntlAllocator *a)
 {
+    static const struct {
+        uint64_t bits, significand;
+        int exponent;
+    } powers_of_five[] = {
+        {UINT64_C(1), UINT64_C(1), -1074},
+        {UINT64_C(2), UINT64_C(1), -1073},
+        {UINT64_C(3), UINT64_C(3), -1074},
+        {UINT64_C(4), UINT64_C(1), -1072},
+        {UINT64_C(0x0008000000000000), UINT64_C(1), -1023},
+        {UINT64_C(0x000fffffffffffff), UINT64_C(4503599627370495), -1074},
+        {UINT64_C(0x0010000000000000), UINT64_C(1), -1022},
+        {UINT64_C(0x0010000000000001), UINT64_C(4503599627370497), -1074}};
     static const char maximum[] =
         "179769313486231570814527423731704356798070567525844996598917476803"
         "157260780028538760589558632766878171540458953514382464234321326889"
@@ -94,6 +106,7 @@ static void extremes(const QJSIntlAllocator *a)
         "868508455133942304583236903222948165808559332123348274797826204144"
         "723168738177180919299881250404026184124858368";
     unsigned int sign, step;
+    size_t case_index;
     check(a, qjs_intl_number_to_intl_decimal, UINT64_C(0x7fefffffffffffff),
           "1.7976931348623157e+308", QJS_INTL_FINITE);
     check(a, qjs_intl_number_to_real_decimal, UINT64_C(0x7fefffffffffffff), maximum,
@@ -101,41 +114,80 @@ static void extremes(const QJSIntlAllocator *a)
     check(a, qjs_intl_number_to_intl_decimal, UINT64_C(1), "5e-324", QJS_INTL_FINITE);
     check(a, qjs_intl_number_to_intl_decimal, UINT64_C(0x8000000000000001), "-5e-324",
           QJS_INTL_FINITE);
-    /* The exact smallest subnormal is 5^1074 * 10^-1074. Verify the
-     * coefficient by division, independent of the converter's multiply. */
+    /* Verify coefficients by division, independent of the converter's
+     * multiply, including cancellation across the subnormal boundary. */
     for (sign = 0; sign < 2; sign++) {
-        uint64_t bits = UINT64_C(1) | ((uint64_t)sign << 63);
-        QJSIntlNumberDecimal r = {0};
-        QJSIntlDecimal decimal = {0};
-        char quotient[800];
-        size_t length, begin = 0, i;
-        assert(qjs_intl_number_to_real_decimal(a, from_bits(bits), &r) == QJS_INTL_OK);
-        assert(r.value.kind == QJS_INTL_FINITE);
-        assert(qjs_intl_decimal_from_value(a, &r.value, &decimal) == QJS_INTL_OK);
-        assert(decimal.negative == sign && decimal.exponent == -1074);
-        assert(decimal.length == 751);
-        assert(!memcmp(decimal.digits, "494065645841246544", 18));
-        length = decimal.length;
-        memcpy(quotient, decimal.digits, length);
-        for (step = 0; step < 1074; step++) {
-            unsigned int remainder = 0;
-            for (i = begin; i < length; i++) {
-                unsigned int current =
-                    remainder * 10 + (unsigned int)(quotient[i] - '0');
-                quotient[i] = (char)('0' + current / 5);
-                remainder = current % 5;
+        for (case_index = 0; case_index < sizeof(powers_of_five) / sizeof(*powers_of_five);
+             case_index++) {
+            uint64_t bits = powers_of_five[case_index].bits | ((uint64_t)sign << 63);
+            uint64_t quotient_value = 0;
+            QJSIntlNumberDecimal r = {0};
+            QJSIntlDecimal decimal = {0};
+            char quotient[800];
+            size_t length, begin = 0, i;
+            assert(qjs_intl_number_to_real_decimal(a, from_bits(bits), &r) == QJS_INTL_OK);
+            assert(r.value.kind == QJS_INTL_FINITE);
+            assert(qjs_intl_decimal_from_value(a, &r.value, &decimal) == QJS_INTL_OK);
+            assert(decimal.negative == sign);
+            assert(decimal.exponent == powers_of_five[case_index].exponent);
+            length = decimal.length;
+            assert(length <= sizeof(quotient));
+            memcpy(quotient, decimal.digits, length);
+            for (step = 0; step < (unsigned int)-decimal.exponent; step++) {
+                unsigned int remainder = 0;
+                for (i = begin; i < length; i++) {
+                    unsigned int current =
+                        remainder * 10 + (unsigned int)(quotient[i] - '0');
+                    quotient[i] = (char)('0' + current / 5);
+                    remainder = current % 5;
+                }
+                assert(!remainder);
+                while (begin + 1 < length && quotient[begin] == '0')
+                    begin++;
             }
-            assert(!remainder);
-            while (begin + 1 < length && quotient[begin] == '0')
-                begin++;
+            for (i = begin; i < length; i++) {
+                assert(quotient_value <=
+                       (UINT64_MAX - (unsigned int)(quotient[i] - '0')) / 10);
+                quotient_value = quotient_value * 10 + (unsigned int)(quotient[i] - '0');
+            }
+            assert(quotient_value == powers_of_five[case_index].significand);
+            if (!case_index) {
+                assert(decimal.length == 751);
+                assert(!memcmp(decimal.digits, "494065645841246544", 18));
+                assert(r.text[0] == (sign ? '-' : '4'));
+                assert(r.value.decimal.length == 757 + sign);
+                assert(!strcmp(r.text + r.value.decimal.length - 6, "e-1074"));
+            }
+            qjs_intl_decimal_clear(a, &decimal);
+            qjs_intl_number_decimal_clear(a, &r);
         }
-        assert(begin + 1 == length && quotient[begin] == '1');
-        assert(r.text[0] == (sign ? '-' : '4'));
-        assert(r.value.decimal.length == 757 + sign);
-        assert(!strcmp(r.text + r.value.decimal.length - 6, "e-1074"));
-        qjs_intl_decimal_clear(a, &decimal);
-        qjs_intl_number_decimal_clear(a, &r);
     }
+}
+static void binary_factors(const QJSIntlAllocator *a)
+{
+    static const struct {
+        uint64_t bits;
+        const char *text;
+    } cases[] = {
+        {UINT64_C(0x3fdfffffffffffff),
+         "499999999999999944488848768742172978818416595458984375e-54"},
+        {UINT64_C(0x3fe0000000000000), "5e-1"},
+        {UINT64_C(0x3fe0000000000001),
+         "50000000000000011102230246251565404236316680908203125e-53"},
+        {UINT64_C(0x3ff0000000000000), "1"},
+        {UINT64_C(0x3ff0000000000001),
+         "10000000000000002220446049250313080847263336181640625e-52"},
+        {UINT64_C(0x3ff8000000000000), "15e-1"},
+        {UINT64_C(0x4000000000000000), "2"},
+        {UINT64_C(0x40f86a0000000000), "1e5"},
+        /* Stop at exponent zero even though the remaining significand is even. */
+        {UINT64_C(0x4320000000000000), "2251799813685248"},
+        {UINT64_C(0x4320000000000001), "22517998136852485e-1"},
+        {UINT64_C(0x4340000000000000), "9007199254740992"}};
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(*cases); i++)
+        check(a, qjs_intl_number_to_real_decimal, cases[i].bits, cases[i].text,
+              QJS_INTL_FINITE);
 }
 static void special_values(const QJSIntlAllocator *a)
 {
@@ -208,6 +260,7 @@ int main(void)
     QJSIntlAllocator a = {&h, allocate, NULL, release};
     distinct_rounding(&a);
     extremes(&a);
+    binary_factors(&a);
     special_values(&a);
     failures();
     assert(h.live == 0);
