@@ -670,8 +670,7 @@ static JSValue js_temporal_zoned_difference(JSContext *ctx, JSValueConst this_va
         }
         balance_unit = settings.largest_unit;
     } else {
-        if (js_temporal_time_zones_equal(ctx, &s->time_zone, &other->time_zone, &equal))
-            goto done;
+        equal = js_temporal_time_zones_equal(&s->time_zone, &other->time_zone);
         if (!equal) {
             JS_ThrowRangeError(ctx, "ZonedDateTime zones must match for a date difference");
             goto done;
@@ -800,7 +799,7 @@ static JSValue js_temporal_zoned_equals(JSContext *ctx, JSValueConst this_val,
 {
     JSTemporalZonedDateTimeData *s, *other;
     JSValue converted;
-    int equal, ret = 0;
+    int equal;
 
     s = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_ZONED_DATE_TIME);
     if (!s)
@@ -811,11 +810,11 @@ static JSValue js_temporal_zoned_equals(JSContext *ctx, JSValueConst this_val,
     other = JS_GetOpaque(converted, JS_CLASS_TEMPORAL_ZONED_DATE_TIME);
     equal = !qjs_temporal_epoch_ns_compare(s->epoch_nanoseconds, other->epoch_nanoseconds);
     if (equal)
-        ret = js_temporal_time_zones_equal(ctx, &s->time_zone, &other->time_zone, &equal);
+        equal = js_temporal_time_zones_equal(&s->time_zone, &other->time_zone);
     if (equal)
         equal = s->calendar == other->calendar;
     JS_FreeValue(ctx, converted);
-    return ret ? JS_EXCEPTION : JS_NewBool(ctx, equal);
+    return JS_NewBool(ctx, equal);
 }
 
 static JSValue zdt_format(JSContext *ctx, const JSTemporalZonedDateTimeData *s,
