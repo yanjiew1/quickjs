@@ -19,6 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+use crate::text::{Utf16, encode_utf16};
 use crate::{BACKEND, RANGE, write_result};
 use icu_list::{
     ListFormatter,
@@ -134,26 +135,6 @@ pub unsafe extern "C" fn qjs_icu4x_list_locales(
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Utf16 {
-    data: *const u16,
-    length: usize,
-}
-
-impl Utf16 {
-    unsafe fn units<'a>(self) -> Result<&'a [u16], i32> {
-        if self.length > isize::MAX as usize / 2 || (self.length != 0 && self.data.is_null()) {
-            return Err(RANGE);
-        }
-        if self.length == 0 {
-            return Ok(&[]);
-        }
-        // SAFETY: C owns the complete readable aligned span for this call.
-        Ok(unsafe { std::slice::from_raw_parts(self.data, self.length) })
-    }
-}
-
 #[derive(Clone, Copy)]
 struct Item<'a>(&'a [u16]);
 impl Writeable for Item<'_> {
@@ -206,20 +187,7 @@ impl Output<'_> {
 }
 impl fmt::Write for Output<'_> {
     fn write_str(&mut self, text: &str) -> fmt::Result {
-        let mut buffer = [0u16; 128];
-        let mut count = 0;
-        for unit in text.encode_utf16() {
-            buffer[count] = unit;
-            count += 1;
-            if count == buffer.len() {
-                self.units(&buffer)?;
-                count = 0;
-            }
-        }
-        if count != 0 {
-            self.units(&buffer[..count])?;
-        }
-        Ok(())
+        encode_utf16(text, |units| self.units(units))
     }
 }
 impl PartsWrite for Output<'_> {

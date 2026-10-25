@@ -28,10 +28,15 @@ mod list;
 #[cfg(feature = "timezones")]
 mod timezone;
 
+#[cfg(feature = "casing")]
+mod casing;
+#[cfg(any(feature = "lists", feature = "casing"))]
+mod text;
+
 const RANGE: i32 = -1;
 #[cfg(any(feature = "calendars", feature = "timezones"))]
 const UNSUPPORTED: i32 = -3;
-#[cfg(feature = "calendars")]
+#[cfg(any(feature = "calendars", feature = "casing"))]
 const MEMORY: i32 = -4;
 const BACKEND: i32 = -5;
 

@@ -1165,8 +1165,8 @@ jobs:
     - name: Build the locked ICU4X bridge
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists
+      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing
     - name: Run bridge unit tests
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists
+      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing

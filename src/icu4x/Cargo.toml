@@ -32,11 +32,23 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
-lists = ["dep:icu_locale_fallback", "dep:icu_list", "dep:icu_list_data", "dep:icu_locale_core", "dep:icu_provider", "icu_provider/std", "icu_provider/baked", "dep:writeable", "dep:zerovec"]
+casing = ["dep:icu_casemap", "dep:icu_locale_core", "dep:writeable"]
+lists = [
+    "dep:icu_locale_fallback",
+    "dep:icu_list",
+    "dep:icu_list_data",
+    "dep:icu_locale_core",
+    "dep:icu_provider",
+    "icu_provider/std",
+    "icu_provider/baked",
+    "dep:writeable",
+    "dep:zerovec",
+]
 timezones = ["dep:icu_time", "dep:icu_locale_core", "dep:icu_provider"]
 calendars = ["dep:icu_calendar", "dep:icu_calendar_data", "dep:icu_provider"]
 
 [dependencies]
+icu_casemap = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }
 icu_locale_fallback = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }
 icu_list = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }
 icu_list_data = { version = "=2.4.0", optional = true }

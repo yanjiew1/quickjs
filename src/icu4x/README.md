@@ -88,3 +88,9 @@ uses replacement scalars. C allocates final text and parts in two checked
 passes. Rust library allocations retain the bridge's documented foreign-OOM
 policy. This module is a foundation for the complete Intl profile; adding it
 does not silently change the currently selected engine backend.
+
+Locale casing delegates to ICU4X CaseMapper. Maximal valid UTF-16 runs are
+converted with fallible temporary allocation; original lone surrogates remain
+uncased boundaries. A persistent UTF-16 buffer joins scalar writes before the
+C callback, preserving order and exact callback errors. The C adapter checks
+output bounds before allocating its owned result.
