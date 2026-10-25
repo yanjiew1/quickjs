@@ -3667,6 +3667,33 @@ void normalization_test(const char *filename)
 }
 #endif
 
+static const char generated_table_license[] =
+    "/*\n"
+    " * Compressed Unicode tables\n"
+    " *\n"
+    " * Copyright (c) 2017-2018 Fabrice Bellard\n"
+    " * Copyright (c) 2017-2018 Charlie Gordon\n"
+    " *\n"
+    " * Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+    " * of this software and associated documentation files (the \"Software\"), to deal\n"
+    " * in the Software without restriction, including without limitation the rights\n"
+    " * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"
+    " * copies of the Software, and to permit persons to whom the Software is\n"
+    " * furnished to do so, subject to the following conditions:\n"
+    " *\n"
+    " * The above copyright notice and this permission notice shall be included in\n"
+    " * all copies or substantial portions of the Software.\n"
+    " *\n"
+    " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n"
+    " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+    " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL\n"
+    " * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+    " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"
+    " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n"
+    " * THE SOFTWARE.\n"
+    " */\n"
+    "\n";
+
 int main(int argc, char *argv[])
 {
     const char *unicode_db_path, *outfilename;
@@ -3782,6 +3809,8 @@ int main(int argc, char *argv[])
             fclose(out->source);
             exit(1);
         }
+        fputs(generated_table_license, out->source);
+        fputs(generated_table_license, out->header);
         fprintf(out->source,
                 "/* Compressed unicode tables */\n"
                 "/* Automatically generated file - do not edit */\n\n"

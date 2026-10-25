@@ -120,7 +120,7 @@
   "bundled_sha256": {
     "fresh-microbench.js": "9e6f7eda99cd0fa680d4d5d085bd21785c805956254aaaa417965b47b862f552",
     "ZOO-LICENSE.txt": "f66ac2ec2f36ff1d8a3ed5c8616f15efc702632802c22a90a9e55b9c2421c5f1",
-    "v8-runner.js": "69522a8b4ea63971a94a3e8fa2ed8446ed643cfdf3c670d700f4e53a71ca2477"
+    "v8-runner.js": "3a73e73be153a950da12a693f4e64208152bc0391a7a7d6407deb29b0c4e3ba8"
   },
   "v8_provenance": {
     "archive_url": "https://bellard.org/quickjs/quickjs-extras-2026-06-04.tar.xz",
@@ -160,9 +160,9 @@
     ],
     "licenses": "Original copyright and license notices remain embedded in every source.",
     "source_directory": "tests/bench-v8",
-    "assembled_sha256": "3e77ee612447529ac9bfc67ec3aa192038268bc6ccd77fb808d07b5a835e8446",
+    "assembled_sha256": "6f9746479f40203bbbec7317f40dd3ab67f3d505386d68b7cef4b43869c4c526",
     "runner": "fixtures/v8-runner.js",
-    "runner_sha256": "69522a8b4ea63971a94a3e8fa2ed8446ed643cfdf3c670d700f4e53a71ca2477",
+    "runner_sha256": "3a73e73be153a950da12a693f4e64208152bc0391a7a7d6407deb29b0c4e3ba8",
     "import_dependency": "Verbatim upstream extras tests import must precede this benchmark commit."
   },
   "micro_provenance": {
