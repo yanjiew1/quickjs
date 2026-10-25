@@ -119,6 +119,8 @@ struct JSRuntime {
 #ifdef CONFIG_ATOMICS
     struct JSNativeJobOwner *native_jobs;
 #endif
+    struct JSRuntimeFinalizerState *finalizers;
+    BOOL is_freeing : 8;
 };
 
 

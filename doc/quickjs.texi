@@ -845,6 +845,17 @@ several JSContexts per JSRuntime and they can share objects, similar
 to frames of the same origin sharing Javascript objects in a
 web browser.
 
+@code{JS_AddRuntimeFinalizer(rt, callback, opaque)} registers native cleanup
+on the runtime's owner thread. It returns zero on success or @code{-1} without
+registering on allocation failure, a null callback or runtime teardown.
+Successful registrations run once, in reverse order, near the end of
+@code{JS_FreeRuntime()}. The callback may release C resources using
+@code{js_free_rt()}, but JavaScript objects, contexts and atoms are already gone.
+It must not execute JavaScript, release retained JavaScript state, recursively
+free the runtime or destroy the custom allocator: that allocator remains in use
+until @code{JS_FreeRuntime()} returns. The @code{opaque} argument must remain
+valid until its callback; a failed registration leaves cleanup to the caller.
+
 @subsection JSValue
 
 @code{JSValue} represents a Javascript value which can be a primitive

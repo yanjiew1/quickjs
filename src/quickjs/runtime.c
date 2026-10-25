@@ -4,6 +4,8 @@
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +50,12 @@
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
+
+typedef struct JSRuntimeFinalizerState {
+    struct JSRuntimeFinalizerState *next;
+    JSRuntimeFinalizer *finalizer;
+    void *opaque;
+} JSRuntimeFinalizerState;
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
@@ -190,6 +198,23 @@ void *JS_GetRuntimeOpaque(JSRuntime *rt)
 void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
 {
     rt->user_opaque = opaque;
+}
+
+int JS_AddRuntimeFinalizer(JSRuntime *rt, JSRuntimeFinalizer *finalizer,
+                           void *opaque)
+{
+    JSRuntimeFinalizerState *state;
+
+    if (!finalizer || rt->is_freeing)
+        return -1;
+    state = js_malloc_rt(rt, sizeof(*state));
+    if (!state)
+        return -1;
+    state->next = rt->finalizers;
+    state->finalizer = finalizer;
+    state->opaque = opaque;
+    rt->finalizers = state;
+    return 0;
 }
 
 const char *JS_GetVersion(void)
@@ -423,6 +448,8 @@ void JS_FreeRuntime(JSRuntime *rt)
     struct list_head *el, *el1;
     int i;
 
+    assert(!rt->is_freeing);
+    rt->is_freeing = TRUE;
 #ifdef CONFIG_ATOMICS
     js_native_jobs_free(rt);
 #endif
@@ -591,6 +618,16 @@ void JS_FreeRuntime(JSRuntime *rt)
         if (rt->rt_info)
             printf("\n");
     }
+#endif
+    /* JS state is gone, but the allocator must remain usable by C cleanup. */
+    while (rt->finalizers) {
+        JSRuntimeFinalizerState *state = rt->finalizers;
+
+        rt->finalizers = state->next;
+        state->finalizer(rt, state->opaque);
+        js_free_rt(rt, state);
+    }
+#ifdef DUMP_LEAKS
     {
         JSMallocState *s = &rt->malloc_ctx.malloc_state;
         if (s->malloc_count > 1) {

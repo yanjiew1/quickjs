@@ -62,6 +62,7 @@ extern "C" {
 
 typedef struct JSRuntime JSRuntime;
 typedef struct JSContext JSContext;
+typedef void JSRuntimeFinalizer(JSRuntime *rt, void *opaque);
 typedef struct JSClass JSClass;
 typedef uint32_t JSClassID;
 typedef uint32_t JSAtom;
@@ -400,6 +401,12 @@ JS_EXTERN JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque);
 JS_EXTERN void JS_FreeRuntime(JSRuntime *rt);
 JS_EXTERN void *JS_GetRuntimeOpaque(JSRuntime *rt);
 JS_EXTERN void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque);
+/* Register C-only cleanup, called once in reverse registration order near the
+   end of JS_FreeRuntime. Return -1 without registering on failure or teardown.
+   Callbacks may free native storage, but cannot use JS state or destroy the
+   allocator; it remains in use until JS_FreeRuntime returns. */
+JS_EXTERN int JS_AddRuntimeFinalizer(JSRuntime *rt, JSRuntimeFinalizer *finalizer,
+                                   void *opaque);
 typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
 JS_EXTERN void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 JS_EXTERN void JS_RunGC(JSRuntime *rt);
