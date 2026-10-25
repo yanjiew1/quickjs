@@ -154,8 +154,9 @@ void qjs_intl_number_result_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
 /* Format both already-coerced endpoints independently. NaN is INVALID_ARGUMENT
    (the binding throws RangeError); descending ranges are allowed. Displayed
    text equality, including equal inputs/infinities, uses approximation with
-   shared sources. Other results preserve both endpoints without collapsing
-   parts. Native prefix approximation is an ILND policy; see range.h.
+   shared sources. Backends choose localized range collapsing and approximation
+   patterns while preserving part origins. Native uses uncollapsed endpoints
+   and prefix approximation as an ILND policy; see range.h.
    Ownership, bounds and result lifetime follow format's disjoint contract. */
 QJSIntlStatus qjs_intl_number_format_range(const QJSIntlNumberFormatter *,
                                          const QJSIntlMathematicalValue *start,
