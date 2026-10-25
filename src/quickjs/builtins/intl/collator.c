@@ -54,11 +54,11 @@ QJSIntlCollationService *js_intl_collation_service(JSContext *ctx)
     JSRuntime *rt = ctx->rt;
 
     if (!rt->intl_collation) {
-        const QJSIntlData *data = js_intl_data(ctx);
+        const QJSIntlData *data;
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlCollationService *service;
 
-        if (!data)
+        if (js_intl_prepare_data(ctx, &data))
             return NULL;
         if (js_intl_error(ctx, qjs_intl_collation_open(&allocator, data, &service), "collation initialization"))
             return NULL;

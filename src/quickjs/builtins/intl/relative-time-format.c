@@ -53,11 +53,11 @@ QJSIntlRelativeService *js_intl_relative_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_relative) {
-        const QJSIntlData *data = js_intl_data(ctx);
+        const QJSIntlData *data;
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlRelativeService *service;
 
-        if (!data)
+        if (js_intl_prepare_data(ctx, &data))
             return NULL;
         if (js_intl_error(ctx, qjs_intl_relative_open(&allocator, data, &service), "relative initialization"))
             return NULL;

@@ -55,8 +55,10 @@ JSValue js_intl_supported_values(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
 const char *js_intl_default_locale(JSContext *ctx);
 QJSIntlAllocator js_intl_allocator(JSRuntime *rt);
-/* Lazily admit compiled shared tables; failure leaves the view retryable. */
-const struct QJSIntlData *js_intl_data(JSContext *ctx);
+/* Native profiles lazily admit shared tables; failures remain retryable.
+   Library-backed profiles succeed with *data=NULL and initialize each provider
+   through its own constructor. The return status distinguishes those cases. */
+int js_intl_prepare_data(JSContext *ctx, const QJSIntlData **data);
 int js_intl_ensure_intrinsics(JSContext *ctx);
 int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_list_format(JSContext *ctx, JSValueConst namespace_object);

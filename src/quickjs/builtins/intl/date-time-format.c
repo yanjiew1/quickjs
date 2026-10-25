@@ -93,11 +93,11 @@ QJSIntlDateTimeService *js_intl_datetime_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_datetime) {
-        const QJSIntlData *data = js_intl_data(ctx);
+        const QJSIntlData *data;
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlDateTimeService *service;
 
-        if (!data)
+        if (js_intl_prepare_data(ctx, &data))
             return NULL;
         if (js_intl_error(ctx, qjs_intl_datetime_open(&allocator, data, &service), "date/time initialization"))
             return NULL;

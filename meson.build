@@ -71,7 +71,7 @@ if not intl_enabled and get_option('intl_data_file') != ''
   error('intl_data_file requires an enabled Intl profile')
 endif
 if intl_enabled
-  common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER']
+  common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER', '-DCONFIG_INTL_NATIVE']
   if get_option('intl') == 'minimal'
     common_args += '-DCONFIG_INTL_SEGMENT_MINIMAL'
   endif

@@ -22,11 +22,11 @@
 #define QJS_INTL_NATIVE_DATA_H
 #include "pack.h"
 
-typedef struct QJSIntlData {
+struct QJSIntlData {
     QJSIntlPack pack;
     QJSIntlSection strings;
     QJSIntlSection locales;
-} QJSIntlData;
+};
 
 /* The selected prepared profile has exactly one generated C owner. */
 extern const uint8_t qjs_intl_native_bytes[];

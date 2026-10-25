@@ -66,8 +66,10 @@ int js_intl_error(JSContext *ctx, QJSIntlStatus status, const char *operation)
     return -1;
 }
 
-const QJSIntlData *js_intl_data(JSContext *ctx)
+int js_intl_prepare_data(JSContext *ctx, const QJSIntlData **out)
 {
+    *out = NULL;
+#ifdef CONFIG_INTL_NATIVE
     JSRuntime *rt = ctx->rt;
 
     if (!rt->intl_data.pack.bytes) {
@@ -78,12 +80,16 @@ const QJSIntlData *js_intl_data(JSContext *ctx)
                                                   &allocator, &data);
 
         if (js_intl_error(ctx, status, "shared data initialization"))
-            return NULL;
-        /* Publish only a complete view. A later typed-service failure does
-           not invalidate these already checked immutable shared tables. */
+            return -1;
+        /* Publish only a complete view. Typed-service failure does not
+           invalidate already checked immutable tables. */
         rt->intl_data = data;
     }
-    return &rt->intl_data;
+    *out = &rt->intl_data;
+#else
+    (void)ctx;
+#endif
+    return 0;
 }
 
 QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx)
@@ -91,12 +97,12 @@ QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx)
     JSRuntime *rt = ctx->rt;
 
     if (!rt->intl_locale) {
-        const QJSIntlData *data = js_intl_data(ctx);
+        const QJSIntlData *data;
         QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlLocaleService *service;
         QJSIntlStatus status;
 
-        if (!data)
+        if (js_intl_prepare_data(ctx, &data))
             return NULL;
         status = qjs_intl_locale_open(&allocator, data, &service);
 

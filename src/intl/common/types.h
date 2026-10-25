@@ -28,8 +28,9 @@
    qjs_intl_data_open admission. NULL requests standalone compiled-data admission.
    Constructors copy the view; only its immutable bytes must outlive consumers.
    Typed sections and module capabilities are still checked by their owners.
-   Minimal Segmenter does not use a data pack and ignores this optional view. */
-struct QJSIntlData;
+   Providers without a native pack use NULL; their own libraries admit data.
+   Minimal Segmenter ignores this optional view. */
+typedef struct QJSIntlData QJSIntlData;
 
 /* Plain C contracts shared by Intl services; no engine or backend state. */
 typedef enum QJSIntlStatus {
