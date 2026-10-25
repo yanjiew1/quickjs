@@ -61,6 +61,34 @@ assert(textParts.find(p => p.type === 'minusSign').unit, 'year');
 assert(textParts.find(p => p.value === ' ').unit, 'year');
 assert('unit' in textParts.find(p => p.value === ', '), false);
 
+const negativeFields = Object.fromEntries(fields.map((name, i) => [name, -(i + 1)]));
+const negativeLong = new DF('en', {style: 'long'});
+assert(negativeLong.format(negativeFields),
+       '-1 year, 2 months, 3 weeks, 4 days, 5 hours, 6 minutes, 7 seconds, ' +
+       '8 milliseconds, 9 microseconds, 10 nanoseconds');
+assertArrayEquals(negativeLong.formatToParts(negativeFields).filter(p => p.type === 'minusSign')
+    .map(p => p.unit), ['year']);
+assert(digital.format({hours: -1, minutes: -2, seconds: -3, nanoseconds: -999999999}), '-1:02:03.999999999');
+assert(digital.format({hours: -0, minutes: -0, seconds: -0}), '0:00:00');
+for (const [unit, following, fraction] of [
+    ['seconds', 'milliseconds', '000'],
+    ['milliseconds', 'microseconds', '000'],
+    ['microseconds', 'nanoseconds', '999'],
+]) {
+    for (const fractionalDigits of [0, 3]) {
+        const formatter = new DF('en', {style: 'long', [unit]: 'long',
+            [following]: 'numeric', fractionalDigits});
+        const magnitude = fractionalDigits ? '1.' + fraction + ' ' + unit : '1 ' + unit.slice(0, -1);
+        assert(formatter.format({[unit]: -1, nanoseconds: -999}), '-' + magnitude);
+        const later = {days: -1, [unit]: -1, nanoseconds: -999};
+        assert(formatter.format(later), '-1 day, ' + magnitude);
+        assert(formatter.formatToParts(later).map(p => p.value).join(''), '-1 day, ' + magnitude);
+    }
+}
+const negativeFraction = new DF('en', {style: 'digital', fractionalDigits: 3});
+assert(negativeFraction.format({seconds: -1, nanoseconds: -999999999}), '-0:00:01.999');
+assert(negativeFraction.format({nanoseconds: -1}), '-0:00:00.000');
+
 const optionOrder = ['localeMatcher', 'numberingSystem', 'style',
     ...fields.flatMap(name => [name, name + 'Display']), 'fractionalDigits'];
 let log = [];
@@ -101,6 +129,19 @@ assertArrayEquals(log, [...alphabetical.slice(0, 8), 'number', ...alphabetical.s
 assert(new DF('en-u-nu-arab', {numberingSystem: 'latn'}).resolvedOptions().locale, 'en');
 assert(new DF('en-u-nu-arab').resolvedOptions().numberingSystem, 'arab');
 assert(new DF('en', {numberingSystem: 'arab', style: 'digital'}).format({seconds: 1}), '٠:٠٠:٠١');
+const arabDigital = new DF('en', {numberingSystem: 'arab', style: 'digital', fractionalDigits: 3});
+for (const [duration, expected] of [
+    [{hours: -1, minutes: -2, seconds: -3, nanoseconds: -999999999}, '\u061c-١:٠٢:٠٣٫٩٩٩'],
+    [{nanoseconds: -1}, '\u061c-٠:٠٠:٠٠٫٠٠٠'],
+    [{hours: -0, minutes: -0, seconds: -0}, '٠:٠٠:٠٠٫٠٠٠'],
+]) {
+    assert(arabDigital.format(duration), expected);
+    assert(arabDigital.formatToParts(duration).map(p => p.value).join(''), expected);
+}
+const arabLong = new DF('en', {numberingSystem: 'arab', style: 'long', yearsDisplay: 'always'});
+assert(arabLong.format({months: -2}), '\u061c-٠ years, ٢ months');
+assertArrayEquals(arabLong.formatToParts({months: -2}).filter(p => p.type === 'minusSign')
+    .map(p => p.value), ['\u061c-']);
 for (const numberingSystem of ['arab', 'arabext', 'beng', 'deva', 'fullwide',
                                'hanidec', 'latn', 'mathbold', 'thai'])
     assert(new DF('en', {numberingSystem}).resolvedOptions().numberingSystem, numberingSystem);
@@ -133,6 +174,7 @@ Target.prototype = null;
 assert(Object.getPrototypeOf(Reflect.construct(DF, ['en'], Target)), Foreign.prototype);
 if (typeof Temporal !== 'undefined') {
     const duration = new Temporal.Duration(0, 0, 0, 0, 1, 2, 3);
+    const negativeDuration = new Temporal.Duration(0, 0, 0, 0, 0, -2, 0, 0, 0, -1);
     Object.defineProperty(duration, 'hours', {get() {throw 'branded getter';}});
     assert(digital.format(duration), '1:02:03');
     const saved = globalThis.Intl;
@@ -141,6 +183,8 @@ if (typeof Temporal !== 'undefined') {
         globalThis.Intl = null;
         DF.prototype.format = () => {throw 'mutable format';};
         assert(duration.toLocaleString('en', {style: 'digital'}), '1:02:03');
+        assert(negativeDuration.toLocaleString('en', {style: 'digital', numberingSystem: 'arab',
+            fractionalDigits: 3}), '\u061c-٠:٠٢:٠٠٫٠٠٠');
     } finally {globalThis.Intl = saved; DF.prototype.format = method;}
 }
 for (let i = 0; i < 20; i++) new DF('en', {get style() {std.gc(); return 'digital';}}).formatToParts({seconds: i});
