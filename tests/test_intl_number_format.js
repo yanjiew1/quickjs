@@ -256,3 +256,13 @@ Intl.NumberFormat.prototype = {format() {throw 0;}};
 assert((1234).toLocaleString('en'), '1,234');
 assert((1234n).toLocaleString('en'), '1,234');
 Intl.NumberFormat = NumberFormat;
+
+if (NumberFormat.supportedLocalesOf("zh-TW").length) {
+    // Scriptless AvailableLocales entries must retain Traditional data.
+    for (const region of ['TW', 'HK']) {
+        const requested = new Intl.NumberFormat('zh-' + region, {notation: 'compact'});
+        const explicit = new Intl.NumberFormat('zh-Hant-' + region, {notation: 'compact'});
+        assert(requested.resolvedOptions().locale, 'zh-' + region);
+        assert(requested.format(100000000), explicit.format(100000000));
+    }
+}
