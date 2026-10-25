@@ -1,4 +1,4 @@
-/* Duration component parts and ListFormat composition, independent of JS.
+/* Duration component parts and bounded text composition, independent of JS.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_DURATION_FORMAT_H
 #define QJS_INTL_DURATION_FORMAT_H
@@ -37,5 +37,14 @@ typedef struct QJSIntlDurationFormatted {
 QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *, QJSIntlFormatted *list,
                                          const QJSIntlDurationComponent *, size_t count,
                                          size_t limit, QJSIntlDurationFormatted *);
+/* Compose one digital group of 1..3 immutable components and count-1 UTF-8
+   separators. Validate component partitions before measuring/allocating. Keep
+   even empty separators as unitless literal parts. Output owns exact text/parts
+   independently of inputs; require fresh disjoint output, malloc/free and limit>0.
+   Failures clear output. */
+QJSIntlStatus qjs_intl_duration_join_digital(const QJSIntlAllocator *,
+                                           const QJSIntlDurationComponent *, size_t count,
+                                           const QJSIntlBytes *separators, size_t limit,
+                                           QJSIntlDurationFormatted *);
 void qjs_intl_duration_result_clear(const QJSIntlAllocator *, QJSIntlDurationFormatted *);
 #endif
