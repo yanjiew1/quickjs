@@ -21,7 +21,6 @@ fixtures = custom_target(
   build_always_stale: true,
 )
 test_workdir = meson.project_build_root()
-test_deps = [fixtures]
 if shared_modules
   bjson_module = shared_module(
     'bjson',
@@ -33,7 +32,6 @@ if shared_modules
     dependencies: host_deps,
     override_options: ['b_lundef=false'],
   )
-  test_deps += [bjson_module, point_module]
 endif
 
 # Tests that include an implementation need archive extraction, not link_whole.
@@ -88,12 +86,17 @@ foreach name : native_test_names
   ]
     suites += 'threading'
   endif
+  # Only file-backed native tests need the staged JavaScript fixtures.
+  native_test_deps = []
+  if name in ['test_api', 'test_atomics_wait', 'test_host_loop']
+    native_test_deps += fixtures
+  endif
   test(
     name,
     app,
     suite: suites + ['unit'],
     workdir: test_workdir,
-    depends: test_deps,
+    depends: native_test_deps,
     timeout: 120,
   )
 endforeach
@@ -114,7 +117,6 @@ test(
   allocation_fuzz_test,
   suite: ['repo', 'native', 'unit'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 
@@ -164,7 +166,6 @@ foreach name : [
     app,
     suite: suites,
     workdir: test_workdir,
-    depends: test_deps,
     timeout: 120,
   )
 endforeach
@@ -197,7 +198,6 @@ test(
   context_test,
   suite: ['repo', 'native', 'unit'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 
@@ -223,7 +223,6 @@ test(
   probe_test,
   suite: ['repo', 'native', 'unit'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 
@@ -251,7 +250,6 @@ test(
   trace_test,
   suite: ['repo', 'native', 'unit'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 
@@ -271,7 +269,7 @@ test(
   fuzz_support,
   suite: ['repo', 'native', 'unit'],
   workdir: test_workdir,
-  depends: test_deps,
+  depends: fixtures,
   timeout: 120,
 )
 
@@ -318,7 +316,6 @@ test(
   ],
   suite: ['repo', 'compiler', 'integration'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 native_std_c = custom_target(
@@ -354,7 +351,6 @@ test(
   ],
   suite: ['repo', 'compiler', 'integration'],
   workdir: test_workdir,
-  depends: test_deps,
   timeout: 120,
 )
 collision_inputs = files(
@@ -402,7 +398,6 @@ foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last'
     ],
     suite: ['repo', 'compiler', 'integration'],
     workdir: test_workdir,
-    depends: test_deps,
     timeout: 120,
   )
 endforeach
@@ -447,6 +442,12 @@ if shared_modules
   }
 endif
 foreach name, args : js_tests
+  js_test_deps = [fixtures]
+  if name == 'bjson'
+    js_test_deps += bjson_module
+  elif name == 'point-module'
+    js_test_deps += point_module
+  endif
   suites = ['repo', 'javascript']
   if name in [
     'closure',
@@ -470,7 +471,7 @@ foreach name, args : js_tests
     args: args,
     suite: suites + ['integration'],
     workdir: test_workdir,
-    depends: test_deps,
+    depends: js_test_deps,
     timeout: 120,
   )
 endforeach
@@ -480,7 +481,7 @@ test(
   args: ['-N', 'tests/test_wait_async_agents.js'],
   suite: ['repo', 'threading', 'integration'],
   workdir: test_workdir,
-  depends: test_deps,
+  depends: fixtures,
   timeout: 120,
 )
 sh = find_program('sh')
@@ -520,7 +521,7 @@ test(
   args: [files('test_run_test262.sh'), runner_prefix, run_test262],
   suite: ['repo', 'tools', 'integration'],
   workdir: test_workdir,
-  depends: test_deps,
+  depends: fixtures,
   timeout: 120,
 )
 test(
