@@ -189,6 +189,11 @@ QJSIntlStatus qjs_intl_number_to_real_decimal(const QJSIntlAllocator *a, double 
         binary_exponent = (int)field - 1023 - 52;
     } else
         binary_exponent = -1074;
+    /* Reduce m / 2^k before expanding powers of five and trimming decimal zeroes. */
+    while (binary_exponent < 0 && !(significand & 1)) {
+        significand >>= 1;
+        binary_exponent++;
+    }
     do {
         digits[length++] = (unsigned char)(significand % 10);
         significand /= 10;
