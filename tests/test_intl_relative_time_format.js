@@ -174,3 +174,15 @@ assert(rtf.format(2, 'day'), 'in 2 days');
 assert(RTF.prototype.format.call(new RTF('en'),
     {valueOf() {std.gc(); assert(auto.format(-1, 'day'), 'yesterday'); return 2;}},
     {toString() {std.gc(); return 'days';}}), 'in 2 days');
+
+// A large exact integer must not become a small plural operand through an
+// implementation's bounded integer conversion. Compare affixes, not digits.
+for (const locale of ['fr', 'pt']) {
+    if (!Intl.RelativeTimeFormat.supportedLocalesOf(locale).length)
+        continue;
+    const formatter = new Intl.RelativeTimeFormat(locale, {numeric: 'always'});
+    const literals = value => formatter.formatToParts(value, 'day')
+        .filter(part => part.type === 'literal').map(part => part.value).join('');
+    for (const value of [1e18, 1e20])
+        assert(literals(value), literals(2));
+}
