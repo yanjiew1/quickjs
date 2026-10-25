@@ -541,7 +541,7 @@ jobs:
         meson install -C build
         prefix="$RUNNER_TEMP/quickjs-install"
         "$prefix/bin/qjs" -e 'if (6 * 7 !== 42) throw Error("installed qjs");'
-        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n n '' libquickjs.so
+        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' n n '' libquickjs.so
         export PKG_CONFIG_PATH="$prefix/lib/x86_64-linux-gnu/pkgconfig:$prefix/lib64/pkgconfig:$prefix/lib/pkgconfig"
         libdir="$(pkg-config --variable=libdir quickjs)"
         cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \

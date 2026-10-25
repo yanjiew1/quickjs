@@ -274,7 +274,6 @@ test(
 )
 
 # Meson supplies MESON_EXE_WRAPPER to drivers with a target binary argument.
-runner_prefix = ''
 json_c = custom_target(
   'qjsc-json-attributes-source',
   depends: generator_runtime_deps,
@@ -295,7 +294,6 @@ json_c = custom_target(
     files('prepare_qjsc_json_attributes.py'),
     generator_qjsc,
     '@OUTPUT@',
-    '',
   ],
 )
 json_exec = executable(
@@ -309,8 +307,7 @@ test(
   'qjsc-json-attributes',
   python,
   args: [
-    files('run_qjsc_json_attributes.py'),
-    runner_prefix,
+    files('run_qjsc_executable.py'),
     json_exec,
     'qjsc-json-attribute-payload-ok',
   ],
@@ -344,8 +341,7 @@ test(
   'qjsc-native-std',
   python,
   args: [
-    files('run_qjsc_json_attributes.py'),
-    runner_prefix,
+    files('run_qjsc_executable.py'),
     native_std_exec,
     'qjsc-native-std-ok',
   ],
@@ -377,7 +373,6 @@ foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last'
       generator_qjsc,
       '@OUTPUT@',
       name,
-      '',
     ],
   )
   app = executable(
@@ -391,8 +386,7 @@ foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last'
     'qjsc-json-collision-' + name,
     python,
     args: [
-      files('run_qjsc_json_collisions.py'),
-      runner_prefix,
+      files('run_qjsc_executable.py'),
       app,
       'qjsc-json-collision-ok',
     ],
@@ -502,7 +496,7 @@ regexp_test = executable(
 test(
   'regexp-cli',
   sh,
-  args: [files('test_regexp.sh'), runner_prefix, regexp_test],
+  args: [files('test_regexp.sh'), regexp_test],
   suite: ['repo', 'tools', 'unit'],
   workdir: test_workdir,
   timeout: 120,
@@ -510,7 +504,7 @@ test(
 test(
   'qjs-cli',
   sh,
-  args: [files('test_qjs_cli.sh'), runner_prefix, qjs],
+  args: [files('test_qjs_cli.sh'), qjs],
   suite: ['repo', 'tools', 'integration'],
   workdir: test_workdir,
   timeout: 120,
@@ -518,7 +512,7 @@ test(
 test(
   'test262-runner',
   sh,
-  args: [files('test_run_test262.sh'), runner_prefix, run_test262],
+  args: [files('test_run_test262.sh'), run_test262],
   suite: ['repo', 'tools', 'integration'],
   workdir: test_workdir,
   depends: fixtures,
@@ -553,7 +547,6 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
     args: [
       files('test_qjsc_executable.py'),
       qjsc,
-      '',
       ' '.join(expected_flags),
       'n',
       'n',

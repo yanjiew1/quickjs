@@ -1,8 +1,8 @@
 #!/bin/sh
 # Check runner diagnostics using a small local harness, without Test262.
 set -eu
-test262_runner=${1:-${MESON_EXE_WRAPPER:-}}
-test262_binary=${2:-./run-test262}
+test262_runner=${MESON_EXE_WRAPPER:-}
+test262_binary=${1:-./run-test262}
 case "$test262_binary" in
     /*) ;;
     *) test262_binary="$(pwd)/$test262_binary" ;;

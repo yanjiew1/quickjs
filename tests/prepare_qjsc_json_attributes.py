@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 """Exercise the real qjsc CLI; generated executables use no JSON source files.
 
-Only -e output is requested, so this also works with a cross-build host qjsc.
-Make compiles that C with its selected target compiler and runs via WINE where
-appropriate. This script never builds a binary or invokes a nested Make.
+Only -e output is requested. Meson supplies a native qjsc in cross builds,
+then compiles the emitted C separately with the selected target compiler.
 """
 from pathlib import Path
-import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 
-prefix = shlex.split(sys.argv[3]) if len(sys.argv) > 3 else []
-qjsc = prefix + [str(Path(sys.argv[1]).resolve())]
+qjsc = [str(Path(sys.argv[1]).resolve())]
 destination = Path(sys.argv[2]).resolve()
 fixtures = Path(__file__).resolve().parent / "qjsc-json-attributes"
 with tempfile.TemporaryDirectory(prefix="qjsc-json-attributes-") as directory:

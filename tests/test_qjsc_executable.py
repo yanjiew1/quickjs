@@ -7,13 +7,10 @@ import sys
 import tempfile
 
 qjsc = str(Path(sys.argv[1]).resolve())
-prefix = shlex.split(sys.argv[2])
-if prefix and "/" in prefix[0] and not Path(prefix[0]).is_absolute():
-    prefix[0] = str(Path(prefix[0]).resolve())
-expected_flags = shlex.split(sys.argv[3])
-intl_enabled, temporal_enabled = (value == "y" for value in sys.argv[4:6])
-lto_flag = sys.argv[6] if len(sys.argv) > 6 else ""
-library_name = sys.argv[7]
+expected_flags = shlex.split(sys.argv[2])
+intl_enabled, temporal_enabled = (value == "y" for value in sys.argv[3:5])
+lto_flag = sys.argv[5]
+library_name = sys.argv[6]
 with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     scratch = Path(directory)
     source = scratch / "main.js"
@@ -25,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
         'if ((typeof Temporal === "object") !== ' + str(temporal_enabled).lower() +
         ') throw Error("qjsc Temporal configuration mismatch");\n'
         'print("qjsc-executable-ok");\n')
-    compiled = subprocess.run(prefix + [qjsc, "-v", "-o", str(executable),
+    compiled = subprocess.run([qjsc, "-v", "-o", str(executable),
                                        str(source)], stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
@@ -42,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     if any(arg.startswith("-fsanitize=") for arg in expected_flags):
         assert "-fno-omit-frame-pointer" in arguments, compiled.stdout
     source.unlink()
-    completed = subprocess.run(prefix + [str(executable)], cwd=str(scratch),
+    completed = subprocess.run([str(executable)], cwd=str(scratch),
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert completed.returncode == 0, (completed.returncode, completed.stderr)
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (

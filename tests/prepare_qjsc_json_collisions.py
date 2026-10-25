@@ -2,14 +2,12 @@
 """Emit collision witnesses through qjsc; leave no sources for execution."""
 from pathlib import Path
 import re
-import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 
-prefix = shlex.split(sys.argv[4]) if len(sys.argv) > 4 else []
-qjsc = prefix + [str(Path(sys.argv[1]).resolve())]
+qjsc = [str(Path(sys.argv[1]).resolve())]
 destination = Path(sys.argv[2]).resolve()
 case = sys.argv[3]
 assert case in ("attributes-first", "attributes-last", "size-first", "size-last")
@@ -40,5 +38,5 @@ with tempfile.TemporaryDirectory(prefix="qjsc-json-collision-") as directory:
                 symbol, rejected.stderr)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(emitted)
-# Every source disappears here. Make separately compiles the C with its
+# Every source disappears here. Meson separately compiles the C with its
 # selected native target; the generated executable must pass the JS marker.
