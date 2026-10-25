@@ -118,8 +118,11 @@ for (const type of Object.keys(codes)) {
 assert(dn.of('EN-gb'), 'British English');
 assert(new DN('en', {type: 'language', languageDisplay: 'standard'}).of('EN-gb'), 'English (United Kingdom)');
 assert(dn.of('iw'), dn.of('he'));
-assert(dn.of('en-Qaaa-QQ'), 'English (Qaaa, QQ)');
-assert(new DN('en', {type: 'language', fallback: 'none'}).of('en-Qaaa-QQ'), 'English (Qaaa, QQ)');
+// Complete-name availability is provider data; fallback must not change it.
+// The native composer's exact Qaaa/QQ layout also has its own service test.
+const unknownComposite = 'en-Qaaa-QQ';
+const completeName = new DN('en', {type: 'language', fallback: 'none'}).of(unknownComposite);
+assert(dn.of(unknownComposite), completeName === undefined ? unknownComposite : completeName);
 for (const style of ['short', 'narrow']) {
     assert(new DN('en', {type: 'region', style}).of('us'), 'US');
     assert(new DN('en', {type: 'script', style}).of('lAtN'), 'Latin');
