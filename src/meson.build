@@ -314,6 +314,10 @@ if get_option('temporal') or intl_enabled
   if get_option('calendars') != 'iso'
     support_sources += files(
       'calendar/eras.c',
+    )
+  endif
+  if get_option('calendars') in ['native', 'icu4c']
+    support_sources += files(
       'calendar/astronomy.c',
       'calendar/lunisolar.c',
       'calendar/lunisolar-months.c',
@@ -348,6 +352,11 @@ if get_option('temporal') or intl_enabled
     support_sources += files(
       'calendar/calendar-icu4c.c',
       'calendar/eras-icu4c.c',
+    )
+  elif get_option('calendars') == 'icu4x'
+    support_sources += files(
+      'calendar/calendar-icu4x.c',
+      'calendar/eras-icu4x.c',
     )
   else
     support_sources += files('calendar/calendar-minimal.c')

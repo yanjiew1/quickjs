@@ -414,8 +414,8 @@ endif
 if calendar_enabled and get_option('calendars') != 'iso'
   component_tests += ['test_calendar_eras', 'test_calendar_era_failure']
 endif
-if calendar_enabled and get_option('calendars') == 'icu4c'
-  component_tests += 'test_calendar_icu4c'
+if calendar_enabled and get_option('calendars') in ['icu4c', 'icu4x']
+  component_tests += 'test_calendar_extended'
 endif
 if native_calendars
   component_tests += [

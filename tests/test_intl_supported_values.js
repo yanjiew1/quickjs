@@ -47,7 +47,7 @@ for (const key of ["calendar", "collation", "currency", "numberingSystem", "time
 // Meson supplies the selected arithmetic/rule providers. Assert their promised
 // capabilities, so adapting individual witnesses cannot hide under-reporting.
 if (scriptArgs.length > 1) {
-    assert(["iso", "native", "icu4c"].includes(scriptArgs[1]));
+    assert(["iso", "native", "icu4c", "icu4x"].includes(scriptArgs[1]));
     const calendars = scriptArgs[1] === "iso" && scriptArgs[3] !== "icu4c" ? ["gregory", "iso8601"] : [
         "buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic",
         "gregory", "hebrew", "indian", "islamic-civil", "islamic-tbla",

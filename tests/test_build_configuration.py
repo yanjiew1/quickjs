@@ -105,6 +105,7 @@ def main():
             'src/calendar/calendar-minimal.c',
             'src/calendar/calendar-native.c',
             'src/calendar/calendar-icu4c.c',
+            'src/calendar/calendar-icu4x.c',
             'src/timezone/timezone-minimal.c',
             'src/timezone/timezone-native.c',
             'src/timezone/timezone-icu4c.c',
@@ -118,7 +119,7 @@ def main():
         if option not in options:
             continue
         controlled.update('src/' + family + '/' + family + '-' + name + '.c'
-                          for name in ('minimal', 'native', 'icu4c'))
+                          for name in ('minimal', 'native', 'icu4c', 'icu4x'))
         if calendars:
             selected = options[option]
             if option == 'calendars' and selected == 'iso':

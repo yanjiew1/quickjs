@@ -43,8 +43,15 @@ typedef enum QJSCalendarId {
     QJS_CAL_COUNT,
 } QJSCalendarId;
 
+/* ICU4X's public Date range is ISO years +/-999999. Keep a metadata margin
+   inside that domain for every offset calendar; all Temporal years still fit. */
+#ifdef CONFIG_CALENDAR_ICU4X
+#define QJS_CAL_MIN_YEAR (-900000)
+#define QJS_CAL_MAX_YEAR 900000
+#else
 #define QJS_CAL_MIN_YEAR (-1000000)
 #define QJS_CAL_MAX_YEAR 1000000
+#endif
 
 enum {
     QJS_CAL_OK = 0,

@@ -31,14 +31,14 @@ const DTF = Intl.DateTimeFormat;
 // without Meson arguments can discover the optional capabilities instead.
 function hasCalendar(calendar) {
     if (scriptArgs.length > 1) {
-        assert(['iso', 'native', 'icu4c'].includes(scriptArgs[1]));
+        assert(['iso', 'native', 'icu4c', 'icu4x'].includes(scriptArgs[1]));
         return scriptArgs[1] !== 'iso';
     }
     return new DTF('en', {calendar}).resolvedOptions().calendar === calendar;
 }
 let namedZones;
 if (scriptArgs.length > 2) {
-    assert(['iso', 'native', 'icu4c'].includes(scriptArgs[1]));
+    assert(['iso', 'native', 'icu4c', 'icu4x'].includes(scriptArgs[1]));
     assert(['minimal', 'native', 'icu4c'].includes(scriptArgs[2]));
     namedZones = scriptArgs[2] !== 'minimal';
 } else {

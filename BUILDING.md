@@ -308,3 +308,35 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 `extras` selections require the corresponding toolchains or Unicode inputs.
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
+
+## ICU4X calendars
+
+`-Dcalendars=icu4x` selects the pinned ICU4X 2.4.0 calendar implementation.
+Rust/Cargo 1.88 or newer is required only for this provider. ISO arithmetic
+remains in core; mandatory Chinese/Dangi publication records are shared with
+the other calendar providers. Timezone and Intl selection are independent.
+
+```sh
+meson setup build-icu4x -Dtemporal=true -Dcalendars=icu4x \
+  -Dtimezone_backend=native -Dintl=disabled
+meson compile -C build-icu4x
+meson test -C build-icu4x --print-errorlogs
+```
+
+The first selected build downloads Cargo.lock dependencies; after fetching,
+`CARGO_NET_OFFLINE=true` supports offline builds. Cargo objects, archives and
+collected notices stay in the Meson build directory. One PIC companion archive
+serves both static and shared engines. Static-library installations place the
+companion beside the engine; shared-only installations do not need it. Both
+retain complete crate/Rust notices under
+`share/licenses/quickjs/icu4x`. Static embedders should use
+`pkg-config --cflags --libs --static quickjs` to include private dependencies.
+Shared exports remain limited to the public engine API.
+
+For cross compilation or a C compiler using `-m32`, set `-Dicu4x_target=` to the
+matching Rust target triple and install that Rust standard-library target first.
+Configuration checks pointer width and queries target runtime libraries without
+executing target programs. Cross builds also prepare a separate build-machine
+bridge for the native `host-qjsc`; target-specific Rust flags do not leak into it.
+Rust internals cannot universally turn allocation failure into an engine OOM
+exception; see [bridge contracts](src/icu4x/README.md).

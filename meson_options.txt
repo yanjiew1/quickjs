@@ -97,9 +97,9 @@ option(
 option(
   'calendars',
   type: 'combo',
-  choices: ['native', 'iso', 'icu4c'],
+  choices: ['native', 'iso', 'icu4c', 'icu4x'],
   value: 'native',
-  description: 'Calendar arithmetic: core ISO only, native extensions or ICU4C',
+  description: 'Calendar arithmetic: core ISO, native, ICU4C or ICU4X',
 )
 option(
   'timezone_backend',
@@ -114,4 +114,11 @@ option(
   choices: ['utc', 'host-offset'],
   value: 'utc',
   description: 'Default-zone fallback when no supported host zone is found: UTC or current host offset',
+)
+
+option(
+  'icu4x_target',
+  type: 'string',
+  value: '',
+  description: 'Rust target triple matching the C target; required for ICU4X cross builds',
 )

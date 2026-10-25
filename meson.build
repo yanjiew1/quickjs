@@ -99,6 +99,8 @@ if get_option('temporal') or intl_enabled
     common_args += '-DCONFIG_CALENDAR_NATIVE'
   elif get_option('calendars') == 'icu4c'
     common_args += '-DCONFIG_CALENDAR_ICU4C'
+  elif get_option('calendars') == 'icu4x'
+    common_args += '-DCONFIG_CALENDAR_ICU4X'
   endif
 endif
 if get_option('temporal') or intl_enabled
@@ -124,6 +126,91 @@ if get_option('b_sanitize') != 'none'
   common_args += '-fno-omit-frame-pointer'
 endif
 
+# Optional foreign providers use a pinned PIC companion archive. Ordinary
+# engine profiles neither require Rust nor build a second engine configuration.
+icu4x_features = []
+if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'icu4x'
+  icu4x_features += 'calendars'
+endif
+icu4x_enabled = icu4x_features.length() != 0
+icu4x_static_install = get_option('default_library') != 'shared'
+icu4x_archives = []
+icu4x_native_libs = []
+library_install_dir = get_option('libdir') / 'quickjs'
+if host_machine.system() == 'windows'
+  library_install_dir = get_option('libdir')
+endif
+if icu4x_enabled
+  cargo = find_program('cargo', native: true)
+  rustc = find_program('rustc', native: true)
+  rust_host = ''
+  foreach line : run_command(rustc, '-vV', check: true).stdout().split('\n')
+    if line.startswith('host: ')
+      rust_host = line.substring(6)
+    endif
+  endforeach
+  if meson.is_cross_build() and get_option('icu4x_target') == ''
+    error('ICU4X cross builds require icu4x_target and its installed Rust standard library')
+  endif
+  foreach native : [false, true]
+    if native and not meson.is_cross_build()
+      icu4x_archives += [icu4x_archives[0]]
+      icu4x_native_libs += [icu4x_native_libs[0]]
+    else
+      rust_target = native or get_option('icu4x_target') == '' ? rust_host : get_option('icu4x_target')
+      rust_cfg = run_command(rustc, '--print=cfg', '--target', rust_target, check: true).stdout()
+      rust_cc = native ? build_cc : cc
+      pointer_size = rust_cc.sizeof('void *')
+      if not rust_cfg.contains('target_pointer_width="' + (pointer_size * 8).to_string() + '"')
+        error('Rust and C pointer widths differ; set icu4x_target to match the C compiler')
+      endif
+      tag = native ? 'native' : 'target'
+      work = meson.current_build_dir() / ('icu4x-' + tag)
+      build_machine_flags = native ? ['--build-machine'] : []
+      flags = run_command(
+        python, files('tools/build/icu4x.py'), 'probe',
+        '--rustc', rustc.full_path(), '--target', rust_target, '--directory', work,
+        build_machine_flags,
+        check: true,
+      ).stdout().strip().split('\n')
+      suffix = native ? '-native' : ''
+      archive = custom_target(
+        'icu4x-' + tag,
+        output: [
+          'libquickjs-icu4x' + suffix + '.a',
+          'ICU4X-NOTICES' + suffix + '.txt',
+          'ICU4X-RUST-COPYRIGHT' + suffix + '.html',
+        ],
+        command: [
+          python, files('tools/build/icu4x.py'), 'build',
+          '--cargo', cargo.full_path(), '--rustc', rustc.full_path(),
+          '--manifest', meson.current_source_dir() / 'src/icu4x/Cargo.toml',
+          '--target', rust_target, '--directory', work,
+          build_machine_flags,
+          '--native-libs=' + ' '.join(flags),
+          '--features', icu4x_features,
+          '--outputs', '@OUTPUT0@', '@OUTPUT1@', '@OUTPUT2@',
+        ],
+        depend_files: files(
+          'src/icu4x/Cargo.toml',
+          'src/icu4x/Cargo.lock',
+          'src/icu4x/lib.rs',
+          'src/icu4x/calendar.rs',
+        ),
+        build_by_default: true,
+        install: not native,
+        install_dir: [
+          icu4x_static_install ? library_install_dir : false,
+          get_option('datadir') / 'licenses/quickjs/icu4x',
+          get_option('datadir') / 'licenses/quickjs/icu4x',
+        ],
+      )
+      icu4x_archives += [archive]
+      icu4x_native_libs += [flags]
+    endif
+  endforeach
+endif
+machine_pkg_deps = []
 machine_args = []
 machine_deps = []
 machine_extra_libs = []
@@ -240,6 +327,29 @@ foreach native : [false, true]
       deps += dl
     endif
   endif
+  pkg_deps = deps
+  if icu4x_enabled
+    flags = icu4x_native_libs[native ? 1 : 0]
+    # One ordered tail prevents pkg-config generation from deduplicating a
+    # Rust runtime dependency ahead of the archive that actually needs it.
+    if icu4x_static_install
+      pkg_deps += [' '.join(['-lquickjs-icu4x'] + flags)]
+    endif
+    if not native
+      deps += declare_dependency(link_with: icu4x_archives[0][0], link_args: flags)
+    elif not meson.is_cross_build()
+      deps += declare_dependency(link_with: icu4x_archives[0][0], link_args: flags)
+    endif
+    if native or icu4x_static_install
+      companion = native and meson.is_cross_build() ? '-lquickjs-icu4x-native' : '-lquickjs-icu4x'
+      extra_libs += run_command(
+        python, files('tools/build/quote_link_args.py'),
+        ' '.join([companion] + flags),
+        check: true,
+      ).stdout().strip()
+    endif
+  endif
+  machine_pkg_deps += [pkg_deps]
   machine_args += [args]
   machine_deps += [deps]
   machine_extra_libs += [extra_libs]
@@ -504,7 +614,6 @@ subdir('src')
 shared_build = get_option('default_library') != 'static'
 static_install = get_option('default_library') != 'shared'
 shared_link_args = []
-library_install_dir = get_option('libdir') / 'quickjs'
 shared_kwargs = {
   'install_dir': library_install_dir,
 }
@@ -793,9 +902,19 @@ foreach variant : qjsc_variants
   )
   qjsc_args = args + ['-DQJSC_CONFIG_FILE="' + config_name + '"']
   overrides = native ? ['b_lto=false', 'b_sanitize=none'] : []
+  rust_link_args = []
+  rust_link_depends = []
+  if native and icu4x_enabled and meson.is_cross_build()
+    # Old Meson custom targets are always HOST. The build-machine generator
+    # instead gets an explicit native archive dependency and link arguments.
+    rust_link_args = [meson.current_build_dir() / 'libquickjs-icu4x-native.a'] + icu4x_native_libs[1]
+    rust_link_depends = [icu4x_archives[1][0]]
+  endif
   app = executable(
     native ? 'host-qjsc' : 'qjsc',
     ['tools/qjsc.c', native ? [] : tool_support],
+    link_args: rust_link_args,
+    link_depends: rust_link_depends,
     native: native,
     c_args: qjsc_args,
     include_directories: inc,
@@ -900,7 +1019,7 @@ if get_option('check_jsvalue')
 endif
 
 pkg = import('pkgconfig')
-pkg_private = host_deps
+pkg_private = machine_pkg_deps[0]
 if static_install and get_option('b_lto')
   # Static bitcode consumers need the target compiler's plugin and LTO mode.
   pkg_private += [target_lto_flag]

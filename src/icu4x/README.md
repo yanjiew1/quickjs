@@ -53,6 +53,14 @@ ICU4X's internal infallible allocations can abort on OOM. Catching a panic is
 not a promise that every Rust allocation failure becomes a recoverable engine
 exception. Engine-owned buffers still follow the ordinary allocator contract.
 
-Before redistributing a linked bridge, retain the resolved crates' copyright
-and license notices and the Rust standard-library notices for the selected
-toolchain. Integrated builds must collect those with the companion archive.
+The Meson build collects the resolved crates' full license notices and the
+selected Rust standard-library copyright/license notices alongside the
+companion archive. Retain those when redistributing linked binaries.
+
+The C provider uses the shared required publication records for Chinese
+1900–2100 and Dangi 1900–2050, because ICU4X's approximation can disagree with
+an official row (Chinese 2057). Other dates retain ICU4X arithmetic. Every
+required year's month count agrees with the pinned ICU4X month sequence;
+repository tests check this, official seams and month-addition roundtrips.
+Large lunar month additions traverse calendar years in the upstream API;
+ordinary and large-delta behavior have separate regression coverage.

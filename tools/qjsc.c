@@ -628,6 +628,10 @@ static int output_executable(const char *out_filename, const char *cfilename,
     if (ret < 0 || (size_t)ret >= sizeof(libjsname))
         goto path_too_long;
     *arg++ = libjsname;
+    /* A selected provider may install a companion archive beside the engine.
+       Derive this path at runtime for both build-tree and installed tools. */
+    *arg++ = "-L";
+    *arg++ = lib_dir;
     /* Static engine consumers need the selected backend's dependencies. */
     for (i = 0; libraries[i]; i++)
         *arg++ = libraries[i];

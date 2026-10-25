@@ -1,4 +1,4 @@
-/* ICU4C calendar storage-year, month-code and error-contract regressions.
+/* Extended calendar storage-year, month-code and error-contract regressions.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,6 +22,9 @@
 #include "../src/calendar/calendar.h"
 #include "../src/calendar/data.h"
 #include "../src/calendar/iso.h"
+#ifdef CONFIG_CALENDAR_ICU4X
+#include "../src/icu4x/calendar.h"
+#endif
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
@@ -42,6 +45,17 @@ static void official_years(void)
             int month;
 
             assert(!qjs_calendar_official_year(id, year, &packed));
+#ifdef CONFIG_CALENDAR_ICU4X
+            /* The pinned ICU4X month sequence has the same number of months
+               in each official year, including its 2057 date-length conflict.
+               Public month arithmetic therefore retains the corrected ordinal
+               sequence across the entire publication span. */
+            {
+                QJSCalendarYearLayout foreign;
+                assert(!qjs_icu4x_calendar_year(id, year, &foreign));
+                assert(foreign.months == packed.months);
+            }
+#endif
             day = packed.first_day;
             for (month = 1; month <= packed.months; month++) {
                 int length = 29 + ((packed.month_lengths >> (2 * (month - 1))) & 3);
@@ -143,7 +157,9 @@ int main(void)
 
     /* These metadata dates exceed Temporal's public interval deliberately:
        backend calendar arithmetic must not inherit Date's clipping policy. */
-    for (year = QJS_CAL_MIN_YEAR; year <= QJS_CAL_MAX_YEAR; year += 1000000) {
+    const int32_t metadata_years[] = {QJS_CAL_MIN_YEAR, 0, QJS_CAL_MAX_YEAR};
+    for (i = 0; i < sizeof(metadata_years) / sizeof(metadata_years[0]); i++) {
+        year = metadata_years[i];
         assert(!qjs_calendar_to_epoch_day(QJS_CAL_GREGORY, year, 3, 1, &epoch));
         assert(!qjs_iso_date_to_days(&roundtrip, (QJSISODate){year, 3, 1}));
         assert(epoch == roundtrip);
