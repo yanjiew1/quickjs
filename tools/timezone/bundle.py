@@ -109,18 +109,23 @@ def unpack(binary):
     if tz_at != strings or cldr_at != strings + len(tz_version) + 1:
         raise ValueError('noncanonical version storage')
     metadata = tz_version.encode('ascii') + b'\0' + cldr_version.encode('ascii') + b'\0'
-    records, extents = [], set()
+    records, extents = [], {}
     for row in range(count):
         name_at, primary_at, offset, length = INDEX.unpack_from(binary, index + row * INDEX.size)
         name, primary = string_at(name_at), string_at(primary_at)
         if offset < payload or offset > total or length > total - offset:
             raise ValueError("invalid payload extent")
-        _blob(binary[offset:offset + length])
+        extent = offset, length
+        checksum = extents.get(extent)
+        if checksum is None:
+            blob = binary[offset:offset + length]
+            _blob(blob)
+            checksum = hashlib.sha256(blob).hexdigest()
+            extents[extent] = checksum
         records.append({"identifier": name, "primary": primary,
                         "identifier_offset": name_at, "primary_offset": primary_at,
                         "offset": offset, "length": length,
-                        "sha256": hashlib.sha256(binary[offset:offset + length]).hexdigest()})
-        extents.add((offset, length))
+                        "sha256": checksum})
     names = [record["identifier"] for record in records]
     if names != sorted(names) or len({name.lower() for name in names}) != count:
         raise ValueError("invalid identifier ordering")
