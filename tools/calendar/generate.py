@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from acquire import SOURCES, atomic_write, load_pin, digest, parse_normalized
-from bundle import pack, unpack
+from bundle import pack
 from normalize import EPOCH, japanese_data, persian_data, ummalqura
 from lunisolar import korea_precomputed
 
@@ -127,14 +127,14 @@ def datasets(data_dir=None, pin=None):
 def generate(output, manifest, data_dir=None, pin=None):
     records, pin = datasets(data_dir, pin)
     binary = pack(records)
-    contents = unpack(binary)
     receipt = {'format': 'QJCA', 'format_version': 2, 'algorithm_version': 1,
                'spec_commit': pin['spec_commit'], 'sources': pin['sources'],
                'normalized': pin['normalized'], 'boundary_model': pin['boundary_model'],
                'boundary_months': pin['boundary_months'],
                'binary_sha256': digest(binary), 'binary_size': len(binary),
                'calendars': []}
-    for data in contents:
+    # pack() already validates these canonical records before encoding.
+    for data in records:
         if data['calendar'] == 'japanese':
             receipt['calendars'].append({'calendar': 'japanese',
                 'version': data['version'], 'era_count': len(data['eras']),
