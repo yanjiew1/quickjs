@@ -239,6 +239,33 @@ for test262_threads in 1 2; do
     fi
 done
 
+# Unexpected thrown values can themselves fail string conversion. Report the
+# negative-test mismatch without passing NULL into the exception-name parser.
+mkdir "$test262_tmp/unprintable"
+for test262_kind in symbol coercion; do
+    cat > "$test262_tmp/unprintable/$test262_kind.js" <<'JS'
+/*---
+flags: [noStrict]
+negative:
+  phase: runtime
+  type: TypeError
+---*/
+JS
+    if [ "$test262_kind" = symbol ]; then
+        printf '%s\n' 'throw Symbol("unexpected negative exception");' \
+            >> "$test262_tmp/unprintable/$test262_kind.js"
+    else
+        printf '%s\n' 'throw { toString() { throw 42; } };' \
+            >> "$test262_tmp/unprintable/$test262_kind.js"
+    fi
+done
+for test262_threads in 1 2; do
+    invoke_runner no -q -v -c "$test262_tmp/config" -T "$test262_threads" \
+        -d "$test262_tmp/unprintable"
+    [ "$test262_status" -eq 1 ]
+    grep -Fqx 'Result: 2/2 errors' "$test262_tmp/err"
+done
+
 # Every fixture has the primary disabled feature; half also have the
 # secondary feature. Each feature counts metadata occurrences, while the
 # aggregate counts skipped files only once. Leave a third counter at zero.

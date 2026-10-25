@@ -1986,15 +1986,19 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
         if (is_negative) {
             ret = 0;
             if (error_type) {
-                char *error_class;
                 const char *msg;
 
                 msg = JS_ToCString(ctx, exception_val);
-                error_class = strdup_len(msg, strcspn(msg, ":"));
-                if (!str_equal(error_class, error_type))
+                if (msg) {
+                    size_t len = strcspn(msg, ":");
+                    if (strlen(error_type) != len || memcmp(msg, error_type, len))
+                        ret = -1;
+                    JS_FreeCString(ctx, msg);
+                } else {
+                    /* Diagnostic coercion must not replace the test result. */
+                    JS_FreeValue(ctx, JS_GetException(ctx));
                     ret = -1;
-                free(error_class);
-                JS_FreeCString(ctx, msg);
+                }
             }
         } else {
             ret = -1;
