@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "format.h"
+#include "../common/format-builder.h"
 #include <string.h>
 
 void qjs_intl_duration_result_clear(const QJSIntlAllocator *allocator, QJSIntlDurationFormatted *result)
@@ -105,4 +106,88 @@ QJSIntlStatus qjs_intl_duration_join_parts(const QJSIntlAllocator *allocator, QJ
     list->length = 0;
     *out = result;
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_duration_join_digital(const QJSIntlAllocator *allocator,
+                                           const QJSIntlDurationComponent *components, size_t count,
+                                           const QJSIntlBytes *separators, size_t limit,
+                                           QJSIntlDurationFormatted *out)
+{
+    QJSIntlDurationFormatted result = {0};
+    QJSIntlFormatBuilder builder = {0};
+    QJSIntlStatus status;
+    size_t i, j, pass, parts;
+
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !allocator || !allocator->malloc || !allocator->free || !limit ||
+        !components || !count || count > 3 || (count > 1 && !separators))
+        return QJS_INTL_INVALID_ARGUMENT;
+    parts = count - 1;
+    for (i = 0; i < count; i++) {
+        status = component_valid(&components[i]);
+        if (status)
+            return status;
+        if (components[i].part_count > SIZE_MAX / sizeof(*result.parts) - parts)
+            return QJS_INTL_OVERFLOW;
+        parts += components[i].part_count;
+    }
+
+    builder.limit = limit;
+    for (pass = 0; pass < 2; pass++) {
+        builder.length = 0;
+        for (i = 0; i < count; i++) {
+            size_t start = builder.length;
+            if (i) {
+                status = qjs_intl_format_builder_text(&builder, separators[i - 1], NULL, NULL);
+                if (status)
+                    goto fail;
+                if (pass)
+                    result.parts[result.part_count++] = (QJSIntlDurationPart){
+                        start, builder.length, QJS_INTL_PART_LITERAL, QJS_TEMPORAL_UNIT_COUNT};
+            }
+            start = builder.length;
+            if (components[i].text.length) {
+                QJSIntlFormatted body = {(uint16_t *)components[i].text.data,
+                                          components[i].text.length, NULL, 0};
+                status = qjs_intl_format_builder_body(&builder, &body);
+                if (status)
+                    goto fail;
+            }
+            if (pass) {
+                for (j = 0; j < components[i].part_count; j++) {
+                    QJSIntlDurationPart part = components[i].parts[j];
+                    part.start += start;
+                    part.end += start;
+                    result.parts[result.part_count++] = part;
+                }
+            }
+        }
+        if (!pass) {
+            if (builder.length > SIZE_MAX / sizeof(*result.text)) {
+                status = QJS_INTL_OVERFLOW;
+                goto fail;
+            }
+            result.length = builder.length;
+            result.text = allocator->malloc(allocator->opaque,
+                (result.length ? result.length : 1) * sizeof(*result.text));
+            if (!result.text) {
+                status = QJS_INTL_NO_MEMORY;
+                goto fail;
+            }
+            if (parts) {
+                result.parts = allocator->malloc(allocator->opaque, parts * sizeof(*result.parts));
+                if (!result.parts) {
+                    status = QJS_INTL_NO_MEMORY;
+                    goto fail;
+                }
+            }
+            builder.result.text = result.text;
+        }
+    }
+    *out = result;
+    return QJS_INTL_OK;
+fail:
+    qjs_intl_duration_result_clear(allocator, &result);
+    return status;
 }
