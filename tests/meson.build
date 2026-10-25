@@ -600,6 +600,21 @@ test(
   timeout: 120,
 )
 
+error_api_test = executable(
+  'test_error_api',
+  'test_error_api.c',
+  c_args: host_args,
+  include_directories: include_directories('../include'),
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'error-api',
+  error_api_test,
+  suite: ['repo', 'embedding', 'integration'],
+  timeout: 120,
+)
+
 public_api_test = executable(
   'test_shared_api',
   'test_shared_api.c',

@@ -4,6 +4,8 @@
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -114,9 +116,9 @@ const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop)
 
 /* if filename != NULL, an additional level is added with the filename
    and line number information (used for parse error). */
-void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                     const char *filename, int line_num, int col_num,
-                     int backtrace_flags)
+static int build_backtrace_checked(JSContext *ctx, JSValueConst error_obj,
+                                   const char *filename, int line_num, int col_num,
+                                   int backtrace_flags)
 {
     JSStackFrame *sf;
     JSValue str, error_ref;
@@ -124,9 +126,10 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     const char *func_name_str;
     const char *str1;
     JSObject *p;
+    int ret = 0;
 
     if (!JS_IsObject(error_obj))
-        return; /* protection in the out of memory case */
+        return 0; /* protection in the out of memory case */
     
     /* Allocations can replace and release the pending exception. */
     error_ref = JS_DupValue(ctx, error_obj);
@@ -187,19 +190,33 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
         dbuf_putc(&dbuf, '\n');
     }
     dbuf_putc(&dbuf, '\0');
-    if (dbuf_error(&dbuf))
+    if (dbuf_error(&dbuf)) {
         str = JS_NULL;
-    else
+        ret = -1;
+    } else {
         str = JS_NewString(ctx, (char *)dbuf.buf);
+    }
     dbuf_free(&dbuf);
-    if (!JS_IsException(str))
+    if (JS_IsException(str) ||
         JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str,
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+        ret = -1;
     goto done;
  fail:
+    ret = -1;
     dbuf_free(&dbuf);
  done:
     JS_FreeValue(ctx, error_ref);
+    return ret;
+}
+
+void build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                     const char *filename, int line_num, int col_num,
+                     int backtrace_flags)
+{
+    /* Throwing paths retain their best-effort stack policy. */
+    build_backtrace_checked(ctx, error_obj, filename, line_num, col_num,
+                             backtrace_flags);
 }
 
 /* Note: it is important that no exception is returned by this function */
@@ -219,6 +236,112 @@ BOOL is_backtrace_needed(JSValueConst obj)
 JSValue JS_NewError(JSContext *ctx)
 {
     return JS_NewObjectClass(ctx, JS_CLASS_ERROR);
+}
+
+static JSValue js_new_error(JSContext *ctx, int error_num,
+                            const char *fmt, va_list ap)
+{
+    JSRuntime *rt = ctx->rt;
+    JSValue saved = rt->current_exception;
+    BOOL saved_uncatchable = rt->current_exception_is_uncatchable;
+    JSValue obj, message;
+    char buf[256];
+
+    /* Keep a prior exception owned while detecting construction/stack failures. */
+    rt->current_exception = JS_UNINITIALIZED;
+    rt->current_exception_is_uncatchable = FALSE;
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    obj = error_num < 0 ? JS_NewError(ctx) :
+        JS_NewObjectProtoClass(ctx, ctx->native_error_proto[error_num], JS_CLASS_ERROR);
+    if (JS_IsException(obj))
+        goto fail;
+    message = JS_NewString(ctx, buf);
+    if (JS_IsException(message))
+        goto fail_object;
+    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_message, message,
+                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+        goto fail_object;
+    if (build_backtrace_checked(ctx, obj, NULL, 0, 0, 0) < 0 || JS_HasException(ctx)) {
+        /* DynBuf uses the runtime allocator and cannot itself throw. */
+        if (!JS_HasException(ctx))
+            JS_ThrowOutOfMemory(ctx);
+        goto fail_object;
+    }
+    rt->current_exception = saved;
+    rt->current_exception_is_uncatchable = saved_uncatchable;
+    return obj;
+
+ fail_object:
+    JS_FreeValue(ctx, obj);
+ fail:
+    JS_FreeValue(ctx, saved);
+    return JS_EXCEPTION;
+}
+
+JSValue JS_NewPlainError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, -1, fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+JSValue JS_NewTypeError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, JS_TYPE_ERROR, fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+JSValue JS_NewRangeError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, JS_RANGE_ERROR, fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+JSValue JS_NewReferenceError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, JS_REFERENCE_ERROR, fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+JSValue JS_NewSyntaxError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, JS_SYNTAX_ERROR, fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+JSValue JS_NewInternalError(JSContext *ctx, const char *fmt, ...)
+{
+    JSValue value;
+    va_list ap;
+
+    va_start(ap, fmt);
+    value = js_new_error(ctx, JS_INTERNAL_ERROR, fmt, ap);
+    va_end(ap);
+    return value;
 }
 
 JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,

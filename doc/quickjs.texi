@@ -890,6 +890,17 @@ value. Test results with @code{JS_IsException()} before using them as values
 or arguments. Catch markers are private VM state and must not be returned
 by native callbacks.
 
+@code{JS_NewPlainError()}, @code{JS_NewTypeError()}, @code{JS_NewRangeError()},
+@code{JS_NewReferenceError()}, @code{JS_NewSyntaxError()} and
+@code{JS_NewInternalError()} return owned Error values without throwing them.
+They use the supplied context's retained intrinsic prototype and attach a stack.
+Their printf-style message formatting follows the bounded formatting of the
+corresponding throwing helpers. Successful construction preserves an existing
+pending exception, including its uncatchable status. Allocation failure returns
+@code{JS_EXCEPTION} and replaces the pending exception with the construction
+error. Creating an @code{InternalError} does not make it uncatchable.
+The existing no-argument @code{JS_NewError()} remains unchanged.
+
 @subsection Script evaluation
 
 Use @code{JS_Eval()} to evaluate a script or module source.

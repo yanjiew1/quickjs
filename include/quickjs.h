@@ -718,6 +718,15 @@ JS_EXTERN JSValue JS_GetException(JSContext *ctx);
 JS_EXTERN JS_BOOL JS_HasException(JSContext *ctx);
 JS_EXTERN JS_BOOL JS_IsError(JSContext *ctx, JSValueConst val);
 JS_EXTERN JSValue JS_NewError(JSContext *ctx);
+/* Formatted Error values with the context's intrinsic prototype and stack.
+   Success preserves an existing pending exception. Failure returns JS_EXCEPTION
+   and replaces it with the construction error. InternalError stays catchable. */
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewPlainError(JSContext *ctx, const char *fmt, ...);
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewTypeError(JSContext *ctx, const char *fmt, ...);
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewRangeError(JSContext *ctx, const char *fmt, ...);
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewReferenceError(JSContext *ctx, const char *fmt, ...);
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewSyntaxError(JSContext *ctx, const char *fmt, ...);
+JS_EXTERN JSValue __js_printf_like(2, 3) JS_NewInternalError(JSContext *ctx, const char *fmt, ...);
 JS_EXTERN JSValue __js_printf_like(2, 3) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...);
 JS_EXTERN JSValue __js_printf_like(2, 3) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...);
 JS_EXTERN JSValue __js_printf_like(2, 3) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...);
