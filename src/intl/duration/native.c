@@ -26,7 +26,7 @@ struct QJSIntlDurationService {
 
 struct QJSIntlDurationFormatter {
     QJSIntlAllocator allocator;
-    QJSIntlNumberFormatter *numbers[QJS_TEMPORAL_UNIT_COUNT][2];
+    QJSIntlNumberFormatter *numbers[QJS_TEMPORAL_UNIT_COUNT];
     QJSIntlListFormatter *list;
     QJSIntlNativeDurationDigital digital;
     QJSIntlDurationOptions options;
@@ -197,10 +197,9 @@ void qjs_intl_duration_formatter_close(QJSIntlDurationFormatter *formatter)
 {
     if (formatter) {
         QJSIntlAllocator allocator = formatter->allocator;
-        unsigned int unit, sign;
+        unsigned int unit;
         for (unit = 0; unit < QJS_TEMPORAL_UNIT_COUNT; unit++)
-            for (sign = 0; sign < 2; sign++)
-                qjs_intl_number_formatter_close(formatter->numbers[unit][sign]);
+            qjs_intl_number_formatter_close(formatter->numbers[unit]);
         qjs_intl_list_formatter_close(formatter->list);
         qjs_intl_duration_native_digital_clear(&allocator, &formatter->digital);
         allocator.free(allocator.opaque, formatter);
@@ -218,7 +217,7 @@ static int has_fraction(const QJSIntlDurationOptions *options, unsigned int unit
            options->units[unit + 1].style == QJS_INTL_DURATION_UNIT_FRACTIONAL;
 }
 
-static QJSIntlNumberOptions number_options(const QJSIntlDurationOptions *options, unsigned int unit, unsigned int sign)
+static QJSIntlNumberOptions number_options(const QJSIntlDurationOptions *options, unsigned int unit)
 {
     static const char *const names[] = {"year", "month", "week", "day", "hour", "minute", "second",
                                        "millisecond", "microsecond", "nanosecond"};
@@ -227,7 +226,7 @@ static QJSIntlNumberOptions number_options(const QJSIntlDurationOptions *options
     int fraction = has_fraction(options, unit);
     result.style = numeric(style) ? QJS_INTL_NUMBER_DECIMAL : QJS_INTL_NUMBER_UNIT;
     result.grouping = numeric(style) ? QJS_INTL_NUMBER_GROUP_OFF : QJS_INTL_NUMBER_GROUP_AUTO;
-    result.sign_display = sign ? QJS_INTL_NUMBER_SIGN_NEVER : QJS_INTL_NUMBER_SIGN_AUTO;
+    result.sign_display = QJS_INTL_NUMBER_SIGN_AUTO;
     result.maximum_output_length = options->maximum_output_length;
     result.digits = (QJSIntlDecimalOptions){.minimum_integer_digits = style == QJS_INTL_DURATION_UNIT_2DIGIT ? 2 : 1,
                                            .minimum_fraction_digits = fraction && options->fractional_digits >= 0 ?
@@ -253,7 +252,7 @@ QJSIntlStatus qjs_intl_duration_formatter_open(const QJSIntlDurationService *ser
     QJSIntlDurationPattern pattern;
     QJSIntlListStyle list_style;
     QJSIntlStatus status;
-    unsigned int unit, sign;
+    unsigned int unit;
     if (out)
         *out = NULL;
     if (!out || !service || locale >= service->count || qjs_intl_duration_options_validate(options))
@@ -276,17 +275,15 @@ QJSIntlStatus qjs_intl_duration_formatter_open(const QJSIntlDurationService *ser
     if (status)
         goto fail;
     for (unit = 0; unit < QJS_TEMPORAL_UNIT_COUNT; unit++) {
+        QJSIntlNumberOptions number;
+
         if (options->units[unit].style == QJS_INTL_DURATION_UNIT_FRACTIONAL)
             continue;
-        /* YEAR is the first possible displayed component, so it can never
-           need a sign-suppressed formatter. */
-        for (sign = 0; sign < (unit == QJS_TEMPORAL_YEAR ? 1 : 2); sign++) {
-            QJSIntlNumberOptions number = number_options(options, unit, sign);
-            status = qjs_intl_number_formatter_open(service->number, service->locales[locale].number,
-                                                     system, &number, &formatter->numbers[unit][sign]);
-            if (status)
-                goto fail;
-        }
+        number = number_options(options, unit);
+        status = qjs_intl_number_formatter_open(service->number, service->locales[locale].number,
+                                                 system, &number, &formatter->numbers[unit]);
+        if (status)
+            goto fail;
     }
     *out = formatter;
     return QJS_INTL_OK;
@@ -319,7 +316,13 @@ static QJSIntlStatus component(const QJSIntlDurationFormatter *formatter, const 
     if (*show_sign && !nonzero(duration, unit, has_fraction(&formatter->options, unit)) &&
         qjs_temporal_duration_sign(duration) < 0)
         value.kind = QJS_INTL_NEGATIVE_ZERO;
-    status = qjs_intl_number_format(formatter->numbers[unit][!*show_sign], &value, number);
+    /* Later components use the unsigned pattern. HALF_EXPAND and TRUNC are
+       sign-symmetric, so format their magnitude through the borrowed slice. */
+    if (!*show_sign && value.decimal.length && value.decimal.data[0] == '-') {
+        value.decimal.data++;
+        value.decimal.length--;
+    }
+    status = qjs_intl_number_format(formatter->numbers[unit], &value, number);
     if (status)
         return status;
     if (number->part_count > SIZE_MAX / sizeof(**parts))
