@@ -18,12 +18,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "native-digital.h"
+#include "digital.h"
 #include "../common/format-builder.h"
 #include <string.h>
 
-void qjs_intl_duration_native_digital_clear(const QJSIntlAllocator *allocator,
-                                          QJSIntlNativeDurationDigital *result)
+void qjs_intl_duration_digital_clear(const QJSIntlAllocator *allocator,
+                                          QJSIntlDurationDigital *result)
 {
     if (!result || !allocator || !allocator->free)
         return;
@@ -96,16 +96,16 @@ static QJSIntlStatus parse(QJSIntlBytes pattern, DigitalPattern *layout)
     return QJS_INTL_OK;
 }
 
-QJSIntlStatus qjs_intl_duration_native_digital_validate(QJSIntlBytes pattern)
+QJSIntlStatus qjs_intl_duration_digital_validate(QJSIntlBytes pattern)
 {
     DigitalPattern layout;
     return parse(pattern, &layout);
 }
 
-QJSIntlStatus qjs_intl_duration_native_digital(const QJSIntlAllocator *allocator, QJSIntlBytes pattern,
-                                             QJSIntlNativeDurationDigital *out)
+QJSIntlStatus qjs_intl_duration_digital(const QJSIntlAllocator *allocator, QJSIntlBytes pattern,
+                                             QJSIntlDurationDigital *out)
 {
-    QJSIntlNativeDurationDigital result = {0};
+    QJSIntlDurationDigital result = {0};
     DigitalPattern layout;
     QJSIntlStatus status;
     if (out)

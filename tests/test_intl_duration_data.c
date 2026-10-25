@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 #include "../src/intl/duration/data.h"
-#include "../src/intl/duration/native-digital.h"
+#include "../src/intl/duration/digital.h"
 #include "../src/intl/native/wire.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -193,12 +193,12 @@ static void check_projection(const QJSIntlDurationData *owner, const QJSIntlAllo
     uint32_t locale;
     for (locale = 0; locale < owner->section.count; locale++) {
         QJSIntlDurationPattern pattern;
-        QJSIntlNativeDurationDigital digital;
+        QJSIntlDurationDigital digital;
         assert(!qjs_intl_duration_pattern_at(owner, locale, QJS_INTL_DURATION_HMS, &pattern));
         assert(pattern.state == QJS_INTL_DURATION_PATTERN_VALUE);
-        assert(!qjs_intl_duration_native_digital(allocator, pattern.text, &digital));
+        assert(!qjs_intl_duration_digital(allocator, pattern.text, &digital));
         assert(digital.hour_width == 1 || digital.hour_width == 2);
-        qjs_intl_duration_native_digital_clear(allocator, &digital);
+        qjs_intl_duration_digital_clear(allocator, &digital);
     }
 }
 
