@@ -1145,3 +1145,28 @@ jobs:
           crash-*
           timeout-*
         if-no-files-found: ignore
+
+  icu4x-bridge:
+    name: ICU4X bridge / Rust ${{ matrix.rust }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ['1.88.0', stable]
+    steps:
+    - uses: actions/checkout@v7
+    - name: Select Rust toolchain
+      run: rustup toolchain install '${{ matrix.rust }}' --profile minimal
+    - name: Record toolchain identity
+      run: |
+        rustc +${{ matrix.rust }} -vV
+        cargo +${{ matrix.rust }} -V
+    - name: Build the locked calendar bridge
+      env:
+        CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
+      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars
+    - name: Run bridge unit tests
+      env:
+        CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
+      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars
