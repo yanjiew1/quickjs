@@ -656,8 +656,8 @@ jobs:
           test262_progress.jsonl
           test262_timings.*
 
-  icu4x-calendar:
-    name: ICU4X calendar / ${{ matrix.compiler }} ASan and UBSan
+  icu4x:
+    name: ICU4X / ${{ matrix.compiler }} ASan and UBSan
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -681,12 +681,12 @@ jobs:
       with:
         path: ~/.cargo/registry
         key: icu4x-registry-${{ runner.os }}-${{ hashFiles('src/icu4x/Cargo.lock') }}
-    - name: Configure ICU4X calendar provider
+    - name: Configure ICU4X timezone and calendar providers
       run: |
         rustc -vV
         meson setup build -Dwerror=true -Ddefault_library=both \
           -Db_sanitize=address,undefined -Dintl=disabled \
-          -Dtemporal=true -Dcalendars=icu4x -Dtimezone_backend=native
+          -Dtemporal=true -Dcalendars=icu4x -Dtimezone_backend=icu4x
     - name: Compile selected build
       id: compile
       run: meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
@@ -719,7 +719,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: icu4x-calendar-${{ matrix.compiler }}-address-undefined
+        name: icu4x-${{ matrix.compiler }}-address-undefined
         path: |
           build/meson-logs/
           build/meson-info/

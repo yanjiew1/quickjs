@@ -1,4 +1,4 @@
-/* Private ICU4X calendar bridge.
+/* Private ICU4X provider bridge.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,9 +23,12 @@
 
 #[cfg(feature = "calendars")]
 mod calendar;
+#[cfg(feature = "timezones")]
+mod timezone;
 
 const RANGE: i32 = -1;
 const UNSUPPORTED: i32 = -3;
+#[cfg(feature = "calendars")]
 const MEMORY: i32 = -4;
 const BACKEND: i32 = -5;
 

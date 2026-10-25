@@ -21,6 +21,7 @@
 
 """Build the optional pinned ICU4X companion archive and its distribution notices."""
 import argparse
+import filecmp
 import hashlib
 import json
 import os
@@ -60,6 +61,9 @@ def run(command, *, env=None, input=None, timeout=900):
 
 def copy_atomic(source, destination):
     destination = Path(destination)
+    if destination.is_file() and filecmp.cmp(str(source), str(destination), shallow=False):
+        shutil.copymode(str(source), str(destination))
+        return
     with tempfile.NamedTemporaryFile(prefix=destination.name + '.',
                                      dir=str(destination.parent), delete=False) as output:
         temporary = Path(output.name)

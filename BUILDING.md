@@ -309,16 +309,17 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
 
-## ICU4X calendars
+## ICU4X timezone and calendar backends
 
-`-Dcalendars=icu4x` selects the pinned ICU4X 2.4.0 calendar implementation.
+`-Dcalendars=icu4x` and `-Dtimezone_backend=icu4x` select the pinned ICU4X 2.4.0
+providers.
 Rust/Cargo 1.88 or newer is required only for this provider. ISO arithmetic
 remains in core; mandatory Chinese/Dangi publication records are shared with
 the other calendar providers. Timezone and Intl selection are independent.
 
 ```sh
 meson setup build-icu4x -Dtemporal=true -Dcalendars=icu4x \
-  -Dtimezone_backend=native -Dintl=disabled
+  -Dtimezone_backend=icu4x -Dintl=disabled
 meson compile -C build-icu4x
 meson test -C build-icu4x --print-errorlogs
 ```
@@ -340,3 +341,11 @@ executing target programs. Cross builds also prepare a separate build-machine
 bridge for the native `host-qjsc`; target-specific Rust flags do not leak into it.
 Rust internals cannot universally turn allocation failure into an engine OOM
 exception; see [bridge contracts](src/icu4x/README.md).
+
+The timezone provider uses ICU4X for IANA identity and CLDR Windows mappings.
+ICU4X does not provide exact timezone transition rules, so the explicit IANA
+companion supplies the embedded 2026e TZif data and checked full-range rules.
+Its primary-identifier policy follows ECMA-402 country boundaries. ICU4X-only
+obsolete aliases are not exposed; the real IANA `Factory` zone retains its own
+rules even though ICU4X treats that name as unknown. Windows host discovery
+uses the shared geographic query and explicit territory-to-`001` fallback.

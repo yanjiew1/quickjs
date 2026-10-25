@@ -104,9 +104,9 @@ option(
 option(
   'timezone_backend',
   type: 'combo',
-  choices: ['native', 'minimal', 'icu4c'],
+  choices: ['native', 'minimal', 'icu4c', 'icu4x'],
   value: 'native',
-  description: 'Named-zone backend: native, minimal or ICU4C; UTC and offsets remain in core',
+  description: 'Named-zone backend: native, minimal, ICU4C or ICU4X; UTC and offsets remain in core',
 )
 option(
   'system_timezone_policy',

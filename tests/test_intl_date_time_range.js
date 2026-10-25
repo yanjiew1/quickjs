@@ -39,7 +39,7 @@ function hasCalendar(calendar) {
 let namedZones;
 if (scriptArgs.length > 2) {
     assert(['iso', 'native', 'icu4c', 'icu4x'].includes(scriptArgs[1]));
-    assert(['minimal', 'native', 'icu4c'].includes(scriptArgs[2]));
+    assert(['minimal', 'native', 'icu4c', 'icu4x'].includes(scriptArgs[2]));
     namedZones = scriptArgs[2] !== 'minimal';
 } else {
     try {

@@ -44,6 +44,7 @@ endif
 calendar_enabled = (get_option('temporal') or intl_enabled)
 native_calendars = (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'
 native_timezones = (get_option('temporal') or intl_enabled) and get_option('timezone_backend') == 'native'
+iana_timezones = (get_option('temporal') or intl_enabled) and get_option('timezone_backend') in ['native', 'icu4x']
 fixture_manifest = files('../tools/build/test-fixtures.list')
 fixture_inputs = []
 foreach name : fs.read(fixture_manifest[0]).strip().split('\n')
@@ -437,11 +438,16 @@ if calendar_enabled
   component_tests += 'test_system_timezone'
 endif
 if native_timezones
+  component_tests += 'test_windows_timezone'
+endif
+if iana_timezones
   component_tests += [
-    'test_windows_timezone',
-    'test_native_timezone',
+    'test_iana_timezone',
     'test_tzif_decoder',
   ]
+endif
+if calendar_enabled and get_option('timezone_backend') == 'icu4x'
+  component_tests += 'test_timezone_icu4x'
 endif
 if get_option('temporal')
   component_tests += [
@@ -5116,7 +5122,7 @@ if intl_native
   )
 endif
 
-if native_timezones
+if iana_timezones
   test(
     'timezone-generator',
     python,

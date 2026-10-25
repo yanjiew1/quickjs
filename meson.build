@@ -111,6 +111,8 @@ if get_option('temporal') or intl_enabled
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   elif get_option('timezone_backend') == 'icu4c'
     common_args += '-DCONFIG_TIMEZONE_ICU4C'
+  elif get_option('timezone_backend') == 'icu4x'
+    common_args += '-DCONFIG_TIMEZONE_ICU4X'
   endif
   if get_option('system_timezone_policy') == 'host-offset'
     common_args += '-DCONFIG_TIMEZONE_HOST_OFFSET'
@@ -132,6 +134,9 @@ icu4x_features = []
 if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'icu4x'
   icu4x_features += 'calendars'
 endif
+if (get_option('temporal') or intl_enabled) and get_option('timezone_backend') == 'icu4x'
+  icu4x_features += 'timezones'
+endif
 icu4x_enabled = icu4x_features.length() != 0
 icu4x_static_install = get_option('default_library') != 'shared'
 icu4x_archives = []
@@ -141,6 +146,24 @@ if host_machine.system() == 'windows'
   library_install_dir = get_option('libdir')
 endif
 if icu4x_enabled
+  icu4x_inputs = files(
+    'src/icu4x/Cargo.toml',
+    'src/icu4x/Cargo.lock',
+    'src/icu4x/lib.rs',
+    'src/icu4x/bridge.h',
+  )
+  if 'calendars' in icu4x_features
+    icu4x_inputs += files(
+      'src/icu4x/calendar.rs',
+      'src/icu4x/calendar.h',
+    )
+  endif
+  if 'timezones' in icu4x_features
+    icu4x_inputs += files(
+      'src/icu4x/timezone.rs',
+      'src/icu4x/timezone.h',
+    )
+  endif
   cargo = find_program('cargo', native: true)
   rustc = find_program('rustc', native: true)
   rust_host = ''
@@ -191,12 +214,7 @@ if icu4x_enabled
           '--features', icu4x_features,
           '--outputs', '@OUTPUT0@', '@OUTPUT1@', '@OUTPUT2@',
         ],
-        depend_files: files(
-          'src/icu4x/Cargo.toml',
-          'src/icu4x/Cargo.lock',
-          'src/icu4x/lib.rs',
-          'src/icu4x/calendar.rs',
-        ),
+        depend_files: icu4x_inputs,
         build_by_default: true,
         install: not native,
         install_dir: [

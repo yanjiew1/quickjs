@@ -64,3 +64,18 @@ required year's month count agrees with the pinned ICU4X month sequence;
 repository tests check this, official seams and month-addition roundtrips.
 Large lunar month additions traverse calendar years in the upstream API;
 ordinary and large-delta behavior have separate regression coverage.
+
+## Timezone identity
+
+The `timezones` feature uses ICU4X's real `IanaParserExtended` and
+`WindowsParser`. The same compiled Windows payload provides a bounded
+case-insensitive fallback for the private host helper. All 505 CLDR 49 Windows
+rows were cross-checked against the existing country-aware IANA policy; modern
+alias spelling differences preserve the same primary identity.
+
+ICU4X supplies no exact transition engine. The C provider explicitly uses the
+shared IANA TZif companion for rules, admission and country-aware primary IDs.
+IANA 2026e and CLDR 49 match the selected ICU4X data release. Obsolete ICU-only
+names are rejected; `Factory` is a valid current IANA zone supplied by that
+companion, not a substitute for unknown input. Raw DST flags come from TZif,
+independently of ICU4X's display-name variants.

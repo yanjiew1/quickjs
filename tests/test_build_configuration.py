@@ -109,6 +109,7 @@ def main():
             'src/timezone/timezone-minimal.c',
             'src/timezone/timezone-native.c',
             'src/timezone/timezone-icu4c.c',
+            'src/timezone/timezone-icu4x.c',
         }:
             providers.add(relative)
     # Foundations can precede the option that selects their runtime provider.

@@ -22,6 +22,7 @@
 #ifndef QJS_ICU4X_CALENDAR_H
 #define QJS_ICU4X_CALENDAR_H
 #include "../calendar/types.h"
+#include "bridge.h"
 #include <stddef.h>
 
 typedef struct QJSICU4XCalendarDate {

@@ -28,7 +28,8 @@
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
-#if defined(CONFIG_TIMEZONE_NATIVE) || defined(CONFIG_TIMEZONE_ICU4C)
+#if defined(CONFIG_TIMEZONE_NATIVE) || defined(CONFIG_TIMEZONE_ICU4C) || \
+    defined(CONFIG_TIMEZONE_ICU4X)
 #include "windows-zone.h"
 #endif
 #endif
@@ -188,7 +189,8 @@ int qjs_timezone_system_default(char *result, size_t capacity,
     char selected[256];
     int error = QJS_TZ_RANGE;
 #ifdef _WIN32
-#if defined(CONFIG_TIMEZONE_NATIVE) || defined(CONFIG_TIMEZONE_ICU4C)
+#if defined(CONFIG_TIMEZONE_NATIVE) || defined(CONFIG_TIMEZONE_ICU4C) || \
+    defined(CONFIG_TIMEZONE_ICU4X)
     char name[256];
 
     if (!qjs_tz_windows_system_identifier(name, sizeof(name)))
