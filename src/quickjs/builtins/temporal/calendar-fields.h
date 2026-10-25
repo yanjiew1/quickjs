@@ -41,10 +41,12 @@ int js_temporal_time_zone_start_of_day(JSContext *ctx,
 int js_temporal_time_zone_transition(JSContext *ctx,
     const JSTemporalTimeZone *zone, QJSTemporalEpochNs epoch, BOOL next,
     QJSTemporalEpochNs *result, int *found);
-int js_temporal_time_zones_equal(JSContext *ctx,
-    const JSTemporalTimeZone *one, const JSTemporalTimeZone *two, int *result);
-int js_temporal_time_zone_to_native(JSContext *ctx,
-    const JSTemporalTimeZone *zone, QJSTemporalZone *result);
+BOOL js_temporal_time_zones_equal(const JSTemporalTimeZone *one,
+                                  const JSTemporalTimeZone *two);
+/* Borrowed arithmetic metadata; identifier spelling is intentionally absent.
+   Keep the owned JS identifier for observable getters, formatting and GC. */
+void js_temporal_time_zone_view(const JSTemporalTimeZone *zone,
+                                QJSTemporalZone *result);
 typedef enum JSTemporalOffsetBehaviour {
     JS_TEMPORAL_OFFSET_WALL, JS_TEMPORAL_OFFSET_EXACT, JS_TEMPORAL_OFFSET_OPTION
 } JSTemporalOffsetBehaviour;
