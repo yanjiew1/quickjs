@@ -333,29 +333,20 @@ int js_temporal_to_time_zone(JSContext *ctx, JSValueConst value,
     result->named = zone.named;
     return 0;
 }
-int js_temporal_time_zone_to_native(JSContext *ctx, const JSTemporalTimeZone *source,
-                                    QJSTemporalZone *result)
+void js_temporal_time_zone_view(const JSTemporalTimeZone *source,
+                                QJSTemporalZone *result)
 {
-    const char *text;
-    size_t length;
-    text = JS_ToCStringLen(ctx, &length, source->identifier);
-    if (!text) return -1;
-    if (length >= sizeof(result->identifier)) {
-        JS_FreeCString(ctx, text);
-        return js_temporal_calendar_error(ctx, QJS_TEMPORAL_ERROR_BACKEND);
-    }
-    memcpy(result->identifier, text, length); result->identifier[length] = 0;
-    JS_FreeCString(ctx, text);
+    result->identifier[0] = 0;
     result->is_offset = source->is_offset;
     result->offset_nanoseconds = source->offset_nanoseconds;
     result->named = source->named;
-    return 0;
 }
+
 int js_temporal_time_zone_offset(JSContext *ctx,
     const JSTemporalTimeZone *zone, QJSTemporalEpochNs epoch, int64_t *result)
 {
     QJSTemporalZone backend;
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend)) return -1;
+    js_temporal_time_zone_view(zone, &backend);
     return js_temporal_calendar_error(ctx, qjs_temporal_zone_offset(&backend, epoch, result));
 }
 int js_temporal_time_zone_datetime(JSContext *ctx,
@@ -363,7 +354,7 @@ int js_temporal_time_zone_datetime(JSContext *ctx,
     QJSTemporalISODateTime *result)
 {
     QJSTemporalZone backend;
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend)) return -1;
+    js_temporal_time_zone_view(zone, &backend);
     return js_temporal_calendar_error(ctx, qjs_temporal_zone_datetime(&backend, epoch, result));
 }
 int js_temporal_time_zone_epoch(JSContext *ctx,
@@ -371,7 +362,7 @@ int js_temporal_time_zone_epoch(JSContext *ctx,
     QJSTemporalDisambiguation disambiguation, QJSTemporalEpochNs *result)
 {
     QJSTemporalZone backend;
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend)) return -1;
+    js_temporal_time_zone_view(zone, &backend);
     return js_temporal_calendar_error(ctx,
         qjs_temporal_zone_epoch(&backend, datetime, disambiguation, result));
 }
@@ -379,7 +370,7 @@ int js_temporal_time_zone_start_of_day(JSContext *ctx,
     const JSTemporalTimeZone *zone, QJSTemporalISODate date, QJSTemporalEpochNs *result)
 {
     QJSTemporalZone backend;
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend)) return -1;
+    js_temporal_time_zone_view(zone, &backend);
     return js_temporal_calendar_error(ctx, qjs_temporal_zone_start_of_day(&backend, date, result));
 }
 int js_temporal_time_zone_transition(JSContext *ctx,
@@ -387,19 +378,20 @@ int js_temporal_time_zone_transition(JSContext *ctx,
     QJSTemporalEpochNs *result, int *found)
 {
     QJSTemporalZone backend;
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend)) return -1;
+    js_temporal_time_zone_view(zone, &backend);
     return js_temporal_calendar_error(ctx,
         qjs_temporal_zone_transition(&backend, epoch, next, result, found));
 }
-int js_temporal_time_zones_equal(JSContext *ctx,
-    const JSTemporalTimeZone *one, const JSTemporalTimeZone *two, int *result)
+BOOL js_temporal_time_zones_equal(const JSTemporalTimeZone *one,
+                                  const JSTemporalTimeZone *two)
 {
     QJSTemporalZone first, second;
-    if (js_temporal_time_zone_to_native(ctx, one, &first) ||
-        js_temporal_time_zone_to_native(ctx, two, &second)) return -1;
-    *result = qjs_temporal_zones_equal(&first, &second);
-    return 0;
+
+    js_temporal_time_zone_view(one, &first);
+    js_temporal_time_zone_view(two, &second);
+    return qjs_temporal_zones_equal(&first, &second);
 }
+
 typedef struct JSTemporalOffsetMatch {
     QJSTemporalEpochNs wall, epoch;
     int64_t offset;
@@ -464,8 +456,7 @@ int js_temporal_interpret_offset(JSContext *ctx,
     if (qjs_iso_date_to_days(&days, datetime.date) ||
         days < -INT64_C(100000000) || days > INT64_C(100000000))
         return js_temporal_calendar_error(ctx, QJS_TEMPORAL_ERROR_RANGE);
-    if (js_temporal_time_zone_to_native(ctx, zone, &backend))
-        return -1;
+    js_temporal_time_zone_view(zone, &backend);
     memset(&match, 0, sizeof(match));
     match.wall = wall;
     match.offset = offset;
