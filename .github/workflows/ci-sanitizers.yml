@@ -537,3 +537,105 @@ jobs:
           build/meson-logs/repo-unit.*
           build/meson-logs/repo-integration.*
         if-no-files-found: ignore
+
+  icu4c:
+    name: ICU4C / ${{ matrix.compiler }} ASan and UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      CC: ${{ matrix.compiler }}
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      ICU_VERSION: '79.1'
+      ICU_SHA512: 9098adf9ba7fbe11d92963415cc80bf09de39ce1372414dbc2561e5f8ef57479a9fe4b6f7abc61911e4659e5953be987c459297d29e61b064d1931a16195a973
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build pkg-config gcc g++ clang
+        echo "ICU_PREFIX=$HOME/.local/quickjs-icu4c-$ICU_VERSION" >> "$GITHUB_ENV"
+    - name: Restore ICU4C dependency
+      id: icu-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.local/quickjs-icu4c-79.1
+        key: icu4c-79.1-ubuntu24.04-${{ runner.arch }}-shared-v1
+    - name: Build verified ICU4C release
+      if: steps.icu-cache.outputs.cache-hit != 'true'
+      run: |
+        archive="$RUNNER_TEMP/icu4c-$ICU_VERSION-sources.tgz"
+        curl --fail --location --retry 3 --max-time 180 \
+          "https://github.com/unicode-org/icu/releases/download/release-$ICU_VERSION/icu4c-$ICU_VERSION-sources.tgz" \
+          --output "$archive"
+        printf '%s  %s\n' "$ICU_SHA512" "$archive" | sha512sum --check --strict
+        tar -xzf "$archive" -C "$RUNNER_TEMP"
+        mkdir "$RUNNER_TEMP/icu-build"
+        cd "$RUNNER_TEMP/icu-build"
+        # ICU is a shared external dependency; engine instrumentation remains
+        # independent of the compiler used to populate this reusable cache.
+        CC=gcc CXX=g++ "$RUNNER_TEMP/icu/source/configure" \
+          --prefix="$ICU_PREFIX" --disable-static --enable-shared \
+          --disable-tests --disable-samples --disable-extras
+        make -j "$(getconf _NPROCESSORS_ONLN)"
+        make install
+    - name: Select ICU4C package metadata
+      run: |
+        echo "PKG_CONFIG_PATH=$ICU_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=$ICU_PREFIX/lib" >> "$GITHUB_ENV"
+    - name: Configure ICU4C timezone backend
+      run: |
+        pkg-config --modversion icu-uc icu-i18n
+        meson setup build -Dwerror=true -Ddefault_library=both \
+          -Db_sanitize=address,undefined -Dintl=disabled \
+          -Dtemporal=true -Dcalendars=native -Dtimezone_backend=icu4c
+    - name: Compile selected build
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+    - name: Install pinned Test262
+      run: |
+        python3 tools/build/test262.py bootstrap
+    - name: Run Test262
+      run: |
+        set -o pipefail
+        timeout --kill-after=30s 3600s ./build/run-test262 \
+          -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a \
+          --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
+          2>&1 | tee test262_runtime.log
+    - name: Report repository test results
+      if: always()
+      run: |
+        sh tools/ci/report_repo_results.sh
+    - name: Report Test262 timings
+      if: always()
+      run: |
+        if test -f test262_timings.jsonl; then
+          python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+            --csv test262_timings.csv --markdown test262_timings.md
+          cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+    - name: Preserve ICU4C diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: icu4c-${{ matrix.compiler }}-address-undefined
+        path: |
+          build/meson-info/intro-buildoptions.json
+          build/meson-logs/*
+          test262_runtime.log
+          test262_progress.jsonl
+          test262_timings.*
