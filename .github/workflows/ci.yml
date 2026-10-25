@@ -186,13 +186,27 @@ jobs:
           test262_selection.md
         if-no-files-found: ignore
   linux-lto:
-    name: Linux LTO
+    name: Linux LTO (${{ matrix.name }})
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CC: ${{ matrix.compiler }}
+      CC_LD: ${{ matrix.linker }}
     defaults:
       run:
         shell: bash
     strategy:
       fail-fast: false
+      matrix:
+        include:
+        - name: gcc-full
+          compiler: gcc
+          linker: bfd
+          mode: default
+        - name: clang-thin
+          compiler: clang
+          linker: lld
+          mode: thin
     steps:
     - uses: actions/checkout@v7
       with:
@@ -200,11 +214,19 @@ jobs:
     - name: Install Meson and Ninja
       run: |
         sudo apt-get update
-        sudo apt-get install -y meson ninja-build
+        sudo apt-get install -y meson ninja-build clang lld
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true -Db_lto=true  \
+        # Bound link concurrency as well as each LTO backend's worker count.
+        lto_options=()
+        if [ "${{ matrix.mode }}" = thin ]; then
+          # qjsc invokes the compiler itself, outside Meson's CC_LD handling.
+          lto_options+=(-Db_lto_mode=thin -Db_thinlto_cache=true
+            '-Dqjsc_cc=clang,-fuse-ld=lld')
+        fi
+        meson setup build -Dwerror=true -Ddefault_library=shared -Db_lto=true \
+          -Dbackend_max_links=2 -Db_lto_threads=2 "${lto_options[@]}"
     - name: Compile selected build
       id: compile
       run: |
@@ -233,7 +255,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: native-linux-lto
+        name: native-linux-lto-${{ matrix.name }}
         path: |
           build/meson-info/intro-buildoptions.json
           build/meson-info/intro-tests.json
