@@ -94,7 +94,7 @@ def main():
         checked |= '-DCONFIG_CHECK_JSVALUE' in words
         if '-o' not in words:
             continue
-        # The four provider paths distinguish selected backends regardless of
+        # Provider paths distinguish selected backends regardless of
         # whether their owners live beside the engine or the test drivers.
         filename = (Path(row['directory']) / row['file']).resolve()
         try:
@@ -106,6 +106,7 @@ def main():
             'src/calendar/calendar-native.c',
             'src/timezone/timezone-minimal.c',
             'src/timezone/timezone-native.c',
+            'src/timezone/timezone-icu4c.c',
         }:
             providers.add(relative)
     # Foundations can precede the option that selects their runtime provider.
@@ -116,7 +117,7 @@ def main():
         if option not in options:
             continue
         controlled.update('src/' + family + '/' + family + '-' + name + '.c'
-                          for name in ('minimal', 'native'))
+                          for name in ('minimal', 'native', 'icu4c'))
         if calendars:
             selected = options[option]
             if option == 'calendars' and selected == 'iso':

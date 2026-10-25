@@ -127,6 +127,15 @@ and embedded IANA timezone rules. It has no ICU or installed timezone-data
 dependency. Use `-Dcalendars=iso` to omit non-ISO calendar implementations and
 their publication data. ISO arithmetic always remains in core; this option is
 independent of the timezone backend selection.
+`-Dtimezone_backend=icu4c` selects ICU4C 74 or newer for named-zone data and
+algorithms. Install its `icu-uc` and `icu-i18n` development packages, or expose
+an alternate prefix through `PKG_CONFIG_PATH`. Native timezone and Windows-map
+packs are omitted. UTC and fixed offsets still use the common implementation.
+ICU owns its global data; embedders must not call `u_cleanup()` while engine
+operations or borrowed zone handles may still be used. ICU's daylight flag is
+its own designation, which can differ from raw tzdb negative-DST flags.
+The Unix `TZ` policy is unchanged; Windows mapping uses ICU's CLDR data.
+
 Use `-Dtimezone_backend=minimal` for all Temporal classes with only core UTC
 and explicit numeric offsets; that backend contains no additional named zones.
 On Unix, the runtime discovers its default from `TZ`, including supported

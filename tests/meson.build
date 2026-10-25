@@ -163,7 +163,7 @@ if calendar_enabled
   identifier_test = executable(
     'test_timezone_identifier_' + backend,
     'test_timezone_identifier.c',
-    c_args: host_args + (native_timezones ? ['-DTEST_NATIVE_ZONE'] : []),
+    c_args: host_args + (get_option('timezone_backend') != 'minimal' ? ['-DTEST_NAMED_ZONE'] : []),
     include_directories: inc,
     dependencies: host_deps,
     link_with: [component_support, normal_data_objects],
@@ -173,6 +173,24 @@ if calendar_enabled
     'timezone-identifier-' + backend,
     identifier_test,
     suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
+
+if calendar_enabled and get_option('timezone_backend') == 'icu4c'
+  timezone_icu4c_test = executable(
+    'test_timezone_icu4c',
+    'test_timezone_icu4c.c',
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: [component_support, normal_data_objects],
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'timezone-icu4c',
+    timezone_icu4c_test,
+    suite: ['repo', 'timezone', 'unit'],
     timeout: 30,
   )
 endif
@@ -225,7 +243,7 @@ if get_option('temporal')
       timeout: 60,
     )
   endforeach
-  if get_option('timezone_backend') == 'native'
+  if get_option('timezone_backend') != 'minimal'
     iana_args = ['--std', 'tests/test_temporal_iana.js']
     iana_env = []
     if host_machine.system() != 'windows'
@@ -432,7 +450,7 @@ if get_option('temporal')
     'test_temporal_date_math',
     'test_temporal_civil',
   ]
-  if not native_timezones
+  if get_option('timezone_backend') == 'minimal'
     component_tests += 'test_temporal_minimal_zones'
   endif
 endif

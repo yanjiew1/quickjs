@@ -529,8 +529,21 @@ int exec_cmd(char **argv)
 static int output_executable(const char *out_filename, const char *cfilename,
                              BOOL verbose, const char *exename)
 {
-    const char *argv[64];
+#ifdef CONFIG_CC_ARGS
+    static const char *const configured_cc[] = { CONFIG_CC_ARGS };
+#else
+    static const char *const configured_cc[] = { CONFIG_CC };
+#endif
+#ifdef CONFIG_EXTRA_LIBS
+    static const char *const libraries[] = { CONFIG_EXTRA_LIBS NULL };
+#else
+    static const char *const libraries[] = { NULL };
+#endif
+    /* Keep fixed command switches separate from both configured argument lists.
+       Neither an ICU package nor a compiler wrapper has a 32-argument limit. */
+    const char *argv[countof(configured_cc) + countof(libraries) + 32];
     const char **arg;
+    size_t i;
     char libjsname[1024];
     char exe_dir[1024], inc_dir[1024], lib_dir[1024], buf[1024], *p;
     int ret;
@@ -565,20 +578,8 @@ static int output_executable(const char *out_filename, const char *cfilename,
     }
 
     arg = argv;
-#ifdef CONFIG_CC_ARGS
-    {
-        static const char * const configured_cc[] = { CONFIG_CC_ARGS };
-        size_t i;
-        if (countof(configured_cc) > countof(argv) - 32) {
-            fprintf(stderr, "Too many configured compiler arguments\n");
-            return 1;
-        }
-        for (i = 0; i < countof(configured_cc); i++)
-            *arg++ = configured_cc[i];
-    }
-#else
-    *arg++ = CONFIG_CC;
-#endif
+    for (i = 0; i < countof(configured_cc); i++)
+        *arg++ = configured_cc[i];
     *arg++ = "-O2";
 #ifdef CONFIG_M32
     *arg++ = "-m32";
@@ -627,6 +628,9 @@ static int output_executable(const char *out_filename, const char *cfilename,
     if (ret < 0 || (size_t)ret >= sizeof(libjsname))
         goto path_too_long;
     *arg++ = libjsname;
+    /* Static engine consumers need the selected backend's dependencies. */
+    for (i = 0; libraries[i]; i++)
+        *arg++ = libraries[i];
     *arg++ = "-lm";
     *arg++ = "-ldl";
     *arg++ = "-lpthread";

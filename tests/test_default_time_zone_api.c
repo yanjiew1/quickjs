@@ -77,7 +77,7 @@ static void assert_default_zone(JSContext *ctx, const char *expected)
     JS_FreeValue(ctx, value);
 }
 
-#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
+#if defined(CONFIG_TIMEZONE_NAMED) && !defined(_WIN32)
 static void test_default_zone_snapshot(void)
 {
     const char *original = getenv("TZ");
@@ -123,7 +123,7 @@ static void test_default_zone(void)
     void *padding = NULL, *next;
 
     assert(rt);
-#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
+#if defined(CONFIG_TIMEZONE_NAMED) && !defined(_WIN32)
     test_default_zone_snapshot();
 #endif
     first = JS_NewContext(rt);
@@ -140,7 +140,7 @@ static void test_default_zone(void)
     JS_FreeValue(first, value);
     assert(!JS_SetDefaultTimeZone(first, "UTC"));
     assert_default_zone(first, "UTC");
-#ifdef CONFIG_TIMEZONE_NATIVE
+#ifdef CONFIG_TIMEZONE_NAMED
     assert(!JS_SetDefaultTimeZone(first, "us/eastern"));
     assert_default_zone(second, "America/New_York");
     value = embedding_eval(second,
@@ -212,7 +212,7 @@ static void test_date_boundaries(void)
         " !Number.isNaN(new Date(-271821,3,19,22,59,59,999).getTime()))"
         " throw Error('lower wall boundary recovery');");
     JS_FreeValue(ctx, result);
-#ifdef CONFIG_TIMEZONE_NATIVE
+#ifdef CONFIG_TIMEZONE_NAMED
     assert(!JS_SetDefaultTimeZone(ctx, "America/New_York"));
     result = embedding_eval(ctx,
         "if (new Date(2024,2,10,2,30).toISOString() !== '2024-03-10T07:30:00.000Z' ||"

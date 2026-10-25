@@ -83,8 +83,13 @@ if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'nati
   common_args += '-DCONFIG_CALENDAR_NATIVE'
 endif
 if get_option('temporal') or intl_enabled
+  if get_option('timezone_backend') != 'minimal'
+    common_args += '-DCONFIG_TIMEZONE_NAMED'
+  endif
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
+  elif get_option('timezone_backend') == 'icu4c'
+    common_args += '-DCONFIG_TIMEZONE_ICU4C'
   endif
   if get_option('system_timezone_policy') == 'host-offset'
     common_args += '-DCONFIG_TIMEZONE_HOST_OFFSET'
@@ -102,6 +107,7 @@ endif
 
 machine_args = []
 machine_deps = []
+machine_extra_libs = []
 foreach native : [false, true]
   compiler = native ? build_cc : cc
   system = native ? build_machine.system() : host_machine.system()
@@ -135,12 +141,44 @@ foreach native : [false, true]
   ]
     args += compiler.get_supported_arguments('-msse2', '-mfpmath=sse')
   endif
+  extra_libs = ''
   deps = [
     dependency(
       'threads',
       native: native,
     ),
   ]
+  if (get_option('temporal') or intl_enabled) and get_option('timezone_backend') == 'icu4c'
+    icu_uc = dependency('icu-uc', version: '>=74', native: native)
+    icu_i18n = dependency('icu-i18n', version: '>=74', native: native)
+    deps += [icu_uc, icu_i18n]
+    # Use the selected machine's package metadata, including custom library
+    # suffixes and private dependencies, for qjsc's standalone C link command.
+    pkg_config = find_program('pkg-config', native: native)
+    pkg_env = environment()
+    path_separator = build_machine.system() == 'windows' ? ';' : ':'
+    pkg_path = get_option(native ? 'build.pkg_config_path' : 'pkg_config_path')
+    pkg_env.set('PKG_CONFIG_PATH', path_separator.join(pkg_path))
+    pkg_libdirs = []
+    pkg_libdirs += meson.get_external_property('pkg_config_libdir', [], native: native)
+    if pkg_libdirs.length() != 0
+      pkg_env.set('PKG_CONFIG_LIBDIR', path_separator.join(pkg_libdirs))
+    endif
+    pkg_sysroot = meson.get_external_property('sys_root', '', native: native)
+    if pkg_sysroot != ''
+      pkg_env.set('PKG_CONFIG_SYSROOT_DIR', pkg_sysroot)
+    endif
+    icu_flags = run_command(
+      pkg_config, '--libs', '--static', 'icu-i18n', 'icu-uc',
+      env: pkg_env,
+      check: true,
+    ).stdout()
+    icu_rpath = system == 'windows' ? '' : icu_i18n.get_variable(pkgconfig: 'libdir')
+    extra_libs = run_command(
+      python, files('tools/build/quote_link_args.py'), icu_flags, icu_rpath,
+      check: true,
+    ).stdout().strip()
+  endif
   math = compiler.find_library(
     'm',
     required: false,
@@ -159,6 +197,7 @@ foreach native : [false, true]
   endif
   machine_args += [args]
   machine_deps += [deps]
+  machine_extra_libs += [extra_libs]
 endforeach
 host_args = machine_args[0]
 host_deps = machine_deps[0]
@@ -666,6 +705,7 @@ foreach variant : qjsc_variants
   config = configuration_data()
   config.set_quoted('CONFIG_CC', cmd[0])
   config.set('CONFIG_CC_ARGS', ', '.join(quoted_cmd))
+  config.set('CONFIG_EXTRA_LIBS', machine_extra_libs[native ? 1 : 0])
   config.set_quoted('CONFIG_PREFIX', get_option('prefix'))
   config.set_quoted(
     'CONFIG_INCLUDE_DIR',

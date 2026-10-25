@@ -26,6 +26,7 @@
 #define QJSC_BUILD_CONFIG_H
 #mesondefine CONFIG_CC
 #mesondefine CONFIG_CC_ARGS
+#mesondefine CONFIG_EXTRA_LIBS
 #mesondefine CONFIG_PREFIX
 #mesondefine CONFIG_INCLUDE_DIR
 #mesondefine CONFIG_LIB_DIR

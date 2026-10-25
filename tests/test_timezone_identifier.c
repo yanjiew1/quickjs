@@ -61,7 +61,7 @@ int main(void)
     assert(qjs_timezone_identifier_compatible(&zone, INT64_MIN, &result) == QJS_TZ_RANGE && result == 123);
     assert(!qjs_timezone_parse_identifier(&zone, "-01", 3));
     assert(qjs_timezone_identifier_compatible(&zone, INT64_MAX, &result) == QJS_TZ_RANGE && result == 123);
-#ifdef TEST_NATIVE_ZONE
+#ifdef TEST_NAMED_ZONE
     assert(!qjs_timezone_parse_identifier(&zone, "us/eastern", 10));
     assert(!strcmp(zone.identifier, "US/Eastern"));
     assert(!strcmp(qjs_timezone_primary_identifier(zone.named), "America/New_York"));

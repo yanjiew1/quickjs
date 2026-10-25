@@ -347,6 +347,11 @@ if get_option('temporal') or intl_enabled
     data_sources += timezone_data
     windows_timezone_sources = files('timezone/windows-zone.c')
     windows_timezone_data_sources += windows_timezone_data
+  elif get_option('timezone_backend') == 'icu4c'
+    support_sources += files(
+      'timezone/timezone-icu4c.c',
+      'timezone/windows-icu4c.c',
+    )
   else
     support_sources += files('timezone/timezone-minimal.c')
   endif
