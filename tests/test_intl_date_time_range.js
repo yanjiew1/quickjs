@@ -25,21 +25,22 @@
 import * as std from 'std';
 import {assert, assertThrows, assertArrayEquals} from './assert.js';
 
+const icuBackend = scriptArgs[3] === "icu4c";
 const DTF = Intl.DateTimeFormat;
 // Configured runs must exercise every promised provider; direct invocation
 // without Meson arguments can discover the optional capabilities instead.
 function hasCalendar(calendar) {
     if (scriptArgs.length > 1) {
-        assert(['iso', 'native'].includes(scriptArgs[1]));
-        return scriptArgs[1] === 'native';
+        assert(['iso', 'native', 'icu4c'].includes(scriptArgs[1]));
+        return scriptArgs[1] !== 'iso';
     }
     return new DTF('en', {calendar}).resolvedOptions().calendar === calendar;
 }
 let namedZones;
 if (scriptArgs.length > 2) {
-    assert(['iso', 'native'].includes(scriptArgs[1]));
-    assert(['minimal', 'native'].includes(scriptArgs[2]));
-    namedZones = scriptArgs[2] === 'native';
+    assert(['iso', 'native', 'icu4c'].includes(scriptArgs[1]));
+    assert(['minimal', 'native', 'icu4c'].includes(scriptArgs[2]));
+    namedZones = scriptArgs[2] !== 'minimal';
 } else {
     try {
         new DTF('en', {timeZone: 'America/New_York'});
@@ -200,7 +201,7 @@ function periodSpaces(range) {
 for (const [start, end] of [[0, 86400], [0, 23 * 3600000]]) {
     const range = check(asciiClock, start, end);
     assert(periodSpaces(range).length > 0, true);
-    assert(periodSpaces(range).every(value => value === ' '), true);
+    assert(periodSpaces(range).every(value => value === (icuBackend ? '\u202f' : ' ')), true);
     assert(range.some(part => part.source === 'shared' && part.value.includes('\u2009–\u2009')), true);
 }
 assert(check(asciiClock, 0, 1).map(part => part.value).join(''), asciiClock.format(0));
@@ -212,9 +213,9 @@ if (typeof Temporal !== 'undefined') {
         const formatter = new DTF('en-US', {timeZone});
         const range = check(formatter, start, end);
         assert(periodSpaces(range).length, 2);
-        assert(periodSpaces(range).every(value => value === ' '), true);
+        assert(periodSpaces(range).every(value => value === (icuBackend ? '\u202f' : ' ')), true);
         assert(periodSpaces(check(formatter, start.toPlainTime(), end.toPlainTime()))
-            .every(value => value === ' '), true);
+            .every(value => value === (icuBackend ? '\u202f' : ' ')), true);
     }
 }
 

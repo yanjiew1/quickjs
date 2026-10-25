@@ -25,6 +25,7 @@
 import * as std from 'std';
 import {assert, assertThrows, assertArrayEquals} from './assert.js';
 
+const icuBackend = scriptArgs[1] === "icu4c";
 const DTF = Intl.DateTimeFormat;
 const utc = {timeZone: 'UTC'};
 assert(DTF.name, 'DateTimeFormat');
@@ -113,8 +114,11 @@ for (const [numberingSystem, expected] of [
         continue; // The minimal digit profile need not supply every system.
     const instant = Date.UTC(2024, 0, 1, 2, 35, 6);
     const parts = formatter.formatToParts(instant);
-    assert(formatter.format(instant), expected);
-    assert(parts.map(part => part.value).join(''), expected);
+    // Native's reviewed source policy selects the available ASCII AM/PM
+    // template. ICU uses its own selected narrow-no-break-space template.
+    const localized = icuBackend ? expected.replace(/ AM$/, '\u202fAM') : expected;
+    assert(formatter.format(instant), localized);
+    assert(parts.map(part => part.value).join(''), localized);
 }
 for (const timeStyle of ['short', 'medium', 'long', 'full']) {
     const formatter = new DTF('en-US', {...utc, timeStyle});
@@ -122,7 +126,7 @@ for (const timeStyle of ['short', 'medium', 'long', 'full']) {
     const parts = formatter.formatToParts(value);
     assert(parts.map(part => part.value).join(''), formatter.format(value));
     const period = parts.findIndex(part => part.type === 'dayPeriod');
-    assert(parts[period - 1].value, ' ');
+    assert(parts[period - 1].value, icuBackend ? '\u202f' : ' ');
 }
 
 // Fractional precision extends a whole minute/second pattern; it adds no hour.
@@ -134,11 +138,59 @@ for (const digits of [1, 2, 3]) {
     assertArrayEquals(formatter.formatToParts(123456).map(p => p.type),
         ['minute', 'literal', 'second', 'literal', 'fractionalSecond']);
 }
+// The required Basic catalog includes fractional clocks and complete mixed
+// date/clock records. A matcher must not lose the fraction because its finite
+// provider catalog happened to contain only whole-second skeletons.
+for (const hourCycle of ['h12', 'h23']) {
+    for (const fractionalSecondDigits of [1, 2, 3]) {
+        for (const dateFields of [{}, {weekday: 'short', year: 'numeric',
+                                      month: 'numeric', day: 'numeric'}]) {
+            const formatter = new DTF('en', {...utc, ...dateFields, hourCycle,
+                hour: 'numeric', minute: 'numeric', second: 'numeric',
+                fractionalSecondDigits, formatMatcher: 'basic'});
+            const resolved = formatter.resolvedOptions();
+            assert(resolved.fractionalSecondDigits, fractionalSecondDigits);
+            const parts = formatter.formatToParts(1234);
+            assert(parts.find(part => part.type === 'fractionalSecond').value,
+                   '234'.slice(0, fractionalSecondDigits));
+            for (const field of [...Object.keys(dateFields), 'hour', 'minute', 'second'])
+                assert(parts.some(part => part.type === field));
+        }
+    }
+}
+// Explicit flexible periods are required together with clock fields even
+// for a 24-hour cycle; an implicit AM/PM source is a different pattern kind.
+for (const hourCycle of ['h11', 'h12', 'h23', 'h24']) {
+    for (const formatMatcher of ['basic', 'best fit']) {
+        for (const clock of [{hour: 'numeric'},
+                             {hour: 'numeric', minute: 'numeric'},
+                             {hour: 'numeric', minute: 'numeric', second: 'numeric'},
+                             {hour: 'numeric', minute: 'numeric', second: 'numeric',
+                              fractionalSecondDigits: 3}]) {
+            const formatter = new DTF('en', {...utc, hourCycle, formatMatcher,
+                dayPeriod: 'short', ...clock});
+            const parts = formatter.formatToParts(Date.UTC(2024, 0, 1, 15, 1, 2, 345));
+            for (const field of ['dayPeriod', ...Object.keys(clock)]) {
+                const type = field === 'fractionalSecondDigits' ? 'fractionalSecond' : field;
+                assert(parts.some(part => part.type === type));
+            }
+            assert(formatter.resolvedOptions().hourCycle, hourCycle);
+            assert(parts.find(part => part.type === 'hour').value.replace(/^0/, ''),
+                   hourCycle === 'h11' || hourCycle === 'h12' ? '3' : '15');
+            assert(parts.find(part => part.type === 'dayPeriod').value, 'in the afternoon');
+        }
+    }
+}
 for (const [hourCycle, text] of [['h11', '0'], ['h12', '12'], ['h23', '0'], ['h24', '24']]) {
-    // Isolate numeric hour-cycle arithmetic from best-fit source padding.
+    // Basic matching chooses among provider formats; it does not guarantee
+    // that a numeric request finds a one-digit source. Check the cycle's
+    // value and the selected width together (ICU's English H source is HH).
     const formatter = new DTF('en', {...utc, hour: 'numeric', hourCycle, formatMatcher: 'basic'});
-    assert(formatter.formatToParts(0).find(p => p.type === 'hour').value, text);
-    assert(formatter.resolvedOptions().hourCycle, hourCycle);
+    const resolved = formatter.resolvedOptions();
+    const expected = resolved.hour === '2-digit' ? text.padStart(2, '0') : text;
+    assert(resolved.hour === 'numeric' || resolved.hour === '2-digit');
+    assert(formatter.formatToParts(0).find(p => p.type === 'hour').value, expected);
+    assert(resolved.hourCycle, hourCycle);
 }
 
 // English's real Hms source has HH, while hms has h. Best fit keeps that
@@ -157,11 +209,11 @@ for (const hourCycle of ['h12', 'h23']) {
                 const width = formatter.resolvedOptions().hour;
                 const padded = width === '2-digit';
                 assert(width === 'numeric' || width === '2-digit');
-                if (hour === '2-digit')
+                if (hour === '2-digit' && (!icuBackend || formatMatcher === 'best fit'))
                     assert(width, '2-digit');
                 // Bare clocks provide both source families. Fractional/mixed
                 // programs may select another truthful representative width.
-                if (Object.keys(fields).length === 0)
+                if (!icuBackend && Object.keys(fields).length === 0)
                     assert(width, hour === '2-digit' || (formatMatcher === 'best fit' && hourCycle === 'h23')
                         ? '2-digit' : 'numeric');
                 const value = Date.UTC(2024, 0, 1, 1, 23, 45, 678);
@@ -169,8 +221,19 @@ for (const hourCycle of ['h12', 'h23']) {
                 if (typeof Temporal !== 'undefined') {
                     // PlainTime selects its own clock-only record, rather
                     // than the ordinary date/clock record of resolvedOptions.
-                    const plainPadded = 'fractionalSecondDigits' in fields ? padded :
-                        hour === '2-digit' || (formatMatcher === 'best fit' && hourCycle === 'h23');
+                    let plainPadded;
+                    if (icuBackend) {
+                        // The plain-kind record drops date fields before
+                        // matching, so compare with that clock-only request.
+                        const clockOptions = {...utc, hourCycle, formatMatcher,
+                            hour, minute: 'numeric', second: 'numeric'};
+                        if ('fractionalSecondDigits' in fields)
+                            clockOptions.fractionalSecondDigits = fields.fractionalSecondDigits;
+                        plainPadded = new DTF('en', clockOptions).resolvedOptions().hour === '2-digit';
+                    } else {
+                        plainPadded = 'fractionalSecondDigits' in fields ? padded :
+                            hour === '2-digit' || (formatMatcher === 'best fit' && hourCycle === 'h23');
+                    }
                     assert(formatter.formatToParts(new Temporal.PlainTime(1, 23, 45, 678))
                         .find(part => part.type === 'hour').value, plainPadded ? '01' : '1');
                 }
@@ -193,7 +256,10 @@ for (const dayPeriod of ['short', 'long', 'narrow']) {
         assert(formatter.format(Date.UTC(2024, 0, 1, hour)), text);
     }
     assert(formatter.format(Date.UTC(2024, 0, 1, 0, 0, 0, 1)), 'in the morning');
-    assert(formatter.format(Date.UTC(2024, 0, 1, 12, 0, 0, 1)), 'in the afternoon');
+    // ICU checks only displayed minutes/seconds and ignores subseconds;
+    // hidden precision in this bare-period pattern does not disqualify noon.
+    assert(formatter.format(Date.UTC(2024, 0, 1, 12, 0, 0, 1)),
+           icuBackend ? (dayPeriod === 'narrow' ? 'n' : 'noon') : 'in the afternoon');
 }
 // Best fit adapts real b/B widths without changing the localized names or
 // literal layout. Basic still scores the finite source catalog unchanged.
@@ -243,7 +309,10 @@ const numericIso = new DTF('en', {...utc, calendar: 'iso8601'});
 assert(numericIso.resolvedOptions().month, '2-digit');
 assert(numericIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, '09');
 const basicIso = new DTF('en', {...utc, calendar: 'iso8601', formatMatcher: 'basic'});
-assert(basicIso.resolvedOptions().month, 'short');
+if (icuBackend)
+    assert(['short', 'long'].includes(basicIso.resolvedOptions().month));
+else
+    assert(basicIso.resolvedOptions().month, 'short');
 const textIso = new DTF('en', {...utc, calendar: 'iso8601', month: 'short'});
 assert(textIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, 'Sep');
 const eraClock = new DTF('en', {...utc, era: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
@@ -303,7 +372,10 @@ for (const hourCycle of ['h12', 'h23']) {
                 year: 'numeric', month: 'numeric', day: 'numeric',
                 hour: 'numeric', minute: 'numeric', second: 'numeric',
                 timeZoneName: 'short', hourCycle, formatMatcher});
-            assert(formatter.resolvedOptions().era, era);
+            if (!icuBackend || formatMatcher === 'best fit')
+                assert(formatter.resolvedOptions().era, era);
+            else
+                assert(['short', 'long', 'narrow'].includes(formatter.resolvedOptions().era));
             const parts = formatter.formatToParts(0);
             assert(parts.some(part => part.type === 'era'));
             assert(parts.some(part => part.type === 'weekday'));
@@ -382,7 +454,10 @@ for (const month of ['numeric', '2-digit']) {
     for (const formatMatcher of ['basic', 'best fit']) {
         const full = new DTF('en', {...options, formatMatcher});
         const parts = full.formatToParts(value);
-        assert(full.resolvedOptions().month, 'short');
+        if (!icuBackend || formatMatcher === 'best fit')
+            assert(full.resolvedOptions().month, 'short');
+        else
+            assert(['short', 'long'].includes(full.resolvedOptions().month));
         assert(parts.find(part => part.type === 'month').value, 'Adar I');
         assert(parts.some(part => part.type === 'era'), false);
         assert(parts.map(part => part.value).join(''), full.format(value));
@@ -588,4 +663,80 @@ if (typeof Temporal !== 'undefined') {
         else
             delete String.prototype[Symbol.split];
     }
+}
+
+// Calendar formatting uses the same official chronology as Temporal. Check
+// numeric fields, not provider-specific month names or interval punctuation.
+if (typeof Temporal === 'object') {
+    for (const [calendar, iso, month] of [['chinese', '1987-07-26', 6],
+        ['dangi', '2017-06-24', 5]]) {
+        const formatter = new DTF('en', {...utc, calendar, numberingSystem: 'latn',
+            year: 'numeric', month: 'numeric', day: 'numeric'});
+        if (formatter.resolvedOptions().calendar !== calendar)
+            continue;
+        const instant = new Date(iso + 'T00:00:00Z');
+        const plain = Temporal.PlainDate.from(iso).withCalendar(calendar);
+        for (const value of [instant, plain]) {
+            const parts = formatter.formatToParts(value);
+            assert(parseInt(parts.find(part => part.type === 'month').value), month);
+            assert(parts.find(part => part.type === 'day').value, '1');
+            assert(parts.find(part => part.type === 'relatedYear').value, iso.slice(0, 4));
+        }
+        const next = new Date(+instant + 86400000);
+        const parts = formatter.formatRangeToParts(instant, next);
+        for (const [source, day] of [['startRange', '1'], ['endRange', '2']]) {
+            assert(parts.find(part => part.source === source && part.type === 'day').value, day);
+        }
+        const yearOnly = new DTF('en', {...utc, calendar, year: 'numeric'});
+        assert(yearOnly.formatRange(instant, next), yearOnly.format(instant));
+        assert(yearOnly.formatRangeToParts(instant, next).every(part => part.source === 'shared'));
+    }
+}
+
+if (icuBackend) {
+    // ICU's numeric Chinese/Dangi era is a cycle label even without a year.
+    // Its per-call symbol projection must keep the era part and cached state.
+    for (const calendar of ['chinese', 'dangi']) {
+        let expected;
+        for (const era of ['short', 'long', 'narrow']) {
+            for (const field of ['hour', 'weekday', 'month', 'day']) {
+                const formatter = new DTF('en', {...utc, calendar, era,
+                    numberingSystem: 'latn', [field]: field === 'weekday' ? 'long' : 'numeric'});
+                const first = formatter.formatToParts(0);
+                const label = first.find(part => part.type === 'era').value;
+                assert(/^[1-9][0-9]*$/.test(label));
+                if (expected === undefined)
+                    expected = label;
+                assert(label, expected);
+                formatter.format(86400000);
+                assert(JSON.stringify(formatter.formatToParts(0)), JSON.stringify(first));
+            }
+        }
+    }
+}
+
+if (icuBackend) {
+    // Nonpositive year presentation must keep the actual calendar's month
+    // rules, while era labels use ICU's existing before-/single-era symbols.
+    for (const [calendar, isoYear, expectedYear] of [
+        ['islamic-civil', 600, 23], ['islamic-tbla', 600, 23],
+        ['islamic-umalqura', 600, 23], ['coptic', 250, 35],
+        ['buddhist', -600, 58], ['ethioaa', -5550, 59],
+        ['hebrew', -3800, 41], ['indian', 70, 9], ['persian', 600, 22]]) {
+        const date = new Date(0);
+        date.setUTCFullYear(isoYear, 5, 15);
+        for (const year of ['numeric', '2-digit']) {
+            const formatter = new DTF('en', {...utc, calendar, year, era: 'long'});
+            const parts = formatter.formatToParts(date);
+            const expected = year === 'numeric' ? String(expectedYear)
+                : String(expectedYear % 100).padStart(2, '0');
+            assert(parts.find(part => part.type === 'year').value, expected);
+            assert(parts.find(part => part.type === 'era').value.length > 0);
+            const original = formatter.format(date);
+            formatter.format(new Date('2025-06-15T00:00:00Z'));
+            assert(formatter.format(date), original);
+            assert(formatter.formatRange(date, date), original);
+        }
+    }
+
 }

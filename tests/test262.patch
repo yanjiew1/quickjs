@@ -187,3 +187,16 @@ diff --git a/test/intl402/Temporal/ZonedDateTime/links.js b/test/intl402/Tempora
 +  assert.sameValue(instance.timeZoneId, zone);
 +  assert.sameValue(instance.equals(new Temporal.ZonedDateTime(0n, formerTarget)), false);
 +}
+
+diff --git a/test/intl402/DateTimeFormat/prototype/format/numbering-system.js b/test/intl402/DateTimeFormat/prototype/format/numbering-system.js
+--- a/test/intl402/DateTimeFormat/prototype/format/numbering-system.js
++++ b/test/intl402/DateTimeFormat/prototype/format/numbering-system.js
+@@ -23,7 +23,7 @@
+   [ "en-US", "2:35:06", "2:35:06.789", "02:35:06", "6" ],
+   [ "en-US-u-nu-arab", "٢:٣٥:٠٦", "٢:٣٥:٠٦٫٧٨٩", "٠٢:٣٥:٠٦", "٦" ],
+   [ "en-US-u-nu-deva", "२:३५:०६", "२:३५:०६.७८९", "०२:३५:०६", "६" ],
+-  [ "en-US-u-nu-hanidec", "二:三五:〇六", "二:三五:〇六.七八九", "〇二:三五:〇六 AM", "六" ],
++  [ "en-US-u-nu-hanidec", "二:三五:〇六", "二:三五:〇六.七八九", "〇二:三五:〇六", "六" ],
+ ]
+ const time = new Date(2024, 0, 1, 2, 35, 6, 789);
+ 
