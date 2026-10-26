@@ -34,6 +34,44 @@ compile_contract()
         -o "$output/$name"
 }
 
+# RelativeTimeFormat consumes this NumberFormat provider too. Keep its exact
+# implementation list in one place so every contract links the same owners.
+compile_number_contract()
+{
+    contract_name=$1
+    shift
+    compile_contract "$contract_name" \
+        data/intl/icu4x-number.c \
+        src/intl/number/icu4x.c \
+        src/intl/number/affix.c \
+        src/intl/number/body.c \
+        src/intl/number/exponent.c \
+        src/intl/number/round.c \
+        src/intl/plural/rules.c \
+        src/intl/currency/boundary-icu4x.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/decimal.c \
+        src/intl/common/format-builder.c \
+        src/intl/common/text.c \
+        src/intl/common/pair-pattern.c \
+        src/intl/common/unary-pattern.c \
+        src/intl/common/range-compose.c \
+        "$output/cutils.o" \
+        data/intl/icu4x-unit.c \
+        src/intl/number/unit-icu4x.c \
+        src/intl/number/unit.c \
+        src/intl/native/data.c \
+        src/intl/native/pack.c \
+        src/intl/common/locale-grammar.c \
+        src/intl/common/source-locale.c \
+        src/intl/unit/data.c \
+        src/intl/unit/grammar-data.c \
+        src/intl/unit/identifier.c \
+        src/intl/unit/pattern.c \
+        src/intl/unit/format.c \
+        "$@"
+}
+
 case ${1:-} in
 compile)
     test "$#" = 3
@@ -64,6 +102,28 @@ compile)
         tests/icu4c/helpers.c \
         tests/icu4x/collation.c
     compile_contract unit-bridge src/intl/unit/identifier.c tests/icu4x/unit-bridge.c
+    compile_contract unit-compose \
+        data/intl/icu4x-unit.c \
+        src/intl/number/unit-icu4x.c \
+        src/intl/number/unit.c \
+        src/intl/native/data.c \
+        src/intl/native/pack.c \
+        src/intl/common/locale-grammar.c \
+        src/intl/common/source-locale.c \
+        src/intl/common/pair-pattern.c \
+        src/intl/common/unary-pattern.c \
+        src/intl/common/text.c \
+        src/intl/common/format-builder.c \
+        src/intl/unit/data.c \
+        src/intl/unit/grammar-data.c \
+        src/intl/unit/identifier.c \
+        src/intl/unit/pattern.c \
+        src/intl/unit/format.c \
+        src/intl/plural/rules.c \
+        src/intl/icu4x/common.c \
+        "$output/cutils.o" \
+        tests/icu4c/helpers.c \
+        tests/icu4x/unit-compose.c
     compile_contract unit-data \
         data/intl/icu4x-unit.c \
         src/intl/native/data.c \
@@ -81,42 +141,10 @@ compile)
         src/intl/icu4x/common.c \
         src/intl/currency/boundary-icu4x.c \
         tests/test_intl_currency_boundary.c
-    compile_contract number \
-        data/intl/icu4x-number.c \
-        src/intl/number/icu4x.c \
-        src/intl/number/affix.c \
-        src/intl/number/body.c \
-        src/intl/number/exponent.c \
-        src/intl/number/round.c \
-        src/intl/plural/rules.c \
-        src/intl/currency/boundary-icu4x.c \
-        src/intl/icu4x/common.c \
-        src/intl/common/decimal.c \
-        src/intl/common/format-builder.c \
-        src/intl/common/text.c \
-        src/intl/common/pair-pattern.c \
-        src/intl/common/unary-pattern.c \
-        src/intl/common/range-compose.c \
-        "$output/cutils.o" \
+    compile_number_contract number \
         tests/icu4c/helpers.c \
         tests/icu4x/number.c
-    compile_contract relative -Isrc/cutils -Isrc/dtoa \
-        data/intl/icu4x-number.c \
-        src/intl/number/icu4x.c \
-        src/intl/number/affix.c \
-        src/intl/number/body.c \
-        src/intl/number/exponent.c \
-        src/intl/number/round.c \
-        src/intl/plural/rules.c \
-        src/intl/currency/boundary-icu4x.c \
-        src/intl/icu4x/common.c \
-        src/intl/common/decimal.c \
-        src/intl/common/format-builder.c \
-        src/intl/common/text.c \
-        src/intl/common/pair-pattern.c \
-        src/intl/common/unary-pattern.c \
-        src/intl/common/range-compose.c \
-        "$output/cutils.o" \
+    compile_number_contract relative -Isrc/cutils -Isrc/dtoa \
         tests/icu4c/helpers.c \
         data/intl/icu4x-locale.c \
         src/intl/relative/icu4x.c \
@@ -125,23 +153,7 @@ compile)
         src/intl/common/number-decimal.c \
         "$output/dtoa.o" \
         tests/icu4c/relative.c
-    compile_contract relative-extra -Isrc/cutils -Isrc/dtoa \
-        data/intl/icu4x-number.c \
-        src/intl/number/icu4x.c \
-        src/intl/number/affix.c \
-        src/intl/number/body.c \
-        src/intl/number/exponent.c \
-        src/intl/number/round.c \
-        src/intl/plural/rules.c \
-        src/intl/currency/boundary-icu4x.c \
-        src/intl/icu4x/common.c \
-        src/intl/common/decimal.c \
-        src/intl/common/format-builder.c \
-        src/intl/common/text.c \
-        src/intl/common/pair-pattern.c \
-        src/intl/common/unary-pattern.c \
-        src/intl/common/range-compose.c \
-        "$output/cutils.o" \
+    compile_number_contract relative-extra -Isrc/cutils -Isrc/dtoa \
         tests/icu4c/helpers.c \
         data/intl/icu4x-locale.c \
         src/intl/relative/icu4x.c \
@@ -209,7 +221,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

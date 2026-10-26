@@ -521,6 +521,94 @@ static void currency_style_metadata(const QJSIntlNumberService *service,
     qjs_intl_number_formatter_close(formatter);
 }
 
+static void units(const QJSIntlNumberService *service, size_t en,
+                  const QJSIntlNumberOptions *initial, const QJSIntlAllocator *allocator,
+                  Allocation *state)
+{
+    QJSIntlNumberOptions options = *initial;
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result;
+    QJSIntlMathematicalValue number = value("2");
+    size_t calls, i, live = state->live;
+
+    options.style = QJS_INTL_NUMBER_UNIT;
+    options.unit = bytes("meter");
+    options.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    calls = state->calls;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    calls = state->calls - calls;
+    ascii(formatter, allocator, "1", "1 meter");
+    ascii(formatter, allocator, "2", "2 meters");
+    ascii(formatter, allocator, "-2", "-2 meters");
+    ascii(formatter, allocator, "-0", "-0 meters");
+    {
+        QJSIntlMathematicalValue infinity = {QJS_INTL_POSITIVE_INFINITY, {0}};
+        QJSIntlFormattedRange range;
+        QJSIntlMathematicalValue end = value("3");
+        unsigned unit_parts = 0;
+        assert(!qjs_intl_number_format(formatter, &infinity, &result));
+        assert(result.text[0] == 0x221e && result.parts[0].type == QJS_INTL_PART_INFINITY);
+        for (i = 0; i < result.part_count; i++)
+            unit_parts += result.parts[i].type == QJS_INTL_PART_UNIT;
+        assert(unit_parts == 1);
+        qjs_intl_number_result_clear(allocator, &result);
+        infinity.kind = QJS_INTL_NAN;
+        assert(!qjs_intl_number_format(formatter, &infinity, &result));
+        assert(result.parts[0].type == QJS_INTL_PART_NAN);
+        qjs_intl_number_result_clear(allocator, &result);
+        assert(!qjs_intl_number_format_range(formatter, &number, &end, &range));
+        unit_parts = 0;
+        for (i = 0; i < range.part_count; i++)
+            unit_parts += range.parts[i].type == QJS_INTL_PART_UNIT;
+        assert(unit_parts == 2);
+        qjs_intl_number_range_result_clear(allocator, &range);
+    }
+    qjs_intl_number_formatter_close(formatter);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter) ==
+               QJS_INTL_NO_MEMORY);
+        assert(!formatter && state->live == live);
+    }
+    state->fail_at = 0;
+    options.digits.minimum_fraction_digits = options.digits.maximum_fraction_digits = 1;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "1", "1.0 meters");
+    qjs_intl_number_formatter_close(formatter);
+    options.digits = initial->digits;
+    options.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "1000", "1E3 meter");
+    qjs_intl_number_formatter_close(formatter);
+    options.notation = QJS_INTL_NUMBER_COMPACT;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "1000", "1K meters");
+    qjs_intl_number_formatter_close(formatter);
+    options.notation = QJS_INTL_NUMBER_STANDARD;
+    options.unit = bytes("percent");
+    options.unit_display = QJS_INTL_NUMBER_UNIT_SHORT;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    /* Unit percent is a measurement label, not the percentage style's x100. */
+    ascii(formatter, allocator, "0.5", "0.5%");
+    qjs_intl_number_formatter_close(formatter);
+    options.unit = bytes("meter-per-second");
+    options.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "2", "2 meters per second");
+    calls = state->calls;
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    calls = state->calls - calls;
+    qjs_intl_number_result_clear(allocator, &result);
+    live = state->live;
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_format(formatter, &number, &result) == QJS_INTL_NO_MEMORY);
+        assert(!result.text && !result.parts && state->live == live);
+    }
+    state->fail_at = 0;
+    qjs_intl_number_formatter_close(formatter);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -569,6 +657,7 @@ int main(void)
                                              QJS_INTL_ROUND_FRACTION,
                                              QJS_INTL_TRAILING_ZERO_AUTO,
                                              1024};
+    units(service, en, &options, &allocator, &state);
     currencies(service, en, find(available, count, "pt-PT"), &options, &allocator, &state);
     currency_style_metadata(service, available, count, &options, &allocator);
     currency_names(service, en, find(available, count, "ru"), &options, &allocator, &state);
@@ -660,10 +749,11 @@ int main(void)
        successful constructor alone is not enough to establish capability. */
     for (i = 0; i < count; i++) {
         unsigned style;
-        for (style = QJS_INTL_NUMBER_DECIMAL; style <= QJS_INTL_NUMBER_CURRENCY; style++) {
+        for (style = QJS_INTL_NUMBER_DECIMAL; style <= QJS_INTL_NUMBER_UNIT; style++) {
             QJSIntlNumberOptions current = options;
             current.style = style;
             current.currency = bytes("USD");
+            current.unit = bytes("meter");
             assert(!qjs_intl_number_formatter_open(service, i, (QJSIntlBytes){0}, &current,
                                                    &formatter));
             number = value("1234.5");
@@ -737,8 +827,20 @@ int main(void)
     options.currency = bytes("USD");
     options.currency_display = QJS_INTL_NUMBER_CURRENCY_NAME;
     assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
-    /* A formatter owns all resolved numeric data and must survive its service. */
-    qjs_intl_number_close(service);
+    /* A unit formatter retains its source rules and pattern payloads too. */
+    {
+        QJSIntlNumberFormatter *unit_formatter;
+        QJSIntlNumberOptions unit_options = options;
+        unit_options.style = QJS_INTL_NUMBER_UNIT;
+        unit_options.notation = QJS_INTL_NUMBER_STANDARD;
+        unit_options.unit = bytes("meter");
+        unit_options.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+        assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &unit_options,
+                                               &unit_formatter));
+        qjs_intl_number_close(service);
+        ascii(unit_formatter, &allocator, "2", "2 meters");
+        qjs_intl_number_formatter_close(unit_formatter);
+    }
     ascii(formatter, &allocator, "-1234", "-1.23K US dollars");
     qjs_intl_number_formatter_close(formatter);
     assert(!state.live);

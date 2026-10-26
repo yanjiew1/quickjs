@@ -420,3 +420,11 @@ fallback; the C materializer must preserve companion leaf/case provenance.
 Literal-only patterns and literal braces remain distinguishable from numeric
 placeholders. The guarded C bridge contract checks all sanctioned singles and
 widths, a later-tier exact match, output preservation and payload lifetime.
+
+NumberFormat now composes every sanctioned unit through the shared C unit
+selector. Its formatter retains each reachable source's public plural rules
+and exact-source unit payloads before formatting. A public affix replaces a
+companion leaf only when the decoded representation matches; public `other`
+fallback cannot invent a missing category or grammatical case. Compact labels
+use virtually expanded rounded operands; scientific/engineering use the
+visible mantissa. Percent-as-unit does not scale the amount by 100.

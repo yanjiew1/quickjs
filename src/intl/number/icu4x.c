@@ -24,6 +24,7 @@
 #include "body.h"
 #include "exponent.h"
 #include "round.h"
+#include "unit-icu4x.h"
 #include "../currency/boundary.h"
 #include "../icu4x/common.h"
 #include "../common/format-builder.h"
@@ -73,6 +74,7 @@ typedef struct CompactNumbers {
 struct QJSIntlNumberService {
     QJSIntlAllocator allocator;
     QJSICU4XInventory systems;
+    QJSIntlICU4XUnitData units;
     QJSIntlBytes *available;
     NumberChoice *choices;
     size_t count;
@@ -95,6 +97,7 @@ struct QJSIntlNumberFormatter {
     CurrencyNames *names;
     NumberPlural *plural;
     CompactNumbers *compact;
+    QJSIntlICU4XNumberUnit *unit;
 };
 
 static QJSIntlBytes text(uint32_t offset)
@@ -181,7 +184,9 @@ QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator, const QJSI
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
-    error = qjs_icu4x_inventory_open(allocator, qjs_icu4x_decimal_systems, &service->systems);
+    error = qjs_icu4x_number_unit_data_open(allocator, &service->units);
+    if (!error)
+        error = qjs_icu4x_inventory_open(allocator, qjs_icu4x_decimal_systems, &service->systems);
     if (error)
         goto fail;
     if (qjs_icu4x_number_locale_count > UINT32_MAX ||
@@ -343,6 +348,7 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
                 formatter->allocator.free(formatter->allocator.opaque, compact->families);
             formatter->allocator.free(formatter->allocator.opaque, compact);
         }
+        qjs_icu4x_number_unit_close(formatter->unit);
         qjs_icu4x_currency_symbol_close(formatter->currency_handle);
         if (formatter->tokens)
             formatter->allocator.free(formatter->allocator.opaque, formatter->tokens);
@@ -755,6 +761,40 @@ static QJSIntlStatus select_plural(const QJSIntlNumberFormatter *formatter,
         }
     }
     return QJS_INTL_OK;
+}
+
+/* Unit labels classify the final rounded magnitude. Compact notation virtually
+   expands the mantissa; scientific/engineering use the visible scaled value,
+   matching PartitionNumberPattern. Numeric exact selectors ignore visible zeros. */
+static QJSIntlStatus format_unit(const QJSIntlNumberFormatter *formatter,
+                                 const QJSIntlRoundedNumber *rounded,
+                                 const QJSIntlFormatted *body, QJSIntlFormatted *out)
+{
+    QJSIntlPluralOperands operands = {0};
+    uint32_t shift = 0;
+    int exact = -1;
+    int finite = rounded->kind == QJS_INTL_FINITE || rounded->kind == QJS_INTL_NEGATIVE_ZERO;
+    if (finite) {
+        const QJSIntlDecimal *number = &rounded->number.rounded;
+        int64_t exponent;
+        size_t i;
+        if (formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT)
+            shift = (uint32_t)rounded->exponent;
+        exponent = (int64_t)number->exponent + shift;
+        operands = (QJSIntlPluralOperands){rounded->number.text, rounded->number.length,
+                                           (int32_t)shift};
+        if (number->length == 1 && number->digits[0] == '0')
+            exact = 0;
+        else if (number->digits[0] == '1' && exponent <= 0 &&
+                 (uint64_t)number->length == (uint64_t)(1 - exponent)) {
+            for (i = 1; i < number->length && number->digits[i] == '0'; i++)
+                ;
+            if (i == number->length)
+                exact = 1;
+        }
+    }
+    return qjs_icu4x_number_unit_format(formatter->unit, finite ? &operands : NULL, shift, exact,
+                                        body, formatter->body.maximum_output_length, out);
 }
 
 static QJSIntlStatus format_currency_name(const QJSIntlNumberFormatter *formatter,
@@ -1274,10 +1314,6 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         options->maximum_output_length > SIZE_MAX / sizeof(uint16_t) ||
         qjs_intl_decimal_options_validate(&options->digits) || (!system.data && system.length))
         return QJS_INTL_INVALID_ARGUMENT;
-    /* Private implementation stage: these styles are added next; no incomplete
-       ICU4X profile is exposed to JavaScript or substituted with another style. */
-    if (options->style == QJS_INTL_NUMBER_UNIT)
-        return QJS_INTL_UNSUPPORTED;
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         int supported;
         error = qjs_intl_number_currency_supported(service, options->currency, &supported);
@@ -1335,6 +1371,13 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
             error = currency_names(formatter, tag, options->currency);
         else
             error = currency_symbol(formatter, tag, options);
+    }
+    if (!error && options->style == QJS_INTL_NUMBER_UNIT) {
+        static const QJSIntlUnitWidth widths[] = {
+            QJS_INTL_UNIT_SHORT, QJS_INTL_UNIT_NARROW, QJS_INTL_UNIT_LONG};
+        error = qjs_icu4x_number_unit_open(&formatter->allocator, &service->units, tag,
+                                           widths[options->unit_display], options->unit,
+                                           &formatter->unit);
     }
     if (!error)
         error = open_affixes(formatter, source, options, override);
@@ -1421,10 +1464,13 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         error = qjs_intl_number_affix_format(
             &formatter->allocator, formatter->tokens + formatter->starts[outer],
             formatter->counts[outer], &symbols, &body, form == QJS_INTL_NUMBER_PATTERN_PLUS,
-            formatter->body.maximum_output_length, formatter->names ? &signed_body : out);
+            formatter->body.maximum_output_length,
+            (formatter->names || formatter->unit) ? &signed_body : out);
     }
     if (!error && formatter->names)
         error = format_currency_name(formatter, &rounded, &signed_body, out);
+    if (!error && formatter->unit)
+        error = format_unit(formatter, &rounded, &signed_body, out);
     qjs_intl_formatted_clear(&formatter->allocator, &body);
     qjs_intl_formatted_clear(&formatter->allocator, &exponent);
     qjs_intl_formatted_clear(&formatter->allocator, &notation);
