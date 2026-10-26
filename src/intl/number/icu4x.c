@@ -1359,6 +1359,20 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         }
         error = QJS_INTL_OK;
     }
+    if (!error && handle &&
+        (symbols.fields[7].length != system.length ||
+         memcmp(symbols.fields[7].data, system.data, system.length))) {
+        /* ICU4X may resolve requested digits but silently retain the locale's
+           default symbol system. Preserve the selected nu separators and
+           grouping through the matching CLDR supplement, not those defaults. */
+        for (i = 0; i < 2; i++) {
+            QJSIntlBytes field = text(source->fields[10 + i]);
+            symbols.fields[i] = (QJSICU4XDecimalText){(const uint8_t *)field.data, field.length};
+        }
+        symbols.primary = source->grouping[0];
+        symbols.secondary = source->grouping[1];
+        symbols.minimum = source->grouping[2];
+    }
     if (!error && options->style == QJS_INTL_NUMBER_CURRENCY)
         error = currency_decimal(tag, system, options->currency, source, override, &symbols,
                                  &currency_handle);

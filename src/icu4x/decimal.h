@@ -34,7 +34,7 @@ int qjs_icu4x_compact_exponent(const QJSICU4XCompact *, int32_t, int32_t *);
 
 /* Resolved public decimal data, independent of numeric magnitude. The handle
    owns the payloads; UTF-8 spans borrow it until close. Field order is decimal,
-   group, minus-prefix/suffix, plus-prefix/suffix, resolved numbering system.
+   group, minus-prefix/suffix, plus-prefix/suffix, resolved digit system, resolved symbol system.
    This supplies the common exact C body formatter without converting the
    mathematical value through ICU4X's bounded i16 decimal representation. */
 typedef struct QJSICU4XDecimal QJSICU4XDecimal;
@@ -45,7 +45,7 @@ typedef struct QJSICU4XDecimalText {
 typedef struct QJSICU4XDecimalSymbols {
     uint32_t digits[10];
     uint32_t primary, secondary, minimum;
-    QJSICU4XDecimalText fields[7];
+    QJSICU4XDecimalText fields[8];
 } QJSICU4XDecimalSymbols;
 /* Empty system requests the locale default; an explicit unknown/algorithmic
    system returns UNSUPPORTED rather than silently accepting fallback digits.

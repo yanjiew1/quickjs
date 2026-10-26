@@ -134,6 +134,7 @@ int main(void)
     field(symbols.fields[2], "-");
     field(symbols.fields[4], "+");
     field(symbols.fields[6], "latn");
+    field(symbols.fields[7], "latn");
     assert(symbols.primary == 3 && symbols.secondary == 3 && symbols.minimum == 1);
     for (i = 0; i < 10; i++)
         assert(symbols.digits[i] == '0' + i);

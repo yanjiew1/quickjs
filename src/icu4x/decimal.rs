@@ -134,7 +134,7 @@ pub struct DecimalSymbols {
     primary: u32,
     secondary: u32,
     minimum: u32,
-    fields: [DecimalText; 7],
+    fields: [DecimalText; 8],
 }
 
 unsafe fn decimal_input<'a>(data: *const u8, length: usize) -> Result<&'a [u8], i32> {
@@ -213,6 +213,7 @@ pub unsafe extern "C" fn qjs_icu4x_decimal_symbols(
                 symbols.plus_sign_prefix(),
                 symbols.plus_sign_suffix(),
                 &handle.system,
+                symbols.numsys(),
             ];
             Ok(DecimalSymbols {
                 digits: handle.digits.get().map(u32::from),

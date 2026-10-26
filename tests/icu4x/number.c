@@ -820,6 +820,9 @@ int main(void)
     assert(!qjs_intl_number_format(formatter, &number, &result));
     assert(result.parts[result.part_count - 1].type == QJS_INTL_PART_EXPONENT_INTEGER);
     assert(result.text[result.length - 1] == 0x0664);
+    /* The digit payload may be arab while public decimal symbols fell back
+       to latn. The full provider must keep the selected CLDR decimal mark. */
+    assert(result.length > 2 && result.text[1] == 0x066b);
     qjs_intl_number_result_clear(&allocator, &result);
     qjs_intl_number_formatter_close(formatter);
     options.notation = QJS_INTL_NUMBER_COMPACT;
