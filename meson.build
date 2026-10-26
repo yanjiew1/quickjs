@@ -59,6 +59,10 @@ python = find_program('python3', 'python')
 intl_enabled = get_option('intl') != 'disabled'
 intl_native = get_option('intl') in ['minimal', 'native']
 intl_icu4c = get_option('intl') == 'icu4c'
+intl_icu4x = get_option('intl') == 'icu4x'
+if intl_icu4x and (get_option('calendars') != 'icu4x' or get_option('timezone_backend') != 'icu4x')
+  error('intl=icu4x requires calendars=icu4x and timezone_backend=icu4x')
+endif
 if intl_icu4c
   if get_option('calendars') != 'icu4c' or get_option('timezone_backend') != 'icu4c'
     error('intl=icu4c requires calendars=icu4c and timezone_backend=icu4c')
@@ -86,7 +90,13 @@ if not intl_native and get_option('intl_data_file') != ''
 endif
 if intl_enabled
   common_args += ['-DCONFIG_INTL', '-DCONFIG_INTL_SEGMENTER']
-  common_args += intl_native ? '-DCONFIG_INTL_NATIVE' : '-DCONFIG_INTL_ICU4C'
+  if intl_native
+    common_args += '-DCONFIG_INTL_NATIVE'
+  elif intl_icu4c
+    common_args += '-DCONFIG_INTL_ICU4C'
+  else
+    common_args += '-DCONFIG_INTL_ICU4X'
+  endif
   if get_option('intl') == 'minimal'
     common_args += '-DCONFIG_INTL_SEGMENT_MINIMAL'
   endif
@@ -131,6 +141,25 @@ endif
 # Optional foreign providers use a pinned PIC companion archive. Ordinary
 # engine profiles neither require Rust nor build a second engine configuration.
 icu4x_features = []
+if intl_icu4x
+  icu4x_features += [
+    'locales',
+    'lists',
+    'casing',
+    'segments',
+    'plurals',
+    'decimals',
+    'currency_names',
+    'currency_numbers',
+    'currency_formats',
+    'compact_formats',
+    'collations',
+    'relatives',
+    'units',
+    'durations',
+    'datetimes',
+  ]
+endif
 if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'icu4x'
   icu4x_features += 'calendars'
 endif
@@ -162,6 +191,51 @@ if icu4x_enabled
     icu4x_inputs += files(
       'src/icu4x/timezone.rs',
       'src/icu4x/timezone.h',
+    )
+  endif
+  if intl_icu4x
+    icu4x_inputs += files(
+      'src/icu4x/casing.h',
+      'src/icu4x/casing.rs',
+      'src/icu4x/collation.h',
+      'src/icu4x/collation.rs',
+      'src/icu4x/compact.h',
+      'src/icu4x/compact.rs',
+      'src/icu4x/currency-format.h',
+      'src/icu4x/currency-number.h',
+      'src/icu4x/currency.h',
+      'src/icu4x/currency.rs',
+      'src/icu4x/currency_format.rs',
+      'src/icu4x/currency_number.rs',
+      'src/icu4x/datetime-names.h',
+      'src/icu4x/datetime_names.rs',
+      'src/icu4x/decimal.h',
+      'src/icu4x/decimal.rs',
+      'src/icu4x/duration.h',
+      'src/icu4x/duration.rs',
+      'src/icu4x/list.h',
+      'src/icu4x/list.rs',
+      'src/icu4x/language_input.rs',
+      'src/icu4x/locale_candidates.rs',
+      'src/icu4x/locale.h',
+      'src/icu4x/locale.rs',
+      'src/icu4x/locale_data.rs',
+      'src/icu4x/names.h',
+      'src/icu4x/names.rs',
+      'src/icu4x/pattern.rs',
+      'src/icu4x/plural.h',
+      'src/icu4x/plural.rs',
+      'src/icu4x/plural_selector.rs',
+      'src/icu4x/relative.h',
+      'src/icu4x/relative.rs',
+      'src/icu4x/segment.h',
+      'src/icu4x/segment.rs',
+      'src/icu4x/text.h',
+      'src/icu4x/text.rs',
+      'src/icu4x/unit.h',
+      'src/icu4x/unit.rs',
+      'src/icu4x/zone-names.h',
+      'src/icu4x/zone_names.rs',
     )
   endif
   cargo = find_program('cargo', native: true)
@@ -1091,6 +1165,8 @@ if intl_native
 endif
 if intl_icu4c
   features += {'Intl data': 'linked ICU4C dependency'}
+elif intl_icu4x
+  features += {'Intl data': 'linked ICU4X with matching CLDR companions'}
 endif
 summary(features, section: 'Features', bool_yn: true)
 summary(

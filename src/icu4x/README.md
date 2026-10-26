@@ -143,9 +143,8 @@ See TR35 Annex C, Definition 5; this is not a replacement language-tag parser.
 `tests/icu4x/locale.c` exercises the real compiled C/Rust layout, identity,
 source facts, callback failures and engine-owned allocation failures. CI runs
 it with combined ASan/UBSan on both the minimum and stable Rust toolchains.
-As with the other bridge foundations, this does not yet expose a complete
-`intl=icu4x` runtime profile. Its final default candidates must be admitted by
-all selected formatting modules rather than inferred from metadata membership.
+Default candidates are admitted by all selected formatting modules rather
+than inferred from metadata membership alone.
 
 ## Segmentation
 
@@ -167,7 +166,7 @@ constructor allocation failures.
 ## Exact plural source data
 
 The private plural provider snapshots public ICU4X rule serialization and
-category range maps. Borrowed rule spans remain valid until that handle closes.
+category range maps after resolving each component's source locale. Borrowed rule spans remain valid until that handle closes.
 The common C evaluator consumes these rules with exact decimal operands;
 ICU4X's bounded integer/fraction operand representation is not used. This is the
 explicit shared exact-evaluation exception: all rules and range results still
@@ -275,16 +274,19 @@ The private decimal adapter wraps the public decimal constructor with a data
 inspection provider. ICU4X still resolves locale and numbering-system fallback;
 the wrapper retains only successful symbol/digit payloads and the actual digit
 identifier. An explicitly requested unsupported or algorithmic system is
-rejected instead of silently accepting fallback digits. Borrowed symbol spans
+rejected instead of silently accepting fallback digits. The bridge also
+reports the actual symbol system: if ICU4X resolves requested digits but falls
+back to another symbol system, the C provider uses the selected companion
+separators/grouping. Borrowed symbol spans
 remain valid until their owning handle closes.
 
 The common C numeric body consumes this data and an already rounded exact
 decimal. It does not pass mathematical inputs through ICU4X's i16 magnitude
 representation, so large integers remain exact. Grouping metadata preserves the
 locale's minimum for auto grouping, while the common formatter implements the
-separate ECMA always/min2 policies. This is a numeric-data foundation, not yet
-the full NumberFormat provider: nonfinite/scientific/range and outer style
-composition remain separate work. The contract includes a 40,000-digit input
+separate ECMA always/min2 policies. Nonfinite, scientific, range and outer
+style composition are owned by the C NumberFormat provider rather than this
+low-level decimal adapter. The contract includes a 40,000-digit input
 with supplementary-plane Adlam digits and UTF-16 part offsets.
 
 The low-level public-payload inventory comes from the same generated
@@ -325,15 +327,13 @@ exponent/precision rules or public ICU4X grouping. The arrays
 are compiled once for the target, without a runtime pack decoder or wire
 version. Locale rows provide source coverage, not executable service admission.
 
-The initial private NumberFormat service combines these sources with common
-exact rounding, numeric bodies and typed affix composition. It currently
-covers decimal/percent styles, standard/scientific/engineering notation and
-source-preserving ranges. It admits declared locale candidates through their
-actual public constructor/default system; tests execute every admitted default.
-Resolved symbol text is copied into one C-owned UTF-16 arena and temporary
-Rust handles are released during construction. Formatters/results outlive the
-service. Currency/unit styles and compact composition remain to be completed
-before enabling the JavaScript ICU4X profile.
+The NumberFormat service combines public data with common exact rounding,
+numeric bodies and typed affix composition for every standard style and
+notation. Source-template ranges preserve complete endpoints without collapse,
+a policy permitted by CollapseNumberRange. It admits declared locale candidates
+through actual public constructors/default systems. Resolved symbol text is
+copied into one C-owned UTF-16 arena; temporary Rust handles are released during
+construction. Formatters/results outlive the service.
 
 ECMA-402 Table 30 requires all 78 numeric systems in the selected draft, while
 the ICU4X 2.4 bake contains 23. The number companion therefore carries the
@@ -440,8 +440,8 @@ resolved text-hour options. No separate duration supplement is needed.
 
 Provider contracts execute every admitted locale and all four styles, in
 addition to fractional nanoseconds, negative durations, Danish separators,
-allocation failures and formatter lifetime. This remains private until the
-complete DateTimeFormat provider enables the full ICU4X profile.
+allocation failures and formatter lifetime. The full ICU4X profile selects
+this adapter alongside DateTimeFormat.
 
 ## Date-program companion
 
@@ -463,8 +463,8 @@ python3 tools/data/generate.py intl-icu4x --component datetime \
 
 The production CI regenerates every ICU4X companion and compares it with the
 repository owner. A private sanitizer contract admits the actual date payload
-through all required C readers and checks temporary allocation failures. These
-source views alone do not enable a complete ICU4X DateTimeFormat provider.
+through all required C readers and checks temporary allocation failures. The
+shared date-program service binds these views to retained public names.
 
 ## Private date-name payloads
 
@@ -500,3 +500,21 @@ alias origins and never revives missing, blocked or empty leaves. Raw GMT
 patterns, source-qualified cities/location composition and compacted-away
 labels remain matching-CLDR companion data where public payloads lose the
 required source distinction.
+
+## Plural source coverage
+
+The `plural` companion records separate CLDR rule and range origins, including
+nondefault-script inheritance. For example, `en-Dsrt` reuses public English
+rules instead of silently receiving ICU4X's root fallback. Some languages such
+as Manx are absent from the stock bake. Deduplicated matching-CLDR rule/range
+families fill lost category sets and missing range pairs; complete public
+families remain preferred. An undeclared range pair defaults to its end category.
+The one generated C owner is about 75 KB of source and adds no runtime parser.
+
+Regenerate it through `tools/data/generate.py intl-icu4x --component plural
+--sources CLDR_ROOT --output data/intl/icu4x-plural.c`. Source acquisition owns
+integrity checks, and runtime checks the selected ICU4X CLDR version. The
+snapshot contract traverses every compiled locale/kind, verifies coverage and
+public string ownership, and checks that supplemental and inherited families
+are both exercised. JavaScript regressions cover Manx cardinal, Cornish ordinal,
+nondefault scripts and explicit/default range results.

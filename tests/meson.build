@@ -4250,7 +4250,7 @@ if intl_enabled
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js', get_option('intl')],
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
-    'intl-collator': ['-m', 'tests/test_intl_collator.js'],
+    'intl-collator': ['-m', 'tests/test_intl_collator.js', get_option('intl')],
     'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js', get_option('intl')],
     'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js', get_option('calendars'), get_option('timezone_backend'), get_option('intl')],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
@@ -4260,7 +4260,7 @@ if intl_enabled
 endif
 if intl_enabled
   js_tests += {
-    'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js'],
+    'intl-segmenter': ['-m', 'tests/test_intl_segmenter.js', get_option('intl')],
   }
 endif
 if intl_native
@@ -5345,4 +5345,66 @@ if intl_icu4c
       timeout: 90,
     )
   endforeach
+endif
+
+if intl_icu4x
+  icu4x_test_helpers = static_library(
+    'test-icu4x-helpers',
+    'icu4c/helpers.c',
+    c_args: host_args,
+    include_directories: inc,
+    override_options: ['b_ndebug=false'],
+    install: false,
+  )
+  foreach module, source : {
+    'locale': 'icu4x/locale.c',
+    'collation': 'icu4x/collation.c',
+    'list': 'icu4c/list.c',
+    'segment': 'icu4c/segment.c',
+    'display': 'icu4x/display.c',
+    'number': 'icu4x/number.c',
+    'plural': 'icu4c/plural.c',
+    'relative': 'icu4x/relative.c',
+    'duration': 'icu4c/duration.c',
+    'datetime': 'icu4c/datetime.c',
+    'date-names': 'icu4x/datetime-binding.c',
+    'zone-names': 'icu4x/zone-binding.c',
+    'plural-snapshot': 'icu4x/plural-snapshot.c',
+  }
+    app = executable(
+      'test_intl_icu4x_' + module,
+      source,
+      c_args: host_args,
+      include_directories: inc,
+      dependencies: host_deps,
+      link_with: component_libraries + [icu4x_test_helpers],
+      override_options: ['b_ndebug=false'],
+    )
+    test(
+      'intl-icu4x-' + module,
+      app,
+      suite: ['repo', 'unit', 'icu4x'],
+      timeout: 120,
+    )
+  endforeach
+endif
+
+if intl_icu4x
+  test(
+    'intl-icu4x-datetime-api',
+    qjs,
+    args: ['-m', files('test_intl_icu4x_datetime.js')],
+    suite: ['repo', 'javascript', 'integration', 'icu4x'],
+    timeout: 120,
+  )
+endif
+
+if intl_icu4x
+  test(
+    'intl-icu4x-interop',
+    qjs,
+    args: ['-m', files('test_intl_icu4x_interop.js')],
+    suite: ['repo', 'javascript', 'integration', 'icu4x'],
+    timeout: 30,
+  )
 endif

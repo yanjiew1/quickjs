@@ -36,7 +36,8 @@ text. Exact reviewed revisions, source versions and deliberate interpretation
 choices belong with the affected code, manifests and
 [native implementation notes](intl-native-notes.md).
 [ICU4C notes](intl-icu4c.md) describe its adapter boundary and limitations;
-[the backend roadmap](intl-future-backends.md) retains the ICU4X feasibility plan.
+[ICU4X notes](intl-icu4x.md) describe the implemented optional adapter;
+[the backend roadmap](intl-future-backends.md) retains the broader design.
 
 ## Architecture and ownership
 

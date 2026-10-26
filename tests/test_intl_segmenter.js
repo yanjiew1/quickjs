@@ -160,14 +160,18 @@ same([...grapheme.segment(unusual)].map(x => [x.segment, x.index]),
 assert(grapheme.segment(unusual).containing(1).index, 0);
 same([...grapheme.segment("é")].map(x => x.segment), ["é"]);
 
+// IsWordLike is implementation-dependent. ICU4X classifies ExtendNumLet
+// (including underscore) as Letter; other selected providers classify it false.
+const underscoreWordLike = scriptArgs[1] === "icu4x";
 const words = new Segmenter("en", {granularity: "word"});
 same([...words.segment("ab 12.3 _ 😀")].map(x => [x.segment, x.index, x.isWordLike]),
      [["ab",0,true],[" ",2,false],["12.3",3,true],[" ",7,false],
-      ["_",8,false],[" ",9,false],["😀",10,false]]);
+      ["_",8,underscoreWordLike],[" ",9,false],["😀",10,false]]);
 same(Object.keys(words.segment("a").containing(0)), ["segment","index","input","isWordLike"]);
 for (const text of ["中", "あ", "ก", "7"])
     assert(words.segment(text).containing(0).isWordLike);
-for (const text of ["_", "!", "\u0301", "😀"])
+assert(words.segment("_").containing(0).isWordLike, underscoreWordLike);
+for (const text of ["!", "\u0301", "😀"])
     assert(!words.segment(text).containing(0).isWordLike);
 const sentence = new Segmenter("en", {granularity: "sentence"});
 same([...sentence.segment("Hi. Bye!")].map(x => [x.segment, x.index]), [["Hi. ",0],["Bye!",4]]);

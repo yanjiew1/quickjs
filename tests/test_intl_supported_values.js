@@ -54,7 +54,7 @@ if (scriptArgs.length > 1) {
         "islamic-umalqura", "iso8601", "japanese", "persian", "roc",
     ];
     assert(inventories.calendar.join(","), calendars.join(","));
-    assert(["minimal", "native", "icu4c"].includes(scriptArgs[2]));
+    assert(["minimal", "native", "icu4c", "icu4x"].includes(scriptArgs[2]));
     if (scriptArgs[2] === "minimal")
         assert(inventories.timeZone.join(","), "UTC");
     else

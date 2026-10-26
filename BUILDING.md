@@ -120,6 +120,26 @@ after base objects are initialized. It is idempotent, reports exceptions on
 failure and throws TypeError in a disabled build. Normal `JS_NewContext()`
 contexts initialize the compiled feature automatically.
 
+### ICU4X Intl
+
+`-Dintl=icu4x` selects the pinned ICU4X 2.4.0 Rust library and matching CLDR 49
+companions. It requires Rust 1.88 or newer and Cargo; the engine and C adapters
+remain C-only. Select `calendars=icu4x` and `timezone_backend=icu4x` as well:
+
+```sh
+CC=gcc meson setup build-icu4x -Dintl=icu4x \
+  -Dcalendars=icu4x -Dtimezone_backend=icu4x \
+  -Db_sanitize=address,undefined -Dwerror=true
+meson compile -C build-icu4x
+meson test -C build-icu4x --print-errorlogs
+```
+
+Temporal remains independently optional. Cargo builds the locked dependencies;
+no ICU4C installation is needed. Native/minimal configurations do not need Rust.
+Generated C data owners remain outside LTO. See
+[the ICU4X adapter notes](doc/intl-icu4x.md) for shared algorithms, explicit
+public-API gaps and distribution requirements.
+
 ### ICU4C Intl
 
 `-Dintl=icu4c` selects ICU4C 74 or newer instead of the prepared native Intl
@@ -129,8 +149,7 @@ acquire no ICU dependency. Normal builds never download ICU.
 
 For a complete ICU-backed configuration, select the calendar and timezone
 providers explicitly as well. The profile rejects native calendar/timezone
-providers; `calendars=iso` and `timezone_backend=minimal` can instead omit those
-optional extensions while retaining core ISO, UTC and numeric offsets:
+providers; the current full profile selects both ICU4C providers:
 
 ```sh
 CC=gcc CXX=g++ meson setup build-icu4c -Dintl=icu4c \

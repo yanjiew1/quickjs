@@ -135,6 +135,15 @@ def main():
         assert not {path for path in filenames if source / 'src/intl/native' in path.parents}
         assert (source / 'src/intl/collation/icu4c.c') in filenames
         assert (source / 'src/intl/datetime/icu4c-format.cpp') in filenames
+    if intl == 'icu4x':
+        assert options['calendars'] == 'icu4x'
+        assert options['timezone_backend'] == 'icu4x'
+        filenames = {(Path(row['directory']) / row['file']).resolve() for row in commands}
+        assert source / 'src/intl/datetime/program-service.c' in filenames
+        assert source / 'src/intl/datetime/names-icu4x.c' in filenames
+        assert source / 'src/intl/datetime/zones-icu4x.c' in filenames
+        assert not {path for path in filenames if source / 'src/intl/icu4c' in path.parents}
+        assert source / 'src/intl/datetime/native.c' not in filenames
     assert checked == options['check_jsvalue'], (checked, options['check_jsvalue'])
     print('Selected configuration and repository suite partition verified.')
 
