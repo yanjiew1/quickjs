@@ -112,6 +112,20 @@ class DisplayNamesTests(unittest.TestCase):
         self.assertEqual(layers(data, 'en', 'bracket')[0][2], (('(', '', '', '', '['),))
         self.assertEqual(data, names.collect(source, graph()))
 
+    def test_narrow_group_collection(self):
+        source = Sources()
+        source.set('en', '<languages><language type="en">English</language></languages>'
+                        '<scripts><script type="Hans" alt="stand-alone">Simplified Han</script></scripts>'
+                        '<types><type key="calendar" type="gregorian">Gregorian</type></types>')
+        data = names.collect(source, graph(), groups=('script', 'calendar'))
+        self.assertEqual(data['groups'], ('script', 'calendar'))
+        self.assertEqual(data['source_records'], 2)
+        self.assertEqual(len(data['rows']), 8)
+        self.assertEqual(layers(data, 'en-GB', 'script')[0][2],
+                         (('Hans', 'stand-alone', '', '', 'Simplified Han'),))
+        with self.assertRaises(DataError):
+            names.collect(source, graph(), groups=('unknown',))
+
     def test_alternate_menu_scope_are_independent_facts(self):
         source = Sources()
         source.set('en', '''<languages>

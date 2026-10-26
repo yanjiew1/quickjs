@@ -41,15 +41,20 @@ import preferences
 from embed import WRAPPER_LICENSE
 
 
+def cldr_version(sources):
+    release = str(sources.pin['release'])
+    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', release):
+        raise ValueError('a numeric CLDR release is required for ICU4X metadata')
+    version = '.'.join((release.split('.') + ['0', '0'])[:3])
+    return version
+
+
 def collect(sources):
     graph = parents.load(sources)
     metadata = locale_metadata.collect(sources, graph)
     facts = preferences.collect(sources)
     registry, _ = availability.complete(graph)
-    release = str(sources.pin['release'])
-    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', release):
-        raise ValueError('a numeric CLDR release is required for ICU4X metadata')
-    version = '.'.join((release.split('.') + ['0', '0'])[:3])
+    version = cldr_version(sources)
     return dict(version=version, keys=metadata['keys'], types=metadata['types'],
                 weeks=facts['weeks'], hours=facts['hours'], calendars=facts['calendars'],
                 unknown_scripts=tuple(key for key, direction in facts['scripts'] if not direction),
@@ -124,13 +129,21 @@ def render(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--component', choices=('locale', 'display'), default='locale')
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--source-pin', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     sources = acquire.Sources(args.sources, acquire.load_pin(args.source_pin))
-    data = collect(sources)
-    acquire.atomic_write(args.output, render(data).encode('ascii'))
+    if args.component == 'display':
+        import icu4x_display
+        data = icu4x_display.collect(sources)
+        data['version'] = cldr_version(sources)
+        output = icu4x_display.render(data)
+    else:
+        data = collect(sources)
+        output = render(data)
+    acquire.atomic_write(args.output, output.encode('ascii'))
     print('Generated ICU4X CLDR '+data['version']+' supplement: '+str(args.output))
 
 

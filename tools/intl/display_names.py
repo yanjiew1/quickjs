@@ -44,10 +44,15 @@ UNOWNED = ('subdivisions', 'keys', 'typeValues', 'transformNames',
 CODE = re.compile(r'[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*')
 
 
-def collect(sources, graph=None):
+def collect(sources, graph=None, groups=GROUPS):
     graph = parents.load(sources) if graph is None else graph
+    # Narrow backend supplements should not retain unrelated language/region
+    # maps. The default still collects every source group for native data.
+    groups = tuple(groups)
+    if len(set(groups)) != len(groups) or any(group not in GROUPS for group in groups):
+        raise DataError('unknown or repeated display-name group selection')
     schema = Schema(sources.read('common/dtd/ldml.dtd'))
-    records = SparseMaps(graph, GROUPS, 'display-name')
+    records = SparseMaps(graph, groups, 'display-name')
     source_records, source_aliases = 0, 0
 
     def children(node):
@@ -90,6 +95,8 @@ def collect(sources, graph=None):
                     raise DataError('unknown/repeated display-name group')
                 seen.add(node.tag)
                 group, leaf_name = CONTAINERS[node.tag]
+                if group not in groups:
+                    continue
                 leaves = plain_container(node)
                 aliases = [leaf for leaf in leaves if leaf.tag == 'alias']
                 if aliases:
@@ -126,6 +133,8 @@ def collect(sources, graph=None):
                             raise DataError('invalid display-name code/selector')
                     add(locale, group, leaf, fields, code)
 
+        if 'bracket' not in groups:
+            continue
         sections = root.findall('characters')
         if len(sections) > 1:
             raise DataError('repeated display-name characters container')
@@ -164,11 +173,11 @@ def collect(sources, graph=None):
         return tail
 
     for locale in graph.tags:
-        for group in GROUPS:
+        for group in groups:
             rows.append((locale, group, freeze(records.overlays(locale, group, cache))))
     ordered = tuple(sorted(maps))
     remap = {maps[fields]: index for index, fields in enumerate(ordered)}
-    return {'groups': GROUPS, 'maps': ordered,
+    return {'groups': groups, 'maps': ordered,
             'nodes': tuple((locale, group, remap[index], tail)
                            for locale, group, index, tail in nodes),
             'rows': tuple(rows), 'source_records': source_records,

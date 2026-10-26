@@ -221,3 +221,34 @@ The same small generated provider owns both currency enumeration and lookup.
 It enables only the matching marker data and locale fallback dependencies;
 the experimental crate's broad `compiled_data` feature is deliberately unused.
 This avoids enabling unrelated providers solely to read plain currency names.
+
+## Display supplement
+
+Generate the missing display facts with the same entry point:
+
+```sh
+python3 tools/data/generate.py intl-icu4x --component display \
+    --sources /path/to/cache/cldr-49 --output data/intl/icu4x-display.c
+```
+
+This component supplies standalone script alternatives, calendar labels, twelve
+date-field labels and standalone capitalization flags for language, region,
+script and calendar names. Plain currency/date-field names retain formatting
+context. The ordinary public ICU4X name data and its short-name policy remain
+in ICU4X. Do not insert standalone script names into language qualifiers.
+
+Projection uses the original CLDR source layers before interning final maps.
+A nearer ordinary script name suppresses a parent's standalone alternative;
+blocked alternatives remain blocked and explicit empty names remain present.
+Calendar lookup keys include valid public aliases and deprecated names, since
+CanonicalCodeForDisplayNames lowercases without alias canonicalization. API
+fallback still uses the original core code.
+
+`src/intl/display/icu4x-data.h` documents the private compiled layout: one
+NUL-delimited UTF-8 pool, label maps and locale-to-map indexes. Label records
+contain code/text offsets and long/short/narrow presence bits (1/2/4); equal
+text across widths shares one row. Missing has no row/bit, while an explicit
+empty label has text offset zero. Locale capitalization bits follow the C
+display type enum. Version is a CLDR string offset, not a wire-format version.
+The target compiler supplies alignment/endianness; no runtime pack decoder is
+introduced. Compatible source edits are accepted without acquisition-hash checks.

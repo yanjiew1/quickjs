@@ -1179,5 +1179,7 @@ jobs:
         ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
         UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       run: sh tools/ci/test_icu4x_contracts.sh test build-icu4x-bridge/contracts
-    - name: Check the compiled CLDR supplement contract
-      run: python3 tests/test_icu4x_metadata.py
+    - name: Check the compiled CLDR supplement contracts
+      run: |
+        python3 tests/test_icu4x_metadata.py
+        python3 tests/test_icu4x_display.py
