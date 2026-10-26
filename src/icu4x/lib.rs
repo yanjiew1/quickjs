@@ -39,10 +39,14 @@ mod datetime_names;
 mod decimal;
 #[cfg(feature = "durations")]
 mod duration;
+#[cfg(any(feature = "locales", feature = "names"))]
+mod language_input;
 #[cfg(feature = "lists")]
 mod list;
 #[cfg(feature = "locales")]
 mod locale;
+#[cfg(any(feature = "lists", feature = "names"))]
+mod locale_candidates;
 #[cfg(feature = "locales")]
 mod locale_data;
 #[cfg(feature = "names")]

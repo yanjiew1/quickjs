@@ -62,6 +62,14 @@ mod inventory {
     impl_locale_names_essentials_v1!(Provider, ITER);
 }
 
+fn present<T>(result: Result<T, icu_provider::DataError>) -> Result<bool, i32> {
+    match result {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind == DataErrorKind::IdentifierNotFound => Ok(false),
+        Err(error) => Err(data_error(error)),
+    }
+}
+
 fn available() -> Result<&'static std::collections::BTreeSet<String>, i32> {
     use icu_provider::{DataMarker, IterableDataProvider};
     use std::{collections::BTreeSet, sync::OnceLock};
@@ -108,7 +116,62 @@ fn available() -> Result<&'static std::collections::BTreeSet<String>, i32> {
             add::<icu_locale::provider::names::LocaleNamesRegionShortTinyV1>(&mut result)?;
             add::<icu_locale::provider::names::LocaleNamesVariantMediumHeavyV1>(&mut result)?;
             add::<icu_locale::provider::names::LocaleNamesEssentialsV1>(&mut result)?;
-            Ok(result)
+            crate::locale_candidates::likely_regions(&mut result)?;
+            let mut admitted = BTreeSet::new();
+            for tag in &result {
+                let mut supported = false;
+                // Unlike NameHandle allocation, these constructors actually
+                // load every public name family used by the service.
+                let locale = Locale::try_from_str(tag).map_err(|_| BACKEND)?;
+                let prefs: DisplayNamesPreferences = locale.into();
+                for short in [false, true] {
+                    let language = LanguageIdentifier::try_from_str("en").map_err(|_| BACKEND)?;
+                    let options = LanguageIdentifierDisplayNameOptions::default();
+                    if short {
+                        supported |=
+                            present(LanguageIdentifierDisplayName::try_new_short_heavy_unstable(
+                                &inventory::Provider,
+                                prefs,
+                                language,
+                                options,
+                            ))?;
+                        supported |= present(ScriptDisplayName::try_new_short_heavy_unstable(
+                            &inventory::Provider,
+                            prefs,
+                            Script::try_from_str("Latn").map_err(|_| BACKEND)?,
+                        ))?;
+                        supported |= present(RegionDisplayName::try_new_short_light_unstable(
+                            &inventory::Provider,
+                            prefs,
+                            Region::try_from_str("US").map_err(|_| BACKEND)?,
+                        ))?;
+                    } else {
+                        supported |=
+                            present(LanguageIdentifierDisplayName::try_new_heavy_unstable(
+                                &inventory::Provider,
+                                prefs,
+                                language,
+                                options,
+                            ))?;
+                        supported |= present(ScriptDisplayName::try_new_heavy_unstable(
+                            &inventory::Provider,
+                            prefs,
+                            Script::try_from_str("Latn").map_err(|_| BACKEND)?,
+                        ))?;
+                        supported |= present(RegionDisplayName::try_new_light_unstable(
+                            &inventory::Provider,
+                            prefs,
+                            Region::try_from_str("US").map_err(|_| BACKEND)?,
+                        ))?;
+                    }
+                }
+                // Missing individual labels are normal DisplayNames fallback,
+                // not evidence that every other name family is unavailable.
+                if supported {
+                    admitted.insert(tag.clone());
+                }
+            }
+            Ok(admitted)
         })
         .as_ref()
         .map_err(|status| *status)
@@ -279,7 +342,13 @@ pub unsafe extern "C" fn qjs_icu4x_names_format(
         match kind {
             0 => {
                 use icu_locale::names::LanguageDisplay;
-                let language = LanguageIdentifier::try_from_utf8(code).map_err(|_| RANGE)?;
+                let tag = std::str::from_utf8(code).map_err(|_| RANGE)?;
+                let input = crate::language_input::LanguageInput::new(tag);
+                let language =
+                    LanguageIdentifier::try_from_str(input.as_str()).map_err(|_| RANGE)?;
+                if input.masked() {
+                    return Err(UNSUPPORTED);
+                }
                 let mut options = LanguageIdentifierDisplayNameOptions::default();
                 options.language_display = Some(if handle.dialect {
                     LanguageDisplay::Dialect

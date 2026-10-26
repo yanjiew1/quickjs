@@ -139,9 +139,16 @@ decimals = [
 ]
 plurals = ["dep:icu_plurals", "dep:icu_plurals_data", "dep:icu_locale_core", "dep:icu_provider"]
 segments = ["dep:icu_segmenter", "dep:icu_segmenter_data", "dep:icu_locale_core"]
-locales = ["dep:icu_locale", "dep:icu_locale_data", "dep:icu_locale_core", "dep:icu_provider"]
+locales = [
+    "dep:icu_locale_fallback",
+    "dep:icu_locale",
+    "dep:icu_locale_data",
+    "dep:icu_locale_core",
+    "dep:icu_provider",
+]
 casing = ["dep:icu_casemap", "dep:icu_locale_core", "dep:writeable"]
 lists = [
+    "dep:icu_locale",
     "dep:icu_locale_fallback",
     "dep:icu_list",
     "dep:icu_list_data",

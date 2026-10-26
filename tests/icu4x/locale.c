@@ -214,6 +214,22 @@ int main(void)
     for (i = 0; i < sizeof(cases) / sizeof(*cases); i++)
         identity(service, cases[i][0], 0, cases[i][1]);
     identity(service, "zh-TW", 1, "zh-Hant-TW");
+    identity(service, "und", 1, "en-Latn-US");
+    identity(service, "und-u-nu-arab", 1, "en-Latn-US-u-nu-arab");
+    identity(service, "und", 2, "en");
+    identity(service, "und-Zzzz-ZZ", 1, "en-Latn-US");
+    identity(service, "und-Zzzz", 1, "en-Latn-US");
+    identity(service, "und-ZZ", 1, "en-Latn-US");
+    identity(service, "und-Zzzz-ZZ", 2, "en");
+    identity(service, "und-Qaaa", 1, "en-Qaaa-US");
+    identity(service, "und-150", 1, "en-Latn-150");
+    identity(service, "und-150", 2, "en-150");
+    identity(service, "und-AQ", 1, "en-Latn-AQ");
+    identity(service, "posix", 0, "posix");
+    identity(service, "AbCdE-LaTn-Us-u-NU-ARAB-x-Keep", 0, "abcde-Latn-US-u-nu-arab-x-keep");
+    identity(service, "en-t-AbCdEfGh-LaTn-Us-u-NU-ARAB", 0, "en-t-abcdefgh-latn-us-u-nu-arab");
+    identity(service, "abcdefgh-Latn-US", 1, "abcdefgh-Latn-US");
+    identity(service, "en-t-abcdefgh-latn-us", 0, "en-t-abcdefgh-latn-us");
     identity(service, "en-Latn-US", 2, "en");
     for (i = 0; i < 1024; i++)
         length += (size_t)snprintf(long_tag + length, sizeof(long_tag) - length, "-v%04zu", i);

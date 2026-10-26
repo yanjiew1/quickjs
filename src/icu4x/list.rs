@@ -69,12 +69,13 @@ fn available() -> Result<&'static std::collections::BTreeSet<String>, i32> {
         // Baked data omits redundant rows: a width may inherit from root or
         // a parent. Admit actual locales from this module's three inventories,
         // then verify all nine formatter choices through normal data fallback.
-        let candidates: BTreeSet<_> = and
+        let mut candidates: BTreeSet<_> = and
             .iter()
             .chain(or.iter())
             .chain(unit.iter())
             .map(|id| id.locale.to_string())
             .collect();
+        crate::locale_candidates::likely_regions(&mut candidates)?;
         let mut result = BTreeSet::new();
         for tag in candidates {
             if tag == "und" {

@@ -147,6 +147,8 @@ int main(void)
     assert(qjs_icu4x_names_locales(&failed, locale_name) == QJS_ICU4X_MEMORY);
     assert(failed.calls == 1 && !failed.count);
     check("en", 0, 1, 0, "ja", "Japanese");
+    check("en-US", 0, 1, 0, "fr", "French");
+    check("en", 0, 1, 0, "abcdefgh-Latn-US", NULL);
     check("en", 0, 1, 0, "en-GB", "British English");
     check("en", 0, 0, 0, "en-GB", "English (United Kingdom)");
     check("en", 0, 1, 0, "zz", NULL);
@@ -165,6 +167,16 @@ int main(void)
         assert(!qjs_icu4x_names_open((const uint8_t *)"ja", 2, 0, 1, &handle));
         assert(!qjs_icu4x_names_format(handle, 0, (const uint8_t *)"en", 2, sink));
         assert(output.length == 2 && output.units[0] == 0x82f1 && output.units[1] == 0x8a9e);
+        qjs_icu4x_names_close(handle);
+        handle = (QJSICU4XNames *)(uintptr_t)1;
+    }
+    {
+        Output output = {0};
+        QJSICU4XTextSink sink = {&output, write_text};
+        assert(!qjs_icu4x_names_open((const uint8_t *)"en", 2, 0, 1, &handle));
+        assert(qjs_icu4x_names_format(handle, 0, (const uint8_t *)"abcdefgh-u", 10, sink) ==
+               QJS_ICU4X_RANGE);
+        assert(!output.calls);
         qjs_icu4x_names_close(handle);
         handle = (QJSICU4XNames *)(uintptr_t)1;
     }

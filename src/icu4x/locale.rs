@@ -170,7 +170,8 @@ fn canonical(handle: &LocaleHandle, input: &str, operation: u32) -> Result<Strin
         return Err(RANGE);
     }
     let frame = frame(input)?;
-    let mut locale = Locale::try_from_str(&frame.main).map_err(|_| RANGE)?;
+    let input = crate::language_input::LanguageInput::new(&frame.main);
+    let mut locale = Locale::try_from_str(input.as_str()).map_err(|_| RANGE)?;
     let data = unsafe { handle.data.view()? };
     if let Some(raw) = frame.unicode {
         let parts: Vec<_> = raw.split('-').collect();
@@ -201,12 +202,31 @@ fn canonical(handle: &LocaleHandle, input: &str, operation: u32) -> Result<Strin
         }
     }
     LocaleCanonicalizer::new_extended().canonicalize(&mut locale);
-    if operation == 1 {
-        LocaleExpander::new_extended().maximize(&mut locale.id);
-    } else if operation == 2 {
-        LocaleExpander::new_extended().minimize(&mut locale.id);
+    if !input.masked() && (operation == 1 || operation == 2) {
+        let expander = LocaleExpander::new_extended();
+        // Maximize first also strips the standard unknown placeholders Zzzz
+        // and ZZ. ICU4X 2.4 then excludes generic und fallback: retain
+        // our optional result using its own public likely tuple, without
+        // overwriting genuinely unknown explicit scripts or regions.
+        expander.maximize(&mut locale.id);
+        if locale.id.language.is_unknown() {
+            use icu_locale_fallback::provider::{Baked, LocaleLikelySubtagsLanguageV1};
+            use icu_provider::DataProvider;
+            let response = <Baked as DataProvider<LocaleLikelySubtagsLanguageV1>>::load(
+                &Baked,
+                Default::default(),
+            )
+            .map_err(|_| BACKEND)?;
+            let (language, script, region) = response.payload.get().und;
+            locale.id.language = language;
+            locale.id.script.get_or_insert(script);
+            locale.id.region.get_or_insert(region);
+        }
+        if operation == 2 {
+            expander.minimize(&mut locale.id);
+        }
     }
-    let mut output = locale.to_string();
+    let mut output = input.restore(locale.to_string());
     if let Some(raw) = frame.transform {
         let parts: Vec<_> = raw.split('-').collect();
         let position = parts
@@ -215,13 +235,14 @@ fn canonical(handle: &LocaleHandle, input: &str, operation: u32) -> Result<Strin
             .unwrap_or(parts.len());
         let mut body = String::new();
         if position != 0 {
-            let mut language =
-                Locale::try_from_str(&parts[..position].join("-")).map_err(|_| RANGE)?;
+            let tag = parts[..position].join("-");
+            let input = crate::language_input::LanguageInput::new(&tag);
+            let mut language = Locale::try_from_str(input.as_str()).map_err(|_| RANGE)?;
             if !language.extensions.is_empty() {
                 return Err(RANGE);
             }
             LocaleCanonicalizer::new_extended().canonicalize(&mut language);
-            body = language.id.to_string().to_ascii_lowercase();
+            body = input.restore(language.id.to_string()).to_ascii_lowercase();
         }
         for (key, value) in fields(&parts, position, true)? {
             if !body.is_empty() {
