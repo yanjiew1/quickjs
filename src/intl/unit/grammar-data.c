@@ -55,7 +55,7 @@ QJSIntlStatus qjs_intl_unit_grammar_data_open(const QJSIntlData *data, const QJS
 {
     QJSIntlUnitGrammarData result = {0};
     QJSIntlStatus status = QJS_INTL_DATA_ERROR;
-    size_t words;
+    size_t words, buffer_size;
     uint32_t i, j;
     uint8_t *checked, *used;
     if (out)
@@ -76,12 +76,13 @@ QJSIntlStatus qjs_intl_unit_grammar_data_open(const QJSIntlData *data, const QJS
         return status;
     result.indices = result.section.bytes + HEADER * 4;
     result.rows = result.indices + (size_t)result.section.count * 4;
-    if (data->strings.count > SIZE_MAX - (size_t)result.row_count)
+    buffer_size = (size_t)data->strings.count + result.row_count;
+    if (buffer_size < data->strings.count)
         return QJS_INTL_OVERFLOW;
-    checked = allocator->malloc(allocator->opaque, (size_t)data->strings.count + result.row_count);
+    checked = allocator->malloc(allocator->opaque, buffer_size);
     if (!checked)
         return QJS_INTL_NO_MEMORY;
-    memset(checked, 0, (size_t)data->strings.count + result.row_count);
+    memset(checked, 0, buffer_size);
     used = checked + data->strings.count;
     for (i = 0; i < result.section.count; i++) {
         uint32_t row = qjs_intl_read_u32(result.indices + (size_t)i * 4);

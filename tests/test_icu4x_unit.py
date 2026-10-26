@@ -137,7 +137,7 @@ int main(void) {
             sources = [str(ROOT / ('src/intl/'+name)) for name in
                        ('native/data.c', 'native/pack.c', 'common/locale-grammar.c', 'common/source-locale.c',
                         'unit/data.c', 'unit/grammar-data.c')]
-            subprocess.run(COMPILER + ['-std=c11', '-Wall', '-Werror', '-I'+str(ROOT),
+            subprocess.run(COMPILER + ['-std=c11', '-Wall', '-Wextra', '-Werror', '-I'+str(ROOT),
                            str(path/'data.c'), str(path/'probe.c')] + sources +
                            ['-o', str(path/'probe')], check=True, timeout=60)
             subprocess.run([str(path/'probe')], check=True, timeout=10)
