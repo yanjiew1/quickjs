@@ -39,7 +39,7 @@ int main(void)
     QJSIntlCollationOptions options;
     const QJSIntlBytes *available;
     QJSIntlBytes type;
-    size_t count, en, de, calls, i, fail_ids[10];
+    size_t count, en, de, calls, i, fail_ids[10], fail_count;
     uint32_t cursor = 0;
     int supported, order;
     static const uint16_t composed[] = {0xe9}, decomposed[] = {'e', 0x301};
@@ -91,11 +91,12 @@ int main(void)
 
     /* Sample early, middle and final owner allocations. Full catalogue
        construction at every allocation point would make this a slow test. */
-    for (i = 0; i < 8; i++)
+    fail_count = calls < 8 ? calls : 8;
+    for (i = 0; i < fail_count; i++)
         fail_ids[i] = i + 1;
-    fail_ids[8] = calls / 2;
-    fail_ids[9] = calls;
-    for (i = 0; i < 10; i++) {
+    fail_ids[fail_count++] = (calls + 1) / 2;
+    fail_ids[fail_count++] = calls;
+    for (i = 0; i < fail_count; i++) {
         state.calls = 0;
         state.fail_at = fail_ids[i];
         assert(qjs_intl_collation_open(&allocator, NULL, &service) == QJS_INTL_NO_MEMORY &&
