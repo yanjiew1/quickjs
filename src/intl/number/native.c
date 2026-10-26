@@ -23,6 +23,7 @@
 #include "number.h"
 #include "affix.h"
 #include "body.h"
+#include "exponent.h"
 #include "compact-data.h"
 #include "compact-format.h"
 #include "compact-family.h"
@@ -791,79 +792,6 @@ fail:
     return status;
 }
 
-/* Append the scientific separator and exponent before applying any positive
-   notation literals (for example Hindi's brackets). The style's sign belongs
-   outside that complete notation body. Use the selected digit repertoire for
-   ICU/CLDR interoperability; the current PartitionNotationSubPattern text
-   omits exponent transliteration (open ECMA-402 issue 627). Source E+000 padding
-   does not override the specification's exponent rules. */
-static QJSIntlStatus append_exponent(const QJSIntlNumberFormatter *formatter,
-                                     const QJSIntlFormatted *body, int32_t exponent,
-                                     QJSIntlFormatted *out)
-{
-    QJSIntlUTF16 separator = formatter->exponent_separator;
-    QJSIntlUTF16 minus = formatter->exponent_minus;
-    uint32_t magnitude = exponent < 0 ? (uint32_t)-(int64_t)exponent : (uint32_t)exponent;
-    uint32_t reversed[10];
-    size_t count = 0, digit_length = 0, length = body->length, i, at, part;
-    size_t extra_parts = exponent < 0 ? 3 : 2;
-    do {
-        uint32_t c = formatter->body.digits[magnitude % 10];
-        reversed[count++] = c;
-        digit_length += c > 0xffff ? 2 : 1;
-        magnitude /= 10;
-    } while (magnitude);
-    if (separator.length > formatter->body.maximum_output_length - length)
-        return QJS_INTL_OVERFLOW;
-    length += separator.length;
-    if (exponent < 0) {
-        if (minus.length > formatter->body.maximum_output_length - length)
-            return QJS_INTL_OVERFLOW;
-        length += minus.length;
-    }
-    if (digit_length > formatter->body.maximum_output_length - length)
-        return QJS_INTL_OVERFLOW;
-    length += digit_length;
-    if (length > SIZE_MAX / sizeof(uint16_t) ||
-        body->part_count > SIZE_MAX / sizeof(QJSIntlPart) - extra_parts)
-        return QJS_INTL_OVERFLOW;
-    out->text = formatter->allocator.malloc(formatter->allocator.opaque, length * sizeof(uint16_t));
-    if (!out->text)
-        return QJS_INTL_NO_MEMORY;
-    out->parts = formatter->allocator.malloc(
-        formatter->allocator.opaque, (body->part_count + extra_parts) * sizeof(QJSIntlPart));
-    if (!out->parts) {
-        qjs_intl_number_result_clear(&formatter->allocator, out);
-        return QJS_INTL_NO_MEMORY;
-    }
-    out->length = length;
-    out->part_count = body->part_count + extra_parts;
-    memcpy(out->text, body->text, body->length * sizeof(uint16_t));
-    memcpy(out->parts, body->parts, body->part_count * sizeof(QJSIntlPart));
-    at = body->length;
-    part = body->part_count;
-    memcpy(out->text + at, separator.data, separator.length * sizeof(uint16_t));
-    out->parts[part++] = (QJSIntlPart){at, at + separator.length, QJS_INTL_PART_EXPONENT_SEPARATOR};
-    at += separator.length;
-    if (exponent < 0) {
-        memcpy(out->text + at, minus.data, minus.length * sizeof(uint16_t));
-        out->parts[part++] =
-            (QJSIntlPart){at, at + minus.length, QJS_INTL_PART_EXPONENT_MINUS_SIGN};
-        at += minus.length;
-    }
-    out->parts[part] = (QJSIntlPart){at, length, QJS_INTL_PART_EXPONENT_INTEGER};
-    for (i = count; i; i--) {
-        uint32_t c = reversed[i - 1];
-        if (c > 0xffff) {
-            c -= 0x10000;
-            out->text[at++] = 0xd800 + (c >> 10);
-            out->text[at++] = 0xdc00 + (c & 1023);
-        } else
-            out->text[at++] = c;
-    }
-    return QJS_INTL_OK;
-}
-
 static int is_one(const QJSIntlDecimal *number, uint32_t shift)
 {
     int64_t exponent = (int64_t)number->exponent + shift;
@@ -1031,7 +959,10 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         (formatter->rounding.notation == QJS_INTL_NUMBER_SCIENTIFIC ||
          formatter->rounding.notation == QJS_INTL_NUMBER_ENGINEERING) &&
         (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
-        status = append_exponent(formatter, &body, rounded.exponent, &exponent_body);
+        status = qjs_intl_number_exponent_format(
+            &formatter->allocator, &body, formatter->body.digits, formatter->exponent_separator,
+            formatter->exponent_minus, rounded.exponent, formatter->body.maximum_output_length,
+            &exponent_body);
         if (!status)
             status = qjs_intl_number_affix_format(
                 &formatter->allocator, formatter->tokens + formatter->offsets[SCIENTIFIC_FORM],

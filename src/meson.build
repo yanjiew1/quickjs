@@ -251,6 +251,7 @@ if intl_enabled
       'intl/number/compact-data.c',
       'intl/number/affix.c',
       'intl/number/body.c',
+      'intl/number/exponent.c',
       'intl/number/compact-family.c',
       'intl/number/compact-format.c',
       'intl/number/currency-format.c',

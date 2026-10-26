@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include "../src/intl/number/body.h"
+#include "../src/intl/number/exponent.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -309,6 +310,52 @@ static void test_errors(const QJSIntlAllocator *allocator)
     qjs_intl_number_body_clear(allocator, NULL);
 }
 
+static void test_exponent(const QJSIntlAllocator *allocator)
+{
+    static const uint16_t separator[] = {'E'}, minus[] = {'-'};
+    static const int32_t exponents[] = {0, INT32_MIN, INT32_MAX};
+    static const char *const expected[] = {"1E0", "1E-2147483648", "1E2147483647"};
+    QJSIntlUTF16 sep = {separator, 1}, sign = {minus, 1};
+    QJSIntlNumberBody layout_value = layout();
+    QJSIntlFormatted body = format(allocator, &layout_value, "1"), result;
+    Allocation *state = allocator->opaque;
+    size_t i, j, live = state->live, calls;
+
+    for (i = 0; i < sizeof(exponents) / sizeof(exponents[0]); i++) {
+        assert(!qjs_intl_number_exponent_format(allocator, &body, layout_value.digits,
+                                                sep, sign, exponents[i], 100, &result));
+        partitioned(&result);
+        assert(result.length == strlen(expected[i]));
+        for (j = 0; j < result.length; j++)
+            assert(result.text[j] == (unsigned char)expected[i][j]);
+        assert(result.parts[result.part_count-1].type == QJS_INTL_PART_EXPONENT_INTEGER);
+        qjs_intl_formatted_clear(allocator, &result);
+    }
+    /* Supplementary exponent digits need two UTF-16 units each; the base
+       body's existing partition and ownership remain unchanged. */
+    for (i = 0; i < 10; i++)
+        layout_value.digits[i] = 0x1e950 + i;
+    assert(!qjs_intl_number_exponent_format(allocator, &body, layout_value.digits,
+                                            sep, sign, -3, 5, &result));
+    assert(result.length == 5 && result.part_count == 4);
+    assert(result.text[3] == 0xd83a && result.text[4] == 0xdd53);
+    assert(result.parts[3].start == 3 && result.parts[3].end == 5);
+    qjs_intl_formatted_clear(allocator, &result);
+    calls = state->calls;
+    assert(qjs_intl_number_exponent_format(allocator, &body, layout_value.digits,
+                                           sep, sign, -3, 4, &result) == QJS_INTL_OVERFLOW);
+    assert(state->calls == calls && !result.text && !result.parts);
+    for (i = 1; i <= 2; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_exponent_format(allocator, &body, layout_value.digits,
+                                               sep, sign, -3, 100, &result) == QJS_INTL_NO_MEMORY);
+        assert(state->live == live && !result.text && !result.parts);
+    }
+    state->fail_at = 0;
+    qjs_intl_formatted_clear(allocator, &body);
+    assert(!state->live);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -317,6 +364,7 @@ int main(void)
     test_unicode(&allocator);
     test_nonfinite(&allocator);
     test_errors(&allocator);
+    test_exponent(&allocator);
     assert(!state.live);
     return 0;
 }
