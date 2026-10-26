@@ -215,6 +215,7 @@ if intl_enabled
       'intl/datetime/name-select.c',
       'intl/datetime/local-time.c',
       'intl/datetime/native.c',
+      'intl/datetime/program-service.c',
       'intl/datetime/text.c',
       'intl/datetime/period-spacing.c',
       'intl/datetime/program-adapt.c',
