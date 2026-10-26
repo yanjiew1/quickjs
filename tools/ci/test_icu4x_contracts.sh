@@ -63,6 +63,7 @@ compile)
         src/intl/icu4x/common.c \
         tests/icu4c/helpers.c \
         tests/icu4x/collation.c
+    compile_contract unit-bridge src/intl/unit/identifier.c tests/icu4x/unit-bridge.c
     compile_contract unit-data \
         data/intl/icu4x-unit.c \
         src/intl/native/data.c \
@@ -208,7 +209,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

@@ -19,11 +19,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::plural_pattern::{Text, selector};
+use crate::plural_pattern::{SinglePattern, Text, selector, single_pattern};
 use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::relativetime::provider::*;
 use icu_locale_core::Locale;
-use icu_pattern::PatternItem;
 use icu_provider::{
     DataIdentifierBorrowed, DataPayload, DataProvider, DataRequest, marker::DataMarkerExt,
 };
@@ -66,12 +65,7 @@ mod source {
 
 type Payload = DataPayload<DatetimeRelativeSecondLongV1>;
 pub struct Handle(Vec<Payload>);
-#[repr(C)]
-pub struct Pattern {
-    prefix: Text,
-    suffix: Text,
-    has_number: u32,
-}
+pub type Pattern = SinglePattern;
 
 fn load(locale: &Locale, width: u32, unit: u32) -> Result<Payload, i32> {
     macro_rules! row {
@@ -164,33 +158,7 @@ pub unsafe extern "C" fn qjs_icu4x_relative_pattern(
             // numeric selectors. The synthetic operand only accesses that metadata;
             // it never replaces the exact quantity classified by the C evaluator.
             let pattern = if past != 0 { &row.past } else { &row.future }.get(2_u32.into(), &rules);
-            let mut result = Pattern {
-                prefix: "".into(),
-                suffix: "".into(),
-                has_number: 0,
-            };
-            for item in pattern.iter() {
-                match item {
-                    PatternItem::Literal(value) => {
-                        let target = if result.has_number == 0 {
-                            &mut result.prefix
-                        } else {
-                            &mut result.suffix
-                        };
-                        if target.length != 0 {
-                            return Err(BACKEND);
-                        }
-                        *target = value.into();
-                    }
-                    PatternItem::Placeholder(_) => {
-                        if result.has_number != 0 {
-                            return Err(BACKEND);
-                        }
-                        result.has_number = 1;
-                    }
-                }
-            }
-            Ok(result)
+            single_pattern(pattern)
         })
     }
 }

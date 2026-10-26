@@ -74,3 +74,45 @@ impl From<&str> for Text {
         }
     }
 }
+
+// Keep decoded literal spans distinct from the numeric placeholder. This is
+// shared by compact, relative and unit metadata; no caller reparses braces.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SinglePattern {
+    pub(crate) prefix: Text,
+    pub(crate) suffix: Text,
+    pub(crate) has_number: u32,
+}
+pub(crate) fn single_pattern(
+    pattern: &icu_pattern::SinglePlaceholderPattern,
+) -> Result<SinglePattern, i32> {
+    use icu_pattern::PatternItem;
+    let mut result = SinglePattern {
+        prefix: "".into(),
+        suffix: "".into(),
+        has_number: 0,
+    };
+    for item in pattern.iter() {
+        match item {
+            PatternItem::Literal(value) => {
+                let target = if result.has_number == 0 {
+                    &mut result.prefix
+                } else {
+                    &mut result.suffix
+                };
+                if target.length != 0 {
+                    return Err(BACKEND);
+                }
+                *target = value.into();
+            }
+            PatternItem::Placeholder(_) => {
+                if result.has_number != 0 {
+                    return Err(BACKEND);
+                }
+                result.has_number = 1;
+            }
+        }
+    }
+    Ok(result)
+}

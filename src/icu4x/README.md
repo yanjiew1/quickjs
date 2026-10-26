@@ -410,3 +410,13 @@ Generation does not authenticate an acquisition pin. The embedded QJIN content
 identity is descriptive; the selected ICU4X CLDR version must match the separate
 version label. The existing unit codecs/readers own the layout, not a second
 ICU4X-specific runtime parser.
+
+The private `units` feature retains public Core/Extended/Outlier payloads and
+projects six grammatical categories to borrowed prefix/suffix spans. It accepts
+only the source locale chosen by the C overlay resolver, checking all tiers
+before declining a source. It never replaces a missing exact source with an
+inherited payload. A successful category query can still use ICU4X's `other`
+fallback; the C materializer must preserve companion leaf/case provenance.
+Literal-only patterns and literal braces remain distinguishable from numeric
+placeholders. The guarded C bridge contract checks all sanctioned singles and
+widths, a later-tier exact match, output preservation and payload lifetime.

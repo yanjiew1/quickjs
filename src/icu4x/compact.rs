@@ -19,14 +19,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::plural_pattern::{Text, selector};
+use crate::plural_pattern::{SinglePattern, selector, single_pattern};
 use crate::{BACKEND, RANGE, write_result};
 use icu_decimal::{
     DecimalFormatterPreferences,
     provider::{DecimalCompactLongV1, DecimalCompactShortV1},
 };
 use icu_locale_core::{Locale, subtags::Subtag};
-use icu_pattern::PatternItem;
 use icu_provider::{
     DataErrorKind, DataIdentifierBorrowed, DataPayload, DataProvider, DataRequest,
     marker::DataMarkerExt,
@@ -49,12 +48,7 @@ pub struct Scale {
     magnitude: u32,
     exponent: u32,
 }
-#[repr(C)]
-pub struct CompactPattern {
-    prefix: Text,
-    suffix: Text,
-    has_number: u32,
-}
+pub type CompactPattern = SinglePattern;
 
 unsafe fn input<'a>(data: *const u8, length: usize) -> Result<&'a [u8], i32> {
     if length > isize::MAX as usize || (length != 0 && data.is_null()) {
@@ -193,33 +187,7 @@ pub unsafe extern "C" fn qjs_icu4x_compact_patterns_get(
             let (_, pattern) = row
                 .variable
                 .get((if exact < 0 { 2 } else { exact as u32 }).into(), &rules);
-            let mut result = CompactPattern {
-                prefix: Text::from(""),
-                suffix: Text::from(""),
-                has_number: 0,
-            };
-            for item in pattern.iter() {
-                match item {
-                    PatternItem::Literal(value) => {
-                        let target = if result.has_number == 0 {
-                            &mut result.prefix
-                        } else {
-                            &mut result.suffix
-                        };
-                        if target.length != 0 {
-                            return Err(BACKEND);
-                        }
-                        *target = value.into();
-                    }
-                    PatternItem::Placeholder(_) => {
-                        if result.has_number != 0 {
-                            return Err(BACKEND);
-                        }
-                        result.has_number = 1;
-                    }
-                }
-            }
-            Ok(result)
+            single_pattern(pattern)
         })
     }
 }

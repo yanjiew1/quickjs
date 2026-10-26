@@ -48,7 +48,8 @@ mod plural;
 #[cfg(any(
     feature = "currency_formats",
     feature = "compact_formats",
-    feature = "relatives"
+    feature = "relatives",
+    feature = "units"
 ))]
 mod plural_pattern;
 #[cfg(feature = "relatives")]
@@ -57,6 +58,8 @@ mod relative;
 mod segment;
 #[cfg(feature = "timezones")]
 mod timezone;
+#[cfg(feature = "units")]
+mod unit;
 
 #[cfg(feature = "casing")]
 mod casing;
@@ -72,7 +75,8 @@ const RANGE: i32 = -1;
     feature = "decimals",
     feature = "currency_numbers",
     feature = "collations",
-    feature = "relatives"
+    feature = "relatives",
+    feature = "units"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]
