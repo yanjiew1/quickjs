@@ -45,6 +45,7 @@ compile)
     ${CC:-cc} -std=c11 -g -O1 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare -I. \
         -fsanitize=address,undefined -fno-omit-frame-pointer \
         -c src/cutils/cutils.c -o "$output/cutils.o"
+    compile_contract collation-bridge tests/icu4x/collation-bridge.c
     compile_contract currency tests/icu4x/currency.c
     compile_contract currency-boundary -DQJS_TEST_ICU4X \
         src/intl/icu4x/common.c \
@@ -128,7 +129,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

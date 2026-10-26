@@ -23,6 +23,8 @@
 
 #[cfg(feature = "calendars")]
 mod calendar;
+#[cfg(feature = "collations")]
+mod collation;
 #[cfg(feature = "compact_formats")]
 mod compact;
 #[cfg(feature = "currency_names")]
@@ -62,7 +64,8 @@ const RANGE: i32 = -1;
     feature = "locales",
     feature = "names",
     feature = "decimals",
-    feature = "currency_numbers"
+    feature = "currency_numbers",
+    feature = "collations"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]

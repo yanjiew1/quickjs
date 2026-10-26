@@ -353,3 +353,20 @@ An absent override is distinct from an unsupported currency and leaves normal
 symbol selection to the caller. Portuguese PTE is covered independently for
 its empty currency symbol and its `$` decimal separator. No amount is formatted
 or rounded by this metadata query.
+
+## Private collation bridge
+
+`collations` uses the selected ICU4X collator and normalizer payloads directly.
+Named collation support comes from the actual metadata inventory. Its public
+constructor normally retries a failed named request with the default tailoring;
+a small provider guard prevents that retry for metadata, tailoring and
+reordering. It does not inspect private metadata bits or reject legitimate
+root/normalizer/diacritics requests.
+
+The stock bake omits CLDR search tailorings. The explicit implementation-defined
+search policy uses German phonebook tailoring for German locales (also the
+German-specific component of CLDR search), and ordinary locale tailoring
+elsewhere, honoring all explicit options. This is not complete CLDR root search
+support. Search still reports semantic `default` collation. Canonical
+normalization and counted UTF-16 comparisons stay in ICU4X; malformed surrogate
+units receive U+FFFD weights, as permitted by UCA's ill-formed-input policy.
