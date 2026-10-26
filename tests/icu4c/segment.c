@@ -107,6 +107,19 @@ static void test_segment(const QJSIntlAllocator *allocator)
     }
     qjs_intl_segment_close(service);
     assert(!state->live);
+
+    // Exercise every engine-owned constructor allocation. Prepared input and
+    // service lifetimes above are independent; partial owners must be too.
+    before = state->calls;
+    assert(!qjs_intl_segment_open(allocator, NULL, &service));
+    before = state->calls - before;
+    qjs_intl_segment_close(service);
+    for (i = 1; i <= before; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_segment_open(allocator, NULL, &service) == QJS_INTL_NO_MEMORY);
+        assert(!service && !state->live);
+    }
+    state->fail_at = 0;
 }
 
 int main(void)

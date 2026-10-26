@@ -146,3 +146,20 @@ it with combined ASan/UBSan on both the minimum and stable Rust toolchains.
 As with the other bridge foundations, this does not yet expose a complete
 `intl=icu4x` runtime profile. Its final default candidates must be admitted by
 all selected formatting modules rather than inferred from metadata membership.
+
+## Segmentation
+
+The private `segments` feature uses ICU4X's locale-aware word and sentence
+constructors, automatic complex-script word models, and grapheme rules.
+The matching CLDR registry defines locale candidates; admission verifies all
+three real constructors for every candidate and checks the data version.
+A root-only rule marker and success for an arbitrary language tag are not used
+as proofs of available locales.
+
+Preparation enumerates original UTF-16 boundaries and preceding-segment word
+statuses, then copies them into one engine-allocated immutable array. Queries
+share the provider-independent binary search with ICU4C, allocate nothing and
+retain no foreign iterator. Prepared inputs may outlive their segmenter while
+the caller keeps the original UTF-16 text alive. Tests cover Greek sentence
+tailoring, Thai words, callback aborts, lone surrogates/NUL and all engine-owned
+constructor allocation failures.

@@ -29,6 +29,8 @@ mod list;
 mod locale;
 #[cfg(feature = "locales")]
 mod locale_data;
+#[cfg(feature = "segments")]
+mod segment;
 #[cfg(feature = "timezones")]
 mod timezone;
 
