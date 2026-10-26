@@ -41,7 +41,7 @@ UNIT_ALIAS = re.compile(r"\.\./unit\[@type=(['\"])([a-z][a-z0-9-]*)\1\]")
 PER_ALIAS = re.compile(r"\.\./compoundUnit\[@type=(['\"])per\1\]")
 
 
-def collect(sources, graph=None):
+def collect(sources, graph=None, selected_groups=None, selected_fields=None):
     graph = parents.load(sources) if graph is None else graph
     schema = Schema(sources.read('common/dtd/ldml.dtd'))
     raw, aliases, length_aliases, identifiers, seen_states = [], [], [], set(), set()
@@ -154,11 +154,31 @@ def collect(sources, graph=None):
     if not identifiers:
         raise DataError('missing unit data inventory')
     groups = tuple(sorted([('unit', name) for name in identifiers] + [('compound', 'per')]))
+    fields = None if selected_fields is None else set(selected_fields)
+    if fields is not None and (not fields or fields - set(FIELDS)):
+        raise DataError('unknown selected unit field')
+    wanted = None
+    if selected_groups is not None:
+        wanted = set(selected_groups)
+        if not wanted or wanted - set(groups):
+            raise DataError('unknown selected unit group')
+        # A width/group alias can leave the requested inventory. Retain its
+        # transitive group targets so overlay provenance remains resolvable.
+        while True:
+            expanded = wanted | {target[1:] for locale, group, target, origin in aliases
+                                 if group[1:] in wanted}
+            if expanded == wanted:
+                break
+            wanted = expanded
+        groups = tuple(group for group in groups if group in wanted)
     records = SparseMaps(graph, ((width, kind, name) for width in WIDTHS for kind, name in groups), 'unit')
     for row in raw:
-        records.add(*row)
+        if ((wanted is None or row[1][1:] in wanted) and
+                (fields is None or row[2][0] in fields)):
+            records.add(*row)
     for row in aliases:
-        records.alias(*row)
+        if wanted is None or row[1][1:] in wanted:
+            records.alias(*row)
     for locale, width, other, origin in length_aliases:
         for kind, name in groups:
             records.alias(locale, (width, kind, name), (other, kind, name), origin)

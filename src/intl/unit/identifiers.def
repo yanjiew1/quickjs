@@ -22,7 +22,9 @@
  */
 
 /* ECMA-402 sanctioned single units and their CLDR data identifiers.
- * Keep canonical identifiers sorted. Included with QJS_INTL_UNIT defined. */
+ * Keep canonical identifiers sorted. Define QJS_INTL_UNIT and/or
+ * QJS_INTL_UNIT_PAIR to select the corresponding inventory. */
+#ifdef QJS_INTL_UNIT
 QJS_INTL_UNIT("acre", "area-acre")
 QJS_INTL_UNIT("bit", "digital-bit")
 QJS_INTL_UNIT("byte", "digital-byte")
@@ -68,3 +70,12 @@ QJS_INTL_UNIT("terabyte", "digital-terabyte")
 QJS_INTL_UNIT("week", "duration-week")
 QJS_INTL_UNIT("yard", "length-yard")
 QJS_INTL_UNIT("year", "duration-year")
+#endif
+
+#ifdef QJS_INTL_UNIT_PAIR
+QJS_INTL_UNIT_PAIR("kilometer", "hour", "speed-kilometer-per-hour")
+QJS_INTL_UNIT_PAIR("liter", "kilometer", "consumption-liter-per-kilometer")
+QJS_INTL_UNIT_PAIR("meter", "second", "speed-meter-per-second")
+QJS_INTL_UNIT_PAIR("mile", "gallon", "consumption-mile-per-gallon")
+QJS_INTL_UNIT_PAIR("mile", "hour", "speed-mile-per-hour")
+#endif

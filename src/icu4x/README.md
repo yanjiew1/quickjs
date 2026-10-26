@@ -388,3 +388,25 @@ construction, retaining their payload owner, so formatting does not allocate
 foreign pattern selectors. Auto lookup precedes rounding; numeric output and
 plural operands share the exact binary64 magnitude and matching digit policy.
 No additional relative-time data supplement is needed.
+
+## Unit composition supplement
+
+The `unit` supplement contains only shared strings/locales, sanctioned unit
+source layers, reachable alias targets and plural/case division grammar. It
+omits display names, gender, native plural rules and unrelated Intl sections.
+The C composer uses source layers to preserve blocked/empty overrides,
+selector origins and complete-expression fallback; public ICU4X unit payloads
+can supply decoded ordinary pattern affixes through the shared materializer.
+The canonical single/precomposed inventory is `intl/unit/identifiers.def`.
+
+Regenerate from compatible supplied CLDR files with:
+
+```sh
+python3 tools/intl/icu4x_metadata.py --component unit --sources CLDR_ROOT \
+    --output data/intl/icu4x-unit.c
+```
+
+Generation does not authenticate an acquisition pin. The embedded QJIN content
+identity is descriptive; the selected ICU4X CLDR version must match the separate
+version label. The existing unit codecs/readers own the layout, not a second
+ICU4X-specific runtime parser.
