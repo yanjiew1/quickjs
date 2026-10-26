@@ -1,4 +1,4 @@
-/* Private ICU4X currency numeric-data adapter.
+/* Private ICU4X plural currency-name and pattern metadata.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,6 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+use crate::plural_pattern::{Text, selector};
 use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::dimension::provider::currency::{
     displayname::CurrencyDisplaynameV1, extended::CurrencyExtendedDataV1,
@@ -26,11 +27,9 @@ use icu_experimental::dimension::provider::currency::{
 };
 use icu_locale_core::Locale;
 use icu_pattern::{DoublePlaceholderKey, DoublePlaceholderPattern, PatternItem};
-use icu_plurals::provider::{PluralRulesData, PluralsCardinalV1, rules::runtime::ast::Rule};
-use icu_plurals::{PluralCategory, PluralRules};
 use icu_provider::{
-    DataError, DataErrorKind, DataIdentifierBorrowed, DataMarkerAttributes, DataPayload,
-    DataProvider, DataRequest, DataResponse, marker::DataMarkerExt,
+    DataErrorKind, DataIdentifierBorrowed, DataMarkerAttributes, DataPayload, DataProvider,
+    DataRequest, marker::DataMarkerExt,
 };
 
 mod source {
@@ -44,61 +43,11 @@ mod source {
     impl_currency_patterns_data_v1!(Provider);
 }
 
-// This provider does not classify an amount. It makes the public packed-data
-// getter select a category already computed by the exact C evaluator. The
-// artificial operands below only choose explicit 0/1 or ordinary metadata.
-struct CategorySelector(PluralCategory);
-impl DataProvider<PluralsCardinalV1> for CategorySelector {
-    fn load(&self, _: DataRequest) -> Result<DataResponse<PluralsCardinalV1>, DataError> {
-        let mut rules = PluralRulesData::default();
-        let always = Some(Rule(zerovec::VarZeroVec::new()));
-        match self.0 {
-            PluralCategory::Zero => rules.zero = always,
-            PluralCategory::One => rules.one = always,
-            PluralCategory::Two => rules.two = always,
-            PluralCategory::Few => rules.few = always,
-            PluralCategory::Many => rules.many = always,
-            PluralCategory::Other => {}
-        }
-        Ok(DataResponse {
-            metadata: Default::default(),
-            payload: DataPayload::from_owned(rules),
-        })
-    }
-}
-fn selector(category: u32) -> Result<PluralRules, i32> {
-    let category = match category {
-        0 => PluralCategory::Zero,
-        1 => PluralCategory::One,
-        2 => PluralCategory::Two,
-        3 => PluralCategory::Few,
-        4 => PluralCategory::Many,
-        5 => PluralCategory::Other,
-        _ => return Err(RANGE),
-    };
-    PluralRules::try_new_cardinal_unstable(&CategorySelector(category), Default::default())
-        .map_err(|_| BACKEND)
-}
-
 pub struct CurrencyNameHandle {
     name: Option<DataPayload<CurrencyExtendedDataV1>>,
     plain: Option<DataPayload<CurrencyDisplaynameV1>>,
     pattern: DataPayload<CurrencyPatternsDataV1>,
     code: [u8; 3],
-}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Text {
-    data: *const u8,
-    length: usize,
-}
-impl From<&str> for Text {
-    fn from(value: &str) -> Self {
-        Self {
-            data: value.as_ptr(),
-            length: value.len(),
-        }
-    }
 }
 #[repr(C)]
 pub struct CurrencyName {

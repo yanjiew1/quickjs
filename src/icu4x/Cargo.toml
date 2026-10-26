@@ -32,6 +32,7 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+compact_formats = ["decimals", "dep:icu_plurals", "dep:icu_pattern"]
 currency_formats = ["currency_names", "dep:icu_plurals", "dep:icu_pattern"]
 currency_numbers = [
     "dep:icu_properties",

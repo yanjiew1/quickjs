@@ -23,6 +23,8 @@
 
 #[cfg(feature = "calendars")]
 mod calendar;
+#[cfg(feature = "compact_formats")]
+mod compact;
 #[cfg(feature = "currency_names")]
 mod currency;
 #[cfg(feature = "currency_formats")]
@@ -41,6 +43,8 @@ mod locale_data;
 mod names;
 #[cfg(feature = "plurals")]
 mod plural;
+#[cfg(any(feature = "currency_formats", feature = "compact_formats"))]
+mod plural_pattern;
 #[cfg(feature = "segments")]
 mod segment;
 #[cfg(feature = "timezones")]
