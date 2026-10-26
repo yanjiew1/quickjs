@@ -32,12 +32,22 @@
 #include "../common/range-compose.h"
 #include "../../icu4x/decimal.h"
 #include "../../icu4x/currency-number.h"
+#include "../../icu4x/currency-format.h"
+#include "../../icu4x/plural.h"
+#include "../plural/rules.h"
 #include <limits.h>
 #include <string.h>
 
 typedef struct NumberChoice {
     uint32_t source, default_system;
 } NumberChoice;
+
+typedef struct CurrencyNames {
+    QJSICU4XCurrencyNameHandle *handle;
+    QJSICU4XPlural *plural;
+    QJSICU4XPluralData rules;
+    QJSICU4XCurrencyName choices[6][3]; /* Category, then ordinary/exact 0/exact 1. */
+} CurrencyNames;
 
 struct QJSIntlNumberService {
     QJSIntlAllocator allocator;
@@ -61,6 +71,7 @@ struct QJSIntlNumberFormatter {
     QJSIntlUnaryPattern approximately;
     QJSICU4XCurrencySymbolHandle *currency_handle;
     char currency_code[3];
+    CurrencyNames *names;
 };
 
 static QJSIntlBytes text(uint32_t offset)
@@ -290,6 +301,11 @@ QJSIntlStatus qjs_intl_number_currency_supported(const QJSIntlNumberService *ser
 void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
 {
     if (formatter) {
+        if (formatter->names) {
+            qjs_icu4x_currency_name_close(formatter->names->handle);
+            qjs_icu4x_plural_close(formatter->names->plural);
+            formatter->allocator.free(formatter->allocator.opaque, formatter->names);
+        }
         qjs_icu4x_currency_symbol_close(formatter->currency_handle);
         if (formatter->tokens)
             formatter->allocator.free(formatter->allocator.opaque, formatter->tokens);
@@ -451,6 +467,103 @@ static int is_currency_token(uint32_t kind)
     return kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY && kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW;
 }
 
+static QJSIntlStatus currency_names(QJSIntlNumberFormatter *formatter, QJSIntlBytes locale,
+                                    QJSIntlBytes code)
+{
+    CurrencyNames *names;
+    QJSIntlStatus error;
+    unsigned category, exact;
+    QJSIntlPluralOperands probe = {"0", 1, 0};
+
+    names = formatter->allocator.malloc(formatter->allocator.opaque, sizeof(*names));
+    if (!names)
+        return QJS_INTL_NO_MEMORY;
+    memset(names, 0, sizeof(*names));
+    formatter->names = names;
+    error = qjs_icu4x_status(qjs_icu4x_currency_name_open((const uint8_t *)locale.data,
+                                                          locale.length, (const uint8_t *)code.data,
+                                                          code.length, &names->handle));
+    if (!error)
+        error = qjs_icu4x_status(
+            qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length, 0, &names->plural));
+    if (!error)
+        error = qjs_icu4x_status(qjs_icu4x_plural_data(names->plural, &names->rules));
+    /* Validate every rule once, including conditions a particular amount
+       would short-circuit. Snapshot choices here, never allocate Rust selectors
+       or reinterpret packed pattern data in the formatting hot path. */
+    for (category = 0; !error && category < 6; category++) {
+        if (names->rules.mask & (1u << category)) {
+            QJSICU4XRuleBytes rule = names->rules.rules[category];
+            int matches;
+            error = qjs_intl_plural_rule_evaluate(
+                (QJSIntlBytes){(const char *)rule.data, rule.length}, &probe, &matches);
+        }
+        for (exact = 0; !error && exact < 3; exact++)
+            error = qjs_icu4x_status(qjs_icu4x_currency_name(
+                names->handle, category, (int)exact - 1, &names->choices[category][exact]));
+    }
+    return error;
+}
+
+static QJSIntlStatus format_currency_name(const QJSIntlNumberFormatter *formatter,
+                                          const QJSIntlRoundedNumber *rounded,
+                                          const QJSIntlFormatted *body, QJSIntlFormatted *out)
+{
+    const CurrencyNames *names = formatter->names;
+    const QJSICU4XCurrencyName *choice;
+    QJSIntlNumberPatternToken tokens[5];
+    QJSIntlNumberAffixSymbols symbols = {0};
+    unsigned category = QJS_INTL_PLURAL_OTHER;
+    int exact = -1;
+    size_t i, count = 0;
+
+    if (rounded->kind == QJS_INTL_FINITE || rounded->kind == QJS_INTL_NEGATIVE_ZERO) {
+        const QJSIntlDecimal *number = &rounded->number.rounded;
+        QJSIntlPluralOperands operands = {rounded->number.text, rounded->number.length, 0};
+        /* Standard and scientific/engineering labels use the visible rounded
+           mantissa. Preserve fraction zeros for category evaluation, while
+           explicit 0/1 selectors use mathematical equality. This follows the
+           living draft's scaled-x ordering and native policy; ICU's high-level
+           formatter can instead choose a label from the expanded quantity. */
+        if (number->length == 1 && number->digits[0] == '0')
+            exact = 0;
+        else if (number->digits[0] == '1' && number->exponent <= 0 &&
+                 (uint64_t)number->length == (uint64_t)(1 - (int64_t)number->exponent)) {
+            for (i = 1; i < number->length && number->digits[i] == '0'; i++)
+                ;
+            if (i == number->length)
+                exact = 1;
+        }
+        for (category = 0; category < QJS_INTL_PLURAL_OTHER; category++) {
+            QJSICU4XRuleBytes rule = names->rules.rules[category];
+            QJSIntlStatus error;
+            int matches;
+            if (!(names->rules.mask & (1u << category)))
+                continue;
+            error = qjs_intl_plural_rule_evaluate(
+                (QJSIntlBytes){(const char *)rule.data, rule.length}, &operands, &matches);
+            if (error)
+                return error;
+            if (matches)
+                break;
+        }
+    }
+    choice = &names->choices[category][exact + 1];
+    symbols.currency = (QJSIntlBytes){(const char *)choice->name.data, choice->name.length};
+    for (i = 0; i < 3; i++) {
+        if (choice->literals[i].length)
+            tokens[count++] = (QJSIntlNumberPatternToken){
+                QJS_INTL_NUMBER_TOKEN_LITERAL,
+                {(const char *)choice->literals[i].data, choice->literals[i].length}};
+        if (i < 2)
+            tokens[count++] = (QJSIntlNumberPatternToken){
+                (choice->first ^ i) ? QJS_INTL_NUMBER_TOKEN_CURRENCY : QJS_INTL_NUMBER_TOKEN_NUMBER,
+                {0}};
+    }
+    return qjs_intl_number_affix_format(&formatter->allocator, tokens, count, &symbols, body, 0,
+                                        formatter->body.maximum_output_length, out);
+}
+
 static int alpha_needed(const QJSICU4XNumberAffix *form, const QJSIntlCurrencyBoundary *boundary)
 {
     size_t i, number = form->count;
@@ -552,7 +665,8 @@ static QJSIntlStatus open_affixes(QJSIntlNumberFormatter *formatter,
         forms[i] = &qjs_icu4x_number_patterns[outer].forms[i];
     formatter->body.primary_grouping = qjs_icu4x_number_patterns[outer].grouping[0];
     formatter->body.secondary_grouping = qjs_icu4x_number_patterns[outer].grouping[1];
-    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+    if (options->style == QJS_INTL_NUMBER_CURRENCY &&
+        options->currency_display != QJS_INTL_NUMBER_CURRENCY_NAME) {
         error = currency_forms(formatter, source, override, options, forms);
         if (error)
             return error;
@@ -615,9 +729,7 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return QJS_INTL_INVALID_ARGUMENT;
     /* Private implementation stage: these styles are added next; no incomplete
        ICU4X profile is exposed to JavaScript or substituted with another style. */
-    if (options->style == QJS_INTL_NUMBER_UNIT || options->notation == QJS_INTL_NUMBER_COMPACT ||
-        (options->style == QJS_INTL_NUMBER_CURRENCY &&
-         options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME))
+    if (options->style == QJS_INTL_NUMBER_UNIT || options->notation == QJS_INTL_NUMBER_COMPACT)
         return QJS_INTL_UNSUPPORTED;
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         int supported;
@@ -671,8 +783,12 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         error = open_symbols(formatter, &symbols, source);
     qjs_icu4x_decimal_close(handle);
     qjs_icu4x_currency_decimal_close(currency_handle);
-    if (!error && options->style == QJS_INTL_NUMBER_CURRENCY)
-        error = currency_symbol(formatter, tag, options);
+    if (!error && options->style == QJS_INTL_NUMBER_CURRENCY) {
+        if (options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME)
+            error = currency_names(formatter, tag, options->currency);
+        else
+            error = currency_symbol(formatter, tag, options);
+    }
     if (!error)
         error = open_affixes(formatter, source, options, override);
     if (!error)
@@ -698,7 +814,7 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                      const QJSIntlMathematicalValue *value, QJSIntlFormatted *out)
 {
     QJSIntlRoundedNumber rounded = {0};
-    QJSIntlFormatted body = {0}, exponent = {0}, notation = {0};
+    QJSIntlFormatted body = {0}, exponent = {0}, notation = {0}, signed_body = {0};
     QJSIntlStatus error;
     unsigned form;
 
@@ -741,11 +857,14 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         error = qjs_intl_number_affix_format(
             &formatter->allocator, formatter->tokens + formatter->starts[form],
             formatter->counts[form], &symbols, &body, form == QJS_INTL_NUMBER_PATTERN_PLUS,
-            formatter->body.maximum_output_length, out);
+            formatter->body.maximum_output_length, formatter->names ? &signed_body : out);
     }
+    if (!error && formatter->names)
+        error = format_currency_name(formatter, &rounded, &signed_body, out);
     qjs_intl_formatted_clear(&formatter->allocator, &body);
     qjs_intl_formatted_clear(&formatter->allocator, &exponent);
     qjs_intl_formatted_clear(&formatter->allocator, &notation);
+    qjs_intl_formatted_clear(&formatter->allocator, &signed_body);
     qjs_intl_number_round_clear(&formatter->allocator, &rounded);
     return error;
 }

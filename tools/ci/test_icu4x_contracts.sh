@@ -57,6 +57,7 @@ compile)
         src/intl/number/body.c \
         src/intl/number/exponent.c \
         src/intl/number/round.c \
+        src/intl/plural/rules.c \
         src/intl/currency/boundary-icu4x.c \
         src/intl/icu4x/common.c \
         src/intl/common/decimal.c \
