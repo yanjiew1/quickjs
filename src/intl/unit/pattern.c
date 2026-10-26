@@ -23,33 +23,11 @@
  */
 #include "pattern.h"
 #include "../common/text.h"
-#include "../../cutils/cutils.h"
 #include <string.h>
 
 QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes text, QJSIntlUnitPattern *out)
 {
     return qjs_intl_unary_pattern_parse(text, out);
-}
-
-static QJSIntlStatus noun_trim(QJSIntlBytes text, QJSIntlBytes *out)
-{
-    size_t at = 0, first = text.length, last = 0;
-    while (at < text.length) {
-        const uint8_t *end;
-        size_t start = at, remaining = text.length - at;
-        int c = unicode_from_utf8((const uint8_t *)text.data + at,
-                                   remaining < 4 ? (int)remaining : 4, &end);
-        if (c <= 0 || c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
-            return QJS_INTL_DATA_ERROR;
-        at = (const char *)end - text.data;
-        if (!qjs_intl_text_is_white_space(c)) {
-            if (!last)
-                first = start;
-            last = at;
-        }
-    }
-    *out = last ? (QJSIntlBytes){text.data + first, last - first} : (QJSIntlBytes){0};
-    return QJS_INTL_OK;
 }
 
 QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes text, QJSIntlBytes *out)
@@ -63,12 +41,12 @@ QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes text, QJSIntlBytes *out)
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_unit_pattern_parse(text, &pattern);
     if (status == QJS_INTL_UNSUPPORTED) {
-        status = noun_trim(text, &suffix);
+        status = qjs_intl_text_trim(text, &suffix);
         prefix = (QJSIntlBytes){0};
     } else if (!status) {
-        status = noun_trim(pattern.prefix, &prefix);
+        status = qjs_intl_text_trim(pattern.prefix, &prefix);
         if (!status)
-            status = noun_trim(pattern.suffix, &suffix);
+            status = qjs_intl_text_trim(pattern.suffix, &suffix);
     }
     if (status)
         return status;

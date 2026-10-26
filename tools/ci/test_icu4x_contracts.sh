@@ -62,6 +62,7 @@ compile)
         src/intl/icu4x/common.c \
         src/intl/common/decimal.c \
         src/intl/common/format-builder.c \
+        src/intl/common/text.c \
         src/intl/common/pair-pattern.c \
         src/intl/common/unary-pattern.c \
         src/intl/common/range-compose.c \

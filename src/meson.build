@@ -180,6 +180,7 @@ if intl_enabled
       'intl/plural/rules.c',
       'intl/common/unary-pattern.c',
       'intl/common/source-locale.c',
+      'intl/common/text.c',
       'intl/locale/timezone-identity.c',
       'intl/locale/type-identity.c',
       'intl/collation/match.c',

@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include "../src/intl/unit/pattern.h"
+#include "../src/intl/common/text.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -359,6 +360,21 @@ static void template_selection(const QJSIntlUnitData *data)
                      field, bytes(""), QJS_INTL_UNSUPPORTED);
 }
 
+static void scalar_trim(void)
+{
+    QJSIntlBytes result;
+    assert(!qjs_intl_text_trim(bytes(" \xc2\xa0" "a b" "\xe2\x80\xaf "), &result));
+    assert(equal(result, "a b"));
+    assert(!qjs_intl_text_trim(bytes(" \xc2\xa0"), &result) && !result.data && !result.length);
+    assert(!qjs_intl_text_trim((QJSIntlBytes){0}, &result) && !result.data);
+    assert(qjs_intl_text_trim((QJSIntlBytes){NULL, 1}, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!result.data && !result.length);
+    assert(qjs_intl_text_trim((QJSIntlBytes){"x", (size_t)PTRDIFF_MAX + 1}, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!result.data && !result.length);
+    assert(qjs_intl_text_trim((QJSIntlBytes){"\0", 1}, &result) == QJS_INTL_DATA_ERROR);
+    assert(!result.data && !result.length);
+}
+
 int main(void)
 {
     QJSIntlAllocator allocator = {NULL, allocate, NULL, release};
@@ -368,6 +384,7 @@ int main(void)
     QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE, -1};
     uint32_t head, compound;
     unsigned int calls;
+    scalar_trim();
     parser();
     division_parser();
     noun_parser();

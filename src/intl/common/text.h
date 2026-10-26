@@ -21,6 +21,7 @@
  */
 #ifndef QJS_INTL_COMMON_TEXT_H
 #define QJS_INTL_COMMON_TEXT_H
+#include "types.h"
 
 /* Unicode White_Space, distinct from ECMAScript lexical WhiteSpace. */
 static inline int qjs_intl_text_is_white_space(int c)
@@ -29,4 +30,8 @@ static inline int qjs_intl_text_is_white_space(int c)
            (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 || c == 0x202f ||
            c == 0x205f || c == 0x3000;
 }
+/* Borrow the non-White_Space span of scalar UTF-8, preserving internal
+   whitespace. Empty/all-space text yields an empty span. No allocation or
+   retention; invalid UTF-8/NUL fails and disjoint output resets on errors. */
+QJSIntlStatus qjs_intl_text_trim(QJSIntlBytes, QJSIntlBytes *out);
 #endif

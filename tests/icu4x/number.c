@@ -358,6 +358,101 @@ static void compact_numbers(const QJSIntlNumberService *service, size_t en, size
     qjs_intl_number_formatter_close(formatter);
 }
 
+static void compact_currencies(const QJSIntlNumberService *service, size_t en, size_t fr, size_t pt,
+                               size_t zh, const QJSIntlNumberOptions *initial,
+                               const QJSIntlAllocator *allocator, Allocation *state)
+{
+    QJSIntlNumberOptions options = *initial;
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result;
+    QJSIntlMathematicalValue number = value("1234");
+    static const uint16_t french[] = u"1,23\u00a0k\u00a0€";
+    size_t i, calls, format_calls, live;
+    unsigned currencies;
+
+    options.style = QJS_INTL_NUMBER_CURRENCY;
+    options.currency = bytes("USD");
+    options.notation = QJS_INTL_NUMBER_COMPACT;
+    options.digits.maximum_fraction_digits = 2;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "1234", "$1.23K");
+    ascii(formatter, allocator, "12", "$12");
+    qjs_intl_number_formatter_close(formatter);
+    options.currency_sign = QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    ascii(formatter, allocator, "-1234", "($1.23K)");
+    qjs_intl_number_formatter_close(formatter);
+    options.currency_sign = QJS_INTL_NUMBER_CURRENCY_STANDARD;
+    options.currency_display = QJS_INTL_NUMBER_CURRENCY_CODE;
+    calls = state->calls;
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter));
+    calls = state->calls - calls;
+    format_calls = state->calls;
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    format_calls = state->calls - format_calls;
+    assert(result.length == 9 && result.text[3] == 0xa0 && result.text[8] == 'K');
+    currencies = 0;
+    for (i = 0; i < result.part_count; i++)
+        currencies += result.parts[i].type == QJS_INTL_PART_CURRENCY;
+    assert(currencies == 1);
+    qjs_intl_number_result_clear(allocator, &result);
+    live = state->live;
+    for (i = 1; i <= format_calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_format(formatter, &number, &result) == QJS_INTL_NO_MEMORY);
+        assert(!result.text && !result.parts && state->live == live);
+    }
+    state->fail_at = 0;
+    qjs_intl_number_formatter_close(formatter);
+    live = state->live;
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_formatter_open(service, en, bytes("latn"), &options, &formatter) ==
+               QJS_INTL_NO_MEMORY);
+        assert(!formatter && state->live == live);
+    }
+    state->fail_at = 0;
+    /* A raw-zero baseline wins over an inherited alpha K pattern at 10^3.
+       At 10^4 the real compact family must still execute normally. */
+    assert(!qjs_intl_number_formatter_open(service, zh, bytes("latn"), &options, &formatter));
+    number = value("1000");
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    for (i = 0; i < result.part_count; i++)
+        assert(result.parts[i].type != QJS_INTL_PART_COMPACT);
+    qjs_intl_number_result_clear(allocator, &result);
+    number = value("10000");
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    assert(result.text[result.length - 1] == 0x4e07);
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    options.currency_display = QJS_INTL_NUMBER_CURRENCY_SYMBOL;
+    options.currency = bytes("EUR");
+    number = value("1234");
+    assert(!qjs_intl_number_formatter_open(service, fr, bytes("latn"), &options, &formatter));
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    assert(result.length == sizeof(french) / 2 - 1 &&
+           !memcmp(result.text, french, sizeof(french) - 2));
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    options.currency = bytes("PTE");
+    assert(!qjs_intl_number_formatter_open(service, pt, bytes("latn"), &options, &formatter));
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    assert(result.length == 8 && result.text[1] == '$' && result.text[4] == 0xa0 &&
+           result.text[7] == 'l');
+    for (i = 0; i < result.part_count; i++)
+        assert(result.parts[i].type != QJS_INTL_PART_CURRENCY);
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    /* Removed empty-symbol spacing must not count against the final bound. */
+    options.maximum_output_length = 5;
+    assert(!qjs_intl_number_formatter_open(service, pt, bytes("latn"), &options, &formatter));
+    number = value("1000");
+    assert(!qjs_intl_number_format(formatter, &number, &result));
+    assert(result.length == 5 && result.text[1] == 0xa0 && result.text[4] == 'l');
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+}
+
 static void currency_style_metadata(const QJSIntlNumberService *service,
                                     const QJSIntlBytes *available, size_t count,
                                     const QJSIntlNumberOptions *initial,
@@ -479,6 +574,8 @@ int main(void)
     currency_names(service, en, find(available, count, "ru"), &options, &allocator, &state);
     compact_numbers(service, en, find(available, count, "fr"), find(available, count, "ja"),
                     &options, &allocator, &state);
+    compact_currencies(service, en, find(available, count, "fr"), find(available, count, "pt-PT"),
+                       find(available, count, "zh"), &options, &allocator, &state);
     missing_digits(service, en, &options, &allocator, "ahom", 0x11730);
     missing_digits(service, en, &options, &allocator, "mathbold", 0x1d7ce);
     missing_digits(service, en, &options, &allocator, "gara", 0x10d40);
@@ -589,6 +686,14 @@ int main(void)
         assert(
             !qjs_intl_number_formatter_open(service, i, (QJSIntlBytes){0}, &current, &formatter));
         number = value("1234.5");
+        assert(!qjs_intl_number_format(formatter, &number, &result));
+        qjs_intl_number_result_clear(&allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+        current.style = QJS_INTL_NUMBER_CURRENCY;
+        current.currency = bytes("USD");
+        current.currency_display = QJS_INTL_NUMBER_CURRENCY_CODE;
+        assert(
+            !qjs_intl_number_formatter_open(service, i, (QJSIntlBytes){0}, &current, &formatter));
         assert(!qjs_intl_number_format(formatter, &number, &result));
         qjs_intl_number_result_clear(&allocator, &result);
         qjs_intl_number_formatter_close(formatter);
