@@ -68,6 +68,7 @@ compile)
         tests/icu4c/helpers.c \
         tests/icu4x/number.c
     compile_contract currency-number tests/icu4x/currency-number.c
+    compile_contract currency-format tests/icu4x/currency-format.c
     compile_contract decimal \
         src/intl/number/body.c \
         tests/icu4c/helpers.c \
@@ -124,7 +125,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary number; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format number; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

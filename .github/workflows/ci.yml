@@ -1165,11 +1165,11 @@ jobs:
     - name: Build the locked ICU4X bridge
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names,currency_numbers
+      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names,currency_numbers,currency_formats
     - name: Run bridge unit tests
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names,currency_numbers
+      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names,currency_numbers,currency_formats
     - name: Compile private C/Rust contracts with sanitizers
       run: |
         sh tools/ci/test_icu4x_contracts.sh compile \
