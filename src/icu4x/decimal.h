@@ -31,4 +31,27 @@ typedef struct QJSICU4XCompact QJSICU4XCompact;
 int qjs_icu4x_compact_open(const uint8_t *, size_t, uint32_t long_style, QJSICU4XCompact **);
 void qjs_icu4x_compact_close(QJSICU4XCompact *);
 int qjs_icu4x_compact_exponent(const QJSICU4XCompact *, int32_t, int32_t *);
+
+/* Resolved public decimal data, independent of numeric magnitude. The handle
+   owns the payloads; UTF-8 spans borrow it until close. Field order is decimal,
+   group, minus-prefix/suffix, plus-prefix/suffix, resolved numbering system.
+   This supplies the common exact C body formatter without converting the
+   mathematical value through ICU4X's bounded i16 decimal representation. */
+typedef struct QJSICU4XDecimal QJSICU4XDecimal;
+typedef struct QJSICU4XDecimalText {
+    const uint8_t *data;
+    size_t length;
+} QJSICU4XDecimalText;
+typedef struct QJSICU4XDecimalSymbols {
+    uint32_t digits[10];
+    uint32_t primary, secondary, minimum;
+    QJSICU4XDecimalText fields[7];
+} QJSICU4XDecimalSymbols;
+/* Empty system requests the locale default; an explicit unknown/algorithmic
+   system returns UNSUPPORTED rather than silently accepting fallback digits.
+   On failure preserve outputs. Close(NULL) is harmless. */
+int qjs_icu4x_decimal_open(const uint8_t *locale, size_t locale_length, const uint8_t *system,
+                           size_t system_length, QJSICU4XDecimal **);
+void qjs_icu4x_decimal_close(QJSICU4XDecimal *);
+int qjs_icu4x_decimal_symbols(const QJSICU4XDecimal *, QJSICU4XDecimalSymbols *);
 #endif

@@ -268,3 +268,21 @@ UTF-16 passes with one final engine allocation; missing, explicit empty and
 code-identical labels remain distinct. Private C contracts cover all six name
 types, constructor/result allocation failures, output bounds, aliases and
 formatter/result lifetimes. Full JavaScript profile composition is still pending.
+
+## Exact numeric source data
+
+The private decimal adapter wraps the public decimal constructor with a data
+inspection provider. ICU4X still resolves locale and numbering-system fallback;
+the wrapper retains only successful symbol/digit payloads and the actual digit
+identifier. An explicitly requested unsupported or algorithmic system is
+rejected instead of silently accepting fallback digits. Borrowed symbol spans
+remain valid until their owning handle closes.
+
+The common C numeric body consumes this data and an already rounded exact
+decimal. It does not pass mathematical inputs through ICU4X's i16 magnitude
+representation, so large integers remain exact. Grouping metadata preserves the
+locale's minimum for auto grouping, while the common formatter implements the
+separate ECMA always/min2 policies. This is a numeric-data foundation, not yet
+the full NumberFormat provider: nonfinite/scientific/range and outer style
+composition remain separate work. The contract includes a 40,000-digit input
+with supplementary-plane Adlam digits and UTF-16 part offsets.

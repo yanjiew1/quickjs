@@ -57,7 +57,7 @@ names = [
     "dep:zerovec",
     "dep:writeable",
 ]
-decimals = ["dep:icu_decimal", "dep:icu_locale_core"]
+decimals = ["dep:icu_decimal", "dep:icu_locale_core", "dep:icu_provider"]
 plurals = ["dep:icu_plurals", "dep:icu_plurals_data", "dep:icu_locale_core", "dep:icu_provider"]
 segments = ["dep:icu_segmenter", "dep:icu_segmenter_data", "dep:icu_locale_core"]
 locales = ["dep:icu_locale", "dep:icu_locale_data", "dep:icu_locale_core", "dep:icu_provider"]

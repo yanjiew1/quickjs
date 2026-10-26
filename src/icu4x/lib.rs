@@ -52,7 +52,8 @@ const RANGE: i32 = -1;
     feature = "calendars",
     feature = "timezones",
     feature = "locales",
-    feature = "names"
+    feature = "names",
+    feature = "decimals"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]
