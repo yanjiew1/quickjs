@@ -42,7 +42,7 @@ COMPILER = sys.argv[1:] or shlex.split(os.environ.get('CC', 'cc'))
 def fixture():
     fields = ('%', '+', '-', '', 'اس', '‰', '∞', 'NaN ??/ \"', '{1} to {0}', '~{0}', '.', ',',
               '[[:^S:]&[:^Z:]]', '[:digit:]', '\u00a0',
-              'after-match', 'after-surrounding', '\u202f')
+              'after-match', 'after-surrounding', '\u202f', ';', ':')
     patterns = ('#,##0.###', '0.###E+00', '0%', '¤0', '¤0;(¤0)', None, BLOCK, '', "'-'0")
     rows = ((fields, patterns, (3, 3, 1)),) * 2
     return {'version': '49.0.0', 'systems': ('arab', 'latn'),
@@ -103,8 +103,11 @@ int main(void) {
  assert(r->patterns[6] == QJS_ICU4X_NUMBER_BLOCKED);
  assert(r->patterns[7] == QJS_ICU4X_NUMBER_EMPTY);
  /* Numeric skeleton defaults, including E+00, do not alter ECMA's
-    exponent semantics; identical outer affixes share a pattern. */
- assert(r->patterns[0] == r->patterns[1]);
+    exponent semantics. Grouping remains specific to the selected pattern. */
+ assert(r->patterns[0] != r->patterns[1]);
+ assert(qjs_icu4x_number_patterns[r->patterns[0]].grouping[0] == 3);
+ assert(qjs_icu4x_number_patterns[r->patterns[1]].grouping[0] == 0);
+ assert(!strcmp(s+r->fields[18], ";") && !strcmp(s+r->fields[19], ":"));
  p = &qjs_icu4x_number_patterns[r->patterns[8]];
  token = &qjs_icu4x_number_tokens[p->forms[0].begin];
  /* A quoted hyphen remains literal; it is not a minusSign placeholder. */
@@ -165,11 +168,24 @@ int main(void) {
     def test_invalid_pattern_and_nul(self):
         data = fixture()
         row = data['locales'][0][1][0]
-        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*18, row[1])):
+        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*20, row[1])):
             data['locales'] = (('en', ((fields, patterns, row[2]),)*2),)
             data['currencies'] = {'en': ()}
             with self.assertRaises(ValueError):
                 number.render(data)
+
+    def test_nondecimal_grouping_bounds(self):
+        data = fixture()
+        fields, patterns, grouping = data['locales'][0][1][0]
+        patterns = patterns[:2] + ('#,0000000000%',) + patterns[3:]
+        data['locales'] = (('en', ((fields, patterns, grouping),)*2),)
+        data['currencies'] = {'en': ()}
+        with self.assertRaises(DataError):
+            number.render(data)
+        data = fixture()
+        data['currencies']['en'] = (('USD', None, None, '¤#,0000000000'),)
+        with self.assertRaises(DataError):
+            number.render(data)
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@
 #include "body.h"
 #include "exponent.h"
 #include "round.h"
+#include "../currency/boundary.h"
 #include "../icu4x/common.h"
 #include "../common/format-builder.h"
 #include "../common/pair-pattern.h"
@@ -58,6 +59,8 @@ struct QJSIntlNumberFormatter {
     QJSIntlUTF16 exponent, exponent_minus;
     QJSIntlPairPattern range;
     QJSIntlUnaryPattern approximately;
+    QJSICU4XCurrencySymbolHandle *currency_handle;
+    char currency_code[3];
 };
 
 static QJSIntlBytes text(uint32_t offset)
@@ -287,6 +290,7 @@ QJSIntlStatus qjs_intl_number_currency_supported(const QJSIntlNumberService *ser
 void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
 {
     if (formatter) {
+        qjs_icu4x_currency_symbol_close(formatter->currency_handle);
         if (formatter->tokens)
             formatter->allocator.free(formatter->allocator.opaque, formatter->tokens);
         if (formatter->storage)
@@ -295,8 +299,8 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
     }
 }
 
-/* Decode once into one engine-owned arena, using the existing bounded scalar
-   writer. No Rust payload/string pointer survives formatter construction. */
+/* Decode numeric symbols once into one engine-owned arena, using the existing
+   bounded scalar writer. Currency text has its own retained payload below. */
 static QJSIntlStatus open_symbols(QJSIntlNumberFormatter *formatter,
                                   const QJSICU4XDecimalSymbols *symbols,
                                   const QJSICU4XNumberRecord *source)
@@ -349,19 +353,216 @@ static QJSIntlStatus open_symbols(QJSIntlNumberFormatter *formatter,
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus open_affixes(QJSIntlNumberFormatter *formatter,
-                                  const QJSICU4XNumberRecord *source, unsigned style)
+static const QJSICU4XNumberCurrency *currency_override(uint32_t locale, QJSIntlBytes code)
 {
-    uint32_t outer = source->patterns[style == QJS_INTL_NUMBER_PERCENT ? 2 : 0];
+    const QJSICU4XNumberCurrencyMap *map =
+        &qjs_icu4x_number_currency_maps[qjs_icu4x_number_locales[locale].currencies];
+    size_t low = 0, high = map->count;
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        const QJSICU4XNumberCurrency *row = &qjs_icu4x_number_currencies[map->begin + middle];
+        int result = order(text(row->code), code);
+        if (!result)
+            return row;
+        if (result < 0)
+            low = middle + 1;
+        else
+            high = middle;
+    }
+    return NULL;
+}
+
+/* Public composite decimal payloads are preferred. The sparse supplement
+   supplies only currency-specific fields omitted by the public data bake;
+   it must never replace the requested digit repertoire with a default. */
+static QJSIntlStatus currency_decimal(QJSIntlBytes locale, QJSIntlBytes system, QJSIntlBytes code,
+                                      const QJSICU4XNumberRecord *source,
+                                      const QJSICU4XNumberCurrency *override,
+                                      QJSICU4XDecimalSymbols *symbols,
+                                      QJSICU4XCurrencyDecimalHandle **handle)
+{
+    QJSICU4XCurrencyDecimal decimal;
+    size_t i;
+    QJSIntlStatus error;
+    for (i = 0; i < 2; i++) {
+        if (source->fields[18 + i] < QJS_ICU4X_NUMBER_EMPTY) {
+            QJSIntlBytes field = text(source->fields[18 + i]);
+            symbols->fields[i] = (QJSICU4XDecimalText){(const uint8_t *)field.data, field.length};
+        }
+    }
+    error = qjs_icu4x_status(qjs_icu4x_currency_decimal_open(
+        (const uint8_t *)locale.data, locale.length, (const uint8_t *)system.data, system.length,
+        (const uint8_t *)code.data, code.length, handle));
+    if (error == QJS_INTL_UNSUPPORTED) {
+        if (override) {
+            uint32_t refs[2] = {override->decimal, override->group};
+            size_t i;
+            for (i = 0; i < 2; i++) {
+                if (refs[i] < QJS_ICU4X_NUMBER_EMPTY) {
+                    QJSIntlBytes field = text(refs[i]);
+                    symbols->fields[i] =
+                        (QJSICU4XDecimalText){(const uint8_t *)field.data, field.length};
+                }
+            }
+        }
+        return QJS_INTL_OK;
+    }
+    if (!error)
+        error = qjs_icu4x_status(qjs_icu4x_currency_decimal(*handle, &decimal));
+    if (!error) {
+        QJSICU4XDecimalText fields[2] = {decimal.decimal, decimal.group};
+        uint32_t refs[2] = {override ? override->decimal : QJS_ICU4X_NUMBER_ABSENT,
+                            override ? override->group : QJS_ICU4X_NUMBER_ABSENT};
+        /* A composite public payload fills an absent per-code side from
+           ordinary decimal symbols. Do not let that undo a general currency
+           symbol on that side (currencyDecimal/currencyGroup). */
+        for (i = 0; i < 2; i++)
+            if (source->fields[18 + i] >= QJS_ICU4X_NUMBER_EMPTY ||
+                refs[i] < QJS_ICU4X_NUMBER_EMPTY)
+                symbols->fields[i] = fields[i];
+        symbols->primary = decimal.primary;
+        symbols->secondary = decimal.secondary;
+        symbols->minimum = decimal.minimum;
+    }
+    return error;
+}
+
+static QJSIntlStatus currency_symbol(QJSIntlNumberFormatter *formatter, QJSIntlBytes locale,
+                                     const QJSIntlNumberOptions *options)
+{
+    QJSICU4XCurrencySymbol symbol;
+    QJSIntlStatus error;
+    memcpy(formatter->currency_code, options->currency.data, 3);
+    formatter->symbols.currency = (QJSIntlBytes){formatter->currency_code, 3};
+    if (options->currency_display == QJS_INTL_NUMBER_CURRENCY_CODE)
+        return QJS_INTL_OK;
+    error = qjs_icu4x_status(qjs_icu4x_currency_symbol_open(
+        (const uint8_t *)locale.data, locale.length, (const uint8_t *)options->currency.data, 3,
+        options->currency_display == QJS_INTL_NUMBER_CURRENCY_NARROW, &formatter->currency_handle));
+    if (!error)
+        error = qjs_icu4x_status(qjs_icu4x_currency_symbol(formatter->currency_handle, &symbol));
+    if (!error && symbol.found)
+        formatter->symbols.currency = (QJSIntlBytes){(const char *)symbol.text, symbol.length};
+    return error;
+}
+
+static int is_currency_token(uint32_t kind)
+{
+    return kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY && kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW;
+}
+
+static int alpha_needed(const QJSICU4XNumberAffix *form, const QJSIntlCurrencyBoundary *boundary)
+{
+    size_t i, number = form->count;
+    for (i = 0; i < form->count; i++) {
+        if (qjs_icu4x_number_tokens[form->begin + i].kind == QJS_INTL_NUMBER_TOKEN_NUMBER) {
+            number = i;
+            break;
+        }
+    }
+    /* Standard currency selection tests the symbol's closest character even
+       across literal spacing. Compact notation has a separate adjacency rule. */
+    for (i = 0; i < form->count; i++) {
+        if (is_currency_token(qjs_icu4x_number_tokens[form->begin + i].kind) &&
+            ((i < number && boundary->before_number) || (i > number && boundary->after_number)))
+            return 1;
+    }
+    return 0;
+}
+
+static int equals(QJSIntlBytes value, const char *expected)
+{
+    size_t length = strlen(expected);
+    return value.length == length && !memcmp(value.data, expected, length);
+}
+
+static QJSIntlStatus currency_spacing(const QJSICU4XNumberRecord *source, size_t start,
+                                      unsigned matches, QJSIntlBytes *out)
+{
+    size_t i;
+    for (i = 0; i < 3; i++)
+        if (source->fields[start + i] >= QJS_ICU4X_NUMBER_EMPTY)
+            return QJS_INTL_OK;
+    if (!equals(text(source->fields[start]), "[[:^S:]&[:^Z:]]") ||
+        !equals(text(source->fields[start + 1]), "[:digit:]"))
+        return QJS_INTL_UNSUPPORTED;
+    if (matches)
+        *out = text(source->fields[start + 2]);
+    return QJS_INTL_OK;
+}
+
+static QJSIntlStatus currency_forms(QJSIntlNumberFormatter *formatter,
+                                    const QJSICU4XNumberRecord *source,
+                                    const QJSICU4XNumberCurrency *override,
+                                    const QJSIntlNumberOptions *options,
+                                    const QJSICU4XNumberAffix **forms)
+{
+    unsigned accounting = options->currency_sign == QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+    uint32_t base = source->patterns[3 + accounting], alpha = source->patterns[5 + accounting];
+    QJSIntlCurrencyBoundary boundary;
+    QJSIntlStatus error;
+    size_t i;
+
+    if (!formatter->symbols.currency.length &&
+        source->patterns[7 + accounting] < QJS_ICU4X_NUMBER_EMPTY) {
+        base = source->patterns[7 + accounting];
+        alpha = QJS_ICU4X_NUMBER_ABSENT;
+    } else if (!accounting && override && override->pattern < QJS_ICU4X_NUMBER_EMPTY) {
+        base = override->pattern;
+        alpha = QJS_ICU4X_NUMBER_ABSENT;
+    }
+    if (base >= QJS_ICU4X_NUMBER_EMPTY)
+        return QJS_INTL_DATA_ERROR;
+    formatter->body.primary_grouping = qjs_icu4x_number_patterns[base].grouping[0];
+    formatter->body.secondary_grouping = qjs_icu4x_number_patterns[base].grouping[1];
+    error = qjs_intl_currency_boundary(formatter->symbols.currency, &boundary);
+    if (error)
+        return error;
+    for (i = 0; i < 3; i++) {
+        forms[i] = &qjs_icu4x_number_patterns[base].forms[i];
+        if (alpha < QJS_ICU4X_NUMBER_EMPTY && alpha_needed(forms[i], &boundary))
+            forms[i] = &qjs_icu4x_number_patterns[alpha].forms[i];
+    }
+    /* An available modern alpha family replaces legacy spacing even when its
+       ordinary form wins. Explicit spacing is filtered against body digits later. */
+    if (alpha < QJS_ICU4X_NUMBER_EMPTY)
+        return QJS_INTL_OK;
+    error = currency_spacing(source, 12, boundary.spacing_after_number,
+                             &formatter->symbols.before_currency);
+    if (!error)
+        error = currency_spacing(source, 15, boundary.spacing_before_number,
+                                 &formatter->symbols.after_currency);
+    return error;
+}
+
+static QJSIntlStatus open_affixes(QJSIntlNumberFormatter *formatter,
+                                  const QJSICU4XNumberRecord *source,
+                                  const QJSIntlNumberOptions *options,
+                                  const QJSICU4XNumberCurrency *override)
+{
+    uint32_t outer = source->patterns[options->style == QJS_INTL_NUMBER_PERCENT ? 2 : 0];
     uint32_t science = source->patterns[1];
     const QJSICU4XNumberAffix *forms[4];
     size_t i, j, count = 0, at = 0;
+    QJSIntlStatus error;
 
     if (outer >= QJS_ICU4X_NUMBER_EMPTY || science >= QJS_ICU4X_NUMBER_EMPTY)
         return QJS_INTL_DATA_ERROR;
     for (i = 0; i < 3; i++)
         forms[i] = &qjs_icu4x_number_patterns[outer].forms[i];
+    formatter->body.primary_grouping = qjs_icu4x_number_patterns[outer].grouping[0];
+    formatter->body.secondary_grouping = qjs_icu4x_number_patterns[outer].grouping[1];
+    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+        error = currency_forms(formatter, source, override, options, forms);
+        if (error)
+            return error;
+    }
     forms[3] = &qjs_icu4x_number_patterns[science].forms[0];
+    if (options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
+        options->notation == QJS_INTL_NUMBER_ENGINEERING) {
+        formatter->body.primary_grouping = qjs_icu4x_number_patterns[science].grouping[0];
+        formatter->body.secondary_grouping = qjs_icu4x_number_patterns[science].grouping[1];
+    }
     for (i = 0; i < 4; i++) {
         if (forms[i]->count > SIZE_MAX / sizeof(*formatter->tokens) - count)
             return QJS_INTL_OVERFLOW;
@@ -389,7 +590,9 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
 {
     QJSIntlNumberFormatter *formatter;
     const QJSICU4XNumberRecord *source;
+    const QJSICU4XNumberCurrency *override = NULL;
     QJSICU4XDecimal *handle = NULL;
+    QJSICU4XCurrencyDecimalHandle *currency_handle = NULL;
     QJSICU4XDecimalSymbols symbols;
     QJSIntlStatus error;
     QJSIntlBytes tag;
@@ -412,8 +615,17 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return QJS_INTL_INVALID_ARGUMENT;
     /* Private implementation stage: these styles are added next; no incomplete
        ICU4X profile is exposed to JavaScript or substituted with another style. */
-    if (options->style > QJS_INTL_NUMBER_PERCENT || options->notation == QJS_INTL_NUMBER_COMPACT)
+    if (options->style == QJS_INTL_NUMBER_UNIT || options->notation == QJS_INTL_NUMBER_COMPACT ||
+        (options->style == QJS_INTL_NUMBER_CURRENCY &&
+         options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME))
         return QJS_INTL_UNSUPPORTED;
+    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+        int supported;
+        error = qjs_intl_number_currency_supported(service, options->currency, &supported);
+        if (error || !supported)
+            return error ? error : QJS_INTL_INVALID_ARGUMENT;
+        override = currency_override(service->choices[locale].source, options->currency);
+    }
     if (!system.length)
         system = text(qjs_icu4x_number_systems[service->choices[locale].default_system]);
     index = system_index(system);
@@ -452,11 +664,17 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         }
         error = QJS_INTL_OK;
     }
+    if (!error && options->style == QJS_INTL_NUMBER_CURRENCY)
+        error = currency_decimal(tag, system, options->currency, source, override, &symbols,
+                                 &currency_handle);
     if (!error)
         error = open_symbols(formatter, &symbols, source);
     qjs_icu4x_decimal_close(handle);
+    qjs_icu4x_currency_decimal_close(currency_handle);
+    if (!error && options->style == QJS_INTL_NUMBER_CURRENCY)
+        error = currency_symbol(formatter, tag, options);
     if (!error)
-        error = open_affixes(formatter, source, options->style);
+        error = open_affixes(formatter, source, options, override);
     if (!error)
         error = qjs_intl_pair_pattern_parse(text(source->fields[8]), &formatter->range);
     if (!error)
@@ -512,11 +730,19 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
             memset(&notation, 0, sizeof(notation));
         }
     }
-    if (!error)
+    if (!error) {
+        QJSIntlNumberAffixSymbols symbols = formatter->symbols;
+        if (!body.length || (symbols.before_currency.length &&
+                             !qjs_icu4x_is_decimal_digit(qjs_intl_number_body_edge(&body, 1))))
+            symbols.before_currency = (QJSIntlBytes){0};
+        if (!body.length || (symbols.after_currency.length &&
+                             !qjs_icu4x_is_decimal_digit(qjs_intl_number_body_edge(&body, 0))))
+            symbols.after_currency = (QJSIntlBytes){0};
         error = qjs_intl_number_affix_format(
             &formatter->allocator, formatter->tokens + formatter->starts[form],
-            formatter->counts[form], &formatter->symbols, &body,
-            form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length, out);
+            formatter->counts[form], &symbols, &body, form == QJS_INTL_NUMBER_PATTERN_PLUS,
+            formatter->body.maximum_output_length, out);
+    }
     qjs_intl_formatted_clear(&formatter->allocator, &body);
     qjs_intl_formatted_clear(&formatter->allocator, &exponent);
     qjs_intl_formatted_clear(&formatter->allocator, &notation);

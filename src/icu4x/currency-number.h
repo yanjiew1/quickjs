@@ -64,4 +64,13 @@ int qjs_icu4x_currency_decimal_open(const uint8_t *locale, size_t locale_length,
                                     QJSICU4XCurrencyDecimalHandle **);
 void qjs_icu4x_currency_decimal_close(QJSICU4XCurrencyDecimalHandle *);
 int qjs_icu4x_currency_decimal(const QJSICU4XCurrencyDecimalHandle *, QJSICU4XCurrencyDecimal *);
+
+/* Selected ICU4X general categories for the shared currency pattern policy.
+   Empty UTF-8 is allowed; invalid/NUL text fails with output preserved. */
+typedef struct QJSICU4XCurrencyBoundary {
+    uint32_t before_number, after_number, compact_before_number;
+    uint32_t spacing_before_number, spacing_after_number;
+} QJSICU4XCurrencyBoundary;
+int qjs_icu4x_currency_boundary(const uint8_t *, size_t, QJSICU4XCurrencyBoundary *);
+int qjs_icu4x_is_decimal_digit(uint32_t);
 #endif

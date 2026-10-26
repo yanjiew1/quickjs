@@ -20,8 +20,14 @@
  * THE SOFTWARE.
  */
 #include "../src/intl/currency/boundary.h"
+#ifdef QJS_TEST_ICU4X
+#include "../src/icu4x/currency-number.h"
+#define is_decimal_digit qjs_icu4x_is_decimal_digit
+#else
 #include "../src/cutils/cutils.h"
 #include "../src/unicode/libunicode.h"
+#define is_decimal_digit lre_is_decimal_digit
+#endif
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
@@ -73,13 +79,15 @@ int main(void)
     assert(qjs_intl_currency_boundary((QJSIntlBytes){"A", 1}, NULL) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_currency_boundary((QJSIntlBytes){"A\0B", 3}, &boundary) == QJS_INTL_INVALID_ARGUMENT);
     assert(!memcmp(&boundary, &zero, sizeof(boundary)));
-    assert(lre_is_decimal_digit('0') && lre_is_decimal_digit('9'));
-    assert(lre_is_decimal_digit(0x661) && lre_is_decimal_digit(0x1d7d9));
-    assert(!lre_is_decimal_digit('A') && !lre_is_decimal_digit(0x4e00));
-    assert(!lre_is_decimal_digit(0x2160) && !lre_is_decimal_digit(0x110000));
+    assert(is_decimal_digit('0') && is_decimal_digit('9'));
+    assert(is_decimal_digit(0x661) && is_decimal_digit(0x1d7d9));
+    assert(!is_decimal_digit('A') && !is_decimal_digit(0x4e00));
+    assert(!is_decimal_digit(0x2160) && !is_decimal_digit(0x110000));
+#ifndef QJS_TEST_ICU4X
     assert(lre_is_symbol_or_separator('$') && lre_is_symbol_or_separator('+'));
     assert(lre_is_symbol_or_separator(' ') && lre_is_symbol_or_separator(0xa0));
     assert(lre_is_symbol_or_separator(0x2028) && lre_is_symbol_or_separator(0x2029));
     assert(!lre_is_symbol_or_separator('.') && !lre_is_symbol_or_separator('A'));
+#endif
     return 0;
 }

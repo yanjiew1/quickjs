@@ -904,24 +904,13 @@ static int compact_has_currency(const QJSIntlNumberFormatter *formatter,
 /* Numeric bodies can contain supplementary numbering digits or notation
    literals. Legacy spacing tests the actual boundary scalar, not finiteness
    or a part's nominal numeric type (hanidec digits are not Nd). */
-static uint32_t body_edge(const QJSIntlFormatted *body, int last)
-{
-    size_t i = last ? body->length - 1 : 0;
-    uint32_t c = body->text[i];
-    if (last && c >= 0xdc00 && c <= 0xdfff && i &&
-        body->text[i - 1] >= 0xd800 && body->text[i - 1] <= 0xdbff)
-        c = 0x10000 + ((body->text[i - 1] - 0xd800) << 10) + c - 0xdc00;
-    else if (!last && c >= 0xd800 && c <= 0xdbff && body->length > 1 &&
-             body->text[1] >= 0xdc00 && body->text[1] <= 0xdfff)
-        c = 0x10000 + ((c - 0xd800) << 10) + body->text[1] - 0xdc00;
-    return c;
-}
-
 static void filter_spacing(QJSIntlNumberAffixSymbols *symbols, const QJSIntlFormatted *body)
 {
-    if (!body->length || (symbols->before_currency.length && !lre_is_decimal_digit(body_edge(body, 1))))
+    if (!body->length || (symbols->before_currency.length &&
+                          !lre_is_decimal_digit(qjs_intl_number_body_edge(body, 1))))
         symbols->before_currency = (QJSIntlBytes){0};
-    if (!body->length || (symbols->after_currency.length && !lre_is_decimal_digit(body_edge(body, 0))))
+    if (!body->length || (symbols->after_currency.length &&
+                          !lre_is_decimal_digit(qjs_intl_number_body_edge(body, 0))))
         symbols->after_currency = (QJSIntlBytes){0};
 }
 

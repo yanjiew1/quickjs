@@ -296,3 +296,63 @@ pub unsafe extern "C" fn qjs_icu4x_currency_decimal(
         })
     }
 }
+
+#[repr(C)]
+#[derive(Default)]
+pub struct CurrencyBoundary {
+    before_number: u32,
+    after_number: u32,
+    compact_before_number: u32,
+    spacing_before_number: u32,
+    spacing_after_number: u32,
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_currency_boundary(
+    text: *const u8,
+    length: usize,
+    out: *mut CurrencyBoundary,
+) -> i32 {
+    use icu_properties::{
+        CodePointMapData,
+        props::{GeneralCategory, GeneralCategoryGroup as Group},
+    };
+    unsafe {
+        write_result(out, || {
+            let text = if length == 0 {
+                ""
+            } else {
+                std::str::from_utf8(input(text, length)?).map_err(|_| RANGE)?
+            };
+            let categories = CodePointMapData::<GeneralCategory>::new();
+            let mut result = CurrencyBoundary::default();
+            for (index, c) in text.chars().enumerate() {
+                if c == '\0' {
+                    return Err(RANGE);
+                }
+                let category = categories.get(c);
+                let letter = Group::Letter.contains(category);
+                let spacing =
+                    !(Group::Symbol.contains(category) || Group::Separator.contains(category));
+                if index == 0 {
+                    result.after_number = letter.into();
+                    result.spacing_after_number = spacing.into();
+                }
+                result.before_number = letter.into();
+                result.spacing_before_number = spacing.into();
+                // Standard alpha uses the closest scalar; compact prefixes may
+                // additionally retain a letter followed only by combining marks.
+                if letter || !Group::Mark.contains(category) {
+                    result.compact_before_number = letter.into();
+                }
+            }
+            Ok(result)
+        })
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn qjs_icu4x_is_decimal_digit(c: u32) -> i32 {
+    use icu_properties::{CodePointMapData, props::GeneralCategory};
+    i32::from(CodePointMapData::<GeneralCategory>::new().get32(c) == GeneralCategory::DecimalNumber)
+}

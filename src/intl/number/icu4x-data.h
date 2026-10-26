@@ -38,6 +38,7 @@ typedef struct QJSICU4XNumberAffix {
     uint32_t begin, count;
 } QJSICU4XNumberAffix;
 typedef struct QJSICU4XNumberPattern {
+    uint32_t grouping[2]; /* Primary/secondary sizes belong to this style. */
     QJSICU4XNumberAffix forms[3]; /* Positive, negative, explicit plus. */
 } QJSICU4XNumberPattern;
 typedef struct QJSICU4XNumberRecord {
@@ -45,7 +46,8 @@ typedef struct QJSICU4XNumberRecord {
        infinity, NaN, range template, approximation template, decimal, group. */
     /* Remaining fields are before/afterCurrency currencyMatch,
        surroundingMatch, insertBetween (three per side). */
-    uint32_t fields[18];
+    /* Finally optional general currencyDecimal and currencyGroup symbols. */
+    uint32_t fields[20];
     uint32_t patterns[9]; /* QJSIntlNumberPatternField order. */
     uint32_t grouping[3]; /* Fallback primary, secondary and minimum group sizes. */
 } QJSICU4XNumberRecord;

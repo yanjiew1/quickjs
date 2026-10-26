@@ -41,7 +41,8 @@ import parents
 from resolve import BLOCK
 
 SYMBOLS = ('percentSign', 'plusSign', 'minusSign', 'approximatelySign',
-           'exponential', 'perMille', 'infinity', 'nan', 'decimal', 'group')
+           'exponential', 'perMille', 'infinity', 'nan', 'decimal', 'group',
+           'currencyDecimal', 'currencyGroup')
 LAYOUTS = ('range', 'approximately') + tuple(
     side + '-' + field for side in ('beforeCurrency', 'afterCurrency')
     for field in ('currencyMatch', 'surroundingMatch', 'insertBetween'))
@@ -80,7 +81,8 @@ def collect(sources):
     for locale in registry.tags:
         source = aliases.get(locale, locale)
         rows.append((locale, tuple((symbol_rows[source, system][:8] + layout_rows[source, system][:2] +
-                                    symbol_rows[source, system][8:] + layout_rows[source, system][2:],
+                                    symbol_rows[source, system][8:10] + layout_rows[source, system][2:] +
+                                    symbol_rows[source, system][10:],
                                     pattern_rows[source, system],
                                     syntax.compile_pattern(pattern_rows[source, system][0])[0][:2] +
                                     (grouping[source],)) for system in systems)))
@@ -133,15 +135,17 @@ def render(data):
                 raw_patterns.add(pattern)
     compiled = {}
     for text in sorted(raw_patterns):
-        _, positive, negative, plus = syntax.compile_pattern(text)
+        numeric, positive, negative, plus = syntax.compile_pattern(text)
+        if any(value > 9 for value in numeric[:2]):
+            raise DataError('numeric pattern grouping exceeds body limits')
         # ECMA digit/grouping and exponent rules own the numeric body. LDML
         # skeleton defaults (including E+00) must not override those rules.
-        compiled[text] = (positive, negative, plus)
+        compiled[text] = (numeric[:2], (positive, negative, plus))
     patterns = tuple(sorted(set(compiled.values())))
     if not patterns:
         raise DataError('numeric supplement has no executable outer patterns')
     pattern_ids = {pattern: index for index, pattern in enumerate(patterns)}
-    affixes = tuple(sorted({affix for pattern in patterns for affix in pattern}))
+    affixes = tuple(sorted({affix for grouping, pattern in patterns for affix in pattern}))
     starts, tokens = {}, []
     for affix in affixes:
         starts[affix] = len(tokens)
@@ -204,9 +208,10 @@ def render(data):
     array('QJSICU4XNumberToken', 'qjs_icu4x_number_tokens',
           ['{'+str(kind)+', '+str(pool[text])+'}' for kind, text in tokens])
     array('QJSICU4XNumberPattern', 'qjs_icu4x_number_patterns', [
-        '{{'+', '.join('{'+str(starts[affix])+', '+str(len(affix))+'}'
-                          for affix in pattern)+'}}'
-        for pattern in patterns])
+        '{{'+', '.join(map(str, grouping))+'}, {'+
+        ', '.join('{'+str(starts[affix])+', '+str(len(affix))+'}'
+                  for affix in pattern)+'}}'
+        for grouping, pattern in patterns])
     array('QJSICU4XNumberRecord', 'qjs_icu4x_number_records', [
         '{{'+', '.join(map(str, row[:FIELD_COUNT]))+'}, {'+', '.join(map(str, row[FIELD_COUNT:FIELD_COUNT+PATTERN_COUNT]))+
         '}, {'+', '.join(map(str, row[FIELD_COUNT+PATTERN_COUNT:]))+'}}' for row in records])

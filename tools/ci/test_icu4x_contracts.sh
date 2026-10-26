@@ -46,6 +46,10 @@ compile)
         -fsanitize=address,undefined -fno-omit-frame-pointer \
         -c src/cutils/cutils.c -o "$output/cutils.o"
     compile_contract currency tests/icu4x/currency.c
+    compile_contract currency-boundary -DQJS_TEST_ICU4X \
+        src/intl/icu4x/common.c \
+        src/intl/currency/boundary-icu4x.c \
+        tests/test_intl_currency_boundary.c
     compile_contract number \
         data/intl/icu4x-number.c \
         src/intl/number/icu4x.c \
@@ -53,6 +57,7 @@ compile)
         src/intl/number/body.c \
         src/intl/number/exponent.c \
         src/intl/number/round.c \
+        src/intl/currency/boundary-icu4x.c \
         src/intl/icu4x/common.c \
         src/intl/common/decimal.c \
         src/intl/common/format-builder.c \
@@ -119,7 +124,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number number; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary number; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done
