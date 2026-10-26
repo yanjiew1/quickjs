@@ -83,7 +83,13 @@ def fraction_data(sources):
     return tuple((code,) + rows[code] for code in sorted(rows))
 
 
-def collect(sources, graph=None):
+def collect(sources, graph=None, selected_fields=FIELDS):
+    # Consumers needing only sparse overrides should not retain every currency
+    # name/symbol. Keep source validation and inheritance identical to full mode.
+    if (not selected_fields or len(set(selected_fields)) != len(selected_fields) or
+            not set(selected_fields) <= set(FIELDS)):
+        raise DataError('invalid currency field projection')
+    selected_fields = tuple(field for field in FIELDS if field in selected_fields)
     graph = parents.load(sources) if graph is None else graph
     schema = Schema(sources.read('common/dtd/ldml.dtd'))
     values, codes, records, skipped = {}, set(), 0, 0
@@ -96,7 +102,7 @@ def collect(sources, graph=None):
         groups = [(node, attributes) for node, attributes in groups if 'alt' not in attributes]
         if len(groups) > 1:
             raise DataError('repeated currency numbers container')
-        fields = {}
+        fields, seen_fields = {}, set()
         for numbers, attributes in groups:
             children = container(schema, numbers)
             if any(node.tag == 'alias' for node, attributes in children):
@@ -143,10 +149,12 @@ def collect(sources, graph=None):
                         if len(node):
                             raise DataError('unexpected currency field children')
                         key = code, field, count
-                        if key in fields:
+                        if key in seen_fields:
                             raise DataError('repeated currency field')
-                        fields[key] = node.text or ''
-                        records += 1
+                        seen_fields.add(key)
+                        if field in selected_fields:
+                            fields[key] = node.text or ''
+                            records += 1
         values[locale] = fields
 
     resolved = {}
@@ -177,7 +185,7 @@ def collect(sources, graph=None):
                   for value in {id(value): value for value in resolved.values()}.values()}
     maps = tuple(sorted(set(converted.values())))
     indices = {value: index for index, value in enumerate(maps)}
-    return {'codes': tuple(sorted(codes)), 'fields': FIELDS, 'counts': COUNTS,
+    return {'codes': tuple(sorted(codes)), 'fields': selected_fields, 'counts': COUNTS,
             'fractions': fraction_data(sources), 'maps': maps,
             'rows': tuple((locale, indices[converted[id(resolved[locale])]]) for locale in graph.tags),
             'root_names': tuple((locale, root_names[id(resolved[locale])]) for locale in graph.tags

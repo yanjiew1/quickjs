@@ -98,6 +98,28 @@ class CurrencyTests(unittest.TestCase):
         self.assertNotIn(('USD', 'name', 'one'), values) # No invented plural fallback.
         self.assertNotIn(('JPY', 'name', ''), values) # No invented currency-code text.
 
+    def test_narrow_override_projection_preserves_source_semantics(self):
+        source = Sources()
+        source.set('en', '<currency type="USD"><decimal>;</decimal><group> </group>'
+                        '<pattern>¤0.00</pattern><displayName count="one">dollar</displayName></currency>')
+        source.set('en_GB', '<currency type="USD"><decimal>' + INHERIT +
+                            '</decimal><group>' + BLOCK + '</group><pattern/></currency>')
+        fields = ('decimal', 'group', 'pattern')
+        complete = self.maps(currencies.collect(source, graph()))
+        narrow = currencies.collect(source, graph(), selected_fields=fields)
+        self.assertEqual(narrow['fields'], fields)
+        self.assertFalse(narrow['root_names'])
+        for locale, row in self.maps(narrow).items():
+            self.assertEqual(row, {key: value for key, value in complete[locale].items()
+                                   if key[1] in fields})
+        for invalid in ((), ('decimal', 'decimal'), ('unknown',)):
+            with self.assertRaises(DataError):
+                currencies.collect(source, graph(), selected_fields=invalid)
+        # Projection must not weaken validation of unselected source fields.
+        source.set('en', '<currency type="USD"><symbol>x</symbol><symbol>y</symbol></currency>')
+        with self.assertRaises(DataError):
+            currencies.collect(source, graph(), selected_fields=fields)
+
     def test_counted_name_origin_survives_equal_text_overrides(self):
         source = Sources()
         source.set('en', '<currency type="USD"><displayName count="other">US dollars</displayName></currency>')

@@ -40,12 +40,16 @@ COMPILER = sys.argv[1:] or shlex.split(os.environ.get('CC', 'cc'))
 
 
 def fixture():
-    fields = ('%', '+', '-', '', 'اس', '‰', '∞', 'NaN ??/ \"', '{1} to {0}', '~{0}', '.', ',')
+    fields = ('%', '+', '-', '', 'اس', '‰', '∞', 'NaN ??/ \"', '{1} to {0}', '~{0}', '.', ',',
+              '[[:^S:]&[:^Z:]]', '[:digit:]', '\u00a0',
+              'after-match', 'after-surrounding', '\u202f')
     patterns = ('#,##0.###', '0.###E+00', '0%', '¤0', '¤0;(¤0)', None, BLOCK, '', "'-'0")
     rows = ((fields, patterns, (3, 3, 1)),) * 2
     return {'version': '49.0.0', 'systems': ('arab', 'latn'),
             'digits': (tuple(range(0x660, 0x66a)), tuple(range(48, 58))),
-            'locales': (('en', rows), ('en-US', rows))}
+            'locales': (('en', rows), ('en-US', rows)),
+            'currencies': {'en': (('PTE', '$', ',', '¤0.00'), ('XXX', None, BLOCK, '')),
+                           'en-US': (('PTE', '$', ',', '¤0.00'), ('XXX', None, BLOCK, ''))}}
 
 
 class NumberSupplementTests(unittest.TestCase):
@@ -62,15 +66,31 @@ int main(void) {
  const QJSICU4XNumberPattern *p;
  unsigned i;
  const QJSICU4XNumberToken *token;
+ const QJSICU4XNumberCurrencyMap *map;
  assert(qjs_icu4x_number_system_count == 2 && qjs_icu4x_number_locale_count == 2);
  assert(!strcmp(s + qjs_icu4x_number_version, "49.0.0"));
  assert(!strcmp(s + qjs_icu4x_number_systems[0], "arab"));
  assert(!strcmp(s + qjs_icu4x_number_systems[1], "latn"));
  assert(!strcmp(s + a->tag, "en") && !strcmp(s + b->tag, "en-US"));
- assert(a->row == b->row);
+ assert(a->row == b->row && a->currencies == b->currencies);
+ map = &qjs_icu4x_number_currency_maps[a->currencies];
+ assert(map->count == 2);
+ {
+   const QJSICU4XNumberCurrency *c = &qjs_icu4x_number_currencies[map->begin];
+   assert(!strcmp(s+c[0].code, "PTE") && !strcmp(s+c[0].decimal, "$"));
+   assert(!strcmp(s+c[0].group, ",") && c[0].pattern < QJS_ICU4X_NUMBER_EMPTY);
+   assert(!strcmp(s+c[1].code, "XXX") && c[1].decimal == QJS_ICU4X_NUMBER_ABSENT);
+   assert(c[1].group == QJS_ICU4X_NUMBER_BLOCKED && c[1].pattern == QJS_ICU4X_NUMBER_EMPTY);
+ }
  assert(qjs_icu4x_number_rows[a->row] == qjs_icu4x_number_rows[a->row+1]);
  assert(r->fields[3] == 0);
  assert(!strcmp(s+r->fields[10], ".") && !strcmp(s+r->fields[11], ","));
+ assert(!strcmp(s+r->fields[12], "[[:^S:]&[:^Z:]]"));
+ assert(!strcmp(s+r->fields[13], "[:digit:]"));
+ assert(!strcmp(s+r->fields[14], "\302\240"));
+ assert(!strcmp(s+r->fields[15], "after-match"));
+ assert(!strcmp(s+r->fields[16], "after-surrounding"));
+ assert(!strcmp(s+r->fields[17], "\342\200\257"));
  assert(r->grouping[0] == 3 && r->grouping[1] == 3 && r->grouping[2] == 1);
  for (i = 0; i < 10; i++) {
    assert(qjs_icu4x_number_digits[0][i] == 0x660+i);
@@ -117,6 +137,15 @@ int main(void) {
             with self.assertRaises(DataError):
                 number.render(data)
 
+    def test_empty_currency_maps(self):
+        data = fixture()
+        data['currencies'] = {'en': (), 'en-US': ()}
+        generated = number.render(data)
+        self.assertIn('const QJSICU4XNumberCurrency qjs_icu4x_number_currencies[] = {\n'
+                      '    {0, 0, 0, 0},\n};', generated)
+        self.assertIn('const QJSICU4XNumberCurrencyMap qjs_icu4x_number_currency_maps[] = {\n'
+                      '    {0, 0},\n};', generated)
+
     def test_invalid_numeric_fallback(self):
         for digits in (((48,)*10, tuple(range(48, 58))),
                        (tuple(range(48, 57)), tuple(range(48, 58))),
@@ -129,14 +158,16 @@ int main(void) {
         fields, patterns, grouping = data['locales'][0][1][0]
         for grouping in ((0, 3, 1), (3, 3, 0), (3, 3, 10)):
             data['locales'] = (('en', ((fields, patterns, grouping),)*2),)
+            data['currencies'] = {'en': ()}
             with self.assertRaises(DataError):
                 number.render(data)
 
     def test_invalid_pattern_and_nul(self):
         data = fixture()
         row = data['locales'][0][1][0]
-        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*12, row[1])):
+        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*18, row[1])):
             data['locales'] = (('en', ((fields, patterns, row[2]),)*2),)
+            data['currencies'] = {'en': ()}
             with self.assertRaises(ValueError):
                 number.render(data)
 

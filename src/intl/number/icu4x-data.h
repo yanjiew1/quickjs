@@ -43,12 +43,20 @@ typedef struct QJSICU4XNumberPattern {
 typedef struct QJSICU4XNumberRecord {
     /* percent, plus, minus, approximately sign, exponential, per-mille,
        infinity, NaN, range template, approximation template, decimal, group. */
-    uint32_t fields[12];
+    /* Remaining fields are before/afterCurrency currencyMatch,
+       surroundingMatch, insertBetween (three per side). */
+    uint32_t fields[18];
     uint32_t patterns[9]; /* QJSIntlNumberPatternField order. */
     uint32_t grouping[3]; /* Fallback primary, secondary and minimum group sizes. */
 } QJSICU4XNumberRecord;
+typedef struct QJSICU4XNumberCurrency {
+    uint32_t code, decimal, group, pattern;
+} QJSICU4XNumberCurrency;
+typedef struct QJSICU4XNumberCurrencyMap {
+    uint32_t begin, count;
+} QJSICU4XNumberCurrencyMap;
 typedef struct QJSICU4XNumberLocale {
-    uint32_t tag, row; /* Row has system_count record indexes. */
+    uint32_t tag, row, currencies; /* Row has system_count record indexes. */
 } QJSICU4XNumberLocale;
 extern const char qjs_icu4x_number_strings[];
 extern const uint32_t qjs_icu4x_number_version, qjs_icu4x_number_systems[], qjs_icu4x_number_rows[];
@@ -59,6 +67,8 @@ extern const uint32_t qjs_icu4x_number_digits[][10];
 extern const QJSICU4XNumberToken qjs_icu4x_number_tokens[];
 extern const QJSICU4XNumberPattern qjs_icu4x_number_patterns[];
 extern const QJSICU4XNumberRecord qjs_icu4x_number_records[];
+extern const QJSICU4XNumberCurrency qjs_icu4x_number_currencies[];
+extern const QJSICU4XNumberCurrencyMap qjs_icu4x_number_currency_maps[];
 extern const QJSICU4XNumberLocale qjs_icu4x_number_locales[];
 extern const size_t qjs_icu4x_number_system_count, qjs_icu4x_number_locale_count;
 #endif

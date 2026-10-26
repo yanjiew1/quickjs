@@ -29,6 +29,7 @@ sign/percent token distinctions. Retain typed outer affixes and missing
 nonfinite/exponent/range symbols from matching CLDR, using existing collectors.
 """
 import availability
+import currencies
 from cldr_xml import DataError
 from embed import WRAPPER_LICENSE, c_string
 import number_layout
@@ -41,7 +42,11 @@ from resolve import BLOCK
 
 SYMBOLS = ('percentSign', 'plusSign', 'minusSign', 'approximatelySign',
            'exponential', 'perMille', 'infinity', 'nan', 'decimal', 'group')
-LAYOUTS = ('range', 'approximately')
+LAYOUTS = ('range', 'approximately') + tuple(
+    side + '-' + field for side in ('beforeCurrency', 'afterCurrency')
+    for field in ('currencyMatch', 'surroundingMatch', 'insertBetween'))
+FIELD_COUNT = len(SYMBOLS) + len(LAYOUTS)
+PATTERN_COUNT = len(number_patterns.FIELDS)
 ABSENT, BLOCKED, EMPTY = 0xffffffff, 0xfffffffe, 0xfffffffd
 
 
@@ -62,16 +67,27 @@ def collect(sources):
                    for locale, system, row in layouts['rows']}
     definitions = numbering.definitions(sources)
     grouping = dict(patterns['grouping'])
+    overrides = currencies.collect(sources, graph, selected_fields=('decimal', 'group', 'pattern'))
+    override_maps = {}
+    for locale, index in overrides['rows']:
+        codes = {}
+        for code, field, count, value in overrides['maps'][index]:
+            codes.setdefault(code, {})[field] = value
+        override_maps[locale] = tuple(
+            (code, fields.get('decimal'), fields.get('group'), fields.get('pattern'))
+            for code, fields in sorted(codes.items()))
     rows = []
     for locale in registry.tags:
         source = aliases.get(locale, locale)
-        rows.append((locale, tuple((symbol_rows[source, system][:8] + layout_rows[source, system] +
-                                    symbol_rows[source, system][8:],
+        rows.append((locale, tuple((symbol_rows[source, system][:8] + layout_rows[source, system][:2] +
+                                    symbol_rows[source, system][8:] + layout_rows[source, system][2:],
                                     pattern_rows[source, system],
                                     syntax.compile_pattern(pattern_rows[source, system][0])[0][:2] +
                                     (grouping[source],)) for system in systems)))
     return {'systems': systems, 'digits': tuple(tuple(map(ord, definitions[name][1]))
-                                               for name in systems), 'locales': tuple(rows)}
+                                               for name in systems), 'locales': tuple(rows),
+            'currencies': {locale: override_maps[aliases.get(locale, locale)]
+                           for locale in registry.tags}}
 
 
 def render(data):
@@ -101,6 +117,20 @@ def render(data):
                 raise DataError('invalid numeric fallback grouping')
             strings.update(text for text in fields if text not in (None, BLOCK))
             raw_patterns.update(text for text in patterns if text not in (None, BLOCK, ''))
+    currency_maps = data['currencies']
+    if set(currency_maps) != {tag for tag, rows in locales}:
+        raise DataError('numeric currency source coverage mismatch')
+    for rows in currency_maps.values():
+        if (tuple(sorted(row[0] for row in rows)) != tuple(row[0] for row in rows) or
+                len({row[0] for row in rows}) != len(rows)):
+            raise DataError('unordered/repeated currency override')
+        for code, decimal, group, pattern in rows:
+            if currencies.CODE.fullmatch(code) is None:
+                raise DataError('invalid currency override code')
+            strings.add(code)
+            strings.update(value for value in (decimal, group) if value not in (None, BLOCK))
+            if pattern not in (None, BLOCK, ''):
+                raw_patterns.add(pattern)
     compiled = {}
     for text in sorted(raw_patterns):
         _, positive, negative, plus = syntax.compile_pattern(text)
@@ -148,6 +178,14 @@ def render(data):
     vector_ids = {vector: index for index, vector in enumerate(unique_vectors)}
     if max(len(records), len(tokens), len(unique_vectors) * len(systems)) >= EMPTY:
         raise DataError('numeric tables exceed field bounds')
+    mapped_currencies = {
+        locale: tuple((pool[code], text_id(decimal), text_id(group), pattern_id(pattern))
+                      for code, decimal, group, pattern in rows)
+        for locale, rows in currency_maps.items()}
+    unique_currencies = tuple(sorted(set(mapped_currencies.values())))
+    currency_ids = {row: index for index, row in enumerate(unique_currencies)}
+    if sum(map(len, unique_currencies)) >= EMPTY:
+        raise DataError('numeric currency maps exceed field bounds')
     lines = [WRAPPER_LICENSE, '/* CLDR '+data['version']+'; data license: data/intl/LICENSE-CLDR. */',
              '#include "src/intl/number/icu4x-data.h"', '',
              'const char qjs_icu4x_number_strings[] =']
@@ -170,12 +208,20 @@ def render(data):
                           for affix in pattern)+'}}'
         for pattern in patterns])
     array('QJSICU4XNumberRecord', 'qjs_icu4x_number_records', [
-        '{{'+', '.join(map(str, row[:12]))+'}, {'+', '.join(map(str, row[12:21]))+
-        '}, {'+', '.join(map(str, row[21:]))+'}}' for row in records])
+        '{{'+', '.join(map(str, row[:FIELD_COUNT]))+'}, {'+', '.join(map(str, row[FIELD_COUNT:FIELD_COUNT+PATTERN_COUNT]))+
+        '}, {'+', '.join(map(str, row[FIELD_COUNT+PATTERN_COUNT:]))+'}}' for row in records])
     array('uint32_t', 'qjs_icu4x_number_rows', [
         ', '.join(map(str, row)) for row in unique_vectors])
+    array('QJSICU4XNumberCurrency', 'qjs_icu4x_number_currencies', [
+        '{'+', '.join(map(str, row))+'}' for group in unique_currencies for row in group] or ['{0, 0, 0, 0}'])
+    currency_starts, start = [], 0
+    for rows in unique_currencies:
+        currency_starts.append('{'+str(start)+', '+str(len(rows))+'}')
+        start += len(rows)
+    array('QJSICU4XNumberCurrencyMap', 'qjs_icu4x_number_currency_maps', currency_starts)
     array('QJSICU4XNumberLocale', 'qjs_icu4x_number_locales', [
-        '{'+str(pool[locale])+', '+str(vector_ids[vectors[locale]] * len(systems))+'}'
+        '{'+str(pool[locale])+', '+str(vector_ids[vectors[locale]] * len(systems))+', '+
+        str(currency_ids[mapped_currencies[locale]])+'}'
         for locale, rows in locales])
     lines += ['const uint32_t qjs_icu4x_number_version = '+str(pool[data['version']])+';',
               'const size_t qjs_icu4x_number_system_count = '+str(len(systems))+';',
