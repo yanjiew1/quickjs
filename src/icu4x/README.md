@@ -480,3 +480,13 @@ category selectors. The boundary contracts cover wide/narrow and standalone
 forms, retained spans, parent-only rejection, Chinese leap affixes and Hebrew
 literal Adar I/6a/6b forms. Canonical flexible day-period labels and exact
 minute rules remain explicit matching-CLDR companion gaps.
+
+The prepared C name owner retains only sources reachable from the selected
+calendar, including alias origins. It snapshots public spans and canonical era
+indexes before rendering; materialization makes no foreign calls or allocations.
+Hebrew Adar variants and representable lunar leap templates are decoded once.
+A public spelling replaces a selected companion leaf only when the text is
+identical, preserving catalog, interval and protected-source decisions. Modern
+Japanese era indexes come from ICU4X calendar metadata rather than a frozen list.
+The binding contract checks source selection, retained spans and allocation
+failure cleanup; the shared text tests check leap-template projection errors.

@@ -379,3 +379,51 @@ pub unsafe extern "C" fn qjs_icu4x_datetime_check_version(data: *const u8, lengt
         _ => BACKEND,
     }
 }
+
+// Calendar data owns canonical-era indexes. In particular, future Japanese
+// eras must follow the selected public payload instead of a frozen name list.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_datetime_era_index(
+    calendar: u32,
+    code: *const u8,
+    length: usize,
+    out: *mut usize,
+) -> i32 {
+    unsafe {
+        write_result(out, || {
+            if code.is_null() || length == 0 || length > isize::MAX as usize || calendar >= 16 {
+                return Err(RANGE);
+            }
+            let code = std::slice::from_raw_parts(code, length);
+            let index = match (calendar, code) {
+                (0 | 7 | 13, b"bce") => 0,
+                (0 | 7 | 13, b"ce") => 1,
+                (1, b"be")
+                | (3 | 8, b"am")
+                | (5 | 6, b"aa")
+                | (9, b"shaka")
+                | (10..=12, b"ah")
+                | (14, b"ap")
+                | (15, b"broc") => 0,
+                (5 | 6, b"am") | (10..=12, b"bh") | (15, b"roc") => 1,
+                (13, _) => {
+                    use icu_calendar::provider::{Baked, CalendarJapaneseModernV1};
+                    let response = <Baked as DataProvider<CalendarJapaneseModernV1>>::load(
+                        &Baked,
+                        Default::default(),
+                    )
+                    .map_err(|_| BACKEND)?;
+                    response
+                        .payload
+                        .get()
+                        .eras()
+                        .find(|(_, name, _)| name.as_bytes() == code)
+                        .map(|(_, _, index)| usize::from(index))
+                        .ok_or(UNSUPPORTED)?
+                }
+                _ => return Err(UNSUPPORTED),
+            };
+            Ok(index)
+        })
+    }
+}

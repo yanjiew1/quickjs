@@ -33,6 +33,7 @@ crate-type = ["staticlib"]
 [features]
 default = []
 datetimes = [
+    "dep:icu_calendar",
     "dep:zerovec",
     "dep:icu_datetime",
     "dep:icu_datetime_data",

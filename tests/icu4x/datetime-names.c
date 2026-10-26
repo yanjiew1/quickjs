@@ -51,7 +51,13 @@ int main(void)
     QJSICU4XDateMonthPattern pattern;
     static const uint8_t bad[] = {0xff};
     unsigned calendar, successes = 0;
+    size_t era;
 
+    assert(!qjs_icu4x_datetime_era_index(13, (const uint8_t *)"reiwa", 5, &era) && era == 6);
+    assert(!qjs_icu4x_datetime_era_index(7, (const uint8_t *)"bce", 3, &era) && !era);
+    assert(!qjs_icu4x_datetime_era_index(15, (const uint8_t *)"roc", 3, &era) && era == 1);
+    assert(qjs_icu4x_datetime_era_index(13, (const uint8_t *)"unknown", 7, &era) ==
+           QJS_ICU4X_UNSUPPORTED && era == 1);
     assert(!qjs_icu4x_datetime_check_version((const uint8_t *)"49.0.0", 6));
     handle = open_names("en", 7, 1, 4, 0);
     assert(!qjs_icu4x_datetime_names_meta(handle, &meta));

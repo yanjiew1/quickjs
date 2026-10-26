@@ -462,6 +462,25 @@ static void materialized_names(const QJSIntlAllocator *allocator,
     strcpy(local.month_key, "4");
     failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_UNSUPPORTED);
     assert(!probe.calls);
+    /* Numeric leap templates use the same prepared-source boundary. Bad
+       template syntax and protected leaves are rejected before projection. */
+    strcpy(local.month_key, "1");
+    local.has_cyclic_year = local.leap_month = 1;
+    data.calendar = calendar(data.names, "chinese");
+    probe.text = "[閏{0}]";
+    probe.status = QJS_INTL_OK;
+    check(allocator, numbers, &data, &local, 0, "M", "[閏1]");
+    assert(probe.calls);
+    probe.status = QJS_INTL_NO_MEMORY;
+    failure(allocator, numbers, &data, &local, "M", QJS_INTL_NO_MEMORY);
+    probe.calls = 0;
+    data.calendar = calendar(data.names, "numericbad");
+    failure(allocator, numbers, &data, &local, "M", QJS_INTL_DATA_ERROR);
+    data.calendar = calendar(data.names, "numericblocked");
+    failure(allocator, numbers, &data, &local, "M", QJS_INTL_UNSUPPORTED);
+    data.calendar = calendar(data.names, "numericempty");
+    failure(allocator, numbers, &data, &local, "M", QJS_INTL_UNSUPPORTED);
+    assert(!probe.calls);
 }
 
 static void prepared_names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,

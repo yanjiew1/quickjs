@@ -72,6 +72,36 @@ compile_number_contract()
         "$@"
 }
 
+# Date source admission and retained-name binding share the same real readers.
+compile_date_contract()
+{
+    contract_name=$1
+    shift
+    compile_contract "$contract_name" \
+        data/intl/icu4x-datetime.c \
+        src/intl/native/data.c \
+        src/intl/native/pack.c \
+        src/intl/common/locale-grammar.c \
+        src/intl/common/source-locale.c \
+        src/intl/locale/native-data.c \
+        src/intl/locale/preference-data.c \
+        src/intl/locale/numbering-data.c \
+        src/intl/datetime/available-data.c \
+        src/intl/datetime/combination-data.c \
+        src/intl/datetime/style-data.c \
+        src/intl/datetime/interval-data.c \
+        src/intl/datetime/name-data.c \
+        src/intl/datetime/era-data.c \
+        src/intl/datetime/dayperiod-data.c \
+        src/intl/datetime/dayperiod-code.c \
+        src/intl/datetime/timezone-name-data.c \
+        src/intl/datetime/timezone-presentation-data.c \
+        src/intl/display/data.c \
+        src/intl/number/symbol-data.c \
+        tests/icu4c/helpers.c \
+        "$@"
+}
+
 case ${1:-} in
 compile)
     test "$#" = 3
@@ -162,29 +192,17 @@ compile)
         tests/icu4c/helpers.c \
         tests/icu4x/duration-bridge.c
     compile_contract datetime-names tests/icu4x/datetime-names.c
-    compile_contract datetime-data \
-        data/intl/icu4x-datetime.c \
-        src/intl/native/data.c \
-        src/intl/native/pack.c \
-        src/intl/common/locale-grammar.c \
-        src/intl/common/source-locale.c \
-        src/intl/locale/native-data.c \
-        src/intl/locale/preference-data.c \
-        src/intl/locale/numbering-data.c \
-        src/intl/datetime/available-data.c \
-        src/intl/datetime/combination-data.c \
-        src/intl/datetime/style-data.c \
-        src/intl/datetime/interval-data.c \
-        src/intl/datetime/name-data.c \
-        src/intl/datetime/era-data.c \
-        src/intl/datetime/dayperiod-data.c \
-        src/intl/datetime/dayperiod-code.c \
-        src/intl/datetime/timezone-name-data.c \
-        src/intl/datetime/timezone-presentation-data.c \
-        src/intl/display/data.c \
-        src/intl/number/symbol-data.c \
-        tests/icu4c/helpers.c \
-        tests/icu4x/datetime-data.c
+    compile_date_contract datetime-data tests/icu4x/datetime-data.c
+    # Keep the isolated name contract independent of calendar arithmetic by
+    # discarding unused facade entry points; production uses its selected backend.
+    compile_date_contract datetime-binding -ffunction-sections -fdata-sections -Wl,--gc-sections \
+        src/intl/datetime/names-icu4x.c \
+        src/intl/datetime/calendar-identity.c \
+        src/intl/datetime/name-select.c \
+        src/intl/locale/type-identity.c \
+        src/intl/icu4x/common.c \
+        src/calendar/calendar.c \
+        tests/icu4x/datetime-binding.c
     compile_contract relative-bridge tests/icu4x/relative-bridge.c
     compile_contract currency tests/icu4x/currency.c
     compile_contract currency-boundary -DQJS_TEST_ICU4X \
@@ -271,7 +289,37 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose duration duration-bridge datetime-data datetime-names; do
+    for name in \
+        locale \
+        segment \
+        plural-data \
+        plural-service \
+        list \
+        casing \
+        names \
+        currency \
+        display \
+        decimal \
+        currency-number \
+        currency-boundary \
+        currency-format \
+        compact \
+        number \
+        collation-bridge \
+        collation \
+        collation-inventory \
+        relative-bridge \
+        relative \
+        relative-extra \
+        unit-data \
+        unit-bridge \
+        unit-compose \
+        duration \
+        duration-bridge \
+        datetime-data \
+        datetime-names \
+        datetime-binding
+    do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

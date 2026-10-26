@@ -179,7 +179,30 @@ static QJSIntlStatus era(const QJSIntlDateTextData *data, const QJSIntlDateCalen
     return status;
 }
 
+static QJSIntlStatus selected_text(const QJSIntlDateTextData *data,
+                                   const QJSIntlDateCalendarFields *local,
+                                   const QJSIntlDatePatternToken *token,
+                                   const QJSIntlDateNameSelection *selected, QJSIntlBytes *out)
+{
+    *out = selected->entry.text;
+    if (data->materialize) {
+        QJSIntlBytes prepared = {0};
+        QJSIntlStatus status = data->materialize(data->materialize_opaque, local, token,
+                                                 selected, &prepared);
+        if (!status) {
+            if (!prepared.data || prepared.length != selected->entry.text.length ||
+                memcmp(prepared.data, selected->entry.text.data, prepared.length))
+                return QJS_INTL_DATA_ERROR;
+            *out = prepared;
+        } else if (status != QJS_INTL_UNSUPPORTED) {
+            return status;
+        }
+    }
+    return QJS_INTL_OK;
+}
+
 static QJSIntlStatus leap_affix(const QJSIntlDateTextData *data,
+                                const QJSIntlDateCalendarFields *local,
                                 const QJSIntlDatePatternToken *token, QJSIntlUnaryPattern *out)
 {
     QJSIntlCalendarNameGroup group = {0};
@@ -207,7 +230,15 @@ static QJSIntlStatus leap_affix(const QJSIntlDateTextData *data,
         return status;
     if (entry.blocked || !entry.text.length)
         return QJS_INTL_UNSUPPORTED;
-    return qjs_intl_unary_pattern_parse(entry.text, out);
+    status = qjs_intl_unary_pattern_parse(entry.text, out);
+    if (!status && data->materialize) {
+        QJSIntlDateNameSelection source = {QJS_INTL_DATE_NAME_TEXT, entry, origin};
+        QJSIntlBytes prepared;
+        status = selected_text(data, local, token, &source, &prepared);
+        if (!status)
+            status = qjs_intl_unary_pattern_parse(prepared, out);
+    }
+    return status;
 }
 
 static QJSIntlStatus named(const QJSIntlDateTextData *data, const QJSIntlDateCalendarFields *local,
@@ -265,23 +296,13 @@ static QJSIntlStatus named(const QJSIntlDateTextData *data, const QJSIntlDateCal
 selected_name:
     if (selected.state != QJS_INTL_DATE_NAME_TEXT)
         return QJS_INTL_UNSUPPORTED;
-    out->text = selected.entry.text;
-    if (data->materialize) {
-        QJSIntlBytes prepared = {0};
-        status = data->materialize(data->materialize_opaque, local, token, &selected, &prepared);
-        if (!status) {
-            if (!prepared.data || prepared.length != selected.entry.text.length ||
-                memcmp(prepared.data, selected.entry.text.data, prepared.length))
-                return QJS_INTL_DATA_ERROR;
-            out->text = prepared;
-        } else if (status != QJS_INTL_UNSUPPORTED) {
-            return status;
-        }
-    }
+    status = selected_text(data, local, token, &selected, &out->text);
+    if (status)
+        return status;
     /* Chinese/Dangi have a repeated nominal month. Hebrew's inserted Adar has
        an independent month key/name, and must not receive a lunar prefix. */
     if ((token->symbol == 'M' || token->symbol == 'L') && local->has_cyclic_year && local->leap_month)
-        return leap_affix(data, token, &out->affix);
+        return leap_affix(data, local, token, &out->affix);
     return QJS_INTL_OK;
 }
 
@@ -412,7 +433,7 @@ static QJSIntlStatus admit_field(const QJSIntlDateTextData *data, QJSCalendarId 
                             calendar == QJS_CAL_ETHIOPIC || calendar == QJS_CAL_HEBREW ? 13 : 12;
         if (token->width <= 2) {
             QJSIntlUnaryPattern affix;
-            return leap_affix(data, token, &affix);
+            return leap_affix(data, &local, token, &affix);
         }
         for (i = 1; i <= last; i++) {
             small_key(local.month_key, i);
@@ -427,7 +448,7 @@ static QJSIntlStatus admit_field(const QJSIntlDateTextData *data, QJSCalendarId 
         }
         if (calendar == QJS_CAL_CHINESE || calendar == QJS_CAL_DANGI) {
             QJSIntlUnaryPattern affix;
-            return leap_affix(data, token, &affix);
+            return leap_affix(data, &local, token, &affix);
         }
     }
     return QJS_INTL_OK;
@@ -570,7 +591,7 @@ QJSIntlStatus qjs_intl_date_text_format(const QJSIntlAllocator *allocator,
             status = named(data, local, subsecond, &pattern->tokens[i], &pieces[i]);
         else if (!status && (symbol == 'M' || symbol == 'L') &&
                  local->has_cyclic_year && local->leap_month)
-            status = leap_affix(data, &pattern->tokens[i], &pieces[i].affix);
+            status = leap_affix(data, local, &pattern->tokens[i], &pieces[i].affix);
         if (status)
             goto done;
     }

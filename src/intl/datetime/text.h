@@ -29,14 +29,13 @@
 #include "era-data.h"
 #include "name-select.h"
 
-/* Optional prepared foreign-name projection. Source selection, explicit
-   blocked/empty semantics have completed. Admission may supply synthetic
-   locals containing only the relevant era/month/weekday/cyclic/period facts;
-   do not require a complete valid date. OK supplies
-   the same decoded text from another immutable owner: catalog/range proofs
-   remain tied to that source leaf. UNSUPPORTED keeps the source name; other
-   errors propagate. Allocate/retain nothing; the immutable binding and returned
-   spans outlive rendering and name-admission caches. */
+/* Optional prepared projection for names and leaf templates. Source selection
+   and blocked/empty handling have completed; template syntax is checked first.
+   Admission may supply synthetic locals containing only relevant name facts,
+   not a complete valid date. OK supplies the same UTF-8 source text from another
+   immutable owner, preserving catalog/range proofs. UNSUPPORTED keeps the
+   source; other errors propagate. Allocate/retain nothing. The binding and
+   returned spans outlive rendering and name-admission caches. */
 typedef QJSIntlStatus (*QJSIntlDateNameMaterializer)(void *,
                                                    const QJSIntlDateCalendarFields *,
                                                    const QJSIntlDatePatternToken *,

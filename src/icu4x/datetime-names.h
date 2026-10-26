@@ -70,5 +70,8 @@ int qjs_icu4x_datetime_names_text(const QJSICU4XDateNames *, size_t index, QJSIC
    C ordinal months (notably Hebrew 6a/6b). A literal-only pattern has no value. */
 int qjs_icu4x_datetime_month_pattern(const QJSICU4XDateNames *, uint32_t phase,
                                      QJSICU4XDateMonthPattern *);
+/* Canonical era code to the selected public fixed-era index. Japanese modern
+   indexes come from calendar metadata; this performs no date conversion. */
+int qjs_icu4x_datetime_era_index(uint32_t calendar, const uint8_t *, size_t, size_t *);
 int qjs_icu4x_datetime_check_version(const uint8_t *, size_t);
 #endif
