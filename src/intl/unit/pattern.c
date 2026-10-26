@@ -30,10 +30,28 @@ QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes text, QJSIntlUnitPattern 
     return qjs_intl_unary_pattern_parse(text, out);
 }
 
+QJSIntlStatus qjs_intl_unit_pattern_noun(const QJSIntlUnitPattern *pattern, QJSIntlBytes *out)
+{
+    QJSIntlBytes prefix, suffix;
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !pattern)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_text_trim(pattern->prefix, &prefix);
+    if (!status)
+        status = qjs_intl_text_trim(pattern->suffix, &suffix);
+    if (status)
+        return status;
+    if (!!prefix.length == !!suffix.length)
+        return QJS_INTL_UNSUPPORTED;
+    *out = prefix.length ? prefix : suffix;
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes text, QJSIntlBytes *out)
 {
     QJSIntlUnitPattern pattern;
-    QJSIntlBytes prefix, suffix;
     QJSIntlStatus status;
     if (out)
         memset(out, 0, sizeof(*out));
@@ -41,19 +59,10 @@ QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes text, QJSIntlBytes *out)
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_unit_pattern_parse(text, &pattern);
     if (status == QJS_INTL_UNSUPPORTED) {
-        status = qjs_intl_text_trim(text, &suffix);
-        prefix = (QJSIntlBytes){0};
-    } else if (!status) {
-        status = qjs_intl_text_trim(pattern.prefix, &prefix);
-        if (!status)
-            status = qjs_intl_text_trim(pattern.suffix, &suffix);
+        pattern = (QJSIntlUnitPattern){text, {0}};
+        status = QJS_INTL_OK;
     }
-    if (status)
-        return status;
-    if (!!prefix.length == !!suffix.length)
-        return QJS_INTL_UNSUPPORTED;
-    *out = prefix.length ? prefix : suffix;
-    return QJS_INTL_OK;
+    return status ? status : qjs_intl_unit_pattern_noun(&pattern, out);
 }
 
 static int equal(QJSIntlBytes a, QJSIntlBytes b)
@@ -89,15 +98,47 @@ typedef struct Selection {
     QJSIntlBytes noun;
 } Selection;
 
+static QJSIntlStatus materialize(const QJSIntlUnitPatternRequest *request,
+                                 const QJSIntlUnitOverlay *layer, const QJSIntlUnitForm *form,
+                                 QJSIntlUnitMaterializedPattern *out)
+{
+    QJSIntlUnitMaterializedPattern fallback = {0};
+    QJSIntlStatus status = qjs_intl_unit_pattern_parse(form->text, &fallback.pattern);
+    /* Substitution changes the representation, not the source admission rules:
+       malformed consulted templates remain errors before any public adapter. */
+    if (status == QJS_INTL_UNSUPPORTED)
+        fallback.pattern.prefix = form->text;
+    else if (status)
+        return status;
+    else
+        fallback.has_number = 1;
+    *out = fallback;
+    /* Empty leaves shadow inheritance and remain ineligible. A public fallback
+       must not turn an explicit empty source override into a visible pattern. */
+    if (request->materialize && form->text.length) {
+        status = request->materialize(request->materialize_opaque, layer, form, out);
+        if (status == QJS_INTL_UNSUPPORTED) {
+            *out = fallback;
+            return QJS_INTL_OK;
+        }
+        if (!status && (out->has_number > 1 || (!out->has_number && out->pattern.suffix.length) ||
+                        (out->pattern.prefix.length && !out->pattern.prefix.data) ||
+                        (out->pattern.suffix.length && !out->pattern.suffix.data)))
+            return QJS_INTL_DATA_ERROR;
+        return status;
+    }
+    return QJS_INTL_OK;
+}
+
 static QJSIntlStatus candidate(const QJSIntlUnitData *data, const QJSIntlUnitOverlay *layer,
                                QJSIntlUnitCount count, const QJSIntlBytes *cases,
-                               unsigned int case_count, uint32_t shadow,
-                               int noun, Selection *out)
+                               unsigned int case_count, uint32_t shadow, int noun,
+                               const QJSIntlUnitPatternRequest *request, Selection *out)
 {
     unsigned int j;
     for (j = 0; j < case_count; j++) {
         QJSIntlUnitForm form;
-        QJSIntlUnitPattern pattern = {0};
+        QJSIntlUnitMaterializedPattern prepared;
         QJSIntlBytes text = {0};
         QJSIntlStatus status;
         if (shadow & (UINT32_C(1) << ((count - 1) * case_count + j)))
@@ -109,14 +150,17 @@ static QJSIntlStatus candidate(const QJSIntlUnitData *data, const QJSIntlUnitOve
             return status;
         if (form.state == QJS_INTL_UNIT_FORM_BLOCKED)
             continue;
-        status = noun ? qjs_intl_unit_noun_parse(form.text, &text)
-                      : qjs_intl_unit_pattern_parse(form.text, &pattern);
+        status = materialize(request, layer, &form, &prepared);
+        if (!status)
+            status = noun                  ? qjs_intl_unit_pattern_noun(&prepared.pattern, &text)
+                     : prepared.has_number ? QJS_INTL_OK
+                                           : QJS_INTL_UNSUPPORTED;
         if (status == QJS_INTL_UNSUPPORTED)
             continue;
         if (status)
             return status;
-        out->selected = (QJSIntlSelectedUnitPattern){pattern, form, layer->locale, layer->width,
-                                                      layer->group};
+        out->selected = (QJSIntlSelectedUnitPattern){prepared.pattern, form, layer->locale,
+                                                     layer->width, layer->group};
         out->noun = text;
         return QJS_INTL_OK;
     }
@@ -151,8 +195,8 @@ static QJSIntlStatus select_pattern(const QJSIntlUnitData *data, uint32_t head,
         if (group.kind != QJS_INTL_UNIT_GROUP_SINGLE)
             return QJS_INTL_INVALID_ARGUMENT;
         if (request->resolve && request->exact >= 0) {
-            status = candidate(data, &layer, request->exact + QJS_INTL_UNIT_COUNT_EXACT_ZERO,
-                               cases, case_count, shadow, noun, out);
+            status = candidate(data, &layer, request->exact + QJS_INTL_UNIT_COUNT_EXACT_ZERO, cases,
+                               case_count, shadow, noun, request, out);
             if (status != QJS_INTL_UNSUPPORTED)
                 return status;
         }
@@ -163,11 +207,12 @@ static QJSIntlStatus select_pattern(const QJSIntlUnitData *data, uint32_t head,
             if (!category_valid(category))
                 return QJS_INTL_DATA_ERROR;
         }
-        status = candidate(data, &layer, category, cases, case_count, shadow, noun, out);
+        status = candidate(data, &layer, category, cases, case_count, shadow, noun, request, out);
         if (status != QJS_INTL_UNSUPPORTED)
             return status;
         if (category != QJS_INTL_UNIT_COUNT_OTHER) {
-            status = candidate(data, &layer, QJS_INTL_UNIT_COUNT_OTHER, cases, case_count, shadow, noun, out);
+            status = candidate(data, &layer, QJS_INTL_UNIT_COUNT_OTHER, cases, case_count, shadow,
+                               noun, request, out);
             if (status != QJS_INTL_UNSUPPORTED)
                 return status;
         }

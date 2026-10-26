@@ -44,8 +44,29 @@ QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes, QJSIntlUnitPattern *);
    require disjoint output and reset non-NULL output on failure. */
 QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes, QJSIntlBytes *);
 
+/* Extract an edge noun from decoded affixes, trimming only surrounding Unicode
+   whitespace. Exactly one nonempty side is required. This also handles a
+   literal-only prefix; literal braces are never parsed as placeholders. */
+QJSIntlStatus qjs_intl_unit_pattern_noun(const QJSIntlUnitPattern *, QJSIntlBytes *);
+
 typedef QJSIntlStatus (*QJSIntlUnitCategoryResolver)(void *opaque, QJSIntlBytes source_locale,
                                                    QJSIntlUnitCount *category);
+
+typedef struct QJSIntlUnitMaterializedPattern {
+    QJSIntlUnitPattern pattern;
+    unsigned has_number; /* 0: literal-only prefix, empty suffix; 1: numeric slot. */
+} QJSIntlUnitMaterializedPattern;
+
+/* Optional public-data adapter, after blocked/empty source semantics and before
+   numeric/noun eligibility. Source template syntax remains validated.
+   It sees the exact selected source layer/leaf.
+   OK supplies borrowed decoded scalar UTF-8 affixes (literal braces remain text);
+   UNSUPPORTED declines the substitution and retains the supplied raw form.
+   Other errors propagate. The callback allocates/retains nothing; its state
+   outlives selection, and returned spans outlive any selected result. */
+typedef QJSIntlStatus (*QJSIntlUnitPatternMaterializer)(void *, const QJSIntlUnitOverlay *,
+                                                        const QJSIntlUnitForm *,
+                                                        QJSIntlUnitMaterializedPattern *);
 
 typedef struct QJSIntlUnitPatternRequest {
     QJSIntlBytes case_name; /* Empty means nominative, including its legacy absent case. */
@@ -53,10 +74,12 @@ typedef struct QJSIntlUnitPatternRequest {
     void *opaque;
     QJSIntlUnitCount category;
     int exact;
+    QJSIntlUnitPatternMaterializer materialize;
+    void *materialize_opaque;
 } QJSIntlUnitPatternRequest;
 
 typedef struct QJSIntlSelectedUnitPattern {
-    QJSIntlUnitPattern pattern;
+    QJSIntlUnitPattern pattern; /* Prepared result; form.text remains original source text. */
     QJSIntlUnitForm form;
     QJSIntlBytes locale;
     QJSIntlUnitWidth width;

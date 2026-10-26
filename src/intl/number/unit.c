@@ -166,7 +166,7 @@ static QJSIntlStatus format_composition(const QJSIntlNumberUnit *unit,
        placeholder is in the middle. Retry a coherent root expression instead
        of dropping either side of the name or fabricating a denominator. */
     if (!status)
-        status = qjs_intl_unit_noun_parse(numerator.form.text, &noun);
+        status = qjs_intl_unit_pattern_noun(&numerator.pattern, &noun);
     if (status)
         return status;
     status = qjs_intl_unit_template_select(&unit->data, plan->denominator, QJS_INTL_UNIT_PER_PATTERN,

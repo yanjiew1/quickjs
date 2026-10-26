@@ -119,8 +119,8 @@ static void resolved(const QJSIntlUnitData *units, const QJSIntlUnitGrammarData 
 {
     QJSIntlNumberUnit unit;
     SourceRules rules = {0};
-    QJSIntlUnitPatternRequest request = {{0}, source_category, &rules,
-                                         QJS_INTL_UNIT_COUNT_NONE, -1};
+    QJSIntlUnitPatternRequest request = {
+        {0}, source_category, &rules, QJS_INTL_UNIT_COUNT_NONE, -1, NULL, NULL};
     uint16_t text = '2';
     QJSIntlPart part = {0, 1, QJS_INTL_PART_INTEGER};
     QJSIntlFormatted body = {&text, 1, &part, 1}, result;

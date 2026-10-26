@@ -210,7 +210,7 @@ static void noun_parser(void)
 static QJSIntlStatus fixed_noun(const QJSIntlUnitData *data, uint32_t head, QJSIntlBytes case_name,
                                 QJSIntlUnitCount category, QJSIntlSelectedUnitNoun *out)
 {
-    QJSIntlUnitPatternRequest request = {case_name, NULL, NULL, category, -1};
+    QJSIntlUnitPatternRequest request = {case_name, NULL, NULL, category, -1, NULL, NULL};
     return qjs_intl_unit_noun_select(data, head, &request, out);
 }
 
@@ -229,7 +229,8 @@ static void noun_selection(const QJSIntlUnitData *data)
 {
     QJSIntlSelectedUnitNoun result, zero = {0};
     Rules rules = {0, 1, QJS_INTL_OK, QJS_INTL_UNIT_COUNT_OTHER};
-    QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE, -1};
+    QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE,
+                                         -1,  NULL,     NULL};
     uint32_t head = head_for(data, "en-GB", "length-denominator"), compound;
     expect_noun(data, "en-GB", "length-denominator", "", QJS_INTL_UNIT_COUNT_ONE,
                 "DENOMINATOR_ONE", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
@@ -375,13 +376,74 @@ static void scalar_trim(void)
     assert(!result.data && !result.length);
 }
 
+typedef struct Materializer {
+    QJSIntlUnitMaterializedPattern value;
+    QJSIntlStatus status;
+    unsigned calls, one_calls;
+} Materializer;
+
+static QJSIntlStatus public_pattern(void *opaque, const QJSIntlUnitOverlay *layer,
+                                    const QJSIntlUnitForm *form,
+                                    QJSIntlUnitMaterializedPattern *out)
+{
+    Materializer *state = opaque;
+    assert(layer->locale.length && layer->width == QJS_INTL_UNIT_LONG);
+    assert(form->state == QJS_INTL_UNIT_FORM_VALUE && form->text.length);
+    state->calls++;
+    state->one_calls += form->count == QJS_INTL_UNIT_COUNT_ONE;
+    *out = state->value;
+    return state->status;
+}
+
+static void materialized(const QJSIntlUnitData *data)
+{
+    Materializer state = {{{{"{", 1}, {"}", 1}}, 1}, QJS_INTL_OK, 0, 0};
+    QJSIntlUnitPatternRequest request = {{0}, NULL,           NULL,  QJS_INTL_UNIT_COUNT_OTHER,
+                                         -1,  public_pattern, &state};
+    QJSIntlSelectedUnitPattern pattern;
+    QJSIntlSelectedUnitNoun noun;
+    uint32_t head = head_for(data, "en-GB", "length-child");
+
+    assert(!qjs_intl_unit_pattern_select(data, head, &request, &pattern));
+    assert(equal(pattern.pattern.prefix, "{") && equal(pattern.pattern.suffix, "}"));
+    assert(equal(pattern.form.text, "CHILD_OTHER {0}") && equal(pattern.locale, "en-GB"));
+    /* Noun eligibility consumes the same decoded affixes; it must not extract
+       CHILD_OTHER from the original raw template after substitution. */
+    assert(qjs_intl_unit_noun_select(data, head, &request, &noun) == QJS_INTL_UNSUPPORTED);
+    assert(!noun.noun.data && !noun.noun.length);
+    state.value.pattern = (QJSIntlUnitPattern){{0}, {" {0}", 4}};
+    assert(!qjs_intl_unit_noun_select(data, head, &request, &noun));
+    assert(equal(noun.noun, "{0}"));
+    state.value = (QJSIntlUnitMaterializedPattern){{{"literal {0}", 11}, {0}}, 0};
+    failed(data, head, &request, QJS_INTL_UNSUPPORTED);
+    assert(!qjs_intl_unit_noun_select(data, head, &request, &noun));
+    assert(equal(noun.noun, "literal {0}"));
+    state.status = QJS_INTL_UNSUPPORTED;
+    expect(data, head, &request, "CHILD_OTHER {0}", "en-GB");
+    state.calls = 0;
+    request.category = QJS_INTL_UNIT_COUNT_ONE;
+    failed(data, head_for(data, "en-GB", "length-malformed"), &request, QJS_INTL_DATA_ERROR);
+    assert(!state.calls); /* A replacement cannot hide malformed source data. */
+    request.category = QJS_INTL_UNIT_COUNT_ONE;
+    state.one_calls = 0;
+    failed(data, head_for(data, "en-GB", "length-block"), &request, QJS_INTL_UNSUPPORTED);
+    failed(data, head_for(data, "en-GB", "length-empty"), &request, QJS_INTL_UNSUPPORTED);
+    assert(!state.one_calls); /* Blocked/empty ONE never revives through an adapter. */
+    state.status = QJS_INTL_NO_MEMORY;
+    failed(data, head, &request, QJS_INTL_NO_MEMORY);
+    state.status = QJS_INTL_OK;
+    state.value.has_number = 2;
+    failed(data, head, &request, QJS_INTL_DATA_ERROR);
+}
+
 int main(void)
 {
     QJSIntlAllocator allocator = {NULL, allocate, NULL, release};
     QJSIntlData shared;
     QJSIntlUnitData data;
     Rules rules = {0, 0, QJS_INTL_OK, QJS_INTL_UNIT_COUNT_ONE};
-    QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE, -1};
+    QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE,
+                                         -1,  NULL,     NULL};
     uint32_t head, compound;
     unsigned int calls;
     scalar_trim();
@@ -392,6 +454,7 @@ int main(void)
                                &allocator, &shared));
     assert(!qjs_intl_unit_data_open(&shared, &allocator, &data));
     calls = allocations;
+    materialized(&data);
     noun_selection(&data);
     template_selection(&data);
     expect(&data, head_for(&data, "en-GB", "length-child"), &request, "CHILD_OTHER {0}", "en-GB");
