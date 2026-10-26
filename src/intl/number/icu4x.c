@@ -34,6 +34,7 @@
 #include "../../icu4x/currency-number.h"
 #include "../../icu4x/currency-format.h"
 #include "../../icu4x/plural.h"
+#include "../../icu4x/compact.h"
 #include "../plural/rules.h"
 #include <limits.h>
 #include <string.h>
@@ -44,10 +45,20 @@ typedef struct NumberChoice {
 
 typedef struct CurrencyNames {
     QJSICU4XCurrencyNameHandle *handle;
-    QJSICU4XPlural *plural;
-    QJSICU4XPluralData rules;
     QJSICU4XCurrencyName choices[6][3]; /* Category, then ordinary/exact 0/exact 1. */
 } CurrencyNames;
+
+typedef struct NumberPlural {
+    QJSICU4XPlural *handle;
+    QJSICU4XPluralData rules;
+} NumberPlural;
+
+typedef struct CompactNumbers {
+    QJSICU4XCompactPatterns *handle;
+    QJSIntlCompactScale *scales;
+    QJSICU4XCompactPattern *choices; /* Row, category, ordinary/exact 0/exact 1. */
+    size_t count;
+} CompactNumbers;
 
 struct QJSIntlNumberService {
     QJSIntlAllocator allocator;
@@ -72,6 +83,8 @@ struct QJSIntlNumberFormatter {
     QJSICU4XCurrencySymbolHandle *currency_handle;
     char currency_code[3];
     CurrencyNames *names;
+    NumberPlural *plural;
+    CompactNumbers *compact;
 };
 
 static QJSIntlBytes text(uint32_t offset)
@@ -303,8 +316,20 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
     if (formatter) {
         if (formatter->names) {
             qjs_icu4x_currency_name_close(formatter->names->handle);
-            qjs_icu4x_plural_close(formatter->names->plural);
             formatter->allocator.free(formatter->allocator.opaque, formatter->names);
+        }
+        if (formatter->plural) {
+            qjs_icu4x_plural_close(formatter->plural->handle);
+            formatter->allocator.free(formatter->allocator.opaque, formatter->plural);
+        }
+        if (formatter->compact) {
+            CompactNumbers *compact = formatter->compact;
+            qjs_icu4x_compact_patterns_close(compact->handle);
+            if (compact->scales)
+                formatter->allocator.free(formatter->allocator.opaque, compact->scales);
+            if (compact->choices)
+                formatter->allocator.free(formatter->allocator.opaque, compact->choices);
+            formatter->allocator.free(formatter->allocator.opaque, compact);
         }
         qjs_icu4x_currency_symbol_close(formatter->currency_handle);
         if (formatter->tokens)
@@ -467,13 +492,42 @@ static int is_currency_token(uint32_t kind)
     return kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY && kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW;
 }
 
+/* One selected cardinal rule owner serves compact affixes and outer names.
+   Neither consumer rounds an amount or constructs an unrelated locale list. */
+static QJSIntlStatus open_plural(QJSIntlNumberFormatter *formatter, QJSIntlBytes locale)
+{
+    NumberPlural *plural;
+    QJSIntlPluralOperands probe = {"0", 1, 0};
+    QJSIntlStatus error;
+    unsigned category;
+    if (formatter->plural)
+        return QJS_INTL_OK;
+    plural = formatter->allocator.malloc(formatter->allocator.opaque, sizeof(*plural));
+    if (!plural)
+        return QJS_INTL_NO_MEMORY;
+    memset(plural, 0, sizeof(*plural));
+    formatter->plural = plural;
+    error = qjs_icu4x_status(
+        qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length, 0, &plural->handle));
+    if (!error)
+        error = qjs_icu4x_status(qjs_icu4x_plural_data(plural->handle, &plural->rules));
+    for (category = 0; !error && category < 6; category++) {
+        if (plural->rules.mask & (1u << category)) {
+            QJSICU4XRuleBytes rule = plural->rules.rules[category];
+            int matches;
+            error = qjs_intl_plural_rule_evaluate(
+                (QJSIntlBytes){(const char *)rule.data, rule.length}, &probe, &matches);
+        }
+    }
+    return error;
+}
+
 static QJSIntlStatus currency_names(QJSIntlNumberFormatter *formatter, QJSIntlBytes locale,
                                     QJSIntlBytes code)
 {
     CurrencyNames *names;
     QJSIntlStatus error;
     unsigned category, exact;
-    QJSIntlPluralOperands probe = {"0", 1, 0};
 
     names = formatter->allocator.malloc(formatter->allocator.opaque, sizeof(*names));
     if (!names)
@@ -484,25 +538,112 @@ static QJSIntlStatus currency_names(QJSIntlNumberFormatter *formatter, QJSIntlBy
                                                           locale.length, (const uint8_t *)code.data,
                                                           code.length, &names->handle));
     if (!error)
-        error = qjs_icu4x_status(
-            qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length, 0, &names->plural));
-    if (!error)
-        error = qjs_icu4x_status(qjs_icu4x_plural_data(names->plural, &names->rules));
-    /* Validate every rule once, including conditions a particular amount
-       would short-circuit. Snapshot choices here, never allocate Rust selectors
-       or reinterpret packed pattern data in the formatting hot path. */
-    for (category = 0; !error && category < 6; category++) {
-        if (names->rules.mask & (1u << category)) {
-            QJSICU4XRuleBytes rule = names->rules.rules[category];
-            int matches;
-            error = qjs_intl_plural_rule_evaluate(
-                (QJSIntlBytes){(const char *)rule.data, rule.length}, &probe, &matches);
-        }
+        error = open_plural(formatter, locale);
+    /* Snapshot choices here, never allocate Rust selectors or reinterpret
+       packed pattern data in the formatting hot path. */
+    for (category = 0; !error && category < 6; category++)
         for (exact = 0; !error && exact < 3; exact++)
             error = qjs_icu4x_status(qjs_icu4x_currency_name(
                 names->handle, category, (int)exact - 1, &names->choices[category][exact]));
-    }
     return error;
+}
+
+static QJSIntlStatus open_compact(QJSIntlNumberFormatter *formatter, QJSIntlBytes locale,
+                                  QJSIntlBytes system, unsigned long_style)
+{
+    CompactNumbers *compact;
+    QJSIntlStatus error;
+    uint32_t count, row, category, exact;
+    size_t items;
+
+    compact = formatter->allocator.malloc(formatter->allocator.opaque, sizeof(*compact));
+    if (!compact)
+        return QJS_INTL_NO_MEMORY;
+    memset(compact, 0, sizeof(*compact));
+    formatter->compact = compact;
+    error = qjs_icu4x_status(qjs_icu4x_compact_patterns_open(
+        (const uint8_t *)locale.data, locale.length, (const uint8_t *)system.data, system.length,
+        long_style, &compact->handle));
+    if (!error)
+        error = qjs_icu4x_status(qjs_icu4x_compact_patterns_count(compact->handle, &count));
+    if (error)
+        return error;
+    items = count;
+    if (items > SIZE_MAX / sizeof(*compact->scales) ||
+        items > SIZE_MAX / 18 / sizeof(*compact->choices))
+        return QJS_INTL_OVERFLOW;
+    compact->count = count;
+    if (count) {
+        compact->scales = formatter->allocator.malloc(formatter->allocator.opaque,
+                                                      count * sizeof(*compact->scales));
+        compact->choices = formatter->allocator.malloc(formatter->allocator.opaque,
+                                                       items * 18 * sizeof(*compact->choices));
+        if (!compact->scales || !compact->choices)
+            return QJS_INTL_NO_MEMORY;
+        error = open_plural(formatter, locale);
+    }
+    for (row = 0; !error && row < count; row++) {
+        QJSICU4XCompactScale scale;
+        error = qjs_icu4x_status(qjs_icu4x_compact_patterns_scale(compact->handle, row, &scale));
+        if (error)
+            return error;
+        if (scale.exponent > scale.magnitude || scale.magnitude > QJS_INTL_DECIMAL_EXPONENT_LIMIT ||
+            (row && scale.magnitude <= compact->scales[row - 1].magnitude))
+            return QJS_INTL_DATA_ERROR;
+        compact->scales[row] = (QJSIntlCompactScale){scale.magnitude, scale.exponent};
+        for (category = 0; !error && category < 6; category++)
+            for (exact = 0; !error && exact < 3; exact++)
+                error = qjs_icu4x_status(qjs_icu4x_compact_patterns_get(
+                    compact->handle, row, category, (int)exact - 1,
+                    &compact->choices[((size_t)row * 6 + category) * 3 + exact]));
+    }
+    formatter->rounding.compact = compact->scales;
+    formatter->rounding.compact_count = count;
+    return error;
+}
+
+static QJSIntlStatus select_plural(const QJSIntlNumberFormatter *formatter,
+                                   const QJSIntlRoundedNumber *rounded, uint32_t shift,
+                                   unsigned *category, int *exact)
+{
+    size_t i;
+    *category = QJS_INTL_PLURAL_OTHER;
+    *exact = -1;
+    if (rounded->kind == QJS_INTL_FINITE || rounded->kind == QJS_INTL_NEGATIVE_ZERO) {
+        const QJSIntlDecimal *number = &rounded->number.rounded;
+        QJSIntlPluralOperands operands = {rounded->number.text, rounded->number.length,
+                                          (int32_t)shift};
+        int64_t exponent = (int64_t)number->exponent + shift;
+        /* Standard and scientific/engineering labels use the visible rounded
+           mantissa. Preserve fraction zeros for category evaluation, while
+           explicit 0/1 selectors use mathematical equality. This follows the
+           living draft's scaled-x ordering and native policy; ICU's high-level
+           formatter can instead choose a label from the expanded quantity.
+           Compact outer names virtually expand it; compact affixes use shift 0. */
+        if (number->length == 1 && number->digits[0] == '0')
+            *exact = 0;
+        else if (number->digits[0] == '1' && exponent <= 0 &&
+                 (uint64_t)number->length == (uint64_t)(1 - exponent)) {
+            for (i = 1; i < number->length && number->digits[i] == '0'; i++)
+                ;
+            if (i == number->length)
+                *exact = 1;
+        }
+        for (*category = 0; *category < QJS_INTL_PLURAL_OTHER; (*category)++) {
+            QJSICU4XRuleBytes rule = formatter->plural->rules.rules[*category];
+            QJSIntlStatus error;
+            int matches;
+            if (!(formatter->plural->rules.mask & (1u << *category)))
+                continue;
+            error = qjs_intl_plural_rule_evaluate_shifted(
+                (QJSIntlBytes){(const char *)rule.data, rule.length}, &operands, shift, &matches);
+            if (error)
+                return error;
+            if (matches)
+                break;
+        }
+    }
+    return QJS_INTL_OK;
 }
 
 static QJSIntlStatus format_currency_name(const QJSIntlNumberFormatter *formatter,
@@ -517,37 +658,11 @@ static QJSIntlStatus format_currency_name(const QJSIntlNumberFormatter *formatte
     int exact = -1;
     size_t i, count = 0;
 
-    if (rounded->kind == QJS_INTL_FINITE || rounded->kind == QJS_INTL_NEGATIVE_ZERO) {
-        const QJSIntlDecimal *number = &rounded->number.rounded;
-        QJSIntlPluralOperands operands = {rounded->number.text, rounded->number.length, 0};
-        /* Standard and scientific/engineering labels use the visible rounded
-           mantissa. Preserve fraction zeros for category evaluation, while
-           explicit 0/1 selectors use mathematical equality. This follows the
-           living draft's scaled-x ordering and native policy; ICU's high-level
-           formatter can instead choose a label from the expanded quantity. */
-        if (number->length == 1 && number->digits[0] == '0')
-            exact = 0;
-        else if (number->digits[0] == '1' && number->exponent <= 0 &&
-                 (uint64_t)number->length == (uint64_t)(1 - (int64_t)number->exponent)) {
-            for (i = 1; i < number->length && number->digits[i] == '0'; i++)
-                ;
-            if (i == number->length)
-                exact = 1;
-        }
-        for (category = 0; category < QJS_INTL_PLURAL_OTHER; category++) {
-            QJSICU4XRuleBytes rule = names->rules.rules[category];
-            QJSIntlStatus error;
-            int matches;
-            if (!(names->rules.mask & (1u << category)))
-                continue;
-            error = qjs_intl_plural_rule_evaluate(
-                (QJSIntlBytes){(const char *)rule.data, rule.length}, &operands, &matches);
-            if (error)
-                return error;
-            if (matches)
-                break;
-        }
-    }
+    uint32_t shift =
+        formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT ? (uint32_t)rounded->exponent : 0;
+    QJSIntlStatus error = select_plural(formatter, rounded, shift, &category, &exact);
+    if (error)
+        return error;
     choice = &names->choices[category][exact + 1];
     symbols.currency = (QJSIntlBytes){(const char *)choice->name.data, choice->name.length};
     for (i = 0; i < 3; i++) {
@@ -562,6 +677,94 @@ static QJSIntlStatus format_currency_name(const QJSIntlNumberFormatter *formatte
     }
     return qjs_intl_number_affix_format(&formatter->allocator, tokens, count, &symbols, body, 0,
                                         formatter->body.maximum_output_length, out);
+}
+
+static QJSIntlStatus compact_text(QJSIntlFormatBuilder *builder, QJSICU4XDecimalText text)
+{
+    size_t start = builder->length, first = SIZE_MAX, last = 0;
+    QJSIntlStatus error = qjs_intl_format_builder_text(
+        builder, (QJSIntlBytes){(const char *)text.data, text.length}, &first, &last);
+    if (error)
+        return error;
+    /* Affix-internal spaces belong to the compact name; only its surrounding
+       Unicode whitespace becomes literal parts, matching native composition. */
+    if (first == SIZE_MAX)
+        return qjs_intl_format_builder_part(builder, start, builder->length, QJS_INTL_PART_LITERAL,
+                                            0);
+    error = qjs_intl_format_builder_part(builder, start, first, QJS_INTL_PART_LITERAL, 0);
+    if (!error)
+        error = qjs_intl_format_builder_part(builder, first, last, QJS_INTL_PART_COMPACT, 0);
+    if (!error)
+        error =
+            qjs_intl_format_builder_part(builder, last, builder->length, QJS_INTL_PART_LITERAL, 0);
+    return error;
+}
+
+static QJSIntlStatus emit_compact(QJSIntlFormatBuilder *builder,
+                                  const QJSICU4XCompactPattern *pattern,
+                                  const QJSIntlFormatted *body)
+{
+    QJSIntlStatus error = compact_text(builder, pattern->prefix);
+    if (!error && pattern->has_number)
+        error = qjs_intl_format_builder_body(builder, body);
+    if (!error)
+        error = compact_text(builder, pattern->suffix);
+    return error;
+}
+
+static QJSIntlStatus format_compact(const QJSIntlNumberFormatter *formatter,
+                                    const QJSIntlRoundedNumber *rounded,
+                                    const QJSIntlFormatted *body, QJSIntlFormatted *out)
+{
+    const CompactNumbers *compact = formatter->compact;
+    const QJSICU4XCompactPattern *pattern;
+    QJSIntlFormatBuilder builder = {.limit = formatter->body.maximum_output_length};
+    QJSIntlStatus error;
+    unsigned category;
+    int exact;
+    size_t low = 0, high = compact->count;
+
+    /* Rows with the same exponent can have distinct words. Select by final
+       magnitude after rounding, never by exponent alone. */
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        if (rounded->notation_magnitude >= 0 &&
+            compact->scales[middle].magnitude <= (uint64_t)rounded->notation_magnitude)
+            low = middle + 1;
+        else
+            high = middle;
+    }
+    if (!low || compact->scales[low - 1].exponent != (uint32_t)rounded->exponent)
+        return QJS_INTL_DATA_ERROR;
+    error = select_plural(formatter, rounded, 0, &category, &exact);
+    if (error)
+        return error;
+    pattern = &compact->choices[((low - 1) * 6 + category) * 3 + (size_t)(exact + 1)];
+    error = emit_compact(&builder, pattern, body);
+    if (error)
+        return error;
+    if (!builder.length || !builder.count)
+        return QJS_INTL_DATA_ERROR;
+    builder.result.text =
+        formatter->allocator.malloc(formatter->allocator.opaque, builder.length * sizeof(uint16_t));
+    if (!builder.result.text)
+        return QJS_INTL_NO_MEMORY;
+    builder.result.parts = formatter->allocator.malloc(formatter->allocator.opaque,
+                                                       builder.count * sizeof(QJSIntlPart));
+    if (!builder.result.parts) {
+        qjs_intl_formatted_clear(&formatter->allocator, &builder.result);
+        return QJS_INTL_NO_MEMORY;
+    }
+    builder.length = builder.count = 0;
+    error = emit_compact(&builder, pattern, body);
+    if (error) {
+        qjs_intl_formatted_clear(&formatter->allocator, &builder.result);
+        return error;
+    }
+    builder.result.length = builder.length;
+    builder.result.part_count = builder.count;
+    *out = builder.result;
+    return QJS_INTL_OK;
 }
 
 static int alpha_needed(const QJSICU4XNumberAffix *form, const QJSIntlCurrencyBoundary *boundary)
@@ -729,7 +932,10 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return QJS_INTL_INVALID_ARGUMENT;
     /* Private implementation stage: these styles are added next; no incomplete
        ICU4X profile is exposed to JavaScript or substituted with another style. */
-    if (options->style == QJS_INTL_NUMBER_UNIT || options->notation == QJS_INTL_NUMBER_COMPACT)
+    if (options->style == QJS_INTL_NUMBER_UNIT ||
+        (options->notation == QJS_INTL_NUMBER_COMPACT &&
+         options->style == QJS_INTL_NUMBER_CURRENCY &&
+         options->currency_display != QJS_INTL_NUMBER_CURRENCY_NAME))
         return QJS_INTL_UNSUPPORTED;
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         int supported;
@@ -791,6 +997,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     }
     if (!error)
         error = open_affixes(formatter, source, options, override);
+    if (!error && options->notation == QJS_INTL_NUMBER_COMPACT)
+        error = open_compact(formatter, tag, system, options->compact_long);
     if (!error)
         error = qjs_intl_pair_pattern_parse(text(source->fields[8]), &formatter->range);
     if (!error)
@@ -829,7 +1037,9 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         error = qjs_intl_number_body_format(
             &formatter->allocator, &formatter->body, rounded.kind,
             (QJSIntlBytes){rounded.number.text, rounded.number.length}, &body);
-    if (!error && formatter->rounding.notation != QJS_INTL_NUMBER_STANDARD &&
+    if (!error &&
+        (formatter->rounding.notation == QJS_INTL_NUMBER_SCIENTIFIC ||
+         formatter->rounding.notation == QJS_INTL_NUMBER_ENGINEERING) &&
         (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
         error = qjs_intl_number_exponent_format(&formatter->allocator, &body,
                                                 formatter->body.digits, formatter->exponent,
@@ -840,6 +1050,15 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                 &formatter->allocator, formatter->tokens + formatter->starts[3],
                 formatter->counts[3], &formatter->symbols, &exponent, 0,
                 formatter->body.maximum_output_length, &notation);
+        if (!error) {
+            qjs_intl_formatted_clear(&formatter->allocator, &body);
+            body = notation;
+            memset(&notation, 0, sizeof(notation));
+        }
+    }
+    if (!error && formatter->compact && rounded.exponent &&
+        (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
+        error = format_compact(formatter, &rounded, &body, &notation);
         if (!error) {
             qjs_intl_formatted_clear(&formatter->allocator, &body);
             body = notation;
