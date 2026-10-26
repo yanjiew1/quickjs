@@ -39,6 +39,9 @@ typedef struct QJSICU4XPluralData {
    matches QJSIntlPluralCategory. Snapshot slices borrow the live immutable
    handle; no source input is retained. Failed calls preserve output. */
 int qjs_icu4x_plural_open(const uint8_t *, size_t, uint32_t ordinal, QJSICU4XPlural **);
+/* Distinct resolved rule/range source locales, with the same output contract. */
+int qjs_icu4x_plural_open_sources(const uint8_t *, size_t, const uint8_t *, size_t,
+                                   uint32_t ordinal, QJSICU4XPlural **);
 int qjs_icu4x_plural_check_version(const uint8_t *, size_t);
 void qjs_icu4x_plural_close(QJSICU4XPlural *);
 int qjs_icu4x_plural_data(const QJSICU4XPlural *, QJSICU4XPluralData *);

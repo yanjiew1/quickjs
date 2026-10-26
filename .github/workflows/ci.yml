@@ -81,7 +81,7 @@ jobs:
     - name: Verify ICU4X companion data reproducibility
       run: |
         mkdir -p "$RUNNER_TEMP/icu4x-reproduced"
-        for component in locale display number unit datetime; do
+        for component in locale display number unit datetime plural; do
           timeout --kill-after=15s 240s python3 tools/data/generate.py intl-icu4x \
             --component "$component" --sources "$CLDR_SOURCE" \
             --output "$RUNNER_TEMP/icu4x-reproduced/$component.c"

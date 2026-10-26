@@ -24,6 +24,7 @@
 #include "../../icu4x/unit.h"
 #include "../../icu4x/plural.h"
 #include <string.h>
+#include "../plural/snapshot-icu4x.h"
 
 typedef struct UnitPatterns {
     QJSIntlBytes locale;
@@ -137,10 +138,7 @@ static QJSIntlStatus prepare_source(QJSIntlICU4XNumberUnit *unit, const QJSIntlU
         rules->locale = locale;
         if (equal(locale, (QJSIntlBytes){"root", 4}))
             locale = (QJSIntlBytes){"und", 3};
-        status = qjs_icu4x_status(
-            qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length, 0, &rules->handle));
-        if (!status)
-            status = qjs_icu4x_status(qjs_icu4x_plural_data(rules->handle, &rules->rules));
+        status = qjs_intl_icu4x_plural_open(locale, 0, &rules->handle, &rules->rules);
         for (category = 0; !status && category < 6; category++) {
             if (rules->rules.mask & (1u << category)) {
                 QJSICU4XRuleBytes rule = rules->rules.rules[category];

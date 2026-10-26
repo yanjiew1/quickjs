@@ -40,6 +40,7 @@
 #include "../plural/rules.h"
 #include <limits.h>
 #include <string.h>
+#include "../plural/snapshot-icu4x.h"
 
 typedef struct NumberChoice {
     uint32_t source, default_system;
@@ -624,10 +625,7 @@ static QJSIntlStatus open_plural(QJSIntlNumberFormatter *formatter, QJSIntlBytes
         return QJS_INTL_NO_MEMORY;
     memset(plural, 0, sizeof(*plural));
     formatter->plural = plural;
-    error = qjs_icu4x_status(
-        qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length, 0, &plural->handle));
-    if (!error)
-        error = qjs_icu4x_status(qjs_icu4x_plural_data(plural->handle, &plural->rules));
+    error = qjs_intl_icu4x_plural_open(locale, 0, &plural->handle, &plural->rules);
     for (category = 0; !error && category < 6; category++) {
         if (plural->rules.mask & (1u << category)) {
             QJSICU4XRuleBytes rule = plural->rules.rules[category];

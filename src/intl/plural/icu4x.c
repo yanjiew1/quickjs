@@ -26,6 +26,7 @@
 #include "../../icu4x/decimal.h"
 #include <limits.h>
 #include <string.h>
+#include "snapshot-icu4x.h"
 
 struct QJSIntlPluralService {
     QJSIntlAllocator allocator;
@@ -145,10 +146,7 @@ QJSIntlStatus qjs_icu4x_plural_formatter_open(const QJSIntlAllocator *allocator,
     memset(formatter, 0, sizeof(*formatter));
     formatter->allocator = *allocator;
     formatter->options = *options;
-    error = qjs_icu4x_status(qjs_icu4x_plural_open((const uint8_t *)locale.data, locale.length,
-                                                   options->type, &formatter->handle));
-    if (!error)
-        error = qjs_icu4x_status(qjs_icu4x_plural_data(formatter->handle, &formatter->data));
+    error = qjs_intl_icu4x_plural_open(locale, options->type, &formatter->handle, &formatter->data);
     // Admit complete rule grammar once, including branches a numeric probe
     // would short-circuit. The snapshot is immutable for this formatter's life.
     for (category = 0; !error && category < QJS_INTL_PLURAL_CATEGORY_COUNT; category++) {

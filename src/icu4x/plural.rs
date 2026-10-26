@@ -93,7 +93,13 @@ fn snapshot(
     }
     result
 }
-unsafe fn open(locale: *const u8, length: usize, kind: u32) -> Result<PluralHandle, i32> {
+unsafe fn open(
+    locale: *const u8,
+    length: usize,
+    range_locale: *const u8,
+    range_length: usize,
+    kind: u32,
+) -> Result<PluralHandle, i32> {
     if locale.is_null() || length > isize::MAX as usize || kind > 1 {
         return Err(RANGE);
     }
@@ -116,7 +122,14 @@ unsafe fn open(locale: *const u8, length: usize, kind: u32) -> Result<PluralHand
     } else {
         PluralRuleType::Ordinal
     });
-    let range = PluralRulesWithRanges::try_new(prefs, options).map_err(|_| BACKEND)?;
+    if range_locale.is_null() || range_length > isize::MAX as usize {
+        return Err(RANGE);
+    }
+    let range_locale =
+        Locale::try_from_utf8(unsafe { std::slice::from_raw_parts(range_locale, range_length) })
+            .map_err(|_| RANGE)?;
+    let range =
+        PluralRulesWithRanges::try_new(range_locale.into(), options).map_err(|_| BACKEND)?;
     if kind == 0 {
         let data = <Baked as DataProvider<PluralsCardinalV1>>::load(&Baked, request)
             .map_err(|_| BACKEND)?
@@ -139,7 +152,9 @@ pub unsafe extern "C" fn qjs_icu4x_plural_open(
 ) -> i32 {
     unsafe {
         write_result(out, || {
-            Ok(Box::into_raw(Box::new(open(locale, length, kind)?)))
+            Ok(Box::into_raw(Box::new(open(
+                locale, length, locale, length, kind,
+            )?)))
         })
     }
 }
@@ -185,5 +200,28 @@ pub unsafe extern "C" fn qjs_icu4x_plural_check_version(data: *const u8, length:
         0
     } else {
         BACKEND
+    }
+}
+
+// Rule and range component inheritance can select different CLDR sources.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_plural_open_sources(
+    locale: *const u8,
+    length: usize,
+    range_locale: *const u8,
+    range_length: usize,
+    kind: u32,
+    out: *mut *mut PluralHandle,
+) -> i32 {
+    unsafe {
+        write_result(out, || {
+            Ok(Box::into_raw(Box::new(open(
+                locale,
+                length,
+                range_locale,
+                range_length,
+                kind,
+            )?)))
+        })
     }
 }

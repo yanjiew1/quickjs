@@ -48,6 +48,8 @@ compile_number_contract()
         src/intl/number/exponent.c \
         src/intl/number/round.c \
         src/intl/plural/rules.c \
+        src/intl/plural/snapshot-icu4x.c \
+        data/intl/icu4x-plural.c \
         src/intl/currency/boundary-icu4x.c \
         src/intl/icu4x/common.c \
         src/intl/common/decimal.c \
@@ -150,6 +152,8 @@ compile)
         src/intl/unit/pattern.c \
         src/intl/unit/format.c \
         src/intl/plural/rules.c \
+        src/intl/plural/snapshot-icu4x.c \
+        data/intl/icu4x-plural.c \
         src/intl/icu4x/common.c \
         "$output/cutils.o" \
         tests/icu4c/helpers.c \
@@ -267,6 +271,11 @@ compile)
         src/intl/segment/prepared.c \
         tests/icu4c/helpers.c \
         tests/icu4c/segment.c
+    compile_contract plural-snapshot \
+        src/intl/plural/snapshot-icu4x.c \
+        data/intl/icu4x-plural.c \
+        src/intl/icu4x/common.c \
+        tests/icu4x/plural-snapshot.c
     compile_contract plural-data \
         data/intl/icu4x-locale.c \
         src/intl/plural/rules.c \
@@ -276,6 +285,8 @@ compile)
         src/intl/icu4x/common.c \
         src/intl/plural/icu4x.c \
         src/intl/plural/rules.c \
+        src/intl/plural/snapshot-icu4x.c \
+        data/intl/icu4x-plural.c \
         src/intl/common/decimal.c \
         tests/icu4c/helpers.c \
         tests/icu4c/plural.c
@@ -298,6 +309,7 @@ test)
         locale \
         segment \
         plural-data \
+        plural-snapshot \
         plural-service \
         list \
         casing \
