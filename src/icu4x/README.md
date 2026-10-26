@@ -428,3 +428,17 @@ companion leaf only when the decoded representation matches; public `other`
 fallback cannot invent a missing category or grammatical case. Compact labels
 use virtually expanded rounded operands; scientific/engineering use the
 visible mantissa. Percent-as-unit does not scale the amount by 100.
+
+## DurationFormat
+
+The private `durations` feature supplies the public digital-duration separator
+and raw hms hour width. The C adapter quotes decoded literals and hands an LDML
+pattern to the existing duration parser. Shared service admission intersects the
+selected Number/List inventories; the common composition preserves exact
+fractional amounts, sign placement and typed parts. Raw padding never overrides
+resolved text-hour options. No separate duration supplement is needed.
+
+Provider contracts execute every admitted locale and all four styles, in
+addition to fractional nanoseconds, negative durations, Danish separators,
+allocation failures and formatter lifetime. This remains private until the
+complete DateTimeFormat provider enables the full ICU4X profile.

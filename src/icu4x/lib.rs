@@ -35,6 +35,8 @@ mod currency_format;
 mod currency_number;
 #[cfg(feature = "decimals")]
 mod decimal;
+#[cfg(feature = "durations")]
+mod duration;
 #[cfg(feature = "lists")]
 mod list;
 #[cfg(feature = "locales")]

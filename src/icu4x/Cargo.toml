@@ -32,6 +32,15 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+durations = [
+    "dep:icu_experimental",
+    "dep:icu_experimental_data",
+    "dep:icu_locale_core",
+    "dep:icu_locale_fallback",
+    "dep:icu_provider",
+    "icu_provider/std",
+    "icu_provider/baked",
+]
 relatives = [
     "dep:icu_experimental",
     "dep:icu_experimental_data",

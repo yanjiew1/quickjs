@@ -135,6 +135,32 @@ compile)
         src/intl/unit/identifier.c \
         tests/icu4c/helpers.c \
         tests/icu4x/unit-data.c
+    # The pure duration/epoch arithmetic TUs also contain unrelated calendar
+    # operations. Discard those unused sections in this isolated contract;
+    # the complete engine links their normal selected calendar dependencies.
+    compile_number_contract duration -Isrc/cutils -ffunction-sections -fdata-sections -Wl,--gc-sections \
+        src/intl/list/icu4x.c \
+        src/intl/duration/provider.c \
+        src/intl/duration/icu4x.c \
+        src/intl/duration/composition.c \
+        src/intl/duration/digital.c \
+        src/intl/duration/options.c \
+        src/intl/duration/decimal.c \
+        src/intl/duration/format.c \
+        src/temporal/duration.c \
+        src/temporal/epoch.c \
+        src/temporal/options.c \
+        tests/icu4c/helpers.c \
+        tests/icu4c/duration.c
+    compile_contract duration-bridge \
+        src/intl/duration/icu4x.c \
+        src/intl/duration/digital.c \
+        src/intl/common/format-builder.c \
+        src/intl/common/text.c \
+        src/intl/icu4x/common.c \
+        "$output/cutils.o" \
+        tests/icu4c/helpers.c \
+        tests/icu4x/duration-bridge.c
     compile_contract relative-bridge tests/icu4x/relative-bridge.c
     compile_contract currency tests/icu4x/currency.c
     compile_contract currency-boundary -DQJS_TEST_ICU4X \
@@ -221,7 +247,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose duration duration-bridge; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

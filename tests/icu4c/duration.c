@@ -121,6 +121,22 @@ static void test_duration(const QJSIntlAllocator *allocator)
     duration.fields[QJS_TEMPORAL_DAY] = 2;
     duration_text(allocator, formatter, &duration, "1 year, 2 days");
     qjs_intl_duration_formatter_close(formatter);
+    /* Admission must be executable through both dependencies. Exercise every
+       declared locale/style, showing all units rather than only digital HMS. */
+    for (i = 0; i < count; i++) {
+        unsigned style, unit;
+        for (style = QJS_INTL_DURATION_LONG; style <= QJS_INTL_DURATION_DIGITAL; style++) {
+            options = duration_options(style);
+            for (unit = 0; unit < QJS_TEMPORAL_UNIT_COUNT; unit++)
+                duration.fields[unit] = 1;
+            assert(!qjs_intl_duration_formatter_open(service, i, (QJSIntlBytes){0}, &options,
+                                                     &formatter));
+            assert(!qjs_intl_duration_format(formatter, &duration, &result));
+            assert(result.length && result.part_count);
+            qjs_intl_duration_result_clear(allocator, &result);
+            qjs_intl_duration_formatter_close(formatter);
+        }
+    }
     qjs_intl_duration_close(service);
 }
 
