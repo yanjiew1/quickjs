@@ -381,3 +381,10 @@ Exact numeric rounding, plural classification and unit-tagged numeric parts
 belong to the shared C modules; all relative labels/patterns still come from
 the selected ICU4X data. Both Number zero signs use automatic offset zero;
 numeric tense keeps the original sign independently.
+
+The C adapter composes those affixes with the selected NumberFormat and
+PluralRules interfaces. It snapshots the 96 unit/tense/category choices at
+construction, retaining their payload owner, so formatting does not allocate
+foreign pattern selectors. Auto lookup precedes rounding; numeric output and
+plural operands share the exact binary64 magnitude and matching digit policy.
+No additional relative-time data supplement is needed.

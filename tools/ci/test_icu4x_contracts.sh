@@ -45,6 +45,11 @@ compile)
     ${CC:-cc} -std=c11 -g -O1 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare -I. \
         -fsanitize=address,undefined -fno-omit-frame-pointer \
         -c src/cutils/cutils.c -o "$output/cutils.o"
+    # dtoa uses the same established signed/unsigned arithmetic conventions;
+    # isolate that policy from the new provider sources compiled below.
+    ${CC:-cc} -std=c11 -g -O1 -Wall -Wextra -Werror -Wno-sign-compare -Wno-unused-parameter -I. -Isrc/cutils \
+        -fsanitize=address,undefined -fno-omit-frame-pointer \
+        -c src/dtoa/dtoa.c -o "$output/dtoa.o"
     compile_contract collation-bridge tests/icu4x/collation-bridge.c
     compile_contract collation \
         data/intl/icu4x-locale.c \
@@ -83,6 +88,56 @@ compile)
         "$output/cutils.o" \
         tests/icu4c/helpers.c \
         tests/icu4x/number.c
+    compile_contract relative -Isrc/cutils -Isrc/dtoa \
+        data/intl/icu4x-number.c \
+        src/intl/number/icu4x.c \
+        src/intl/number/affix.c \
+        src/intl/number/body.c \
+        src/intl/number/exponent.c \
+        src/intl/number/round.c \
+        src/intl/plural/rules.c \
+        src/intl/currency/boundary-icu4x.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/decimal.c \
+        src/intl/common/format-builder.c \
+        src/intl/common/text.c \
+        src/intl/common/pair-pattern.c \
+        src/intl/common/unary-pattern.c \
+        src/intl/common/range-compose.c \
+        "$output/cutils.o" \
+        tests/icu4c/helpers.c \
+        data/intl/icu4x-locale.c \
+        src/intl/relative/icu4x.c \
+        src/intl/relative/format.c \
+        src/intl/plural/icu4x.c \
+        src/intl/common/number-decimal.c \
+        "$output/dtoa.o" \
+        tests/icu4c/relative.c
+    compile_contract relative-extra -Isrc/cutils -Isrc/dtoa \
+        data/intl/icu4x-number.c \
+        src/intl/number/icu4x.c \
+        src/intl/number/affix.c \
+        src/intl/number/body.c \
+        src/intl/number/exponent.c \
+        src/intl/number/round.c \
+        src/intl/plural/rules.c \
+        src/intl/currency/boundary-icu4x.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/decimal.c \
+        src/intl/common/format-builder.c \
+        src/intl/common/text.c \
+        src/intl/common/pair-pattern.c \
+        src/intl/common/unary-pattern.c \
+        src/intl/common/range-compose.c \
+        "$output/cutils.o" \
+        tests/icu4c/helpers.c \
+        data/intl/icu4x-locale.c \
+        src/intl/relative/icu4x.c \
+        src/intl/relative/format.c \
+        src/intl/plural/icu4x.c \
+        src/intl/common/number-decimal.c \
+        "$output/dtoa.o" \
+        tests/icu4x/relative.c
     compile_contract currency-number tests/icu4x/currency-number.c
     compile_contract currency-format tests/icu4x/currency-format.c
     compile_contract compact tests/icu4x/compact.c
@@ -142,7 +197,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

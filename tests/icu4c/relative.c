@@ -103,6 +103,8 @@ static void test_relative(const QJSIntlAllocator *allocator)
         qjs_intl_relative_formatter_close(localized);
     }
     qjs_intl_relative_close(service);
+    relative_text(allocator, formatter, -0.0, "today");
+    relative_text(allocator, formatter, 0.0, "today");
     relative_text(allocator, formatter, 1, "tomorrow");
     relative_text(allocator, formatter, 1.0001, "in 1 day");
     relative_text(allocator, formatter, 0.00001, "in 0 days");
