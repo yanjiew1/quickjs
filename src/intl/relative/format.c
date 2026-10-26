@@ -141,6 +141,22 @@ static QJSIntlStatus compose(const QJSIntlAllocator *allocator, QJSIntlBytes pre
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_relative_affixes_format(const QJSIntlAllocator *allocator,
+                                               QJSIntlBytes prefix, QJSIntlBytes suffix,
+                                               const QJSIntlFormatted *body,
+                                               QJSIntlRelativeUnit unit, size_t limit,
+                                               QJSIntlRelativeFormatted *out)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !allocator || !allocator->malloc || !allocator->free || !limit ||
+        (!prefix.data && prefix.length) || (!suffix.data && suffix.length) ||
+        prefix.length > PTRDIFF_MAX || suffix.length > PTRDIFF_MAX ||
+        (unsigned)unit >= QJS_INTL_RELATIVE_UNIT_COUNT || (body && !body_valid(body)))
+        return QJS_INTL_INVALID_ARGUMENT;
+    return compose(allocator, prefix, suffix, body, unit, 0, limit, out);
+}
+
 QJSIntlStatus qjs_intl_relative_pattern_format(const QJSIntlAllocator *allocator, QJSIntlBytes pattern,
                                                const QJSIntlFormatted *body, QJSIntlRelativeUnit unit,
                                                size_t limit, QJSIntlRelativeFormatted *out)
@@ -172,7 +188,7 @@ QJSIntlStatus qjs_intl_relative_pattern_format(const QJSIntlAllocator *allocator
     } else {
         body = NULL;
     }
-    return compose(allocator, prefix, suffix, body, unit, 0, limit, out);
+    return qjs_intl_relative_affixes_format(allocator, prefix, suffix, body, unit, limit, out);
 }
 
 QJSIntlStatus qjs_intl_relative_literal_format(const QJSIntlAllocator *allocator, QJSIntlBytes text,

@@ -97,6 +97,17 @@ int main(void)
     qjs_intl_relative_result_clear(&allocator, &result);
     qjs_intl_relative_result_clear(&allocator, &result);
     assert(!state.live);
+    /* Public provider pattern iterators already distinguish literals. Braces
+       in those spans are text, never another numeric placeholder. */
+    assert(!qjs_intl_relative_affixes_format(&allocator, bytes("{"), bytes("}"), &body,
+                                             QJS_INTL_RELATIVE_DAY, 5, &result));
+    assert(result.length == 5 && result.text[0] == '{' && result.text[4] == '}');
+    assert(result.part_count == 5 && result.parts[1].unit == QJS_INTL_RELATIVE_DAY);
+    qjs_intl_relative_result_clear(&allocator, &result);
+    assert(qjs_intl_relative_affixes_format(&allocator, (QJSIntlBytes){NULL, 1}, bytes("}"), &body,
+                                            QJS_INTL_RELATIVE_DAY, 5,
+                                            &result) == QJS_INTL_INVALID_ARGUMENT);
+    check_zero(&result);
     /* Auto literals retain braces and exactly one part, even when empty. */
     assert(!qjs_intl_relative_literal_format(&allocator, bytes("{0}"), 3, &result));
     assert(result.length == 3 && result.part_count == 1 && result.parts[0].end == 3 &&

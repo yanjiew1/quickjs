@@ -47,6 +47,14 @@ typedef struct QJSIntlRelativeFormatted {
 QJSIntlStatus qjs_intl_relative_pattern_format(const QJSIntlAllocator *, QJSIntlBytes pattern,
                                                const QJSIntlFormatted *body, QJSIntlRelativeUnit,
                                                size_t limit, QJSIntlRelativeFormatted *);
+/* Compose already-decoded scalar affixes without reparsing braces. A non-NULL
+   body inserts its validated numeric parts; NULL produces literal-only pattern
+   text. Empty affixes/body-less patterns have no parts. Ownership, unit tagging
+   and bounds follow pattern_format. */
+QJSIntlStatus qjs_intl_relative_affixes_format(const QJSIntlAllocator *, QJSIntlBytes prefix,
+                                               QJSIntlBytes suffix, const QJSIntlFormatted *body,
+                                               QJSIntlRelativeUnit, size_t limit,
+                                               QJSIntlRelativeFormatted *);
 /* Auto text is a literal, never a template: preserve braces and always return
    exactly one literal part, including for an empty string. Same ownership,
    scalar text, bounds and output contracts as pattern_format. */
