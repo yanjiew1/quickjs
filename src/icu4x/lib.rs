@@ -25,6 +25,8 @@
 mod calendar;
 #[cfg(feature = "currency_names")]
 mod currency;
+#[cfg(feature = "currency_numbers")]
+mod currency_number;
 #[cfg(feature = "decimals")]
 mod decimal;
 #[cfg(feature = "lists")]

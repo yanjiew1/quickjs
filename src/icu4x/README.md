@@ -186,7 +186,7 @@ value again. Formatter snapshots own their foreign rule handles independently
 of the source service. This provider still awaits final profile composition.
 
 To run the private C contracts separately from a full engine build, build the
-locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names`,
+locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names,currency_numbers`,
 then invoke `tools/ci/test_icu4x_contracts.sh compile ARCHIVE OUTPUT_DIR` and
 `tools/ci/test_icu4x_contracts.sh test OUTPUT_DIR` from the repository root.
 Compilation uses combined ASan/UBSan; the two modes preserve separate CI build
@@ -293,3 +293,12 @@ system and verify its resolved identity. Explicit symbol locale IDs are not
 used as an available-locale list: they omit locales legitimately inheriting
 root symbols. Complete NumberFormat admission must validate its declared locale
 candidates across all required operations.
+
+The separate `currency_numbers` feature reads public regular currency fraction
+data and short/narrow symbol payloads. It does not enable ordinary display-name
+or casing data merely to query numeric metadata, and does not enable the broad
+experimental compiled-data feature. Standard digits remain distinct from cash
+digits/rounding. Unknown symbols remain absent for core code fallback; explicit
+empty symbols remain present for the composing formatter's no-currency pattern.
+Symbols retain the library's letter-boundary flags for currency spacing. The
+query never formats an amount or changes resolved numeric precision.

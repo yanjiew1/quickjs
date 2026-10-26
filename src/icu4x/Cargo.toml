@@ -32,6 +32,15 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+currency_numbers = [
+    "dep:icu_experimental",
+    "dep:icu_experimental_data",
+    "dep:icu_locale_core",
+    "dep:icu_locale_fallback",
+    "dep:icu_provider",
+    "icu_provider/baked",
+    "dep:zerovec",
+]
 currency_names = [
     "names",
     "dep:icu_experimental",
