@@ -23,6 +23,7 @@
 #define QJS_INTL_DATETIME_PROVIDER_H
 #include "../native/data.h"
 #include "text.h"
+#include "zone-name.h"
 
 /* Compile-time data binding for the shared date-program service. The returned
    pack borrows immutable storage; validators and formatter policy remain in
@@ -37,4 +38,7 @@ const QJSIntlData *qjs_intl_datetime_provider_dependency_data(const QJSIntlData 
 QJSIntlStatus qjs_intl_datetime_provider_text_open(const QJSIntlAllocator *,
                                                  QJSIntlDateTextData *, QJSCalendarId, void **);
 void qjs_intl_datetime_provider_text_close(void *);
+QJSIntlStatus qjs_intl_datetime_provider_zone_open(const QJSIntlAllocator *,
+                                                 QJSIntlDateZoneData *, void **);
+void qjs_intl_datetime_provider_zone_close(void *);
 #endif

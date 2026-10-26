@@ -52,3 +52,17 @@ void qjs_intl_datetime_provider_text_close(void *owner)
 {
     (void)owner;
 }
+
+QJSIntlStatus qjs_intl_datetime_provider_zone_open(const QJSIntlAllocator *allocator,
+                                                 QJSIntlDateZoneData *binding, void **out)
+{
+    (void)allocator;
+    (void)binding;
+    *out = NULL;
+    return QJS_INTL_OK;
+}
+
+void qjs_intl_datetime_provider_zone_close(void *owner)
+{
+    (void)owner;
+}

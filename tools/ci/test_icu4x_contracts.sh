@@ -192,6 +192,11 @@ compile)
         tests/icu4c/helpers.c \
         tests/icu4x/duration-bridge.c
     compile_contract datetime-names tests/icu4x/datetime-names.c
+    compile_contract zone-names tests/icu4x/zone-names.c
+    compile_date_contract zone-binding \
+        src/intl/datetime/zones-icu4x.c \
+        src/intl/icu4x/common.c \
+        tests/icu4x/zone-binding.c
     compile_date_contract datetime-data tests/icu4x/datetime-data.c
     # Keep the isolated name contract independent of calendar arithmetic by
     # discarding unused facade entry points; production uses its selected backend.
@@ -318,7 +323,9 @@ test)
         duration-bridge \
         datetime-data \
         datetime-names \
-        datetime-binding
+        datetime-binding \
+        zone-names \
+        zone-binding
     do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"

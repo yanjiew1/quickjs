@@ -29,6 +29,14 @@
 #include "../locale/timezone-identity.h"
 #include "../../timezone/timezone.h"
 
+/* Equivalent-text projection after source resolution. UNSUPPORTED keeps the
+   source leaf; other errors propagate. Protected/empty leaves never reach it.
+   The callback allocates nothing and returned spans borrow its retained owner. */
+typedef QJSIntlStatus (*QJSIntlDateZoneMaterializer)(void *,
+                                                    const QJSIntlTimeZoneNameNode *,
+                                                    const QJSIntlTimeZoneNameEntry *,
+                                                    QJSIntlBytes *);
+
 typedef struct QJSIntlDateZoneData {
     const QJSIntlTimeZoneNameData *names;
     const QJSIntlTimeZonePresentationData *presentation;
@@ -36,6 +44,8 @@ typedef struct QJSIntlDateZoneData {
     const QJSIntlNameData *regions;
     uint32_t names_locale, regions_locale;
     QJSIntlBytes territory; /* Resolved/maximized locale region, or empty for 001. */
+    QJSIntlDateZoneMaterializer materialize;
+    void *materialize_opaque;
 } QJSIntlDateZoneData;
 
 /* Format one of the six standard zone-name styles as one owned timeZoneName

@@ -490,3 +490,13 @@ identical, preserving catalog, interval and protected-source decisions. Modern
 Japanese era indexes come from ICU4X calendar metadata rather than a frozen list.
 The binding contract checks source selection, retained spans and allocation
 failure cleanup; the shared text tests check leap-template projection errors.
+
+Timezone name payloads retain exact-source generic/specific names and validate
+their checksum against public ICU4X periods. A representative IANA zone and a
+safe instant inside a post-2015 CLDR membership recover each dataset-local
+metazone ID. Historical-only metazones remain a companion gap. Names are
+snapshotted at construction; equivalent-text projection preserves resolved
+alias origins and never revives missing, blocked or empty leaves. Raw GMT
+patterns, source-qualified cities/location composition and compacted-away
+labels remain matching-CLDR companion data where public payloads lose the
+required source distinction.

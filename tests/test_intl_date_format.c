@@ -240,7 +240,7 @@ int main(void)
     assert(calendar < names.calendar_count);
     data.text.calendar = calendar;
     data.zones = (QJSIntlDateZoneData){&zones, &presentation, &metadata, &regions,
-                                      locale(&zones.data, "en"), locale(&regions.data, "en"), {"US", 2}};
+                                      locale(&zones.data, "en"), locale(&regions.data, "en"), {"US", 2}, NULL, NULL};
     assert(!qjs_intl_date_offset_from_data(&zones, data.zones.names_locale, &allocator, &offset));
     data.offset = &offset;
     assert(!qjs_intl_number_open(&allocator, NULL, &service));

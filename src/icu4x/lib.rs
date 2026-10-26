@@ -72,6 +72,8 @@ mod segment;
 mod timezone;
 #[cfg(feature = "units")]
 mod unit;
+#[cfg(feature = "datetimes")]
+mod zone_names;
 
 #[cfg(feature = "casing")]
 mod casing;

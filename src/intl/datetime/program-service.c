@@ -91,6 +91,7 @@ struct QJSIntlDateTimeFormatter {
     QJSIntlDateFormatData format;
     QJSIntlDayPeriodRuleList rules;
     void *name_provider;
+    void *zone_provider;
     QJSIntlDateNumberFormats numbers;
     QJSIntlDateOffset offset;
     QJSTimeZoneIdentifier zone, utc;
@@ -1389,6 +1390,7 @@ void qjs_intl_datetime_formatter_close(QJSIntlDateTimeFormatter *formatter)
             qjs_intl_number_formatter_close((QJSIntlNumberFormatter *)formatter->numbers.fraction[i]);
         qjs_intl_date_offset_clear(&formatter->offset);
         qjs_intl_datetime_provider_text_close(formatter->name_provider);
+        qjs_intl_datetime_provider_zone_close(formatter->zone_provider);
         allocator.free(allocator.opaque, formatter);
     }
 }
@@ -1564,8 +1566,12 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
     memcpy(formatter->territory, source->territory, sizeof(formatter->territory));
     formatter->format.zones = (QJSIntlDateZoneData){
         &formatter->data.zones, &formatter->data.presentation, &formatter->data.metadata,
-        &formatter->data.regions, source->source, source->source, bytes(formatter->territory),
+        &formatter->data.regions, source->source, source->source, bytes(formatter->territory), NULL, NULL,
     };
+    status = qjs_intl_datetime_provider_zone_open(allocator, &formatter->format.zones,
+                                                 &formatter->zone_provider);
+    if (status)
+        goto done;
     status = qjs_intl_date_offset_from_data(&formatter->data.zones, source->source, allocator, &formatter->offset);
     if (status)
         goto done;

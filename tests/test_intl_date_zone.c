@@ -211,6 +211,18 @@ static void check(const QJSIntlAllocator *allocator, const QJSIntlDateZoneData *
 }
 
 #ifdef CONFIG_TIMEZONE_NATIVE
+typedef struct Projection { size_t calls; QJSIntlStatus status; } Projection;
+
+static QJSIntlStatus project(void *opaque, const QJSIntlTimeZoneNameNode *origin,
+                             const QJSIntlTimeZoneNameEntry *entry, QJSIntlBytes *out)
+{
+    Projection *state = opaque;
+    assert(origin->origin_locale.length && !entry->blocked && entry->text.length);
+    state->calls++;
+    *out = entry->text;
+    return state->status;
+}
+
 /* These witnesses use actual named rules and an authored TZif descriptor. */
 static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetadata *metadata,
                       const QJSIntlDateNumberFormats *numbers)
@@ -233,6 +245,25 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlLocaleMetad
     data.territory = bytes("US");
     assert(!qjs_intl_date_offset_from_data(&names, data.names_locale, allocator, &offset));
     check(allocator, &data, &offset, numbers, "Asia/Tokyo", 1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Direct zone");
+    {
+        Projection projection = {0};
+        const QJSTimeZone *zone = NULL;
+        data.materialize = project;
+        data.materialize_opaque = &projection;
+        check(allocator, &data, &offset, numbers, "Asia/Tokyo", 1719835200,
+              QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Direct zone");
+        assert(projection.calls);
+        projection.status = QJS_INTL_UNSUPPORTED;
+        check(allocator, &data, &offset, numbers, "Asia/Tokyo", 1719835200,
+              QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "Direct zone");
+        projection.status = QJS_INTL_NO_MEMORY;
+        assert(!qjs_timezone_lookup(&zone, "Asia/Tokyo", 10));
+        assert(qjs_intl_date_zone_format(allocator, &data, &offset, numbers, zone, 0,
+                  1719835200, QJS_INTL_DATETIME_ZONE_LONG_GENERIC, 1000, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+        data.materialize = NULL;
+        data.materialize_opaque = NULL;
+    }
     check(allocator, &data, &offset, numbers, "America/Vancouver", 1719835200,
           QJS_INTL_DATETIME_ZONE_LONG_GENERIC, "CA — Pacific");
     data.territory = bytes("CA");

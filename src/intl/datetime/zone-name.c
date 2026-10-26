@@ -86,8 +86,25 @@ static QJSIntlStatus text(const QJSIntlDateZoneData *data, uint32_t source, cons
                                            (QJSIntlBytes){0}, &entry, &origin);
     if (status == QJS_INTL_UNSUPPORTED)
         return QJS_INTL_OK;
-    if (!status && !entry.blocked && entry.text.length)
+    if (!status && !entry.blocked && entry.text.length) {
         *out = entry.text;
+        if (data->materialize) {
+            QJSIntlBytes projected = {0};
+            status = data->materialize(data->materialize_opaque, &origin, &entry, &projected);
+            if (status == QJS_INTL_UNSUPPORTED)
+                status = QJS_INTL_OK;
+            else if (!status) {
+                /* Source equivalence keeps qualification and interval proofs
+                   unchanged even when foreign payloads compact their leaves. */
+                if (!same(projected, entry.text))
+                    status = QJS_INTL_DATA_ERROR;
+                else
+                    *out = projected;
+            }
+        }
+    }
+    if (status)
+        *out = (QJSIntlBytes){0};
     return status;
 }
 
