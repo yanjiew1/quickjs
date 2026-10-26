@@ -82,6 +82,23 @@ int main(void)
         }
     }
 
+    {
+        QJSIntlMathematicalValue huge = number("100000000000000003");
+        QJSIntlMathematicalValue late = number("1.0000000000000000001");
+
+        // Do not lose a large integer residue or the nonzero nineteenth
+        // fractional digit through the foreign library's bounded operands.
+        options.digits.maximum_fraction_digits = 100;
+        assert(!qjs_intl_plural_formatter_open(service, find(locales, count, "ar"), &options,
+                                               &formatter));
+        assert(!qjs_intl_plural_select(formatter, &huge, &category));
+        assert(category == QJS_INTL_PLURAL_FEW);
+        assert(!qjs_intl_plural_select(formatter, &late, &category));
+        assert(category == QJS_INTL_PLURAL_OTHER);
+        qjs_intl_plural_formatter_close(formatter);
+        options.digits.maximum_fraction_digits = 3;
+    }
+
     for (options.notation = QJS_INTL_PLURAL_STANDARD; options.notation <= QJS_INTL_PLURAL_COMPACT;
          options.notation++) {
         assert(!qjs_intl_plural_formatter_open(service, en, &options, &formatter));

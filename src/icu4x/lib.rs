@@ -23,12 +23,16 @@
 
 #[cfg(feature = "calendars")]
 mod calendar;
+#[cfg(feature = "decimals")]
+mod decimal;
 #[cfg(feature = "lists")]
 mod list;
 #[cfg(feature = "locales")]
 mod locale;
 #[cfg(feature = "locales")]
 mod locale_data;
+#[cfg(feature = "plurals")]
+mod plural;
 #[cfg(feature = "segments")]
 mod segment;
 #[cfg(feature = "timezones")]

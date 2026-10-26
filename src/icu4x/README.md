@@ -163,3 +163,31 @@ retain no foreign iterator. Prepared inputs may outlive their segmenter while
 the caller keeps the original UTF-16 text alive. Tests cover Greek sentence
 tailoring, Thai words, callback aborts, lone surrogates/NUL and all engine-owned
 constructor allocation failures.
+
+## Exact plural source data
+
+The private plural provider snapshots public ICU4X rule serialization and
+category range maps. Borrowed rule spans remain valid until that handle closes.
+The common C evaluator consumes these rules with exact decimal operands;
+ICU4X's bounded integer/fraction operand representation is not used. This is the
+explicit shared exact-evaluation exception: all rules and range results still
+come from the selected ICU4X library, never the native Intl pack.
+
+The compiled CLDR registry is shared metadata rather than Segmenter-owned data.
+Its membership defines candidates; each consuming module must independently
+verify its required public data/operations. The plural contract checks every
+exported relation, plus large Arabic integer and late-fraction examples,
+visible zeros, negative notation exponents and Slovenian category ranges.
+
+The C provider uses common exact rounding once on the unscaled value, then
+adds scientific/engineering or compact exponent metadata. Compact thresholds
+come from ICU4X's public decimal formatter; no foreign formatter rounds the
+value again. Formatter snapshots own their foreign rule handles independently
+of the source service. This provider still awaits final profile composition.
+
+To run the private C contracts separately from a full engine build, build the
+locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals`,
+then invoke `tools/ci/test_icu4x_contracts.sh compile ARCHIVE OUTPUT_DIR` and
+`tools/ci/test_icu4x_contracts.sh test OUTPUT_DIR` from the repository root.
+Compilation uses combined ASan/UBSan; the two modes preserve separate CI build
+and test steps. All generated executables stay in the supplied build directory.

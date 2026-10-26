@@ -41,8 +41,8 @@ static int enumerate_locales(void *opaque, QJSICU4XEmit *emit)
     size_t i;
     int status;
 
-    for (i = 0; i < qjs_icu4x_segment_locale_count; i++) {
-        const char *tag = qjs_icu4x_locale_strings + qjs_icu4x_segment_locales[i];
+    for (i = 0; i < qjs_icu4x_locale_registry_count; i++) {
+        const char *tag = qjs_icu4x_locale_strings + qjs_icu4x_locale_registry[i];
         size_t length = strlen(tag);
         status = qjs_icu4x_segment_check((const uint8_t *)tag, length, (const uint8_t *)version,
                                          strlen(version));

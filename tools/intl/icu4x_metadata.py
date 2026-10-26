@@ -53,7 +53,7 @@ def collect(sources):
     return dict(version=version, keys=metadata['keys'], types=metadata['types'],
                 weeks=facts['weeks'], hours=facts['hours'], calendars=facts['calendars'],
                 unknown_scripts=tuple(key for key, direction in facts['scripts'] if not direction),
-                segment_locales=tuple(tag for tag in registry.tags if tag != 'root'))
+                registry=tuple(tag for tag in registry.tags if tag != 'root'))
 
 
 def render(data):
@@ -68,7 +68,7 @@ def render(data):
         for name, values in data[family]:
             strings.update((name, ' '.join(values)))
     strings.update(data['unknown_scripts'])
-    strings.update(data['segment_locales'])
+    strings.update(data['registry'])
     pool, length = {}, 0
     for value in sorted(strings):
         if '\0' in value or any(ord(char) > 127 for char in value):
@@ -110,7 +110,7 @@ def render(data):
         array('QJSICU4XPreference', 'qjs_icu4x_locale_'+family,
               [(pool[name],pool[' '.join(values)]) for name,values in data[family]])
     for family, symbol in [('unknown_scripts','qjs_icu4x_locale_unknown_scripts'),
-                           ('segment_locales','qjs_icu4x_segment_locales')]:
+                           ('registry','qjs_icu4x_locale_registry')]:
         lines.append('const uint32_t '+symbol+'[] = {')
         values = [str(pool[name]) for name in data[family]] or ['0']
         lines.extend('    '+', '.join(values[i:i+12])+',' for i in range(0,len(values),12))
@@ -118,7 +118,7 @@ def render(data):
     for symbol,count in [('week',len(data['weeks'])),('hour',len(data['hours'])),
                          ('calendar',len(data['calendars'])),('unknown_script',len(data['unknown_scripts']))]:
         lines.append('const size_t qjs_icu4x_locale_'+symbol+'_count = '+str(count)+';')
-    lines.append('const size_t qjs_icu4x_segment_locale_count = '+str(len(data['segment_locales']))+';')
+    lines.append('const size_t qjs_icu4x_locale_registry_count = '+str(len(data['registry']))+';')
     return '\n'.join(lines)+'\n'
 
 

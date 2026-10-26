@@ -4691,7 +4691,7 @@ const uint32_t qjs_icu4x_locale_unknown_scripts[] = {
     7188, 10399, 10404, 10409,
 };
 
-const uint32_t qjs_icu4x_segment_locales[] = {
+const uint32_t qjs_icu4x_locale_registry[] = {
     10414, 10417, 10423, 10426, 10463, 10467, 10474, 10481, 10507, 10510, 10516, 10542,
     10546, 10564, 10567, 10594, 10597, 10613, 10616, 10640, 10644, 10673, 10677, 10750,
     10753, 10760, 10766, 10772, 10778, 10784, 10790, 10796, 10802, 10808, 10814, 10820,
@@ -4797,4 +4797,4 @@ const size_t qjs_icu4x_locale_week_count = 156;
 const size_t qjs_icu4x_locale_hour_count = 277;
 const size_t qjs_icu4x_locale_calendar_count = 52;
 const size_t qjs_icu4x_locale_unknown_script_count = 4;
-const size_t qjs_icu4x_segment_locale_count = 1183;
+const size_t qjs_icu4x_locale_registry_count = 1183;

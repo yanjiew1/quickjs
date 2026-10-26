@@ -61,6 +61,6 @@ extern const QJSICU4XPreference qjs_icu4x_locale_calendars[];
 extern const size_t qjs_icu4x_locale_calendar_count;
 extern const uint32_t qjs_icu4x_locale_unknown_scripts[];
 extern const size_t qjs_icu4x_locale_unknown_script_count;
-extern const uint32_t qjs_icu4x_segment_locales[];
-extern const size_t qjs_icu4x_segment_locale_count;
+extern const uint32_t qjs_icu4x_locale_registry[];
+extern const size_t qjs_icu4x_locale_registry_count;
 #endif

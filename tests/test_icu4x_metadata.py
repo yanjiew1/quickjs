@@ -46,7 +46,7 @@ def fixture():
                        ('u', 'ca', 'islamicc', (), 'islamic-civil', True, False, '', '')],
                 weeks=[('001', 1, 1, (6, 7))], hours=[('001', ('h12', 'h23'))],
                 calendars=[('001', ('gregorian', 'islamic-civil'))],
-                unknown_scripts=['Brai'], segment_locales=['en', 'en-US'])
+                unknown_scripts=['Brai'], registry=['en', 'en-US'])
 
 
 class MetadataTest(unittest.TestCase):
@@ -73,8 +73,8 @@ int main(void) {
  assert(!strcmp(s + qjs_icu4x_locale_hours[0].value, "h12 h23"));
  assert(!strcmp(s + qjs_icu4x_locale_calendars[0].value, "gregorian islamic-civil"));
  assert(!strcmp(s + qjs_icu4x_locale_unknown_scripts[0], "Brai"));
- assert(qjs_icu4x_segment_locale_count == 2);
- assert(!strcmp(s + qjs_icu4x_segment_locales[1], "en-US"));
+ assert(qjs_icu4x_locale_registry_count == 2);
+ assert(!strcmp(s + qjs_icu4x_locale_registry[1], "en-US"));
  return 0;
 }
 '''

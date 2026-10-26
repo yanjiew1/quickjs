@@ -1,0 +1,96 @@
+#!/bin/sh
+# Copyright (c) 2026 Yan-Jie Wang
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Invoke from the repository root. Keep compilation separate from execution
+# so CI reports build failures and assertion/sanitizer failures distinctly.
+set -eu
+
+compile_contract()
+{
+    name=$1
+    shift
+    echo "Compile ICU4X $name contract"
+    ${CC:-cc} -std=c11 -g -O1 -Wall -Wextra -Werror -I. \
+        -fsanitize=address,undefined -fno-omit-frame-pointer \
+        "$@" "$bridge" -lgcc_s -lutil -lrt -lpthread -lm -ldl \
+        -o "$output/$name"
+}
+
+case ${1:-} in
+compile)
+    test "$#" = 3
+    bridge=$2
+    output=$3
+    mkdir -p "$output"
+    compile_contract locale \
+        data/intl/icu4x-locale.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/locale-grammar.c \
+        src/intl/locale/identifier.c \
+        src/intl/locale/matching.c \
+        src/intl/locale/preferences.c \
+        src/intl/locale/icu4x.c \
+        tests/icu4c/helpers.c \
+        tests/icu4x/locale.c
+    compile_contract segment \
+        data/intl/icu4x-locale.c \
+        src/intl/icu4x/common.c \
+        src/intl/segment/icu4x.c \
+        src/intl/segment/prepared.c \
+        tests/icu4c/helpers.c \
+        tests/icu4c/segment.c
+    compile_contract plural-data \
+        data/intl/icu4x-locale.c \
+        src/intl/plural/rules.c \
+        tests/icu4x/plural.c
+    compile_contract plural-service \
+        data/intl/icu4x-locale.c \
+        src/intl/icu4x/common.c \
+        src/intl/plural/icu4x.c \
+        src/intl/plural/rules.c \
+        src/intl/common/decimal.c \
+        tests/icu4c/helpers.c \
+        tests/icu4c/plural.c
+    compile_contract list \
+        src/intl/icu4x/common.c \
+        src/intl/list/icu4x.c \
+        tests/icu4c/helpers.c \
+        tests/icu4c/list.c
+    compile_contract casing \
+        src/intl/icu4x/common.c \
+        src/intl/common/locale-grammar.c \
+        src/intl/locale/case-icu4x.c \
+        tests/icu4c/helpers.c \
+        tests/icu4x/case.c
+    ;;
+test)
+    test "$#" = 2
+    output=$2
+    for name in locale segment plural-data plural-service list casing; do
+        echo "Run ICU4X $name contract"
+        timeout --kill-after=5s 60s "$output/$name"
+    done
+    ;;
+*)
+    echo "usage: $0 compile BRIDGE_ARCHIVE OUTPUT_DIR | test OUTPUT_DIR" >&2
+    exit 2
+    ;;
+esac

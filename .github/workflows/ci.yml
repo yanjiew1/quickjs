@@ -1165,49 +1165,19 @@ jobs:
     - name: Build the locked ICU4X bridge
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments
+      run: cargo +${{ matrix.rust }} build --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals
     - name: Run bridge unit tests
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
-      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments
-    - name: Compile the locale C/Rust contract with sanitizers
+      run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing,locales,segments,plurals,decimals
+    - name: Compile private C/Rust contracts with sanitizers
       run: |
-        cc -std=c11 -g -O1 -Wall -Wextra -Werror -I. \
-          -fsanitize=address,undefined -fno-omit-frame-pointer \
-          data/intl/icu4x-locale.c \
-          src/intl/icu4x/common.c \
-          src/intl/common/locale-grammar.c \
-          src/intl/locale/identifier.c \
-          src/intl/locale/matching.c \
-          src/intl/locale/preferences.c \
-          src/intl/locale/icu4x.c \
-          tests/icu4c/helpers.c \
-          tests/icu4x/locale.c \
-          build-icu4x-bridge/debug/libquickjs_icu4x.a \
-          -lgcc_s -lutil -lrt -lpthread -lm -ldl \
-          -o build-icu4x-bridge/locale-contract
-    - name: Run the locale C/Rust contract
+        sh tools/ci/test_icu4x_contracts.sh compile \
+          build-icu4x-bridge/debug/libquickjs_icu4x.a build-icu4x-bridge/contracts
+    - name: Run private C/Rust contracts
       env:
         ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
         UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-      run: timeout --kill-after=5s 60s build-icu4x-bridge/locale-contract
-    - name: Compile the segment C/Rust contract with sanitizers
-      run: |
-        cc -std=c11 -g -O1 -Wall -Wextra -Werror -I. \
-          -fsanitize=address,undefined -fno-omit-frame-pointer \
-          data/intl/icu4x-locale.c \
-          src/intl/icu4x/common.c \
-          src/intl/segment/icu4x.c \
-          src/intl/segment/prepared.c \
-          tests/icu4c/helpers.c \
-          tests/icu4c/segment.c \
-          build-icu4x-bridge/debug/libquickjs_icu4x.a \
-          -lgcc_s -lutil -lrt -lpthread -lm -ldl \
-          -o build-icu4x-bridge/segment-contract
-    - name: Run the segment C/Rust contract
-      env:
-        ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
-        UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-      run: timeout --kill-after=5s 60s build-icu4x-bridge/segment-contract
+      run: sh tools/ci/test_icu4x_contracts.sh test build-icu4x-bridge/contracts
     - name: Check the compiled CLDR supplement contract
       run: python3 tests/test_icu4x_metadata.py
