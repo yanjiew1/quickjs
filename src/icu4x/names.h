@@ -26,7 +26,8 @@
 
 typedef struct QJSICU4XNames QJSICU4XNames;
 /* Private public-API data foundation: formatting-context language/region/script
-   names only (kind 0/1/2). The C Intl adapter supplies standalone/context and
+   names (kind 0/1/2); currency_names adds plain currency kind 3.
+   The C Intl adapter supplies standalone/context and
    other missing CLDR data. Missing names return UNSUPPORTED before callbacks;
    empty/code-identical successful text is present. Style=long/short/narrow,
    dialect Boolean. Inputs are canonical codes; output spans borrow the call. */

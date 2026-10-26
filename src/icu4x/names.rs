@@ -183,6 +183,11 @@ pub unsafe extern "C" fn qjs_icu4x_names_format(
                 .map_err(data_error)?;
                 write(name, sink)
             }
+            #[cfg(feature = "currency_names")]
+            3 => {
+                let name = crate::currency::plain_name(handle.prefs.locale_preferences, code)?;
+                write(&**name.get(), sink)
+            }
             _ => Err(RANGE),
         }
     })) {

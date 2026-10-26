@@ -186,7 +186,7 @@ value again. Formatter snapshots own their foreign rule handles independently
 of the source service. This provider still awaits final profile composition.
 
 To run the private C contracts separately from a full engine build, build the
-locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals,names`,
+locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals,names,currency_names`,
 then invoke `tools/ci/test_icu4x_contracts.sh compile ARCHIVE OUTPUT_DIR` and
 `tools/ci/test_icu4x_contracts.sh test OUTPUT_DIR` from the repository root.
 Compilation uses combined ASan/UBSan; the two modes preserve separate CI build
@@ -208,3 +208,16 @@ retain their original callback status, and returned text uses buffered counted
 UTF-16 output. These are formatting-context component names; complete Intl
 standalone/context handling, calendar/date-field labels and currency data still
 belong to the forthcoming full DisplayNames adapter.
+
+The optional `currency_names` feature uses public ICU4X experimental 0.7.0
+plain-name payloads, from the same pinned release revision and CLDR version.
+Its sorted currency inventory comes from those actual payload IDs, including
+plain-name-only codes such as Chuvash XAD. Currency symbols, plural unit labels
+and ISO digit metadata cannot establish DisplayNames name presence. Payload
+lookup retains public locale-preference fallback and distinguishes absence
+from an empty or code-identical name.
+
+The same small generated provider owns both currency enumeration and lookup.
+It enables only the matching marker data and locale fallback dependencies;
+the experimental crate's broad `compiled_data` feature is deliberately unused.
+This avoids enabling unrelated providers solely to read plain currency names.
