@@ -18,7 +18,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "segment.h"
+#include "prepared.h"
 #include "../icu4c/common.h"
 #include <limits.h>
 #include <string.h>
@@ -34,17 +34,6 @@ struct QJSIntlSegmenter {
     QJSIntlGranularity granularity;
     char *locale;
 };
-
-typedef struct ICUSegmentBoundary {
-    int32_t end;
-    int word_like;
-} ICUSegmentBoundary;
-
-typedef struct ICUSegmentInput {
-    QJSIntlAllocator allocator;
-    size_t count;
-    ICUSegmentBoundary boundaries[];
-} ICUSegmentInput;
 
 QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator, const QJSIntlData *data,
                                     QJSIntlSegmentService **out)
@@ -133,7 +122,7 @@ QJSIntlStatus qjs_intl_segment_input_prepare(const QJSIntlSegmenter *segmenter,
     static const UBreakIteratorType types[] = {UBRK_CHARACTER, UBRK_WORD, UBRK_SENTENCE};
     UErrorCode status = U_ZERO_ERROR;
     UBreakIterator *iterator;
-    ICUSegmentInput *input = NULL;
+    QJSIntlPreparedSegments *input = NULL;
     QJSIntlStatus error = QJS_INTL_OK;
     size_t count = 0, index = 0;
     int32_t end, previous = 0;
@@ -190,8 +179,8 @@ QJSIntlStatus qjs_intl_segment_input_prepare(const QJSIntlSegmenter *segmenter,
             goto done;
         }
         input->boundaries[index++] =
-            (ICUSegmentBoundary){end, segmenter->granularity == QJS_INTL_SEGMENT_WORD &&
-                                          ubrk_getRuleStatus(iterator) >= UBRK_WORD_NUMBER};
+            (QJSIntlSegmentBoundary){end, segmenter->granularity == QJS_INTL_SEGMENT_WORD &&
+                                              ubrk_getRuleStatus(iterator) >= UBRK_WORD_NUMBER};
         previous = end;
     }
     if (index != count || (size_t)previous != text->length) {
@@ -205,63 +194,4 @@ done:
         segmenter->allocator.free(segmenter->allocator.opaque, input);
     ubrk_close(iterator);
     return error;
-}
-
-void qjs_intl_segment_input_clear(QJSIntlSegmentInput *input)
-{
-    if (!input)
-        return;
-    if (input->state) {
-        ICUSegmentInput *state = input->state;
-
-        state->allocator.free(state->allocator.opaque, state);
-    }
-    memset(input, 0, sizeof(*input));
-}
-
-static QJSIntlStatus segment_at(const QJSIntlSegmentInput *input, size_t index, int exact,
-                                QJSIntlSegment *out)
-{
-    const ICUSegmentInput *state;
-    size_t low = 0, high, start;
-
-    if (out)
-        memset(out, 0, sizeof(*out));
-    if (!out || !input || (unsigned int)input->granularity > QJS_INTL_SEGMENT_SENTENCE ||
-        (input->text.length && (!input->text.data || !input->state)))
-        return QJS_INTL_INVALID_ARGUMENT;
-    if (exact && index > input->text.length)
-        return QJS_INTL_INVALID_ARGUMENT;
-    if (index >= input->text.length)
-        return QJS_INTL_OK;
-    state = input->state;
-    high = state->count;
-    while (low < high) {
-        size_t middle = low + (high - low) / 2;
-
-        if ((size_t)state->boundaries[middle].end <= index)
-            low = middle + 1;
-        else
-            high = middle;
-    }
-    if (low == state->count)
-        return QJS_INTL_DATA_ERROR;
-    start = low ? (size_t)state->boundaries[low - 1].end : 0;
-    if (exact && start != index)
-        return QJS_INTL_INVALID_ARGUMENT;
-    *out = (QJSIntlSegment){start, (size_t)state->boundaries[low].end, 1,
-                            state->boundaries[low].word_like};
-    return QJS_INTL_OK;
-}
-
-QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmentInput *input, size_t start,
-                                    QJSIntlSegment *out)
-{
-    return segment_at(input, start, 1, out);
-}
-
-QJSIntlStatus qjs_intl_segment_containing(const QJSIntlSegmentInput *input, size_t index,
-                                          QJSIntlSegment *out)
-{
-    return segment_at(input, index, 0, out);
 }

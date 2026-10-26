@@ -307,6 +307,7 @@ if intl_enabled
       'intl/plural/rules.c',
       'intl/relative/icu4c.c',
       'intl/segment/icu4c.c',
+      'intl/segment/prepared.c',
     )
   endif
 endif
