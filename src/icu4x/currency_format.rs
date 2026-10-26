@@ -19,7 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::plural_pattern::{Text, selector};
+use crate::pattern::Text;
+use crate::plural_selector::selector;
 use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::dimension::provider::currency::{
     displayname::CurrencyDisplaynameV1, extended::CurrencyExtendedDataV1,

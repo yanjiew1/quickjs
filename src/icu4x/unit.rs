@@ -19,7 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::plural_pattern::{SinglePattern, selector, single_pattern};
+use crate::pattern::{SinglePattern, single_pattern};
+use crate::plural_selector::selector;
 use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::dimension::provider::units::{
     categorized_display_names::*, display_names::UnitsDisplayNames,

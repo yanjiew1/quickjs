@@ -465,3 +465,18 @@ The production CI regenerates every ICU4X companion and compares it with the
 repository owner. A private sanitizer contract admits the actual date payload
 through all required C readers and checks temporary allocation failures. These
 source views alone do not enable a complete ICU4X DateTimeFormat provider.
+
+## Private date-name payloads
+
+`datetimes` retains public year, month, weekday and fixed day-period payloads
+for exact source identities selected by C. It maps LDML widths through ICU4X's
+semantic attribute helpers: LDML wide 4 uses ICU attribute 5, narrow 5 uses 4.
+Indexed text excludes encoded month-pattern stores and flexible-rule headers.
+Decoded month patterns keep ordinary/leap/base phases and numeric offsets
+separate; Hebrew offsets cannot be applied blindly to C ordinal months.
+
+The generic decoded-pattern projection is shared independently of plural
+category selectors. The boundary contracts cover wide/narrow and standalone
+forms, retained spans, parent-only rejection, Chinese leap affixes and Hebrew
+literal Adar I/6a/6b forms. Canonical flexible day-period labels and exact
+minute rules remain explicit matching-CLDR companion gaps.

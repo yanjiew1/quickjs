@@ -32,6 +32,17 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+datetimes = [
+    "dep:zerovec",
+    "dep:icu_datetime",
+    "dep:icu_datetime_data",
+    "dep:icu_pattern",
+    "dep:icu_locale_core",
+    "dep:icu_locale_fallback",
+    "dep:icu_provider",
+    "icu_provider/std",
+    "icu_provider/baked",
+]
 durations = [
     "dep:icu_experimental",
     "dep:icu_experimental_data",
@@ -143,6 +154,8 @@ timezones = ["dep:icu_time", "dep:icu_locale_core", "dep:icu_provider"]
 calendars = ["dep:icu_calendar", "dep:icu_calendar_data", "dep:icu_provider"]
 
 [dependencies]
+icu_datetime = { version = "=2.4.0", default-features = false, optional = true }
+icu_datetime_data = { version = "=2.4.0", optional = true }
 icu_collator = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }
 icu_collator_data = { version = "=2.4.0", optional = true }
 icu_normalizer = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }

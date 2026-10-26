@@ -33,6 +33,8 @@ mod currency;
 mod currency_format;
 #[cfg(feature = "currency_numbers")]
 mod currency_number;
+#[cfg(feature = "datetimes")]
+mod datetime_names;
 #[cfg(feature = "decimals")]
 mod decimal;
 #[cfg(feature = "durations")]
@@ -45,6 +47,14 @@ mod locale;
 mod locale_data;
 #[cfg(feature = "names")]
 mod names;
+#[cfg(any(
+    feature = "currency_formats",
+    feature = "compact_formats",
+    feature = "relatives",
+    feature = "units",
+    feature = "datetimes"
+))]
+mod pattern;
 #[cfg(feature = "plurals")]
 mod plural;
 #[cfg(any(
@@ -53,7 +63,7 @@ mod plural;
     feature = "relatives",
     feature = "units"
 ))]
-mod plural_pattern;
+mod plural_selector;
 #[cfg(feature = "relatives")]
 mod relative;
 #[cfg(feature = "segments")]
@@ -78,7 +88,8 @@ const RANGE: i32 = -1;
     feature = "currency_numbers",
     feature = "collations",
     feature = "relatives",
-    feature = "units"
+    feature = "units",
+    feature = "datetimes"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]

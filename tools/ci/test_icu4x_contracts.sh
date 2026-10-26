@@ -161,6 +161,7 @@ compile)
         "$output/cutils.o" \
         tests/icu4c/helpers.c \
         tests/icu4x/duration-bridge.c
+    compile_contract datetime-names tests/icu4x/datetime-names.c
     compile_contract datetime-data \
         data/intl/icu4x-datetime.c \
         src/intl/native/data.c \
@@ -270,7 +271,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose duration duration-bridge datetime-data; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number currency-boundary currency-format compact number collation-bridge collation collation-inventory relative-bridge relative relative-extra unit-data unit-bridge unit-compose duration duration-bridge datetime-data datetime-names; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

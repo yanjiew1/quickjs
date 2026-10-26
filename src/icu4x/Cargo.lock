@@ -140,6 +140,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "icu_datetime"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c338aa7ebff734470e216a4196fa84b123a366cc786c445741b6f5647412c3c"
+dependencies = [
+ "displaydoc",
+ "fixed_decimal",
+ "icu_calendar",
+ "icu_decimal",
+ "icu_locale_core",
+ "icu_pattern",
+ "icu_plurals",
+ "icu_provider",
+ "icu_time",
+ "potential_utf",
+ "tinystr",
+ "writeable",
+ "zerovec",
+]
+
+[[package]]
+name = "icu_datetime_data"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bddb757c2df1635453c4e8cb2d4ba7ad026e904893f29699315826c0951bbd9"
+
+[[package]]
 name = "icu_decimal"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -411,6 +438,7 @@ dependencies = [
  "icu_locale_core",
  "icu_provider",
  "icu_time_data",
+ "serde",
  "writeable",
  "zerotrie",
  "zerovec",
@@ -502,6 +530,8 @@ dependencies = [
  "icu_casemap",
  "icu_collator",
  "icu_collator_data",
+ "icu_datetime",
+ "icu_datetime_data",
  "icu_decimal",
  "icu_decimal_data",
  "icu_experimental",

@@ -19,7 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::plural_pattern::{SinglePattern, Text, selector, single_pattern};
+use crate::pattern::{SinglePattern, Text, single_pattern};
+use crate::plural_selector::selector;
 use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::relativetime::provider::*;
 use icu_locale_core::Locale;
