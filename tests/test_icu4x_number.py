@@ -44,7 +44,10 @@ def fixture():
               '[[:^S:]&[:^Z:]]', '[:digit:]', '\u00a0',
               'after-match', 'after-surrounding', '\u202f', ';', ':')
     patterns = ('#,##0.###', '0.###E+00', '0%', '¤0', '¤0;(¤0)', None, BLOCK, '', "'-'0")
-    rows = ((fields, patterns, (3, 3, 1)),) * 2
+    compact = ((3, 'other', 'standard', '¤0K'), (3, 'one', 'alphaNextToNumber', '¤ 0K'),
+               (3, '1', 'standard', 'mille'), (3, 'few', 'standard', BLOCK),
+               (3, 'many', 'standard', ''), (6, 'other', 'standard', '0'))
+    rows = ((fields, patterns, (3, 3, 1), compact),) * 2
     return {'version': '49.0.0', 'systems': ('arab', 'latn'),
             'digits': (tuple(range(0x660, 0x66a)), tuple(range(48, 58))),
             'locales': (('en', rows), ('en-US', rows)),
@@ -92,6 +95,30 @@ int main(void) {
  assert(!strcmp(s+r->fields[16], "after-surrounding"));
  assert(!strcmp(s+r->fields[17], "\342\200\257"));
  assert(r->grouping[0] == 3 && r->grouping[1] == 3 && r->grouping[2] == 1);
+ {
+   const QJSICU4XNumberCompactMap *m = &qjs_icu4x_number_compact_maps[r->currency_compact];
+   const QJSICU4XNumberCompactEntry *e = &qjs_icu4x_number_compact_entries[m->begin];
+   const QJSICU4XNumberCompactPattern *c;
+   assert(m->count == 6 && e[0].magnitude == 3 && e[0].count == 1 && e[0].variant == 0);
+   c = &qjs_icu4x_number_compact_patterns[e[0].pattern];
+   assert(c->mode == 1 && c->exponent == 3 && c->zeros == 0);
+   p = &qjs_icu4x_number_patterns[c->pattern];
+   token = &qjs_icu4x_number_tokens[p->forms[0].begin];
+   assert(p->forms[0].count == 1 && token->kind == 0 && !strcmp(s+token->text, "mille"));
+   assert(e[1].count == 3 && e[1].variant == 1);
+   assert(e[2].count == 5 && e[2].pattern == QJS_ICU4X_NUMBER_BLOCKED);
+   assert(e[3].count == 6 && e[3].pattern == QJS_ICU4X_NUMBER_EMPTY);
+   assert(e[4].count == 7 && e[4].variant == 0);
+   c = &qjs_icu4x_number_compact_patterns[e[5].pattern];
+   assert(e[5].magnitude == 6 && c->mode == 2 && c->exponent == 0 && c->zeros == 1);
+   c = &qjs_icu4x_number_compact_patterns[e[1].pattern];
+   assert(c->mode == 0 && c->exponent == 3 && c->zeros == 1);
+   p = &qjs_icu4x_number_patterns[c->pattern];
+   token = &qjs_icu4x_number_tokens[p->forms[0].begin];
+   assert(p->forms[0].count == 4 && token[0].kind == 6 && token[1].kind == 0);
+   assert(!strcmp(s+token[1].text, " ") && token[2].kind == 1 && token[3].kind == 0);
+   assert(!strcmp(s+token[3].text, "K"));
+ }
  for (i = 0; i < 10; i++) {
    assert(qjs_icu4x_number_digits[0][i] == 0x660+i);
    assert(qjs_icu4x_number_digits[1][i] == 48+i);
@@ -158,9 +185,9 @@ int main(void) {
             with self.assertRaises(DataError):
                 number.render(data)
         data = fixture()
-        fields, patterns, grouping = data['locales'][0][1][0]
+        fields, patterns, grouping, compact = data['locales'][0][1][0]
         for grouping in ((0, 3, 1), (3, 3, 0), (3, 3, 10)):
-            data['locales'] = (('en', ((fields, patterns, grouping),)*2),)
+            data['locales'] = (('en', ((fields, patterns, grouping, compact),)*2),)
             data['currencies'] = {'en': ()}
             with self.assertRaises(DataError):
                 number.render(data)
@@ -169,23 +196,38 @@ int main(void) {
         data = fixture()
         row = data['locales'][0][1][0]
         for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*20, row[1])):
-            data['locales'] = (('en', ((fields, patterns, row[2]),)*2),)
+            data['locales'] = (('en', ((fields, patterns, row[2], row[3]),)*2),)
             data['currencies'] = {'en': ()}
             with self.assertRaises(ValueError):
                 number.render(data)
 
     def test_nondecimal_grouping_bounds(self):
         data = fixture()
-        fields, patterns, grouping = data['locales'][0][1][0]
+        fields, patterns, grouping, compact = data['locales'][0][1][0]
         patterns = patterns[:2] + ('#,0000000000%',) + patterns[3:]
-        data['locales'] = (('en', ((fields, patterns, grouping),)*2),)
+        data['locales'] = (('en', ((fields, patterns, grouping, compact),)*2),)
         data['currencies'] = {'en': ()}
         with self.assertRaises(DataError):
             number.render(data)
+
         data = fixture()
         data['currencies']['en'] = (('USD', None, None, '¤#,0000000000'),)
         with self.assertRaises(DataError):
             number.render(data)
+
+    def test_compact_currency_validation_and_empty_map(self):
+        data = fixture()
+        fields, patterns, grouping, compact = data['locales'][0][1][0]
+        data['locales'] = (('en', ((fields, patterns, grouping, ()),)*2),)
+        data['currencies'] = {'en': ()}
+        self.assertIn('const QJSICU4XNumberCompactMap qjs_icu4x_number_compact_maps[] = {\n'
+                      '    {0, 0},\n};', number.render(data))
+        for compact in (((3, 'other', 'standard', BLOCK),),
+                        ((3, 'other', 'standard', '¤0K'),)*2,
+                        ((3, 'unknown', 'standard', '¤0K'),)):
+            data['locales'] = (('en', ((fields, patterns, grouping, compact),)*2),)
+            with self.assertRaises(DataError):
+                number.render(data)
 
 
 if __name__ == '__main__':

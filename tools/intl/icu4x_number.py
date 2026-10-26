@@ -30,6 +30,8 @@ nonfinite/exponent/range symbols from matching CLDR, using existing collectors.
 """
 import availability
 import currencies
+import compact_patterns
+import compact_pattern_syntax
 from cldr_xml import DataError
 from embed import WRAPPER_LICENSE, c_string
 import number_layout
@@ -58,6 +60,9 @@ def collect(sources):
     symbols = number_symbols.collect(sources, graph)
     patterns = number_patterns.collect(sources, graph)
     layouts = number_layout.collect(sources, graph)
+    compacts = compact_patterns.collect(sources, graph)
+    compact_rows = {(locale, system): compacts['maps'][index]
+                    for locale, system, kind, index in compacts['rows'] if kind == 2}
     systems = symbols['systems']
     if systems != patterns['systems'] or systems != layouts['systems']:
         raise DataError('number supplement system mismatch')
@@ -85,7 +90,8 @@ def collect(sources):
                                     symbol_rows[source, system][10:],
                                     pattern_rows[source, system],
                                     syntax.compile_pattern(pattern_rows[source, system][0])[0][:2] +
-                                    (grouping[source],)) for system in systems)))
+                                    (grouping[source],), compact_rows[source, system])
+                                   for system in systems)))
     return {'systems': systems, 'digits': tuple(tuple(map(ord, definitions[name][1]))
                                                for name in systems), 'locales': tuple(rows),
             'currencies': {locale: override_maps[aliases.get(locale, locale)]
@@ -110,7 +116,7 @@ def render(data):
     for locale, rows in locales:
         if len(rows) != len(systems):
             raise DataError('numeric locale/system extent mismatch')
-        for fields, patterns, grouping in rows:
+        for fields, patterns, grouping, compact in rows:
             if len(fields) != len(SYMBOLS) + len(LAYOUTS) or len(patterns) != len(number_patterns.FIELDS):
                 raise DataError('numeric record width mismatch')
             if (len(grouping) != 3 or any(type(value) is not int or not 0 <= value <= 9
@@ -133,6 +139,16 @@ def render(data):
             strings.update(value for value in (decimal, group) if value not in (None, BLOCK))
             if pattern not in (None, BLOCK, ''):
                 raw_patterns.add(pattern)
+    # Only currency compact patterns are missing from public ICU4X markers.
+    # Compile that sparse gap with the existing LDML grammar; do not carry
+    # duplicate decimal compact payloads or a second binary section envelope.
+    compact_sources = {compact for locale, rows in locales
+                       for fields, patterns, grouping, compact in rows}
+    compact_maps = {compact: compact_pattern_syntax.compile_map(compact)
+                    for compact in sorted(compact_sources)}
+    compact_values = tuple(sorted({value for entries in compact_maps.values()
+                                   for magnitude, count, variant, value in entries
+                                   if value not in ('', BLOCK)}))
     compiled = {}
     for text in sorted(raw_patterns):
         numeric, positive, negative, plus = syntax.compile_pattern(text)
@@ -141,7 +157,8 @@ def render(data):
         # ECMA digit/grouping and exponent rules own the numeric body. LDML
         # skeleton defaults (including E+00) must not override those rules.
         compiled[text] = (numeric[:2], (positive, negative, plus))
-    patterns = tuple(sorted(set(compiled.values())))
+    patterns = tuple(sorted(set(compiled.values()) |
+                            {((0, 0), value[3:]) for value in compact_values}))
     if not patterns:
         raise DataError('numeric supplement has no executable outer patterns')
     pattern_ids = {pattern: index for index, pattern in enumerate(patterns)}
@@ -169,11 +186,23 @@ def render(data):
             return BLOCKED
         return EMPTY if text == '' else pattern_ids[compiled[text]]
 
+    compact_ids = {value: index for index, value in enumerate(compact_values)}
+    mapped_compacts = {
+        original: tuple(sorted((magnitude, compact_patterns.COUNTS.index(count),
+                                compact_patterns.VARIANTS.index(variant),
+                                BLOCKED if value == BLOCK else EMPTY if value == '' else compact_ids[value])
+                               for magnitude, count, variant, value in entries))
+        for original, entries in compact_maps.items()}
+    unique_compacts = tuple(sorted(set(mapped_compacts.values())))
+    compact_map_ids = {entries: index for index, entries in enumerate(unique_compacts)}
+    if max(len(compact_values), sum(map(len, unique_compacts))) >= EMPTY:
+        raise DataError('numeric compact tables exceed field bounds')
     mapped = {}
     for locale, rows in locales:
         mapped[locale] = tuple(tuple(text_id(text) for text in fields) +
-                               tuple(pattern_id(text) for text in fields_patterns) + grouping
-                               for fields, fields_patterns, grouping in rows)
+                               tuple(pattern_id(text) for text in fields_patterns) + grouping +
+                               (compact_map_ids[mapped_compacts[compact]],)
+                               for fields, fields_patterns, grouping, compact in rows)
         records.update(mapped[locale])
     records = tuple(sorted(records))
     record_ids = {record: index for index, record in enumerate(records)}
@@ -214,7 +243,8 @@ def render(data):
         for grouping, pattern in patterns])
     array('QJSICU4XNumberRecord', 'qjs_icu4x_number_records', [
         '{{'+', '.join(map(str, row[:FIELD_COUNT]))+'}, {'+', '.join(map(str, row[FIELD_COUNT:FIELD_COUNT+PATTERN_COUNT]))+
-        '}, {'+', '.join(map(str, row[FIELD_COUNT+PATTERN_COUNT:]))+'}}' for row in records])
+        '}, {'+', '.join(map(str, row[FIELD_COUNT+PATTERN_COUNT:FIELD_COUNT+PATTERN_COUNT+3]))+
+        '}, '+str(row[-1])+'}' for row in records])
     array('uint32_t', 'qjs_icu4x_number_rows', [
         ', '.join(map(str, row)) for row in unique_vectors])
     array('QJSICU4XNumberCurrency', 'qjs_icu4x_number_currencies', [
@@ -224,6 +254,17 @@ def render(data):
         currency_starts.append('{'+str(start)+', '+str(len(rows))+'}')
         start += len(rows)
     array('QJSICU4XNumberCurrencyMap', 'qjs_icu4x_number_currency_maps', currency_starts)
+    array('QJSICU4XNumberCompactPattern', 'qjs_icu4x_number_compact_patterns', [
+        '{'+', '.join(map(str, value[:3]))+', '+str(pattern_ids[((0, 0), value[3:])])+'}'
+        for value in compact_values] or ['{0, 0, 0, 0}'])
+    array('QJSICU4XNumberCompactEntry', 'qjs_icu4x_number_compact_entries', [
+        '{'+', '.join(map(str, entry))+'}' for entries in unique_compacts for entry in entries]
+        or ['{0, 0, 0, 0}'])
+    compact_starts, start = [], 0
+    for entries in unique_compacts:
+        compact_starts.append('{'+str(start)+', '+str(len(entries))+'}')
+        start += len(entries)
+    array('QJSICU4XNumberCompactMap', 'qjs_icu4x_number_compact_maps', compact_starts)
     array('QJSICU4XNumberLocale', 'qjs_icu4x_number_locales', [
         '{'+str(pool[locale])+', '+str(vector_ids[vectors[locale]] * len(systems))+', '+
         str(currency_ids[mapped_currencies[locale]])+'}'

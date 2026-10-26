@@ -50,7 +50,22 @@ typedef struct QJSICU4XNumberRecord {
     uint32_t fields[20];
     uint32_t patterns[9]; /* QJSIntlNumberPatternField order. */
     uint32_t grouping[3]; /* Fallback primary, secondary and minimum group sizes. */
+    uint32_t currency_compact; /* Exact locale/system's sparse compact map. */
 } QJSICU4XNumberRecord;
+enum { QJS_ICU4X_COMPACT_SCALED, QJS_ICU4X_COMPACT_LITERAL, QJS_ICU4X_COMPACT_FALLBACK };
+enum { QJS_ICU4X_COMPACT_STANDARD, QJS_ICU4X_COMPACT_ALPHA, QJS_ICU4X_COMPACT_NO_CURRENCY };
+typedef struct QJSICU4XNumberCompactPattern {
+    uint32_t mode, exponent, zeros, pattern; /* Pattern indexes shared typed affixes. */
+} QJSICU4XNumberCompactPattern;
+typedef struct QJSICU4XNumberCompactEntry {
+    /* Sorted magnitude/count/variant. Counts are 0, 1, zero, one, two, few,
+       many, other. Pattern indexes compact descriptors, or BLOCKED/EMPTY;
+       an absent leaf has no entry at all. */
+    uint32_t magnitude, count, variant, pattern;
+} QJSICU4XNumberCompactEntry;
+typedef struct QJSICU4XNumberCompactMap {
+    uint32_t begin, count;
+} QJSICU4XNumberCompactMap;
 typedef struct QJSICU4XNumberCurrency {
     uint32_t code, decimal, group, pattern;
 } QJSICU4XNumberCurrency;
@@ -71,6 +86,9 @@ extern const QJSICU4XNumberPattern qjs_icu4x_number_patterns[];
 extern const QJSICU4XNumberRecord qjs_icu4x_number_records[];
 extern const QJSICU4XNumberCurrency qjs_icu4x_number_currencies[];
 extern const QJSICU4XNumberCurrencyMap qjs_icu4x_number_currency_maps[];
+extern const QJSICU4XNumberCompactPattern qjs_icu4x_number_compact_patterns[];
+extern const QJSICU4XNumberCompactEntry qjs_icu4x_number_compact_entries[];
+extern const QJSICU4XNumberCompactMap qjs_icu4x_number_compact_maps[];
 extern const QJSICU4XNumberLocale qjs_icu4x_number_locales[];
 extern const size_t qjs_icu4x_number_system_count, qjs_icu4x_number_locale_count;
 #endif
