@@ -40,7 +40,28 @@ compile)
     bridge=$2
     output=$3
     mkdir -p "$output"
+    # Match cutils' established warning policy for upstream callback/signed
+    # arithmetic conventions, scoped to that object rather than new providers.
+    ${CC:-cc} -std=c11 -g -O1 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-sign-compare -I. \
+        -fsanitize=address,undefined -fno-omit-frame-pointer \
+        -c src/cutils/cutils.c -o "$output/cutils.o"
     compile_contract currency tests/icu4x/currency.c
+    compile_contract number \
+        data/intl/icu4x-number.c \
+        src/intl/number/icu4x.c \
+        src/intl/number/affix.c \
+        src/intl/number/body.c \
+        src/intl/number/exponent.c \
+        src/intl/number/round.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/decimal.c \
+        src/intl/common/format-builder.c \
+        src/intl/common/pair-pattern.c \
+        src/intl/common/unary-pattern.c \
+        src/intl/common/range-compose.c \
+        "$output/cutils.o" \
+        tests/icu4c/helpers.c \
+        tests/icu4x/number.c
     compile_contract currency-number tests/icu4x/currency-number.c
     compile_contract decimal \
         src/intl/number/body.c \
@@ -98,7 +119,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number; do
+    for name in locale segment plural-data plural-service list casing names currency display decimal currency-number number; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

@@ -60,4 +60,5 @@ int qjs_icu4x_decimal_symbols(const QJSICU4XDecimal *, QJSICU4XDecimalSymbols *)
    explicit symbol rows omit locales legitimately inheriting root symbols. */
 typedef int QJSICU4XDecimalEmit(void *, const uint8_t *, size_t);
 int qjs_icu4x_decimal_systems(void *, QJSICU4XDecimalEmit *);
+int qjs_icu4x_decimal_check_version(const uint8_t *, size_t);
 #endif

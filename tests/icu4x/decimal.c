@@ -127,6 +127,8 @@ int main(void)
     QJSICU4XDecimal *handle = open_symbols("en", "", &symbols);
     size_t i;
 
+    assert(!qjs_icu4x_decimal_check_version((const uint8_t *)"49.0.0", 6));
+    assert(qjs_icu4x_decimal_check_version((const uint8_t *)"48.0.0", 6) == QJS_ICU4X_BACKEND);
     field(symbols.fields[0], ".");
     field(symbols.fields[1], ",");
     field(symbols.fields[2], "-");

@@ -287,8 +287,8 @@ the full NumberFormat provider: nonfinite/scientific/range and outer style
 composition remain separate work. The contract includes a 40,000-digit input
 with supplementary-plane Adlam digits and UTF-16 part offsets.
 
-The numeric digit-system inventory comes from the same generated public
-provider used by actual formatting queries. Tests construct every advertised
+The low-level public-payload inventory comes from the same generated
+provider used by actual ICU4X queries. Tests construct every advertised
 system and verify its resolved identity. Explicit symbol locale IDs are not
 used as an available-locale list: they omit locales legitimately inheriting
 root symbols. Complete NumberFormat admission must validate its declared locale
@@ -311,8 +311,9 @@ data/intl/icu4x-number.c`. The component reuses the existing CLDR symbol,
 pattern and layout collectors. It supplies nonfinite/exponent/atomic sign
 symbols, range/approximation templates and typed outer affixes; the public
 ICU4X formatters do not expose all required tokens and would re-round some
-amounts. Numeric digits, decimal/group separators, grouping sizes, regular
-currency precision/symbols and exact plural rules remain in ICU4X.
+amounts. Public ICU4X numeric data remains preferred; regular currency precision/
+symbols and exact plural rules also remain in ICU4X. Required numeric systems
+absent from the public bake use the compact matching CLDR fallback below.
 
 The private layout in `src/intl/number/icu4x-data.h` uses one UTF-8 pool,
 shared field records, shared system-index vectors and deduplicated typed
@@ -323,3 +324,23 @@ defaults, including LDML exponent width/plus signs, do not override ECMA
 exponent/precision rules or public ICU4X grouping. The arrays
 are compiled once for the target, without a runtime pack decoder or wire
 version. Locale rows provide source coverage, not executable service admission.
+
+The initial private NumberFormat service combines these sources with common
+exact rounding, numeric bodies and typed affix composition. It currently
+covers decimal/percent styles, standard/scientific/engineering notation and
+source-preserving ranges. It admits declared locale candidates through their
+actual public constructor/default system; tests execute every admitted default.
+Resolved symbol text is copied into one C-owned UTF-16 arena and temporary
+Rust handles are released during construction. Formatters/results outlive the
+service. Currency/unit styles and compact composition remain to be completed
+before enabling the JavaScript ICU4X profile.
+
+ECMA-402 Table 30 requires all 78 numeric systems in the selected draft, while
+the ICU4X 2.4 bake contains 23. The number companion therefore carries the
+complete CLDR numeric digit map (about 3 KB) and fallback decimal/group
+separators and grouping sizes. Retaining the tiny complete map avoids another
+hand-maintained library capability pin. Public payloads are preferred for
+systems they actually provide; the remaining 55 use the shared exact body.
+Fallback follows the requested system's resolved CLDR data, not the locale's
+default system: Persian with mathematical digits must not accidentally inherit
+the default Arabic-extended numbering separators. Algorithmic systems remain excluded.

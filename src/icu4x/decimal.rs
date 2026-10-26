@@ -291,3 +291,17 @@ pub unsafe extern "C" fn qjs_icu4x_decimal_systems(
         Err(_) => BACKEND,
     }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_decimal_check_version(text: *const u8, length: usize) -> i32 {
+    if text.is_null() || length > isize::MAX as usize {
+        return RANGE;
+    }
+    if unsafe { std::slice::from_raw_parts(text, length) }
+        == icu_decimal_data::cldr_tag!().as_bytes()
+    {
+        0
+    } else {
+        BACKEND
+    }
+}
