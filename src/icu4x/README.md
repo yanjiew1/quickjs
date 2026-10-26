@@ -124,3 +124,25 @@ compiler supplies target alignment and endianness, so this is compiled data,
 not a versioned wire format. One translation unit owns all arrays. The production
 CLDR 49 payload is about 60 KB before linking. `tests/test_icu4x_metadata.py`
 checks actual compiled fields and string escaping using a small authored fixture.
+
+## Locale identity
+
+The private `locales` feature delegates base aliases and likely subtags to
+ICU4X, and borrows the matching compiled supplement for key/type aliases and
+region preferences. Admission verifies its declared CLDR version and preferred
+chains once. Source-type and territory queries then return immutable borrowed
+text without allocation. Timezone metadata preserves the source territory
+before consumers resolve an IANA primary identifier.
+
+A narrow extension adapter preserves embedded `true` values which ICU4X 2.4's
+public parser otherwise drops. Only an entire Unicode value `true` is elided;
+transformed values retain it. Public ICU4X APIs still canonicalize the base,
+other extension kinds, region/subdivision aliases and transformed language.
+See TR35 Annex C, Definition 5; this is not a replacement language-tag parser.
+
+`tests/icu4x/locale.c` exercises the real compiled C/Rust layout, identity,
+source facts, callback failures and engine-owned allocation failures. CI runs
+it with combined ASan/UBSan on both the minimum and stable Rust toolchains.
+As with the other bridge foundations, this does not yet expose a complete
+`intl=icu4x` runtime profile. Its final default candidates must be admitted by
+all selected formatting modules rather than inferred from metadata membership.

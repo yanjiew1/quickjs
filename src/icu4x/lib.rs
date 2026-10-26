@@ -25,6 +25,10 @@
 mod calendar;
 #[cfg(feature = "lists")]
 mod list;
+#[cfg(feature = "locales")]
+mod locale;
+#[cfg(feature = "locales")]
+mod locale_data;
 #[cfg(feature = "timezones")]
 mod timezone;
 
@@ -34,7 +38,7 @@ mod casing;
 mod text;
 
 const RANGE: i32 = -1;
-#[cfg(any(feature = "calendars", feature = "timezones"))]
+#[cfg(any(feature = "calendars", feature = "timezones", feature = "locales"))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]
 const MEMORY: i32 = -4;
