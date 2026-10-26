@@ -32,6 +32,18 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+relatives = [
+    "dep:icu_experimental",
+    "dep:icu_experimental_data",
+    "dep:icu_locale_core",
+    "dep:icu_locale_fallback",
+    "dep:icu_plurals",
+    "dep:icu_pattern",
+    "dep:icu_provider",
+    "icu_provider/std",
+    "icu_provider/baked",
+    "dep:zerovec",
+]
 collations = [
     "dep:icu_locale_fallback",
     "dep:icu_collator",

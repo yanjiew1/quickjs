@@ -45,8 +45,14 @@ mod locale_data;
 mod names;
 #[cfg(feature = "plurals")]
 mod plural;
-#[cfg(any(feature = "currency_formats", feature = "compact_formats"))]
+#[cfg(any(
+    feature = "currency_formats",
+    feature = "compact_formats",
+    feature = "relatives"
+))]
 mod plural_pattern;
+#[cfg(feature = "relatives")]
+mod relative;
 #[cfg(feature = "segments")]
 mod segment;
 #[cfg(feature = "timezones")]
@@ -65,7 +71,8 @@ const RANGE: i32 = -1;
     feature = "names",
     feature = "decimals",
     feature = "currency_numbers",
-    feature = "collations"
+    feature = "collations",
+    feature = "relatives"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]

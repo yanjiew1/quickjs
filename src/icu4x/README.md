@@ -370,3 +370,14 @@ elsewhere, honoring all explicit options. This is not complete CLDR root search
 support. Search still reports semantic `default` collation. Canonical
 normalization and counted UTF-16 comparisons stay in ICU4X; malformed surrogate
 units receive U+FFFD weights, as permitted by UCA's ill-formed-input policy.
+
+## Private relative-time metadata
+
+`relatives` retains the public ICU4X experimental 0.7.0 payloads for eight
+units and three widths. It exposes automatic labels and grammatical pattern
+affixes, keeping placeholder items distinct from literal braces. It does not
+send amounts through ICU4X's bounded Decimal or high-level relative formatter.
+Exact numeric rounding, plural classification and unit-tagged numeric parts
+belong to the shared C modules; all relative labels/patterns still come from
+the selected ICU4X data. Both Number zero signs use automatic offset zero;
+numeric tense keeps the original sign independently.
