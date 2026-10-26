@@ -409,6 +409,61 @@ static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateNumber
     }
 }
 
+typedef struct PreparedNameProbe {
+    QJSIntlStatus status;
+    const char *text;
+    unsigned calls;
+} PreparedNameProbe;
+
+static QJSIntlStatus prepared_name(void *opaque, const QJSIntlDateCalendarFields *local,
+                                    const QJSIntlDatePatternToken *token,
+                                    const QJSIntlDateNameSelection *source, QJSIntlBytes *out)
+{
+    PreparedNameProbe *probe = opaque;
+    if (token->symbol != 'M')
+        return QJS_INTL_UNSUPPORTED;
+    probe->calls++;
+    assert(!strcmp(local->month_key, "1"));
+    assert(source->state == QJS_INTL_DATE_NAME_TEXT);
+    if (probe->status)
+        return probe->status;
+    *out = bytes(probe->text);
+    return QJS_INTL_OK;
+}
+
+static void materialized_names(const QJSIntlAllocator *allocator,
+                                const QJSIntlDateNumberFormats *numbers, QJSIntlDateTextData data)
+{
+    QJSIntlDateCalendarFields local = {0};
+    PreparedNameProbe probe = {QJS_INTL_OK, "January", 0};
+    local.numeric = (QJSIntlDateNumericFields){2021, 2021, 1, 3, 12, 2, 3, 0};
+    strcpy(local.month_key, "1");
+    data.locale = locale(&data.names->data, "en");
+    data.calendar = calendar(data.names, "gregorian");
+    data.materialize = prepared_name;
+    data.materialize_opaque = &probe;
+    check(allocator, numbers, &data, &local, 0, "MMMM", "January");
+    assert(probe.calls);
+    probe.status = QJS_INTL_UNSUPPORTED;
+    check(allocator, numbers, &data, &local, 0, "MMMM", "January");
+    probe.status = QJS_INTL_NO_MEMORY;
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_NO_MEMORY);
+    probe.status = QJS_INTL_OK;
+    probe.text = "JanuarX";
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_DATA_ERROR);
+    probe.text = "";
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_DATA_ERROR);
+    /* The adapter never sees blocked, empty or missing source leaves. */
+    probe.calls = 0;
+    strcpy(local.month_key, "2");
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_UNSUPPORTED);
+    strcpy(local.month_key, "3");
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_UNSUPPORTED);
+    strcpy(local.month_key, "4");
+    failure(allocator, numbers, &data, &local, "MMMM", QJS_INTL_UNSUPPORTED);
+    assert(!probe.calls);
+}
+
 static void prepared_names(const QJSIntlAllocator *allocator, const QJSIntlDateNumberFormats *numbers,
                             const QJSIntlData *prepared, const QJSIntlLocaleMetadata *metadata)
 {
@@ -477,6 +532,7 @@ int main(void)
     admission(&allocator, data);
     names(&allocator, &numbers, data);
     ownership(&allocator, &numbers, data);
+    materialized_names(&allocator, &numbers, data);
     prepared_names(&allocator, &numbers, &prepared, &metadata);
     close_numbers(&numbers);
     data.calendar = calendar(data.names, "gregorian");

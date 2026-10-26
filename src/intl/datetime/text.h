@@ -27,6 +27,21 @@
 #include "calendar-identity.h"
 #include "dayperiod.h"
 #include "era-data.h"
+#include "name-select.h"
+
+/* Optional prepared foreign-name projection. Source selection, explicit
+   blocked/empty semantics have completed. Admission may supply synthetic
+   locals containing only the relevant era/month/weekday/cyclic/period facts;
+   do not require a complete valid date. OK supplies
+   the same decoded text from another immutable owner: catalog/range proofs
+   remain tied to that source leaf. UNSUPPORTED keeps the source name; other
+   errors propagate. Allocate/retain nothing; the immutable binding and returned
+   spans outlive rendering and name-admission caches. */
+typedef QJSIntlStatus (*QJSIntlDateNameMaterializer)(void *,
+                                                   const QJSIntlDateCalendarFields *,
+                                                   const QJSIntlDatePatternToken *,
+                                                   const QJSIntlDateNameSelection *,
+                                                   QJSIntlBytes *);
 
 typedef struct QJSIntlDateTextData {
     const QJSIntlCalendarNameData *names;
@@ -36,6 +51,8 @@ typedef struct QJSIntlDateTextData {
     const QJSIntlDayPeriodRuleList *period_rules;
     uint32_t locale, calendar; /* Indexes in names, not other source owners. */
     unsigned int use_midnight; /* Explicit 00:00 point-label policy; 0 or 1. */
+    QJSIntlDateNameMaterializer materialize;
+    void *materialize_opaque;
 } QJSIntlDateTextData;
 
 /* Zero-initialize once for one unchanged locale/calendar/data/rule binding.

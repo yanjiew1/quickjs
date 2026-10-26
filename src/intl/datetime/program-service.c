@@ -90,6 +90,7 @@ struct QJSIntlDateTimeFormatter {
     QJSIntlDateTimeOptions options;
     QJSIntlDateFormatData format;
     QJSIntlDayPeriodRuleList rules;
+    void *name_provider;
     QJSIntlDateNumberFormats numbers;
     QJSIntlDateOffset offset;
     QJSTimeZoneIdentifier zone, utc;
@@ -1387,6 +1388,7 @@ void qjs_intl_datetime_formatter_close(QJSIntlDateTimeFormatter *formatter)
         for (i = 0; i < 3; i++)
             qjs_intl_number_formatter_close((QJSIntlNumberFormatter *)formatter->numbers.fraction[i]);
         qjs_intl_date_offset_clear(&formatter->offset);
+        qjs_intl_datetime_provider_text_close(formatter->name_provider);
         allocator.free(allocator.opaque, formatter);
     }
 }
@@ -1536,8 +1538,11 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
        period at midnight, following TR35's optional midnight-support policy.
        Keep the source rules/names intact; noon still uses its exact point. */
     formatter->format.text = (QJSIntlDateTextData){
-        &formatter->data.names, &formatter->data.metadata, &formatter->data.eras,
-        &formatter->data.periods, NULL, source->source, 0, 0,
+        .names = &formatter->data.names,
+        .metadata = &formatter->data.metadata,
+        .eras = &formatter->data.eras,
+        .periods = &formatter->data.periods,
+        .locale = source->source,
     };
     status = qjs_intl_date_name_calendar_index(&formatter->data.metadata, &formatter->data.names,
                                                bytes(qjs_calendar_identifier(formatter->calendar)),
@@ -1550,6 +1555,10 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
         status = QJS_INTL_OK;
     else if (!status)
         formatter->format.text.period_rules = &formatter->rules;
+    if (status)
+        goto done;
+    status = qjs_intl_datetime_provider_text_open(allocator, &formatter->format.text,
+                                                 formatter->calendar, &formatter->name_provider);
     if (status)
         goto done;
     memcpy(formatter->territory, source->territory, sizeof(formatter->territory));

@@ -22,6 +22,7 @@
 #ifndef QJS_INTL_DATETIME_PROVIDER_H
 #define QJS_INTL_DATETIME_PROVIDER_H
 #include "../native/data.h"
+#include "text.h"
 
 /* Compile-time data binding for the shared date-program service. The returned
    pack borrows immutable storage; validators and formatter policy remain in
@@ -31,4 +32,9 @@ QJSIntlStatus qjs_intl_datetime_provider_pack_open(const QJSIntlAllocator *,
 /* Native dependencies share the pack. Foreign providers use their own data
    and therefore receive NULL, never a companion presented as native payload. */
 const QJSIntlData *qjs_intl_datetime_provider_dependency_data(const QJSIntlData *pack);
+/* Prepare optional foreign names before catalog admission. Publish the binding
+   and opaque owner only on success; NULL closes. Native needs no extra owner. */
+QJSIntlStatus qjs_intl_datetime_provider_text_open(const QJSIntlAllocator *,
+                                                 QJSIntlDateTextData *, QJSCalendarId, void **);
+void qjs_intl_datetime_provider_text_close(void *);
 #endif

@@ -1,4 +1,4 @@
-/* Private ICU4X packed plural-metadata selection.
+/* Private ICU4X decoded single-placeholder patterns.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

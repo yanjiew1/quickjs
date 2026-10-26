@@ -266,6 +266,18 @@ selected_name:
     if (selected.state != QJS_INTL_DATE_NAME_TEXT)
         return QJS_INTL_UNSUPPORTED;
     out->text = selected.entry.text;
+    if (data->materialize) {
+        QJSIntlBytes prepared = {0};
+        status = data->materialize(data->materialize_opaque, local, token, &selected, &prepared);
+        if (!status) {
+            if (!prepared.data || prepared.length != selected.entry.text.length ||
+                memcmp(prepared.data, selected.entry.text.data, prepared.length))
+                return QJS_INTL_DATA_ERROR;
+            out->text = prepared;
+        } else if (status != QJS_INTL_UNSUPPORTED) {
+            return status;
+        }
+    }
     /* Chinese/Dangi have a repeated nominal month. Hebrew's inserted Adar has
        an independent month key/name, and must not receive a lunar prefix. */
     if ((token->symbol == 'M' || token->symbol == 'L') && local->has_cyclic_year && local->leap_month)

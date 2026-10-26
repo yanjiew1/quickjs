@@ -36,3 +36,19 @@ const QJSIntlData *qjs_intl_datetime_provider_dependency_data(const QJSIntlData 
 {
     return pack;
 }
+
+QJSIntlStatus qjs_intl_datetime_provider_text_open(const QJSIntlAllocator *allocator,
+                                                 QJSIntlDateTextData *binding,
+                                                 QJSCalendarId calendar, void **out)
+{
+    (void)allocator;
+    (void)binding;
+    (void)calendar;
+    *out = NULL;
+    return QJS_INTL_OK;
+}
+
+void qjs_intl_datetime_provider_text_close(void *owner)
+{
+    (void)owner;
+}
