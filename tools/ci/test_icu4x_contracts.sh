@@ -40,6 +40,7 @@ compile)
     bridge=$2
     output=$3
     mkdir -p "$output"
+    compile_contract names tests/icu4x/names.c
     compile_contract locale \
         data/intl/icu4x-locale.c \
         src/intl/icu4x/common.c \
@@ -84,7 +85,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing; do
+    for name in locale segment plural-data plural-service list casing names; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

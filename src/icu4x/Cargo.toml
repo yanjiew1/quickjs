@@ -32,6 +32,7 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+names = ["dep:icu_provider", "dep:icu_locale", "icu_locale/unstable", "dep:icu_locale_core", "dep:writeable"]
 decimals = ["dep:icu_decimal", "dep:icu_locale_core"]
 plurals = ["dep:icu_plurals", "dep:icu_plurals_data", "dep:icu_locale_core", "dep:icu_provider"]
 segments = ["dep:icu_segmenter", "dep:icu_segmenter_data", "dep:icu_locale_core"]

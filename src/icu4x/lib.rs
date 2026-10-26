@@ -31,6 +31,8 @@ mod list;
 mod locale;
 #[cfg(feature = "locales")]
 mod locale_data;
+#[cfg(feature = "names")]
+mod names;
 #[cfg(feature = "plurals")]
 mod plural;
 #[cfg(feature = "segments")]
@@ -40,11 +42,16 @@ mod timezone;
 
 #[cfg(feature = "casing")]
 mod casing;
-#[cfg(any(feature = "lists", feature = "casing"))]
+#[cfg(any(feature = "lists", feature = "casing", feature = "names"))]
 mod text;
 
 const RANGE: i32 = -1;
-#[cfg(any(feature = "calendars", feature = "timezones", feature = "locales"))]
+#[cfg(any(
+    feature = "calendars",
+    feature = "timezones",
+    feature = "locales",
+    feature = "names"
+))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]
 const MEMORY: i32 = -4;

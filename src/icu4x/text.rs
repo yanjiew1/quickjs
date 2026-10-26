@@ -19,11 +19,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#[cfg(any(feature = "lists", feature = "casing"))]
 use crate::RANGE;
-#[cfg(feature = "casing")]
+#[cfg(any(feature = "casing", feature = "names"))]
 use std::ffi::c_void;
 use std::fmt;
 
+#[cfg(any(feature = "lists", feature = "casing"))]
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Utf16 {
@@ -31,6 +33,7 @@ pub struct Utf16 {
     pub(crate) length: usize,
 }
 
+#[cfg(any(feature = "lists", feature = "casing"))]
 impl Utf16 {
     pub(crate) unsafe fn units<'a>(self) -> Result<&'a [u16], i32> {
         if self.length > isize::MAX as usize / 2 || (self.length != 0 && self.data.is_null()) {
@@ -46,6 +49,7 @@ impl Utf16 {
 
 // Literal/case output is scalar text; encode in bounded stack chunks rather
 // than allocate an intermediate UTF-16 string. Element copies bypass this.
+#[cfg(feature = "lists")]
 pub(crate) fn encode_utf16(text: &str, mut emit: impl FnMut(&[u16]) -> fmt::Result) -> fmt::Result {
     let mut buffer = [0u16; 128];
     let mut count = 0;
@@ -63,7 +67,7 @@ pub(crate) fn encode_utf16(text: &str, mut emit: impl FnMut(&[u16]) -> fmt::Resu
     Ok(())
 }
 
-#[cfg(feature = "casing")]
+#[cfg(any(feature = "casing", feature = "names"))]
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct TextSink {
@@ -71,14 +75,14 @@ pub struct TextSink {
     pub write: unsafe extern "C" fn(*mut c_void, *const u16, usize) -> i32,
 }
 
-#[cfg(feature = "casing")]
+#[cfg(any(feature = "casing", feature = "names"))]
 pub(crate) struct TextOutput {
     sink: TextSink,
     pub error: i32,
     buffer: [u16; 128],
     used: usize,
 }
-#[cfg(feature = "casing")]
+#[cfg(any(feature = "casing", feature = "names"))]
 impl TextOutput {
     pub fn new(sink: TextSink) -> Self {
         Self {
@@ -120,7 +124,7 @@ impl TextOutput {
         Ok(())
     }
 }
-#[cfg(feature = "casing")]
+#[cfg(any(feature = "casing", feature = "names"))]
 impl fmt::Write for TextOutput {
     fn write_str(&mut self, text: &str) -> fmt::Result {
         if self.error != 0 {

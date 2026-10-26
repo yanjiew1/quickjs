@@ -186,8 +186,25 @@ value again. Formatter snapshots own their foreign rule handles independently
 of the source service. This provider still awaits final profile composition.
 
 To run the private C contracts separately from a full engine build, build the
-locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals`,
+locked Rust archive with `calendars,timezones,lists,casing,locales,segments,plurals,decimals,names`,
 then invoke `tools/ci/test_icu4x_contracts.sh compile ARCHIVE OUTPUT_DIR` and
 `tools/ci/test_icu4x_contracts.sh test OUTPUT_DIR` from the repository root.
 Compilation uses combined ASan/UBSan; the two modes preserve separate CI build
 and test steps. All generated executables stay in the supplied build directory.
+
+## Public display-name foundation
+
+The private `names` feature adapts ICU4X's public heavy language/script and
+light region names. It uses the library's localized language composition and
+dialect/standard distinction. Short names use ICU4X's own baked fallback policy;
+narrow currently shares that short representation. ECMA-402 leaves these
+localized strings implementation-defined, so they need not equal the native
+provider's source-selection policy.
+
+Language composition can report a missing qualifier after producing a known
+prefix. A discard-only preflight detects absence before invoking the bounded
+C sink. Missing is never inferred from code-identical or empty output. Errors
+retain their original callback status, and returned text uses buffered counted
+UTF-16 output. These are formatting-context component names; complete Intl
+standalone/context handling, calendar/date-field labels and currency data still
+belong to the forthcoming full DisplayNames adapter.
