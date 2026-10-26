@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "../src/intl/number/unit.h"
+#include "../src/intl/number/unit-native.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +71,7 @@ static uint32_t locale_id(const QJSIntlData *data, const char *name)
     abort();
 }
 
-static void formatted(const QJSIntlNumberUnit *unit, const QJSIntlAllocator *allocator,
+static void formatted(const QJSIntlNativeNumberUnit *unit, const QJSIntlAllocator *allocator,
                       unsigned int value, int exact, size_t limit, const char *expected,
                       QJSIntlStatus status)
 {
@@ -82,7 +82,8 @@ static void formatted(const QJSIntlNumberUnit *unit, const QJSIntlAllocator *all
     QJSIntlPluralOperands number = {&decimal, 1, 0};
     size_t i, at = 0;
     memset(&result, 0xff, sizeof(result));
-    assert(qjs_intl_number_unit_format(unit, allocator, &number, 0, exact, &body, limit, &result) == status);
+    assert(qjs_intl_number_unit_native_format(unit, allocator, &number, 0, exact, &body, limit,
+                                              &result) == status);
     if (status) {
         assert(!memcmp(&result, &zero, sizeof(result)));
         return;
@@ -98,6 +99,55 @@ static void formatted(const QJSIntlNumberUnit *unit, const QJSIntlAllocator *all
     qjs_intl_unit_format_clear(allocator, &result);
 }
 
+typedef struct SourceRules {
+    unsigned calls;
+    QJSIntlStatus error;
+} SourceRules;
+
+static QJSIntlStatus source_category(void *opaque, QJSIntlBytes source, QJSIntlUnitCount *out)
+{
+    SourceRules *rules = opaque;
+    assert(source.data && source.length);
+    rules->calls++;
+    *out = QJS_INTL_UNIT_COUNT_OTHER;
+    return rules->error;
+}
+
+static void resolved(const QJSIntlUnitData *units, const QJSIntlUnitGrammarData *grammar,
+                     uint32_t en, uint32_t british, uint32_t root,
+                     const QJSIntlAllocator *allocator)
+{
+    QJSIntlNumberUnit unit;
+    SourceRules rules = {0};
+    QJSIntlUnitPatternRequest request = {{0}, source_category, &rules,
+                                         QJS_INTL_UNIT_COUNT_NONE, -1};
+    uint16_t text = '2';
+    QJSIntlPart part = {0, 1, QJS_INTL_PART_INTEGER};
+    QJSIntlFormatted body = {&text, 1, &part, 1}, result;
+
+    assert(!qjs_intl_number_unit_open(units, grammar, en, root, QJS_INTL_UNIT_LONG,
+                                      bytes("meter-per-second"), &unit));
+    assert(!qjs_intl_number_unit_format(&unit, allocator, &request, &body, 100, &result));
+    assert(result.length == 9 && result.text[2] == 'E' && rules.calls);
+    qjs_intl_unit_format_clear(allocator, &result);
+    request.resolve = NULL;
+    request.category = QJS_INTL_UNIT_COUNT_OTHER;
+    assert(!qjs_intl_number_unit_format(&unit, allocator, &request, &body, 100, &result));
+    assert(result.length == 9);
+    qjs_intl_unit_format_clear(allocator, &result);
+
+    assert(!qjs_intl_number_unit_open(units, grammar, british, root, QJS_INTL_UNIT_LONG,
+                                      bytes("liter-per-fluid-ounce"), &unit));
+    request.resolve = source_category;
+    request.category = QJS_INTL_UNIT_COUNT_NONE;
+    rules.calls = 0;
+    rules.error = QJS_INTL_UNSUPPORTED;
+    /* A dependency failure must not select the otherwise usable root plan. */
+    assert(qjs_intl_number_unit_format(&unit, allocator, &request, &body, 100, &result) ==
+           QJS_INTL_UNSUPPORTED);
+    assert(rules.calls == 1 && !result.text && !result.parts);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -106,7 +156,7 @@ int main(void)
     QJSIntlUnitData units;
     QJSIntlPluralData plurals;
     QJSIntlUnitGrammarData grammar;
-    QJSIntlNumberUnit unit, zero = {0};
+    QJSIntlNativeNumberUnit unit, zero = {0};
     uint32_t en, british, de, root;
     size_t calls, i;
     assert(!qjs_intl_data_open(qjs_intl_unit_composition_bytes, qjs_intl_unit_composition_length,
@@ -119,9 +169,12 @@ int main(void)
     british = locale_id(&data, "en-GB");
     de = locale_id(&data, "de");
     root = locale_id(&data, "root");
+    resolved(&units, &grammar, en, british, root, &allocator);
+    assert(!state.live);
     calls = state.calls;
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, british, root, QJS_INTL_UNIT_LONG,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, root,
+                                             QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     assert(state.calls == calls);
     formatted(&unit, &allocator, 2, -1, 100, "ACC_TWO CHILD_DIV 2 EN_ONE", QJS_INTL_OK);
     calls = state.calls;
@@ -134,34 +187,41 @@ int main(void)
     }
     state.fail_at = 0;
     formatted(&unit, &allocator, 2, -1, 5, NULL, QJS_INTL_OVERFLOW);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, en, root, QJS_INTL_UNIT_LONG,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, en, root,
+                                             QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     formatted(&unit, &allocator, 1, 1, 100, "ACC_ONE CHILD_DIV 1 EN_ONE", QJS_INTL_OK);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, de, root, QJS_INTL_UNIT_LONG,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, de, root,
+                                             QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     formatted(&unit, &allocator, 2, -1, 100, "2 DE_OTHER DE_DIV DE_ACC", QJS_INTL_OK);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, british, root, QJS_INTL_UNIT_LONG,
-                                       bytes("liter-per-hour"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, root,
+                                             QJS_INTL_UNIT_LONG, bytes("liter-per-hour"), &unit));
     formatted(&unit, &allocator, 2, -1, 100, "EN_PER_H 2 EN_ONE", QJS_INTL_OK);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, en, root, QJS_INTL_UNIT_LONG,
-                                       bytes("meter-per-second"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, en, root,
+                                             QJS_INTL_UNIT_LONG, bytes("meter-per-second"), &unit));
     formatted(&unit, &allocator, 2, -1, 100, "2 EN_FULL", QJS_INTL_OK);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, british, root, QJS_INTL_UNIT_SHORT,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, root,
+                                             QJS_INTL_UNIT_SHORT, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     formatted(&unit, &allocator, 2, -1, 100, NULL, QJS_INTL_DATA_ERROR);
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, british, root, QJS_INTL_UNIT_NARROW,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, root,
+                                             QJS_INTL_UNIT_NARROW, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     formatted(&unit, &allocator, 2, -1, 100, "2 ROOT_L ROOT_DIV ROOT_F", QJS_INTL_OK);
-    assert(qjs_intl_number_unit_open(&units, &plurals, &grammar, british, en, QJS_INTL_UNIT_LONG,
-                                      bytes("liter-per-hour"), &unit) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, en,
+                                            QJS_INTL_UNIT_LONG, bytes("liter-per-hour"),
+                                            &unit) == QJS_INTL_INVALID_ARGUMENT);
     assert(!memcmp(&unit, &zero, sizeof(unit)));
-    assert(qjs_intl_number_unit_open(&units, &plurals, &grammar, data.locales.count, root,
-                                      QJS_INTL_UNIT_LONG, bytes("liter-per-hour"), &unit) ==
-           QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_number_unit_open(&units, &plurals, &grammar, en, root, QJS_INTL_UNIT_WIDTH_COUNT,
-                                      bytes("liter-per-hour"), &unit) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_number_unit_open(&units, &plurals, NULL, en, root, QJS_INTL_UNIT_LONG,
-                                      bytes("liter-per-hour"), &unit) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_unit_native_open(&units, &plurals, &grammar, data.locales.count, root,
+                                            QJS_INTL_UNIT_LONG, bytes("liter-per-hour"),
+                                            &unit) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_unit_native_open(&units, &plurals, &grammar, en, root,
+                                            QJS_INTL_UNIT_WIDTH_COUNT, bytes("liter-per-hour"),
+                                            &unit) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_unit_native_open(&units, &plurals, NULL, en, root, QJS_INTL_UNIT_LONG,
+                                            bytes("liter-per-hour"),
+                                            &unit) == QJS_INTL_INVALID_ARGUMENT);
     {
         QJSIntlData missing_data;
         QJSIntlUnitData missing_units;
@@ -172,17 +232,19 @@ int main(void)
         assert(!qjs_intl_unit_data_open(&missing_data, &allocator, &missing_units));
         assert(!qjs_intl_plural_data_open(&missing_data, &allocator, &missing_plurals));
         assert(!qjs_intl_unit_grammar_data_open(&missing_data, &allocator, &missing_grammar));
-        assert(!qjs_intl_number_unit_open(&missing_units, &missing_plurals, &missing_grammar,
-                                           locale_id(&missing_data, "en-GB"), locale_id(&missing_data, "root"),
-                                           QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"), &unit));
+        assert(!qjs_intl_number_unit_native_open(
+            &missing_units, &missing_plurals, &missing_grammar, locale_id(&missing_data, "en-GB"),
+            locale_id(&missing_data, "root"), QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"),
+            &unit));
         /* The en-origin noun needs cardinal rules that this projected pack
            deliberately omits. A usable root expression must not hide that. */
         calls = state.calls;
         formatted(&unit, &allocator, 2, -1, 100, NULL, QJS_INTL_UNSUPPORTED);
         assert(state.calls == calls);
     }
-    assert(!qjs_intl_number_unit_open(&units, &plurals, &grammar, british, root, QJS_INTL_UNIT_LONG,
-                                       bytes("liter-per-fluid-ounce"), &unit));
+    assert(!qjs_intl_number_unit_native_open(&units, &plurals, &grammar, british, root,
+                                             QJS_INTL_UNIT_LONG, bytes("liter-per-fluid-ounce"),
+                                             &unit));
     memset(&data, 0, sizeof(data));
     memset(&units, 0, sizeof(units));
     memset(&plurals, 0, sizeof(plurals));

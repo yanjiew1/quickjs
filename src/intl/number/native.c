@@ -30,7 +30,7 @@
 #include "sign-affix.h"
 #include "currency-format.h"
 #include "currency-pattern.h"
-#include "unit.h"
+#include "unit-native.h"
 #include "range.h"
 #include "../currency/display.h"
 #include "../plural/native-engine.h"
@@ -81,7 +81,7 @@ struct QJSIntlNumberFormatter {
     uint32_t locale;
     char currency_code[3];
     unsigned int currency_name, compact_currency;
-    QJSIntlNumberUnit unit;
+    QJSIntlNativeNumberUnit unit;
     QJSIntlBytes range_separator, approximately;
 };
 
@@ -652,9 +652,9 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
                                     ? QJS_INTL_UNIT_LONG
                                 : options->unit_display == QJS_INTL_NUMBER_UNIT_NARROW
                                     ? QJS_INTL_UNIT_NARROW : QJS_INTL_UNIT_SHORT;
-        status = qjs_intl_number_unit_open(&service->units, &service->plurals, &service->unit_grammar,
-                                            source, service->root, width,
-                                            options->unit, &formatter->unit);
+        status = qjs_intl_number_unit_native_open(&service->units, &service->plurals,
+                                                  &service->unit_grammar, source, service->root,
+                                                  width, options->unit, &formatter->unit);
         if (status)
             goto fail;
     }
@@ -984,7 +984,8 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         unsigned int affix_form = complete_currency ? COMPACT_SIGN_FORM + form : form;
         const QJSIntlNumberPatternToken *tokens = formatter->tokens + formatter->offsets[affix_form];
         size_t count = formatter->counts[affix_form];
-        QJSIntlFormatted *target = formatter->currency_name || formatter->unit.active ? &signed_body : out;
+        QJSIntlFormatted *target =
+            formatter->currency_name || formatter->unit.composition.active ? &signed_body : out;
         symbols = formatter->symbols;
         if (complete_currency)
             symbols.before_currency = symbols.after_currency = (QJSIntlBytes){0};
@@ -1027,16 +1028,16 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                                            &signed_body,
                                                            formatter->body.maximum_output_length, out);
     }
-    if (!status && formatter->unit.active) {
+    if (!status && formatter->unit.composition.active) {
         QJSIntlPluralOperands operands = {0};
         uint32_t shift = 0;
         int exact = -1;
         int finite = rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO;
         if (finite)
             operands = outer_operands(formatter, &rounded, &shift, &exact);
-        status = qjs_intl_number_unit_format(&formatter->unit, &formatter->allocator,
-                                               finite ? &operands : NULL, shift, exact, &signed_body,
-                                               formatter->body.maximum_output_length, out);
+        status = qjs_intl_number_unit_native_format(
+            &formatter->unit, &formatter->allocator, finite ? &operands : NULL, shift, exact,
+            &signed_body, formatter->body.maximum_output_length, out);
     }
     qjs_intl_number_body_clear(&formatter->allocator, &body);
     qjs_intl_number_body_clear(&formatter->allocator, &exponent_body);

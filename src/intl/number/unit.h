@@ -1,4 +1,4 @@
-/* Sanctioned single/division units for native NumberFormat, independent of JS values.
+/* Sanctioned single/division units for NumberFormat, independent of JS values.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +23,6 @@
 #define QJS_INTL_NUMBER_UNIT_H
 #include "../unit/format.h"
 #include "../unit/grammar-data.h"
-#include "../plural/data.h"
 
 typedef struct QJSIntlNumberUnitComposition {
     uint32_t full, numerator, denominator, division;
@@ -32,7 +31,6 @@ typedef struct QJSIntlNumberUnitComposition {
 
 typedef struct QJSIntlNumberUnit {
     QJSIntlUnitData data;
-    QJSIntlPluralData plurals;
     QJSIntlNumberUnitComposition local, root;
     unsigned int active, compound;
 } QJSIntlNumberUnit;
@@ -42,22 +40,20 @@ typedef struct QJSIntlNumberUnit {
    root must identify the pack's root locale. Cache local/root composition heads
    and independent supplemental grammar, not selected numeric categories.
    Allocate nothing; reset non-NULL output on errors. */
-QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *, const QJSIntlPluralData *,
-                                        const QJSIntlUnitGrammarData *, uint32_t locale, uint32_t root,
-                                        QJSIntlUnitWidth, QJSIntlBytes identifier,
-                                        QJSIntlNumberUnit *);
+QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *, const QJSIntlUnitGrammarData *,
+                                        uint32_t locale, uint32_t root, QJSIntlUnitWidth,
+                                        QJSIntlBytes identifier, QJSIntlNumberUnit *);
 
-/* The caller supplies final rounded operands and notation expansion, plus
-   exact -1/0/1. NULL operands means nonfinite OTHER and requires exact -1.
-   Resolve each selected source's own cardinal rules, never requester rules.
-   No origin is advertised as an available locale by this lookup.
-   Prefer a complete precomposed form, then a denominator perUnitPattern, then
-   generic division with derived component features. If local composition is
-   ineligible, retry the entire unit expression from root while preserving the
-   localized numeric body. Consulted malformed templates remain errors.
-   Formatting copies the body/result according to unit/format.h. */
+/* Caller resolves each selected source's cardinal category, not requester
+   categories. The request follows unit/pattern.h; fixed grammatical/nonfinite
+   categories do not enable numeric exact selectors. Resolver failures remain
+   dependency errors and never trigger root-expression fallback.
+   Prefer complete precomposed forms, then perUnitPattern, then division with
+   derived component grammar. If local composition is ineligible, retry the
+   entire expression from root while preserving the localized numeric body.
+   Malformed consulted templates remain errors. Ownership follows unit/format.h. */
 QJSIntlStatus qjs_intl_number_unit_format(const QJSIntlNumberUnit *, const QJSIntlAllocator *,
-                                          const QJSIntlPluralOperands *, uint32_t decimal_shift,
-                                          int exact, const QJSIntlFormatted *body, size_t limit,
+                                          const QJSIntlUnitPatternRequest *,
+                                          const QJSIntlFormatted *body, size_t limit,
                                           QJSIntlFormatted *);
 #endif

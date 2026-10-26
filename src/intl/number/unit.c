@@ -20,7 +20,6 @@
  */
 #include "unit.h"
 #include "../unit/identifier.h"
-#include "../plural/native-engine.h"
 #include <string.h>
 
 static QJSIntlStatus overlay(const QJSIntlUnitData *data, uint32_t locale, QJSIntlUnitWidth width,
@@ -63,10 +62,9 @@ static QJSIntlStatus composition(const QJSIntlUnitData *data, const QJSIntlUnitG
     return status;
 }
 
-QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *data, const QJSIntlPluralData *plurals,
-                                        const QJSIntlUnitGrammarData *grammar,
-                                        uint32_t locale, uint32_t root, QJSIntlUnitWidth width,
-                                        QJSIntlBytes name,
+QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *data,
+                                        const QJSIntlUnitGrammarData *grammar, uint32_t locale,
+                                        uint32_t root, QJSIntlUnitWidth width, QJSIntlBytes name,
                                         QJSIntlNumberUnit *out)
 {
     QJSIntlUnitIdentifier unit;
@@ -76,8 +74,7 @@ QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *data, const QJSIn
     uint32_t parent;
     if (out)
         memset(out, 0, sizeof(*out));
-    if (!out || !data || !data->section.bytes || !plurals || !plurals->section.bytes ||
-        !grammar || !grammar->section.bytes || data->data.pack.bytes != plurals->data.pack.bytes ||
+    if (!out || !data || !data->section.bytes || !grammar || !grammar->section.bytes ||
         data->data.pack.bytes != grammar->data.pack.bytes || locale >= data->data.locales.count ||
         (unsigned int)width >= QJS_INTL_UNIT_WIDTH_COUNT ||
         qjs_intl_data_locale(&data->data, root, &root_name, &parent) || parent != UINT32_MAX)
@@ -94,53 +91,20 @@ QJSIntlStatus qjs_intl_number_unit_open(const QJSIntlUnitData *data, const QJSIn
     if (!configured.local.full && !(configured.local.numerator && configured.local.denominator))
         return QJS_INTL_UNSUPPORTED;
     configured.data = *data;
-    configured.plurals = *plurals;
     configured.active = 1;
     *out = configured;
     return QJS_INTL_OK;
 }
 
-typedef struct UnitQuantity {
-    const QJSIntlPluralData *data;
-    const QJSIntlPluralOperands *number;
-    uint32_t shift;
+typedef struct UnitSource {
+    const QJSIntlUnitPatternRequest *request;
     QJSIntlStatus error;
-} UnitQuantity;
+} UnitSource;
 
 static QJSIntlStatus category(void *opaque, QJSIntlBytes source, QJSIntlUnitCount *out)
 {
-    UnitQuantity *quantity = opaque;
-    const QJSIntlData *data = &quantity->data->data;
-    QJSIntlPluralRuleSet rules;
-    QJSIntlPluralCategory result;
-    QJSIntlStatus status;
-    uint32_t lo = 0, hi = data->locales.count;
-    while (lo < hi) {
-        uint32_t mid = lo + (hi - lo) / 2, parent;
-        QJSIntlBytes tag;
-        size_t shared;
-        int order;
-        qjs_intl_data_locale(data, mid, &tag, &parent);
-        shared = source.length < tag.length ? source.length : tag.length;
-        order = shared ? memcmp(source.data, tag.data, shared) : 0;
-        if (!order)
-            order = (source.length > tag.length) - (source.length < tag.length);
-        if (!order) {
-            status = qjs_intl_plural_rules_at(quantity->data, mid, QJS_INTL_PLURAL_CARDINAL, &rules);
-            if (!status)
-                status = qjs_intl_native_plural_select_shifted(&rules, quantity->number,
-                                                                quantity->shift, &result);
-            if (!status)
-                *out = result + QJS_INTL_UNIT_COUNT_ZERO;
-            quantity->error = status;
-            return status;
-        }
-        if (order < 0)
-            hi = mid;
-        else
-            lo = mid + 1;
-    }
-    quantity->error = QJS_INTL_UNSUPPORTED;
+    UnitSource *quantity = opaque;
+    quantity->error = quantity->request->resolve(quantity->request->opaque, source, out);
     return quantity->error;
 }
 
@@ -184,7 +148,7 @@ static QJSIntlStatus format_composition(const QJSIntlNumberUnit *unit,
     QJSIntlUnitPatternRequest request;
     QJSIntlBytes prefix[4] = {0}, suffix[4] = {0}, noun;
     QJSIntlUnitAffix before = {prefix, 2}, after = {suffix, 2};
-    const UnitQuantity *quantity = whole->opaque;
+    const UnitSource *quantity = whole->opaque;
     QJSIntlStatus status;
     if (plan->full) {
         status = qjs_intl_unit_pattern_select(&unit->data, plan->full, whole, &numerator);
@@ -250,23 +214,25 @@ static QJSIntlStatus format_composition(const QJSIntlNumberUnit *unit,
 
 QJSIntlStatus qjs_intl_number_unit_format(const QJSIntlNumberUnit *unit,
                                           const QJSIntlAllocator *allocator,
-                                          const QJSIntlPluralOperands *number, uint32_t shift,
-                                          int exact, const QJSIntlFormatted *body, size_t limit,
+                                          const QJSIntlUnitPatternRequest *input,
+                                          const QJSIntlFormatted *body, size_t limit,
                                           QJSIntlFormatted *out)
 {
-    QJSIntlUnitPatternRequest request = {0};
-    UnitQuantity quantity;
+    QJSIntlUnitPatternRequest request;
+    UnitSource quantity;
     QJSIntlStatus status;
     if (out)
         memset(out, 0, sizeof(*out));
-    if (!out || !unit || !unit->active || exact < -1 || exact > 1 ||
-        (!number && (exact != -1 || shift)))
+    if (!out || !unit || !unit->active || !input ||
+        (input->resolve
+             ? input->category != QJS_INTL_UNIT_COUNT_NONE || input->exact < -1 || input->exact > 1
+             : input->category < QJS_INTL_UNIT_COUNT_ZERO ||
+                   input->category > QJS_INTL_UNIT_COUNT_OTHER || input->exact != -1))
         return QJS_INTL_INVALID_ARGUMENT;
-    quantity = (UnitQuantity){&unit->plurals, number, shift, QJS_INTL_OK};
-    request.resolve = number ? category : NULL;
+    quantity = (UnitSource){input, QJS_INTL_OK};
+    request = *input;
+    request.resolve = input->resolve ? category : NULL;
     request.opaque = &quantity;
-    request.category = number ? QJS_INTL_UNIT_COUNT_NONE : QJS_INTL_UNIT_COUNT_OTHER;
-    request.exact = exact;
     status = format_composition(unit, &unit->local, &request, allocator, body, limit, out);
     /* Missing source cardinal rules are a dependency error, not ineligible
        unit text. Do not hide that failure by substituting root selection. */

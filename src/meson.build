@@ -265,6 +265,7 @@ if intl_enabled
       'intl/number/sign-affix.c',
       'intl/number/symbol-data.c',
       'intl/number/unit.c',
+      'intl/number/unit-native.c',
       'intl/plural/data.c',
       'intl/plural/native.c',
       'intl/plural/native-engine.c',
