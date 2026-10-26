@@ -94,3 +94,33 @@ converted with fallible temporary allocation; original lone surrogates remain
 uncased boundaries. A persistent UTF-16 buffer joins scalar writes before the
 C callback, preserving order and exact callback errors. The C adapter checks
 output bounds before allocating its owned result.
+
+## CLDR metadata supplement
+
+ICU4X public data does not contain complete Unicode/transformed key aliases,
+allowed hour-cycle lists, ordered calendar preferences or minimum week days.
+The narrow supplement in `data/intl/icu4x-locale.c` supplies these facts, four
+listed-unknown script identities, and a declared CLDR locale registry for global
+segmentation rules. Formatting data and base alias/likely-subtag algorithms
+remain in ICU4X. Registry membership alone is not executable service coverage.
+
+Use the existing data front door to acquire and regenerate compatible sources:
+
+```sh
+python3 tools/data/acquire.py cldr --cache /path/to/cache
+python3 tools/data/generate.py intl-icu4x --sources /path/to/cache/cldr-49 \
+    --output data/intl/icu4x-locale.c
+```
+
+Acquisition uses `data/intl/pin.json`; `--source-pin` selects an alternative pin.
+Generation accepts supplied local sources without checking acquisition hashes.
+When upgrading CLDR, update its pin and the matching ICU4X data dependencies;
+this supplement's declared version must match the selected ICU4X CLDR version.
+See the existing data maintenance guide for pin/source upgrade commands.
+
+The private layout is documented by `src/intl/icu4x/locale-data.h`. Fixed-width
+rows reference one interned NUL-delimited ASCII pool by 32-bit offsets. The C
+compiler supplies target alignment and endianness, so this is compiled data,
+not a versioned wire format. One translation unit owns all arrays. The production
+CLDR 49 payload is about 60 KB before linking. `tests/test_icu4x_metadata.py`
+checks actual compiled fields and string escaping using a small authored fixture.

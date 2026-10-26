@@ -1170,3 +1170,5 @@ jobs:
       env:
         CARGO_TARGET_DIR: ${{ github.workspace }}/build-icu4x-bridge
       run: cargo +${{ matrix.rust }} test --manifest-path src/icu4x/Cargo.toml --locked --features calendars,timezones,lists,casing
+    - name: Check the compiled CLDR supplement contract
+      run: python3 tests/test_icu4x_metadata.py

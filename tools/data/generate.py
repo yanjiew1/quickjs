@@ -28,6 +28,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = {
+    'intl-icu4x': ROOT / 'tools/intl/icu4x_metadata.py',
     'calendar': ROOT / 'tools/calendar/generate.py',
     'timezone': ROOT / 'tools/timezone/generate.py',
 }
