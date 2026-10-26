@@ -129,17 +129,20 @@ def render(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--component', choices=('locale', 'display'), default='locale')
+    parser.add_argument('--component', choices=('locale', 'display', 'number'), default='locale')
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--source-pin', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     sources = acquire.Sources(args.sources, acquire.load_pin(args.source_pin))
-    if args.component == 'display':
-        import icu4x_display
-        data = icu4x_display.collect(sources)
+    if args.component in ('display', 'number'):
+        if args.component == 'display':
+            import icu4x_display as component
+        else:
+            import icu4x_number as component
+        data = component.collect(sources)
         data['version'] = cldr_version(sources)
-        output = icu4x_display.render(data)
+        output = component.render(data)
     else:
         data = collect(sources)
         output = render(data)

@@ -169,7 +169,7 @@ int main(void) {
     def test_invalid_tables(self):
         with self.assertRaises(DataError):
             display.render({'version': '49.0.0', 'locales': ()})
-        with self.assertRaises(DataError):
+        with self.assertRaises(ValueError):
             display.c_string('bad\0label')
 
 

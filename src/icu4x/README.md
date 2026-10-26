@@ -302,3 +302,24 @@ digits/rounding. Unknown symbols remain absent for core code fallback; explicit
 empty symbols remain present for the composing formatter's no-currency pattern.
 Symbols retain the library's letter-boundary flags for currency spacing. The
 query never formats an amount or changes resolved numeric precision.
+
+## Number composition supplement
+
+Generate the remaining number facts with `tools/data/generate.py intl-icu4x
+--component number --sources /path/to/cache/cldr-49 --output
+data/intl/icu4x-number.c`. The component reuses the existing CLDR symbol,
+pattern and layout collectors. It supplies nonfinite/exponent/atomic sign
+symbols, range/approximation templates and typed outer affixes; the public
+ICU4X formatters do not expose all required tokens and would re-round some
+amounts. Numeric digits, decimal/group separators, grouping sizes, regular
+currency precision/symbols and exact plural rules remain in ICU4X.
+
+The private layout in `src/intl/number/icu4x-data.h` uses one UTF-8 pool,
+shared field records, shared system-index vectors and deduplicated typed
+affixes. String offset zero means explicit empty; reserved references
+distinguish absent, blocked and explicitly empty patterns. Quoted literal
+hyphens remain distinct from semantic minus-sign tokens. Numeric skeleton
+defaults, including LDML exponent width/plus signs, do not override ECMA
+exponent/precision rules or public ICU4X grouping. The arrays
+are compiled once for the target, without a runtime pack decoder or wire
+version. Locale rows provide source coverage, not executable service admission.

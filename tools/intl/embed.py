@@ -81,6 +81,19 @@ def render(binary, profile=None):
     return WRAPPER_LICENSE + '\n'.join(lines)
 
 
+
+def c_string(text):
+    if '\0' in text:
+        raise ValueError('NUL in compiled string')
+    raw = text.encode('utf-8')
+    # Three-digit octal bytes are independent of the compiler source/execution
+    # charset and cannot consume a following decimal digit or hex letter.
+    # Escaping '?' also prevents C trigraphs before string-literal parsing.
+    return '"' + ''.join(chr(value) if 32 <= value < 127 and value not in (34, 63, 92)
+                         else '\\%03o' % value for value in raw) + '\\000"'
+
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, required=True)

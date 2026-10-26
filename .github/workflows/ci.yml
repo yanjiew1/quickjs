@@ -1183,3 +1183,4 @@ jobs:
       run: |
         python3 tests/test_icu4x_metadata.py
         python3 tests/test_icu4x_display.py
+        python3 tests/test_icu4x_number.py

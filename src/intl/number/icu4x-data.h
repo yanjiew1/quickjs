@@ -1,0 +1,59 @@
+/* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+#ifndef QJS_INTL_NUMBER_ICU4X_DATA_H
+#define QJS_INTL_NUMBER_ICU4X_DATA_H
+#include <stddef.h>
+#include <stdint.h>
+
+/* Private target-compiled CLDR supplement; no wire-format/ABI version. One
+   translation unit owns the arrays. All text offsets address a shared UTF-8
+   NUL-delimited pool; offset zero is explicit empty. Reserved references mean
+   absent, blocked or an explicitly empty pattern (not an empty text field). */
+#define QJS_ICU4X_NUMBER_ABSENT UINT32_MAX
+#define QJS_ICU4X_NUMBER_BLOCKED (UINT32_MAX - 1)
+#define QJS_ICU4X_NUMBER_EMPTY (UINT32_MAX - 2)
+
+typedef struct QJSICU4XNumberToken {
+    uint32_t kind, text; /* Kinds match QJSIntlNumberTokenKind. */
+} QJSICU4XNumberToken;
+typedef struct QJSICU4XNumberAffix {
+    uint32_t begin, count;
+} QJSICU4XNumberAffix;
+typedef struct QJSICU4XNumberPattern {
+    QJSICU4XNumberAffix forms[3]; /* Positive, negative, explicit plus. */
+} QJSICU4XNumberPattern;
+typedef struct QJSICU4XNumberRecord {
+    /* percent, plus, minus, approximately sign, exponential, per-mille,
+       infinity, NaN, range template, approximation template. */
+    uint32_t fields[10];
+    uint32_t patterns[9]; /* QJSIntlNumberPatternField order. */
+} QJSICU4XNumberRecord;
+typedef struct QJSICU4XNumberLocale {
+    uint32_t tag, row; /* Row has system_count record indexes. */
+} QJSICU4XNumberLocale;
+extern const char qjs_icu4x_number_strings[];
+extern const uint32_t qjs_icu4x_number_version, qjs_icu4x_number_systems[], qjs_icu4x_number_rows[];
+extern const QJSICU4XNumberToken qjs_icu4x_number_tokens[];
+extern const QJSICU4XNumberPattern qjs_icu4x_number_patterns[];
+extern const QJSICU4XNumberRecord qjs_icu4x_number_records[];
+extern const QJSICU4XNumberLocale qjs_icu4x_number_locales[];
+extern const size_t qjs_icu4x_number_system_count, qjs_icu4x_number_locale_count;
+#endif
