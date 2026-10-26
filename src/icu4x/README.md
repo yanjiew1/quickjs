@@ -442,3 +442,26 @@ Provider contracts execute every admitted locale and all four styles, in
 addition to fractional nanoseconds, negative durations, Danish separators,
 allocation failures and formatter lifetime. This remains private until the
 complete DateTimeFormat provider enables the full ICU4X profile.
+
+## Date-program companion
+
+ICU4X semantic skeletons do not expose the complete style, available-format,
+append and interval catalog used by the shared C date service. The scoped
+`data/intl/icu4x-datetime.c` companion retains those original programs, precise
+day-period rules, calendar-name fallback and timezone presentation facts. Its
+region-name section leaves unrelated display-name columns empty. It contains
+no native collation, segmentation, lists, units or plural rules.
+
+The CLDR 49 binary payload is 14,673,144 bytes; its one generated C owner is
+about 60 MB of source. It reuses the existing layouts and readers documented
+in `doc/intl-data-format.md` and `doc/intl-data-sections.md`. Regenerate with:
+
+```sh
+python3 tools/data/generate.py intl-icu4x --component datetime \
+    --sources CLDR_ROOT --output data/intl/icu4x-datetime.c
+```
+
+The production CI regenerates every ICU4X companion and compares it with the
+repository owner. A private sanitizer contract admits the actual date payload
+through all required C readers and checks temporary allocation failures. These
+source views alone do not enable a complete ICU4X DateTimeFormat provider.

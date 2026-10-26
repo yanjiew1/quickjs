@@ -25,7 +25,9 @@
 
 Reuse the source-schema collectors. Generation accepts compatible supplied
 files; authentication belongs to acquisition, not to this compiler stage.
-Language aliases, likely subtags and real formatting data stay in ICU4X.
+Runtime base aliases and likely-subtag algorithms remain in ICU4X. Explicit
+matching-version companions cover metadata and formatting facts missing from
+the public APIs.
 """
 import argparse
 import json
@@ -129,19 +131,23 @@ def render(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--component', choices=('locale', 'display', 'number', 'unit'), default='locale')
+    parser.add_argument('--component',
+                        choices=('locale', 'display', 'number', 'unit', 'datetime'),
+                        default='locale')
     parser.add_argument('--sources', type=Path, required=True)
     parser.add_argument('--source-pin', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     sources = acquire.Sources(args.sources, acquire.load_pin(args.source_pin))
-    if args.component in ('display', 'number', 'unit'):
+    if args.component in ('display', 'number', 'unit', 'datetime'):
         if args.component == 'display':
             import icu4x_display as component
         elif args.component == 'number':
             import icu4x_number as component
-        else:
+        elif args.component == 'unit':
             import icu4x_unit as component
+        else:
+            import icu4x_datetime as component
         data = component.collect(sources)
         data['version'] = cldr_version(sources)
         output = component.render(data)
