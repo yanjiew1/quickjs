@@ -31,8 +31,18 @@ typedef struct QJSICU4XNames QJSICU4XNames;
    other missing CLDR data. Missing names return UNSUPPORTED before callbacks;
    empty/code-identical successful text is present. Style=long/short/narrow,
    dialect Boolean. Inputs are canonical codes; output spans borrow the call. */
+typedef int QJSICU4XNameLocaleEmit(void *, const uint8_t *, size_t);
+int qjs_icu4x_names_locales(void *, QJSICU4XNameLocaleEmit *);
 int qjs_icu4x_names_open(const uint8_t *, size_t, uint32_t style, uint32_t dialect,
                          QJSICU4XNames **);
+/* Standalone capitalization bits follow display type 0/1/2/4. Formatting
+   currency/date-field labels remains unchanged. Full Unicode titlecasing
+   affects a lowercase initial only and preserves the trailing text. */
+int qjs_icu4x_names_open_context(const uint8_t *, size_t, uint32_t style, uint32_t dialect,
+                                 uint32_t capitalization, QJSICU4XNames **);
+int qjs_icu4x_names_text(const QJSICU4XNames *, uint32_t kind, const uint8_t *, size_t,
+                         QJSICU4XTextSink);
+int qjs_icu4x_names_check_version(const uint8_t *, size_t);
 void qjs_icu4x_names_close(QJSICU4XNames *);
 int qjs_icu4x_names_format(const QJSICU4XNames *, uint32_t kind, const uint8_t *, size_t,
                            QJSICU4XTextSink);

@@ -33,7 +33,7 @@
 struct QJSIntlLocaleService {
     QJSIntlAllocator allocator;
     QJSICU4XLocale *identity;
-    QJSICU4XLocales defaults;
+    QJSICU4XInventory defaults;
 };
 
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator, const QJSIntlData *data,
@@ -53,7 +53,7 @@ QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator, const QJSI
     service->allocator = *allocator;
     error = qjs_icu4x_status(qjs_icu4x_locale_open(&qjs_icu4x_locale_aliases, &service->identity));
     if (!error)
-        error = qjs_icu4x_locales_open(allocator, qjs_icu4x_list_locales, &service->defaults);
+        error = qjs_icu4x_inventory_open(allocator, qjs_icu4x_list_locales, &service->defaults);
     if (error) {
         qjs_intl_locale_close(service);
         return error;
@@ -67,7 +67,7 @@ void qjs_intl_locale_close(QJSIntlLocaleService *service)
     if (!service)
         return;
     qjs_icu4x_locale_close(service->identity);
-    qjs_icu4x_locales_clear(&service->defaults);
+    qjs_icu4x_inventory_clear(&service->defaults);
     service->allocator.free(service->allocator.opaque, service);
 }
 
@@ -87,10 +87,10 @@ QJSIntlStatus qjs_intl_locale_profile_match(const QJSIntlLocaleService *service,
         memset(out, 0, sizeof(*out));
     if (!service || !out)
         return QJS_INTL_INVALID_ARGUMENT;
-    error = qjs_intl_lookup_matching_locale(service->defaults.tags, service->defaults.count,
+    error = qjs_intl_lookup_matching_locale(service->defaults.items, service->defaults.count,
                                             &request, 1, &match);
     if (!error && match.found)
-        *out = service->defaults.tags[match.available_index];
+        *out = service->defaults.items[match.available_index];
     return error ? error : match.found ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
 }
 

@@ -27,7 +27,7 @@
 
 struct QJSIntlSegmentService {
     QJSIntlAllocator allocator;
-    QJSICU4XLocales locales;
+    QJSICU4XInventory locales;
 };
 struct QJSIntlSegmenter {
     QJSIntlAllocator allocator;
@@ -72,7 +72,7 @@ QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator, const QJS
     service->allocator = *allocator;
     // Global break rules and sparse overrides do not enumerate locale support.
     // Use the matching CLDR registry and verify all three real constructors.
-    error = qjs_icu4x_locales_open(allocator, enumerate_locales, &service->locales);
+    error = qjs_icu4x_inventory_open(allocator, enumerate_locales, &service->locales);
     if (error) {
         qjs_intl_segment_close(service);
         return error;
@@ -84,7 +84,7 @@ QJSIntlStatus qjs_intl_segment_open(const QJSIntlAllocator *allocator, const QJS
 void qjs_intl_segment_close(QJSIntlSegmentService *service)
 {
     if (service) {
-        qjs_icu4x_locales_clear(&service->locales);
+        qjs_icu4x_inventory_clear(&service->locales);
         service->allocator.free(service->allocator.opaque, service);
     }
 }
@@ -98,7 +98,7 @@ QJSIntlStatus qjs_intl_segment_available(const QJSIntlSegmentService *service,
         *count = 0;
     if (!out || !count || !service)
         return QJS_INTL_INVALID_ARGUMENT;
-    *out = service->locales.tags;
+    *out = service->locales.items;
     *count = service->locales.count;
     return QJS_INTL_OK;
 }
@@ -121,7 +121,7 @@ QJSIntlStatus qjs_intl_segmenter_open(const QJSIntlSegmentService *service, size
     segmenter->granularity = granularity;
     segmenter->handle = NULL;
     error = qjs_icu4x_status(qjs_icu4x_segment_open(
-        (const uint8_t *)service->locales.tags[locale].data, service->locales.tags[locale].length,
+        (const uint8_t *)service->locales.items[locale].data, service->locales.items[locale].length,
         granularity, &segmenter->handle));
     if (error) {
         qjs_intl_segmenter_close(segmenter);

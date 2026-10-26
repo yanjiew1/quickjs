@@ -42,6 +42,13 @@ compile)
     mkdir -p "$output"
     compile_contract currency tests/icu4x/currency.c
     compile_contract names tests/icu4x/names.c
+    compile_contract display \
+        data/intl/icu4x-display.c \
+        src/intl/display/icu4x.c \
+        src/intl/icu4x/common.c \
+        src/intl/common/locale-grammar.c \
+        tests/icu4c/helpers.c \
+        tests/icu4x/display.c
     compile_contract locale \
         data/intl/icu4x-locale.c \
         src/intl/icu4x/common.c \
@@ -86,7 +93,7 @@ compile)
 test)
     test "$#" = 2
     output=$2
-    for name in locale segment plural-data plural-service list casing names currency; do
+    for name in locale segment plural-data plural-service list casing names currency display; do
         echo "Run ICU4X $name contract"
         timeout --kill-after=5s 60s "$output/$name"
     done

@@ -30,4 +30,7 @@ typedef int QJSICU4XCurrencyEmit(void *, const uint8_t *, size_t);
    qualify. Callback spans borrow this call; its exact error stops enumeration.
    Enabling currency_names also adds names_format kind=3 for these plain names. */
 int qjs_icu4x_currency_names(void *, QJSICU4XCurrencyEmit *);
+/* Exact plain-name presence after public locale fallback. OK means present,
+   including empty; UNSUPPORTED alone means absent. No formatting/output buffer. */
+int qjs_icu4x_currency_present(const uint8_t *, size_t, const uint8_t *, size_t);
 #endif

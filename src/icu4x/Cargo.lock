@@ -475,6 +475,7 @@ dependencies = [
  "icu_locale_fallback",
  "icu_plurals",
  "icu_plurals_data",
+ "icu_properties",
  "icu_provider",
  "icu_segmenter",
  "icu_segmenter_data",

@@ -26,7 +26,7 @@
 
 struct QJSIntlListService {
     QJSIntlAllocator allocator;
-    QJSICU4XLocales locales;
+    QJSICU4XInventory locales;
 };
 struct QJSIntlListFormatter {
     QJSIntlAllocator allocator;
@@ -47,7 +47,7 @@ QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator, const QJSInt
         return QJS_INTL_NO_MEMORY;
     memset(service, 0, sizeof(*service));
     service->allocator = *allocator;
-    error = qjs_icu4x_locales_open(allocator, qjs_icu4x_list_locales, &service->locales);
+    error = qjs_icu4x_inventory_open(allocator, qjs_icu4x_list_locales, &service->locales);
     if (error) {
         qjs_intl_list_close(service);
         return error;
@@ -59,7 +59,7 @@ QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator, const QJSInt
 void qjs_intl_list_close(QJSIntlListService *service)
 {
     if (service) {
-        qjs_icu4x_locales_clear(&service->locales);
+        qjs_icu4x_inventory_clear(&service->locales);
         service->allocator.free(service->allocator.opaque, service);
     }
 }
@@ -73,7 +73,7 @@ QJSIntlStatus qjs_intl_list_available(const QJSIntlListService *service, const Q
         *count = 0;
     if (!out || !count || !service)
         return QJS_INTL_INVALID_ARGUMENT;
-    *out = service->locales.tags;
+    *out = service->locales.items;
     *count = service->locales.count;
     return QJS_INTL_OK;
 }
@@ -94,9 +94,9 @@ QJSIntlStatus qjs_intl_list_formatter_open(const QJSIntlListService *service, si
         return QJS_INTL_NO_MEMORY;
     formatter->allocator = service->allocator;
     formatter->handle = NULL;
-    error = qjs_icu4x_status(
-        qjs_icu4x_list_open((const uint8_t *)service->locales.tags[locale].data,
-                            service->locales.tags[locale].length, type, style, &formatter->handle));
+    error = qjs_icu4x_status(qjs_icu4x_list_open(
+        (const uint8_t *)service->locales.items[locale].data, service->locales.items[locale].length,
+        type, style, &formatter->handle));
     if (error) {
         qjs_intl_list_formatter_close(formatter);
         return error;

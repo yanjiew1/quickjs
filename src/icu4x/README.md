@@ -205,9 +205,9 @@ Language composition can report a missing qualifier after producing a known
 prefix. A discard-only preflight detects absence before invoking the bounded
 C sink. Missing is never inferred from code-identical or empty output. Errors
 retain their original callback status, and returned text uses buffered counted
-UTF-16 output. These are formatting-context component names; complete Intl
-standalone/context handling, calendar/date-field labels and currency data still
-belong to the forthcoming full DisplayNames adapter.
+UTF-16 output. The C DisplayNames provider adds standalone/context handling and the narrow
+calendar/date-field supplement described below. It does not replace ICU4X
+language-name composition or insert standalone script labels into qualifiers.
 
 The optional `currency_names` feature uses public ICU4X experimental 0.7.0
 plain-name payloads, from the same pinned release revision and CLDR version.
@@ -252,3 +252,19 @@ empty label has text offset zero. Locale capitalization bits follow the C
 display type enum. Version is a CLDR string offset, not a wire-format version.
 The target compiler supplies alignment/endianness; no runtime pack decoder is
 introduced. Compatible source edits are accepted without acquisition-hash checks.
+
+The C DisplayNames provider admits the intersection of actual public name
+payload locales and the matching supplement registry. Its currency inventory
+is restricted to plain names reachable from those admitted locales. The
+common inventory helper only captures stable sorted identifiers; each module
+still owns its domain and admission policy.
+
+Standalone capitalization uses the selected ICU4X lowercase property and
+locale-sensitive titlecasing with trailing text unchanged. The supplement's
+declared CLDR version must match the selected library. Formatter handles own
+their preferences and borrow only immutable process-lifetime supplemental
+rows, so they remain usable after the service closes. Output uses two bounded
+UTF-16 passes with one final engine allocation; missing, explicit empty and
+code-identical labels remain distinct. Private C contracts cover all six name
+types, constructor/result allocation failures, output bounds, aliases and
+formatter/result lifetimes. Full JavaScript profile composition is still pending.

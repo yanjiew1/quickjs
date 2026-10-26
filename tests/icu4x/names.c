@@ -71,10 +71,81 @@ static void check(const char *locale, unsigned style, unsigned dialect, unsigned
     qjs_icu4x_names_close(handle);
 }
 
+typedef struct LocaleInventory {
+    char previous[128];
+    size_t count, calls;
+    int en, fr, zz, error;
+} LocaleInventory;
+
+static int locale_name(void *opaque, const uint8_t *text, size_t length)
+{
+    LocaleInventory *out = opaque;
+    out->calls++;
+    if (out->error)
+        return out->error;
+    assert(length && length < sizeof(out->previous));
+    assert(!memchr(text, 0, length));
+    if (out->count) {
+        char current[128];
+        memcpy(current, text, length);
+        current[length] = 0;
+        assert(strcmp(out->previous, current) < 0);
+    }
+    memcpy(out->previous, text, length);
+    out->previous[length] = 0;
+    out->count++;
+    out->en |= !strcmp(out->previous, "en");
+    out->fr |= !strcmp(out->previous, "fr");
+    out->zz |= !strcmp(out->previous, "zz");
+    assert(strcmp(out->previous, "und") && strcmp(out->previous, "root"));
+    return 0;
+}
+
+/* Context transforms must use the selected Unicode data and locale-sensitive
+   titlecasing, while leaving the remaining characters untouched. */
+static void context(const char *locale, unsigned mask, unsigned kind, const char *text,
+                    const uint16_t *expected, size_t length)
+{
+    QJSICU4XNames *handle = NULL;
+    Output output = {0};
+    QJSICU4XTextSink sink = {&output, write_text};
+
+    assert(!qjs_icu4x_names_open_context((const uint8_t *)locale, strlen(locale), 0, 1, mask,
+                                         &handle));
+    assert(!qjs_icu4x_names_text(handle, kind, (const uint8_t *)text, strlen(text), sink));
+    assert(output.length == length);
+    assert(!length || !memcmp(output.units, expected, length * sizeof(*expected)));
+    output = (Output){.error = QJS_ICU4X_MEMORY};
+    assert(qjs_icu4x_names_text(handle, kind, (const uint8_t *)text, strlen(text), sink) ==
+           QJS_ICU4X_MEMORY);
+    assert(output.calls == 1 && !output.length);
+    qjs_icu4x_names_close(handle);
+}
+
 int main(void)
 {
     QJSICU4XNames *handle = (QJSICU4XNames *)(uintptr_t)1;
+    LocaleInventory inventory = {0}, failed = {.error = QJS_ICU4X_MEMORY};
 
+    context("tr", 1, 0, "istanBUL", (const uint16_t[]){0x130, 's', 't', 'a', 'n', 'B', 'U', 'L'},
+            8);
+    context("nl", 4, 2, "ijssel", (const uint16_t[]){'I', 'J', 's', 's', 'e', 'l'}, 6);
+    context("de", 16, 4,
+            "\xc3\x9f"
+            "eta",
+            (const uint16_t[]){'S', 's', 'e', 't', 'a'}, 5);
+    context("en", 1, 0, "UPper", (const uint16_t[]){'U', 'P', 'p', 'e', 'r'}, 5);
+    context("en", 1, 3, "lower", (const uint16_t[]){'l', 'o', 'w', 'e', 'r'}, 5);
+    context("en", 0, 0, "lower", (const uint16_t[]){'l', 'o', 'w', 'e', 'r'}, 5);
+    assert(!qjs_icu4x_names_check_version((const uint8_t *)"49.0.0", 6));
+    assert(qjs_icu4x_names_check_version((const uint8_t *)"48", 2) == QJS_ICU4X_BACKEND);
+    assert(qjs_icu4x_names_open_context((const uint8_t *)"en", 2, 0, 1, 8, &handle) ==
+           QJS_ICU4X_RANGE);
+    assert(handle == (QJSICU4XNames *)(uintptr_t)1);
+    assert(!qjs_icu4x_names_locales(&inventory, locale_name));
+    assert(inventory.count > 100 && inventory.en && inventory.fr && !inventory.zz);
+    assert(qjs_icu4x_names_locales(&failed, locale_name) == QJS_ICU4X_MEMORY);
+    assert(failed.calls == 1 && !failed.count);
     check("en", 0, 1, 0, "ja", "Japanese");
     check("en", 0, 1, 0, "en-GB", "British English");
     check("en", 0, 0, 0, "en-GB", "English (United Kingdom)");

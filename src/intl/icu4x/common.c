@@ -38,7 +38,7 @@ QJSIntlStatus qjs_icu4x_status(int status)
 }
 
 typedef struct Inventory {
-    QJSICU4XLocales *result;
+    QJSICU4XInventory *result;
     size_t count, length, capacity, bytes;
     QJSIntlStatus error;
     int filling;
@@ -47,12 +47,12 @@ typedef struct Inventory {
 static int inventory_emit(void *opaque, const uint8_t *text, size_t length)
 {
     Inventory *state = opaque;
-    QJSICU4XLocales *result = state->result;
+    QJSICU4XInventory *result = state->result;
 
     if (!text || !length || memchr(text, 0, length))
         state->error = QJS_INTL_DATA_ERROR;
     else if (length == SIZE_MAX || state->length > SIZE_MAX - length - 1 ||
-             state->count >= SIZE_MAX / sizeof(*result->tags))
+             state->count >= SIZE_MAX / sizeof(*result->items))
         state->error = QJS_INTL_OVERFLOW;
     if (state->error)
         return QJS_ICU4X_RANGE;
@@ -65,30 +65,31 @@ static int inventory_emit(void *opaque, const uint8_t *text, size_t length)
         copy = result->storage + state->length;
         memcpy(copy, text, length);
         copy[length] = 0;
-        if (state->count && strcmp(result->tags[state->count - 1].data, copy) >= 0) {
+        if (state->count && strcmp(result->items[state->count - 1].data, copy) >= 0) {
             state->error = QJS_INTL_DATA_ERROR;
             return QJS_ICU4X_RANGE;
         }
-        result->tags[state->count] = (QJSIntlBytes){copy, length};
+        result->items[state->count] = (QJSIntlBytes){copy, length};
     }
     state->length += length + 1;
     state->count++;
     return QJS_ICU4X_OK;
 }
 
-void qjs_icu4x_locales_clear(QJSICU4XLocales *value)
+void qjs_icu4x_inventory_clear(QJSICU4XInventory *value)
 {
-    if (value->tags)
-        value->allocator.free(value->allocator.opaque, value->tags);
+    if (value->items)
+        value->allocator.free(value->allocator.opaque, value->items);
     if (value->storage)
         value->allocator.free(value->allocator.opaque, value->storage);
     memset(value, 0, sizeof(*value));
 }
 
-QJSIntlStatus qjs_icu4x_locales_open(const QJSIntlAllocator *allocator,
-                                     QJSICU4XEnumerate *enumerate, QJSICU4XLocales *out)
+QJSIntlStatus qjs_icu4x_inventory_open_context(const QJSIntlAllocator *allocator,
+                                               QJSICU4XEnumerateContext *enumerate, void *context,
+                                               QJSICU4XInventory *out)
 {
-    QJSICU4XLocales result = {0};
+    QJSICU4XInventory result = {0};
     Inventory state = {.result = &result};
     QJSIntlStatus error;
     int status;
@@ -98,7 +99,7 @@ QJSIntlStatus qjs_icu4x_locales_open(const QJSIntlAllocator *allocator,
     if (!out || !allocator || !allocator->malloc || !allocator->free || !enumerate)
         return QJS_INTL_INVALID_ARGUMENT;
     result.allocator = *allocator;
-    status = enumerate(&state, inventory_emit);
+    status = enumerate(context, &state, inventory_emit);
     error = state.error ? state.error : qjs_icu4x_status(status);
     if (error)
         return error;
@@ -106,15 +107,15 @@ QJSIntlStatus qjs_icu4x_locales_open(const QJSIntlAllocator *allocator,
         return QJS_INTL_DATA_ERROR;
     state.capacity = state.count;
     state.bytes = state.length;
-    result.tags = allocator->malloc(allocator->opaque, state.count * sizeof(*result.tags));
+    result.items = allocator->malloc(allocator->opaque, state.count * sizeof(*result.items));
     result.storage = allocator->malloc(allocator->opaque, state.length);
-    if (!result.tags || !result.storage) {
+    if (!result.items || !result.storage) {
         error = QJS_INTL_NO_MEMORY;
         goto fail;
     }
     state.count = state.length = 0;
     state.filling = 1;
-    status = enumerate(&state, inventory_emit);
+    status = enumerate(context, &state, inventory_emit);
     error = state.error ? state.error : qjs_icu4x_status(status);
     if (!error && (state.count != state.capacity || state.length != state.bytes))
         error = QJS_INTL_DATA_ERROR;
@@ -124,6 +125,28 @@ QJSIntlStatus qjs_icu4x_locales_open(const QJSIntlAllocator *allocator,
     *out = result;
     return QJS_INTL_OK;
 fail:
-    qjs_icu4x_locales_clear(&result);
+    qjs_icu4x_inventory_clear(&result);
     return error;
+}
+
+typedef struct SimpleEnumerator {
+    QJSICU4XEnumerate *enumerate;
+} SimpleEnumerator;
+
+static int enumerate_simple(void *context, void *output, QJSICU4XEmit *emit)
+{
+    const SimpleEnumerator *state = context;
+    return state->enumerate(output, emit);
+}
+
+QJSIntlStatus qjs_icu4x_inventory_open(const QJSIntlAllocator *allocator,
+                                       QJSICU4XEnumerate *enumerate, QJSICU4XInventory *out)
+{
+    SimpleEnumerator context = {enumerate};
+    if (!enumerate) {
+        if (out)
+            memset(out, 0, sizeof(*out));
+        return QJS_INTL_INVALID_ARGUMENT;
+    }
+    return qjs_icu4x_inventory_open_context(allocator, enumerate_simple, &context, out);
 }

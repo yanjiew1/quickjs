@@ -25,16 +25,20 @@
 
 typedef int QJSICU4XEmit(void *, const uint8_t *, size_t);
 typedef int QJSICU4XEnumerate(void *, QJSICU4XEmit *);
-typedef struct QJSICU4XLocales {
+typedef int QJSICU4XEnumerateContext(void *context, void *output, QJSICU4XEmit *);
+typedef struct QJSICU4XInventory {
     QJSIntlAllocator allocator;
-    QJSIntlBytes *tags;
+    QJSIntlBytes *items;
     char *storage;
     size_t count;
-} QJSICU4XLocales;
+} QJSICU4XInventory;
 QJSIntlStatus qjs_icu4x_status(int);
-/* Enumerator returns a stable sorted, unique canonical inventory, without
-   root. The two bounded passes allocate one text arena and one tag array. */
-QJSIntlStatus qjs_icu4x_locales_open(const QJSIntlAllocator *, QJSICU4XEnumerate *,
-                                     QJSICU4XLocales *);
-void qjs_icu4x_locales_clear(QJSICU4XLocales *);
+/* Enumerator supplies stable sorted unique nonempty identifiers. Its owner
+   verifies domain/availability; these two bounded passes only capture one
+   text arena and one item array. Callback spans borrow the enumeration call. */
+QJSIntlStatus qjs_icu4x_inventory_open(const QJSIntlAllocator *, QJSICU4XEnumerate *,
+                                       QJSICU4XInventory *);
+QJSIntlStatus qjs_icu4x_inventory_open_context(const QJSIntlAllocator *, QJSICU4XEnumerateContext *,
+                                               void *context, QJSICU4XInventory *);
+void qjs_icu4x_inventory_clear(QJSICU4XInventory *);
 #endif

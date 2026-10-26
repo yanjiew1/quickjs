@@ -115,3 +115,33 @@ pub unsafe extern "C" fn qjs_icu4x_currency_names(
         Err(_) => BACKEND,
     }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_currency_present(
+    locale: *const u8,
+    locale_length: usize,
+    code: *const u8,
+    code_length: usize,
+) -> i32 {
+    match catch_unwind(|| {
+        if locale.is_null()
+            || code.is_null()
+            || locale_length > isize::MAX as usize
+            || code_length > isize::MAX as usize
+        {
+            return Err(RANGE);
+        }
+        let locale = icu_locale_core::Locale::try_from_utf8(unsafe {
+            std::slice::from_raw_parts(locale, locale_length)
+        })
+        .map_err(|_| RANGE)?;
+        plain_name((&locale).into(), unsafe {
+            std::slice::from_raw_parts(code, code_length)
+        })?;
+        Ok(())
+    }) {
+        Ok(Ok(())) => 0,
+        Ok(Err(status)) => status,
+        Err(_) => BACKEND,
+    }
+}
