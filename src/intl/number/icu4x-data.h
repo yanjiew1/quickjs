@@ -42,15 +42,20 @@ typedef struct QJSICU4XNumberPattern {
 } QJSICU4XNumberPattern;
 typedef struct QJSICU4XNumberRecord {
     /* percent, plus, minus, approximately sign, exponential, per-mille,
-       infinity, NaN, range template, approximation template. */
-    uint32_t fields[10];
+       infinity, NaN, range template, approximation template, decimal, group. */
+    uint32_t fields[12];
     uint32_t patterns[9]; /* QJSIntlNumberPatternField order. */
+    uint32_t grouping[3]; /* Fallback primary, secondary and minimum group sizes. */
 } QJSICU4XNumberRecord;
 typedef struct QJSICU4XNumberLocale {
     uint32_t tag, row; /* Row has system_count record indexes. */
 } QJSICU4XNumberLocale;
 extern const char qjs_icu4x_number_strings[];
 extern const uint32_t qjs_icu4x_number_version, qjs_icu4x_number_systems[], qjs_icu4x_number_rows[];
+/* The library currently omits 55 mandatory ECMA digit payloads. Keep the
+   small complete CLDR numeric repertoire here, avoiding a second hand-pinned
+   library capability list. Public payloads remain preferred where present. */
+extern const uint32_t qjs_icu4x_number_digits[][10];
 extern const QJSICU4XNumberToken qjs_icu4x_number_tokens[];
 extern const QJSICU4XNumberPattern qjs_icu4x_number_patterns[];
 extern const QJSICU4XNumberRecord qjs_icu4x_number_records[];

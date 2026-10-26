@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Compile missing NumberFormat facts without duplicating ICU4X digits/rules.
+"""Compile missing NumberFormat facts from matching CLDR data.
 
-Public ICU4X decimal data supplies digits, grouping and decimal separators.
+Public ICU4X decimal data supplies digits/grouping/separators where present.
+A small complete CLDR numeric fallback covers mandatory systems it omits.
 Its high-level currency APIs re-round, and pattern-only APIs discard semantic
 sign/percent token distinctions. Retain typed outer affixes and missing
 nonfinite/exponent/range symbols from matching CLDR, using existing collectors.
@@ -34,11 +35,12 @@ import number_layout
 import number_patterns
 import number_pattern_syntax as syntax
 import number_symbols
+import numbering
 import parents
 from resolve import BLOCK
 
 SYMBOLS = ('percentSign', 'plusSign', 'minusSign', 'approximatelySign',
-           'exponential', 'perMille', 'infinity', 'nan')
+           'exponential', 'perMille', 'infinity', 'nan', 'decimal', 'group')
 LAYOUTS = ('range', 'approximately')
 ABSENT, BLOCKED, EMPTY = 0xffffffff, 0xfffffffe, 0xfffffffd
 
@@ -58,12 +60,18 @@ def collect(sources):
     pattern_rows = {(locale, system): row for locale, system, row in patterns['rows']}
     layout_rows = {(locale, system): tuple(row[layouts['fields'].index(key)] for key in LAYOUTS)
                    for locale, system, row in layouts['rows']}
+    definitions = numbering.definitions(sources)
+    grouping = dict(patterns['grouping'])
     rows = []
     for locale in registry.tags:
         source = aliases.get(locale, locale)
-        rows.append((locale, tuple((symbol_rows[source, system] + layout_rows[source, system],
-                                    pattern_rows[source, system]) for system in systems)))
-    return {'systems': systems, 'locales': tuple(rows)}
+        rows.append((locale, tuple((symbol_rows[source, system][:8] + layout_rows[source, system] +
+                                    symbol_rows[source, system][8:],
+                                    pattern_rows[source, system],
+                                    syntax.compile_pattern(pattern_rows[source, system][0])[0][:2] +
+                                    (grouping[source],)) for system in systems)))
+    return {'systems': systems, 'digits': tuple(tuple(map(ord, definitions[name][1]))
+                                               for name in systems), 'locales': tuple(rows)}
 
 
 def render(data):
@@ -72,15 +80,25 @@ def render(data):
             tuple(sorted(row[0] for row in locales)) != tuple(row[0] for row in locales) or
             len({row[0] for row in locales}) != len(locales)):
         raise DataError('unordered/repeated numeric identities')
+    digits = data['digits']
+    if len(digits) != len(systems) or any(
+            len(row) != 10 or len(set(row)) != 10 or
+            any(type(value) is not int or not 0 < value <= 0x10ffff or
+                0xd800 <= value <= 0xdfff for value in row) for row in digits):
+        raise DataError('invalid numeric fallback digits')
     records = set()
     raw_patterns = set()
     strings = {'', data['version']} | set(systems) | {tag for tag, rows in locales}
     for locale, rows in locales:
         if len(rows) != len(systems):
             raise DataError('numeric locale/system extent mismatch')
-        for fields, patterns in rows:
+        for fields, patterns, grouping in rows:
             if len(fields) != len(SYMBOLS) + len(LAYOUTS) or len(patterns) != len(number_patterns.FIELDS):
                 raise DataError('numeric record width mismatch')
+            if (len(grouping) != 3 or any(type(value) is not int or not 0 <= value <= 9
+                                          for value in grouping) or not grouping[2] or
+                    (bool(grouping[0]) != bool(grouping[1]))):
+                raise DataError('invalid numeric fallback grouping')
             strings.update(text for text in fields if text not in (None, BLOCK))
             raw_patterns.update(text for text in patterns if text not in (None, BLOCK, ''))
     compiled = {}
@@ -120,8 +138,8 @@ def render(data):
     mapped = {}
     for locale, rows in locales:
         mapped[locale] = tuple(tuple(text_id(text) for text in fields) +
-                               tuple(pattern_id(text) for text in fields_patterns)
-                               for fields, fields_patterns in rows)
+                               tuple(pattern_id(text) for text in fields_patterns) + grouping
+                               for fields, fields_patterns, grouping in rows)
         records.update(mapped[locale])
     records = tuple(sorted(records))
     record_ids = {record: index for index, record in enumerate(records)}
@@ -142,6 +160,9 @@ def render(data):
         lines.extend(('};', ''))
 
     array('uint32_t', 'qjs_icu4x_number_systems', [str(pool[system]) for system in systems])
+    lines.append('const uint32_t qjs_icu4x_number_digits[][10] = {')
+    lines.extend('    {'+', '.join(map(str, row))+'},' for row in digits)
+    lines.extend(('};', ''))
     array('QJSICU4XNumberToken', 'qjs_icu4x_number_tokens',
           ['{'+str(kind)+', '+str(pool[text])+'}' for kind, text in tokens])
     array('QJSICU4XNumberPattern', 'qjs_icu4x_number_patterns', [
@@ -149,7 +170,8 @@ def render(data):
                           for affix in pattern)+'}}'
         for pattern in patterns])
     array('QJSICU4XNumberRecord', 'qjs_icu4x_number_records', [
-        '{{'+', '.join(map(str, row[:10]))+'}, {'+', '.join(map(str, row[10:]))+'}}' for row in records])
+        '{{'+', '.join(map(str, row[:12]))+'}, {'+', '.join(map(str, row[12:21]))+
+        '}, {'+', '.join(map(str, row[21:]))+'}}' for row in records])
     array('uint32_t', 'qjs_icu4x_number_rows', [
         ', '.join(map(str, row)) for row in unique_vectors])
     array('QJSICU4XNumberLocale', 'qjs_icu4x_number_locales', [

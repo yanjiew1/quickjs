@@ -40,10 +40,11 @@ COMPILER = sys.argv[1:] or shlex.split(os.environ.get('CC', 'cc'))
 
 
 def fixture():
-    fields = ('%', '+', '-', '', 'اس', '‰', '∞', 'NaN ??/ \"', '{1} to {0}', '~{0}')
+    fields = ('%', '+', '-', '', 'اس', '‰', '∞', 'NaN ??/ \"', '{1} to {0}', '~{0}', '.', ',')
     patterns = ('#,##0.###', '0.###E+00', '0%', '¤0', '¤0;(¤0)', None, BLOCK, '', "'-'0")
-    rows = ((fields, patterns),) * 2
+    rows = ((fields, patterns, (3, 3, 1)),) * 2
     return {'version': '49.0.0', 'systems': ('arab', 'latn'),
+            'digits': (tuple(range(0x660, 0x66a)), tuple(range(48, 58))),
             'locales': (('en', rows), ('en-US', rows))}
 
 
@@ -59,6 +60,7 @@ int main(void) {
  const QJSICU4XNumberLocale *b = &qjs_icu4x_number_locales[1];
  const QJSICU4XNumberRecord *r = &qjs_icu4x_number_records[qjs_icu4x_number_rows[a->row]];
  const QJSICU4XNumberPattern *p;
+ unsigned i;
  const QJSICU4XNumberToken *token;
  assert(qjs_icu4x_number_system_count == 2 && qjs_icu4x_number_locale_count == 2);
  assert(!strcmp(s + qjs_icu4x_number_version, "49.0.0"));
@@ -68,6 +70,12 @@ int main(void) {
  assert(a->row == b->row);
  assert(qjs_icu4x_number_rows[a->row] == qjs_icu4x_number_rows[a->row+1]);
  assert(r->fields[3] == 0);
+ assert(!strcmp(s+r->fields[10], ".") && !strcmp(s+r->fields[11], ","));
+ assert(r->grouping[0] == 3 && r->grouping[1] == 3 && r->grouping[2] == 1);
+ for (i = 0; i < 10; i++) {
+   assert(qjs_icu4x_number_digits[0][i] == 0x660+i);
+   assert(qjs_icu4x_number_digits[1][i] == 48+i);
+ }
  assert(!strcmp(s+r->fields[4], "\330\247\330\263"));
  assert(!strcmp(s+r->fields[7], "NaN \077\077/ \""));
  assert(!strcmp(s+r->fields[8], "{1} to {0}"));
@@ -109,11 +117,26 @@ int main(void) {
             with self.assertRaises(DataError):
                 number.render(data)
 
+    def test_invalid_numeric_fallback(self):
+        for digits in (((48,)*10, tuple(range(48, 58))),
+                       (tuple(range(48, 57)), tuple(range(48, 58))),
+                       ((0xd800,)+tuple(range(49, 58)), tuple(range(48, 58)))):
+            data = fixture()
+            data['digits'] = digits
+            with self.assertRaises(DataError):
+                number.render(data)
+        data = fixture()
+        fields, patterns, grouping = data['locales'][0][1][0]
+        for grouping in ((0, 3, 1), (3, 3, 0), (3, 3, 10)):
+            data['locales'] = (('en', ((fields, patterns, grouping),)*2),)
+            with self.assertRaises(DataError):
+                number.render(data)
+
     def test_invalid_pattern_and_nul(self):
         data = fixture()
         row = data['locales'][0][1][0]
-        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*10, row[1])):
-            data['locales'] = (('en', ((fields, patterns),)*2),)
+        for fields, patterns in ((row[0], ('broken',)*9), (('bad\0text',)*12, row[1])):
+            data['locales'] = (('en', ((fields, patterns, row[2]),)*2),)
             with self.assertRaises(ValueError):
                 number.render(data)
 
