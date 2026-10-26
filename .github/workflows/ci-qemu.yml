@@ -90,24 +90,34 @@ jobs:
         include:
         - id: '386'
           platform: linux/386
+          qemu: i386
         - id: 'riscv64'
           platform: linux/riscv64
+          qemu: riscv64
         - id: 'arm-v6'
           platform: linux/arm/v6
+          qemu: arm
         - id: 'arm-v7'
           platform: linux/arm/v7
+          qemu: arm
         - id: 's390x'
           platform: linux/s390x
+          qemu: s390x
         - id: 'ppc64le'
           platform: linux/ppc64le
+          qemu: ppc64le
 
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Install QEMU binary format handlers
-        # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
-        run: docker run --privileged --rm tonistiigi/binfmt:master --install all
+        # Signed distribution packages include the concurrent page-flags fix.
+        # Register only this guest; never intercept the native host architecture.
+        run: >-
+          docker run --privileged --rm
+          --mount "type=bind,source=$GITHUB_WORKSPACE,target=/host,readonly"
+          debian:trixie-slim sh /host/tools/ci/install-qemu.sh '${{ matrix.qemu }}'
       - name: Start Alpine container
         run: >-
           docker run --detach --name quickjs-qemu
