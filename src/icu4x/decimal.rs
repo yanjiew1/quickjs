@@ -79,7 +79,7 @@ pub unsafe extern "C" fn qjs_icu4x_compact_exponent(
     }
 }
 
-use icu_decimal::provider::{Baked, DecimalDigitsV1, DecimalSymbolsV1};
+use icu_decimal::provider::{DecimalDigitsV1, DecimalSymbolsV1};
 use icu_decimal::{DecimalFormatter, DecimalFormatterPreferences};
 use icu_locale_core::subtags::Subtag;
 use icu_provider::{DataError, DataPayload, DataProvider, DataRequest, DataResponse};
@@ -96,14 +96,20 @@ struct Capture {
 // failed speculative requests must not replace the eventual resolved result.
 impl DataProvider<DecimalSymbolsV1> for Capture {
     fn load(&self, request: DataRequest) -> Result<DataResponse<DecimalSymbolsV1>, DataError> {
-        let response = <Baked as DataProvider<DecimalSymbolsV1>>::load(&Baked, request)?;
+        let response = <inventory::Provider as DataProvider<DecimalSymbolsV1>>::load(
+            &inventory::Provider,
+            request,
+        )?;
         self.symbols.replace(Some(response.payload.clone()));
         Ok(response)
     }
 }
 impl DataProvider<DecimalDigitsV1> for Capture {
     fn load(&self, request: DataRequest) -> Result<DataResponse<DecimalDigitsV1>, DataError> {
-        let response = <Baked as DataProvider<DecimalDigitsV1>>::load(&Baked, request)?;
+        let response = <inventory::Provider as DataProvider<DecimalDigitsV1>>::load(
+            &inventory::Provider,
+            request,
+        )?;
         self.digits.replace(Some((
             response.payload.clone(),
             request.id.marker_attributes.as_str().to_owned(),
@@ -225,5 +231,63 @@ pub unsafe extern "C" fn qjs_icu4x_decimal_symbols(
                 }),
             })
         })
+    }
+}
+
+// The same public generated payloads establish executable numeric identities;
+// no list of numbering-system metadata is mistaken for actual digit coverage.
+mod inventory {
+    use icu_decimal_data::*;
+    pub mod icu {
+        pub use icu_decimal as decimal;
+    }
+    pub struct Provider;
+    make_provider!(Provider);
+    impl_decimal_symbols_v1!(Provider);
+    impl_decimal_digits_v1!(Provider, ITER);
+}
+
+fn available_systems() -> Result<&'static std::collections::BTreeSet<String>, i32> {
+    use icu_provider::IterableDataProvider;
+    use std::{collections::BTreeSet, sync::OnceLock};
+    static SYSTEMS: OnceLock<Result<BTreeSet<String>, i32>> = OnceLock::new();
+    SYSTEMS
+        .get_or_init(|| {
+            let mut systems = BTreeSet::new();
+            for id in <inventory::Provider as IterableDataProvider<DecimalDigitsV1>>::iter_ids(
+                &inventory::Provider,
+            )
+            .map_err(|_| BACKEND)?
+            {
+                let system = id.marker_attributes.as_str();
+                if system.is_empty() {
+                    return Err(BACKEND);
+                }
+                systems.insert(system.to_owned());
+            }
+            Ok(systems)
+        })
+        .as_ref()
+        .map_err(|status| *status)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_decimal_systems(
+    opaque: *mut std::ffi::c_void,
+    emit: unsafe extern "C" fn(*mut std::ffi::c_void, *const u8, usize) -> i32,
+) -> i32 {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let values = available_systems()?;
+        for value in values {
+            let status = unsafe { emit(opaque, value.as_ptr(), value.len()) };
+            if status != 0 {
+                return Err(status);
+            }
+        }
+        Ok(())
+    })) {
+        Ok(Ok(())) => 0,
+        Ok(Err(status)) => status,
+        Err(_) => BACKEND,
     }
 }

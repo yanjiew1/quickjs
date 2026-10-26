@@ -76,6 +76,51 @@ static void exact_body(void)
     free(input);
 }
 
+typedef struct Inventory {
+    char previous[128];
+    unsigned count, calls;
+    int error, latn, arab, adlm;
+} Inventory;
+
+static int inventory_value(void *opaque, const uint8_t *text, size_t length)
+{
+    Inventory *state = opaque;
+    char current[128];
+    QJSICU4XDecimalSymbols symbols;
+    QJSICU4XDecimal *handle;
+
+    state->calls++;
+    if (state->error)
+        return state->error;
+    assert(length && length < sizeof(current) && !memchr(text, 0, length));
+    memcpy(current, text, length);
+    current[length] = 0;
+    if (state->count)
+        assert(strcmp(state->previous, current) < 0);
+    assert(strcmp(current, "und") && strcmp(current, "root") && strcmp(current, "roman"));
+    strcpy(state->previous, current);
+    state->count++;
+    state->latn |= !strcmp(current, "latn");
+    state->arab |= !strcmp(current, "arab");
+    state->adlm |= !strcmp(current, "adlm");
+    /* Every advertised record must be constructible. Digit identities are
+       checked against the actual resolved system, not just a marker label. */
+    handle = open_symbols("en", current, &symbols);
+    field(symbols.fields[6], current);
+    qjs_icu4x_decimal_close(handle);
+    return 0;
+}
+
+static void inventory(void)
+{
+    Inventory systems = {0}, failed = {.error = QJS_ICU4X_MEMORY};
+
+    assert(!qjs_icu4x_decimal_systems(&systems, inventory_value));
+    assert(systems.count >= 3 && systems.latn && systems.arab && systems.adlm);
+    assert(qjs_icu4x_decimal_systems(&failed, inventory_value) == QJS_ICU4X_MEMORY);
+    assert(failed.calls == 1 && !failed.count);
+}
+
 int main(void)
 {
     QJSICU4XDecimalSymbols symbols;
@@ -115,6 +160,7 @@ int main(void)
     assert(qjs_icu4x_decimal_symbols(NULL, &symbols) == QJS_ICU4X_RANGE);
     assert(symbols.primary == 0x5a5a5a5a);
     qjs_icu4x_decimal_close(NULL);
+    inventory();
     exact_body();
     return 0;
 }

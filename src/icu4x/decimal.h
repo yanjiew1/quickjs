@@ -54,4 +54,10 @@ int qjs_icu4x_decimal_open(const uint8_t *locale, size_t locale_length, const ui
                            size_t system_length, QJSICU4XDecimal **);
 void qjs_icu4x_decimal_close(QJSICU4XDecimal *);
 int qjs_icu4x_decimal_symbols(const QJSICU4XDecimal *, QJSICU4XDecimalSymbols *);
+/* Numeric digit systems from real payload IDs, not algorithmic metadata.
+   Sorted unique callback spans borrow the call; preserve the first callback
+   error. Locale admission belongs to the complete NumberFormat provider:
+   explicit symbol rows omit locales legitimately inheriting root symbols. */
+typedef int QJSICU4XDecimalEmit(void *, const uint8_t *, size_t);
+int qjs_icu4x_decimal_systems(void *, QJSICU4XDecimalEmit *);
 #endif

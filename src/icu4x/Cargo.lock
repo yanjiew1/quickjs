@@ -465,6 +465,7 @@ dependencies = [
  "icu_calendar_data",
  "icu_casemap",
  "icu_decimal",
+ "icu_decimal_data",
  "icu_experimental",
  "icu_experimental_data",
  "icu_list",

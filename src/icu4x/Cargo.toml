@@ -57,7 +57,16 @@ names = [
     "dep:zerovec",
     "dep:writeable",
 ]
-decimals = ["dep:icu_decimal", "dep:icu_locale_core", "dep:icu_provider"]
+decimals = [
+    "dep:icu_decimal",
+    "dep:icu_decimal_data",
+    "dep:icu_locale_core",
+    "dep:icu_locale_fallback",
+    "dep:icu_provider",
+    "icu_provider/std",
+    "icu_provider/baked",
+    "dep:zerovec",
+]
 plurals = ["dep:icu_plurals", "dep:icu_plurals_data", "dep:icu_locale_core", "dep:icu_provider"]
 segments = ["dep:icu_segmenter", "dep:icu_segmenter_data", "dep:icu_locale_core"]
 locales = ["dep:icu_locale", "dep:icu_locale_data", "dep:icu_locale_core", "dep:icu_provider"]
@@ -77,6 +86,7 @@ timezones = ["dep:icu_time", "dep:icu_locale_core", "dep:icu_provider"]
 calendars = ["dep:icu_calendar", "dep:icu_calendar_data", "dep:icu_provider"]
 
 [dependencies]
+icu_decimal_data = { version = "=2.4.0", optional = true }
 icu_properties = { version = "=2.4.0", default-features = false, features = ["compiled_data"], optional = true }
 icu_experimental = { version = "=0.7.0", default-features = false, optional = true }
 icu_experimental_data = { version = "=0.7.0", optional = true }

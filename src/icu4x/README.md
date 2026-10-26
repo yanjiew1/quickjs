@@ -286,3 +286,10 @@ separate ECMA always/min2 policies. This is a numeric-data foundation, not yet
 the full NumberFormat provider: nonfinite/scientific/range and outer style
 composition remain separate work. The contract includes a 40,000-digit input
 with supplementary-plane Adlam digits and UTF-16 part offsets.
+
+The numeric digit-system inventory comes from the same generated public
+provider used by actual formatting queries. Tests construct every advertised
+system and verify its resolved identity. Explicit symbol locale IDs are not
+used as an available-locale list: they omit locales legitimately inheriting
+root symbols. Complete NumberFormat admission must validate its declared locale
+candidates across all required operations.
