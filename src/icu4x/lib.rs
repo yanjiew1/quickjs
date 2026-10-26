@@ -55,7 +55,8 @@ const RANGE: i32 = -1;
     feature = "timezones",
     feature = "locales",
     feature = "names",
-    feature = "decimals"
+    feature = "decimals",
+    feature = "currency_numbers"
 ))]
 const UNSUPPORTED: i32 = -3;
 #[cfg(any(feature = "calendars", feature = "casing"))]

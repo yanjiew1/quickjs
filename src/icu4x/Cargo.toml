@@ -33,6 +33,7 @@ crate-type = ["staticlib"]
 [features]
 default = []
 currency_numbers = [
+    "dep:icu_decimal",
     "dep:icu_experimental",
     "dep:icu_experimental_data",
     "dep:icu_locale_core",

@@ -50,12 +50,52 @@ static void symbol(const char *locale, const char *code, unsigned narrow, const 
     qjs_icu4x_currency_symbol_close(handle);
 }
 
+static void currency_decimal(void)
+{
+    QJSICU4XCurrencyDecimalHandle *handle = NULL;
+    QJSICU4XCurrencyDecimal result;
+    size_t i;
+    static const char *const systems[] = {"", "latn"};
+
+    /* PTE changes decimal/group separators even though its localized symbol
+       is explicitly empty. Retrieve metadata without formatting an amount. */
+    for (i = 0; i < 2; i++) {
+        assert(!qjs_icu4x_currency_decimal_open((const uint8_t *)"pt-PT", 5,
+                                                (const uint8_t *)systems[i], strlen(systems[i]),
+                                                (const uint8_t *)"PTE", 3, &handle));
+        assert(!qjs_icu4x_currency_decimal(handle, &result));
+        assert(result.decimal.length == 1 && result.decimal.data[0] == '$');
+        assert(result.group.length == 1 && result.group.data[0] == ',');
+        assert(result.primary == 3 && result.secondary == 3 && result.minimum);
+        qjs_icu4x_currency_decimal_close(handle);
+    }
+    handle = (QJSICU4XCurrencyDecimalHandle *)(uintptr_t)1;
+    /* The unqualified PTE record is Latin. It must not masquerade as an
+       exact Arabic-system override through an unrelated default-system fallback. */
+    assert(qjs_icu4x_currency_decimal_open((const uint8_t *)"pt-PT", 5,
+                                           (const uint8_t *)"arab", 4,
+                                           (const uint8_t *)"PTE", 3, &handle) == QJS_ICU4X_UNSUPPORTED);
+    assert(handle == (QJSICU4XCurrencyDecimalHandle *)(uintptr_t)1);
+    assert(qjs_icu4x_currency_decimal_open((const uint8_t *)"pt-PT", 5, (const uint8_t *)"latn", 4,
+                                           (const uint8_t *)"EUR", 3,
+                                           &handle) == QJS_ICU4X_UNSUPPORTED);
+    assert(handle == (QJSICU4XCurrencyDecimalHandle *)(uintptr_t)1);
+    assert(qjs_icu4x_currency_decimal_open((const uint8_t *)"pt-PT", 5, (const uint8_t *)"bad--", 5,
+                                           (const uint8_t *)"PTE", 3, &handle) == QJS_ICU4X_RANGE);
+    assert(handle == (QJSICU4XCurrencyDecimalHandle *)(uintptr_t)1);
+    memset(&result, 0x5a, sizeof(result));
+    assert(qjs_icu4x_currency_decimal(NULL, &result) == QJS_ICU4X_RANGE);
+    assert(result.primary == 0x5a5a5a5a);
+    qjs_icu4x_currency_decimal_close(NULL);
+}
+
 int main(void)
 {
     QJSICU4XCurrencySymbolHandle *handle = (QJSICU4XCurrencySymbolHandle *)(uintptr_t)1;
     QJSICU4XCurrencySymbol result;
     uint32_t digits = UINT32_MAX;
 
+    currency_decimal();
     precision("USD", 2);
     precision("JPY", 0);
     precision("KWD", 3);

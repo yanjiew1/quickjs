@@ -19,12 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-use crate::{BACKEND, RANGE, write_result};
+use crate::{BACKEND, RANGE, UNSUPPORTED, write_result};
 use icu_experimental::dimension::{
     currency::CurrencyType,
     provider::currency::{
         fractions::CurrencyFractionsV1,
-        symbols::{CurrencySymbolWidth, CurrencySymbolsV1},
+        symbols::{CurrencyDecimalSymbolsV1, CurrencySymbolWidth, CurrencySymbolsV1},
     },
 };
 use icu_locale_core::Locale;
@@ -33,17 +33,19 @@ use icu_provider::{
     marker::DataMarkerExt,
 };
 
-// Enable only the two public currency payload families used here. The broad
+// Enable only the public currency payload families used here. The broad
 // experimental compiled_data feature would include unrelated formatters/data.
 mod source {
     use icu_experimental_data::*;
     pub mod icu {
+        pub use icu_decimal as decimal;
         pub use icu_experimental as experimental;
     }
     pub struct Provider;
     make_provider!(Provider);
     impl_currency_fractions_v1!(Provider);
     impl_currency_symbols_v1!(Provider);
+    impl_currency_decimal_symbols_v1!(Provider);
 }
 
 unsafe fn input<'a>(data: *const u8, length: usize) -> Result<&'a [u8], i32> {
@@ -172,6 +174,125 @@ pub unsafe extern "C" fn qjs_icu4x_currency_symbol(
                     found: 0,
                 })
             }
+        })
+    }
+}
+
+pub struct CurrencyDecimalHandle(DataPayload<CurrencyDecimalSymbolsV1>);
+#[repr(C)]
+pub struct DecimalText {
+    data: *const u8,
+    length: usize,
+}
+#[repr(C)]
+pub struct CurrencyDecimal {
+    decimal: DecimalText,
+    group: DecimalText,
+    primary: u32,
+    secondary: u32,
+    minimum: u32,
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_currency_decimal_open(
+    locale: *const u8,
+    locale_length: usize,
+    system: *const u8,
+    system_length: usize,
+    code: *const u8,
+    code_length: usize,
+    out: *mut *mut CurrencyDecimalHandle,
+) -> i32 {
+    unsafe {
+        write_result(out, || {
+            let locale = Locale::try_from_utf8(input(locale, locale_length)?).map_err(|_| RANGE)?;
+            let currency = currency(input(code, code_length)?)?;
+            let system = if system_length == 0 {
+                None
+            } else {
+                Some(
+                    icu_locale_core::subtags::Subtag::try_from_utf8(input(system, system_length)?)
+                        .map_err(|_| RANGE)?,
+                )
+            };
+            let locale = CurrencyDecimalSymbolsV1::make_locale((&locale).into());
+            let load = |system| {
+                <source::Provider as DataProvider<CurrencyDecimalSymbolsV1>>::load(
+                    &source::Provider,
+                    DataRequest {
+                        id: DataIdentifierBorrowed::for_marker_attributes_and_locale(
+                            CurrencyDecimalSymbolsV1::make_attributes(
+                                system,
+                                currency,
+                                &mut Default::default(),
+                            ),
+                            &locale,
+                        ),
+                        ..Default::default()
+                    },
+                )
+                .map(|response| response.payload)
+                .map_err(|error| {
+                    if error.kind == DataErrorKind::IdentifierNotFound {
+                        UNSUPPORTED
+                    } else {
+                        BACKEND
+                    }
+                })
+            };
+            let payload = match load(system) {
+                Err(UNSUPPORTED) if system.is_some() => {
+                    // The bake may share the default-nu record under the
+                    // unqualified key. Reuse it only for that exact system;
+                    // a locale-default fallback could change requested symbols.
+                    let payload = load(None)?;
+                    if payload.get().numsys() != system.as_ref().ok_or(RANGE)?.as_str() {
+                        return Err(UNSUPPORTED);
+                    }
+                    payload
+                }
+                result => result?,
+            };
+            Ok(Box::into_raw(Box::new(CurrencyDecimalHandle(payload))))
+        })
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_currency_decimal_close(handle: *mut CurrencyDecimalHandle) {
+    if !handle.is_null() {
+        unsafe {
+            drop(Box::from_raw(handle));
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn qjs_icu4x_currency_decimal(
+    handle: *const CurrencyDecimalHandle,
+    out: *mut CurrencyDecimal,
+) -> i32 {
+    unsafe {
+        write_result(out, || {
+            let symbols = handle.as_ref().ok_or(RANGE)?.0.get();
+            let grouping = symbols.grouping_sizes;
+            Ok(CurrencyDecimal {
+                decimal: DecimalText {
+                    data: symbols.decimal_separator().as_ptr(),
+                    length: symbols.decimal_separator().len(),
+                },
+                group: DecimalText {
+                    data: symbols.grouping_separator().as_ptr(),
+                    length: symbols.grouping_separator().len(),
+                },
+                primary: grouping.primary.into(),
+                secondary: if grouping.primary == 0 {
+                    0
+                } else if grouping.secondary == 0 {
+                    grouping.primary.into()
+                } else {
+                    grouping.secondary.into()
+                },
+                minimum: grouping.min_grouping.into(),
+            })
         })
     }
 }

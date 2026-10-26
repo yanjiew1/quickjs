@@ -344,3 +344,12 @@ systems they actually provide; the remaining 55 use the shared exact body.
 Fallback follows the requested system's resolved CLDR data, not the locale's
 default system: Persian with mathematical digits must not accidentally inherit
 the default Arabic-extended numbering separators. Algorithmic systems remain excluded.
+
+Currency-specific decimal/group symbols are queried through public
+`CurrencyDecimalSymbolsV1`, preserving their numeric grouping metadata. The
+bake can share a default-system record under an unqualified currency key;
+an explicit request reuses it only when its reported system matches exactly.
+An absent override is distinct from an unsupported currency and leaves normal
+symbol selection to the caller. Portuguese PTE is covered independently for
+its empty currency symbol and its `$` decimal separator. No amount is formatted
+or rounded by this metadata query.

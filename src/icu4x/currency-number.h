@@ -21,6 +21,7 @@
 #ifndef QJS_ICU4X_CURRENCY_NUMBER_H
 #define QJS_ICU4X_CURRENCY_NUMBER_H
 #include "bridge.h"
+#include "decimal.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -45,4 +46,22 @@ int qjs_icu4x_currency_symbol_open(const uint8_t *locale, size_t locale_length, 
                                    QJSICU4XCurrencySymbolHandle **);
 void qjs_icu4x_currency_symbol_close(QJSICU4XCurrencySymbolHandle *);
 int qjs_icu4x_currency_symbol(const QJSICU4XCurrencySymbolHandle *, QJSICU4XCurrencySymbol *);
+
+/* Public composed currency-specific decimal symbols. An empty system requests
+   the unqualified default record; a nonempty system is exact. UNSUPPORTED means the
+   public bake has no override payload for that locale/system/currency pair;
+   it does not mean the currency or numeric system is globally unsupported.
+   All spans borrow the immutable handle until close; failures preserve output.
+   The numeric amount, digit repertoire and precision are not changed. */
+typedef struct QJSICU4XCurrencyDecimalHandle QJSICU4XCurrencyDecimalHandle;
+typedef struct QJSICU4XCurrencyDecimal {
+    QJSICU4XDecimalText decimal, group;
+    uint32_t primary, secondary, minimum;
+} QJSICU4XCurrencyDecimal;
+int qjs_icu4x_currency_decimal_open(const uint8_t *locale, size_t locale_length,
+                                    const uint8_t *system, size_t system_length,
+                                    const uint8_t *code, size_t code_length,
+                                    QJSICU4XCurrencyDecimalHandle **);
+void qjs_icu4x_currency_decimal_close(QJSICU4XCurrencyDecimalHandle *);
+int qjs_icu4x_currency_decimal(const QJSICU4XCurrencyDecimalHandle *, QJSICU4XCurrencyDecimal *);
 #endif
