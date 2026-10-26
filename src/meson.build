@@ -300,6 +300,7 @@ if intl_enabled
       'intl/datetime/icu4c-format.cpp',
       'intl/display/icu4c.c',
       'intl/duration/icu4c.c',
+      'intl/duration/provider.c',
       'intl/list/icu4c.c',
       'intl/locale/icu4c.c',
       'intl/locale/icu4c-preferences.c',
