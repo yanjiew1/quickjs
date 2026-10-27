@@ -120,42 +120,54 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
 {
     JSModuleDef *module = JS_VALUE_GET_PTR(func_data[0]);
     JSValueConst error = argv[0];
-    int i;
 
 #ifdef DUMP_MODULE_EXEC
     js_dump_module(ctx->rt, __func__, module);
 #endif
-    if (js_check_stack_overflow(ctx->rt, 0))
-        return JS_ThrowStackOverflow(ctx);
-
     if (module->status == JS_MODULE_STATUS_EVALUATED) {
         assert(module->eval_has_exception);
         return JS_UNDEFINED;
     }
 
-    assert(module->status == JS_MODULE_STATUS_EVALUATING_ASYNC);
-    assert(!module->eval_has_exception);
-    assert(module->async_evaluation);
+    /* Evaluation DFS has finished. Reuse its temporary link and cursor for
+       rejection so even an exhausted stack and allocator can reach every
+       async parent without recursion or another allocation. */
+    module->stack_prev = NULL;
+    module->dfs_index = 0;
+    while (module) {
+        JSModuleDef *next;
 
-    module->eval_has_exception = TRUE;
-    module->eval_exception = JS_DupValue(ctx, error);
-    module->status = JS_MODULE_STATUS_EVALUATED;
-    module->async_evaluation = FALSE;
+        if (module->status == JS_MODULE_STATUS_EVALUATING_ASYNC) {
+            assert(!module->eval_has_exception);
+            assert(module->async_evaluation);
+            module->eval_has_exception = TRUE;
+            module->eval_exception = JS_DupValue(ctx, error);
+            module->status = JS_MODULE_STATUS_EVALUATED;
+            module->async_evaluation = FALSE;
 
-    if (!JS_IsUndefined(module->promise)) {
-        JSValue ret_val;
-        assert(module->cycle_root == module);
-        ret_val = JS_Call(ctx, module->resolving_funcs[1], JS_UNDEFINED,
-                          1, &error);
-        JS_FreeValue(ctx, ret_val);
-    }
+            if (!JS_IsUndefined(module->promise)) {
+                JSValue ret_val;
 
-    for(i = 0; i < module->async_parent_modules_count; i++) {
-        JSModuleDef *m = module->async_parent_modules[i];
-        JSValue m_obj = JS_NewModuleValue(m);
-        js_async_module_execution_rejected(ctx, JS_UNDEFINED, 1, &error, 0,
-                                           &m_obj);
-        JS_FreeValue(ctx, m_obj);
+                assert(module->cycle_root == module);
+                ret_val = JS_Call(ctx, module->resolving_funcs[1], JS_UNDEFINED,
+                                  1, &error);
+                JS_FreeValue(ctx, ret_val);
+            }
+        }
+
+        if (module->dfs_index < module->async_parent_modules_count) {
+            next = module->async_parent_modules[module->dfs_index++];
+            if (next->status == JS_MODULE_STATUS_EVALUATED) {
+                assert(next->eval_has_exception);
+                continue;
+            }
+            next->stack_prev = module;
+            next->dfs_index = 0;
+        } else {
+            next = module->stack_prev;
+            module->stack_prev = NULL;
+        }
+        module = next;
     }
     return JS_UNDEFINED;
 }

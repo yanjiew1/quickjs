@@ -372,6 +372,119 @@ static void test_async_generator_oom(int is_return)
     }
 }
 
+static void *module_stack_padding;
+static int module_freeze_calls, module_graph_mode;
+
+static JSValue exhaust_module_stack(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+
+    module_freeze_calls++;
+    module_stack_padding = test_pool_padding(rt);
+    JS_SetMaxStackSize(rt, 1);
+    JS_SetMemoryLimit(rt, 0);
+    return JS_UNDEFINED;
+}
+
+static JSModuleDef *load_stack_module(JSContext *ctx, const char *name,
+                                      void *opaque)
+{
+    static const char dependency[] = "await 0;";
+    static const char parent[] = "import 'dep'; exhaustModuleStack(); await 0;";
+    static const char diamond_parent[] = "import 'mid'; await 0;";
+    static const char diamond_middle[] = "import 'leaf'; exhaustModuleStack(); await 0;";
+    const char *source;
+
+    if (module_graph_mode == 2) {
+        if (!strcmp(name, "leaf"))
+            source = dependency;
+        else if (!strcmp(name, "mid"))
+            source = diamond_middle;
+        else
+            source = diamond_parent;
+    } else {
+        source = !strcmp(name, "dep") ? dependency : parent;
+    }
+    JSValue compiled = JS_Eval(ctx, source, strlen(source), name,
+                               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    JSModuleDef *module;
+
+    if (JS_IsException(compiled))
+        return NULL;
+    module = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return module;
+}
+
+static void test_async_module_late_setup_failure(int graph_mode)
+{
+    static const char root[] = "import 'dep'; exhaustModuleStack(); await 0;";
+    static const char rooted_parent[] = "import 'parent'; await 0;";
+    static const char diamond[] = "import 'left'; import 'right'; await 0;";
+    const char *source = graph_mode == 2 ? diamond :
+                         graph_mode == 1 ? rooted_parent : root;
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, method, compiled, result, error;
+    int jobs = 0, ret;
+
+    assert(rt && ctx);
+    JS_SetModuleLoaderFunc(rt, NULL, load_stack_module, NULL);
+    global = JS_GetGlobalObject(ctx);
+    method = JS_NewCFunction(ctx, exhaust_module_stack, "exhaustModuleStack", 0);
+    assert(!JS_IsException(method));
+    assert(JS_SetPropertyStr(ctx, global, "exhaustModuleStack", method) >= 0);
+    JS_FreeValue(ctx, global);
+    module_stack_padding = NULL;
+    module_freeze_calls = 0;
+    module_graph_mode = graph_mode;
+    compiled = JS_Eval(ctx, source, strlen(source), "stack-root",
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    result = JS_EvalFunction(ctx, compiled);
+    assert(!JS_IsException(result));
+    while (JS_IsJobPending(rt)) {
+        assert(++jobs < 24);
+        ret = JS_ExecutePendingJob(rt, NULL);
+        if (module_freeze_calls) {
+            JS_SetMemoryLimit(rt, (size_t)-1);
+            JS_SetMaxStackSize(rt, 0);
+            test_pool_padding_free(rt, module_stack_padding);
+            module_stack_padding = NULL;
+        }
+        if (ret < 0)
+            JS_FreeValue(ctx, JS_GetException(ctx));
+    }
+    assert(module_freeze_calls == 1);
+    /* Every async ancestor must settle even when no new job can be made. */
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+    error = JS_PromiseResult(ctx, result);
+    assert(JS_IsNull(error) || JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    if (graph_mode == 2) {
+        const char *names[] = { "left", "right", "mid" };
+        int i;
+
+        for (i = 0; i < 3; i++) {
+            JSValue parent = JS_LoadModule(ctx, "stack-root", names[i]);
+
+            assert(!JS_IsException(parent));
+            while (JS_IsJobPending(rt)) {
+                assert(++jobs < 32);
+                assert(JS_ExecutePendingJob(rt, NULL) > 0);
+            }
+            assert(JS_PromiseState(ctx, parent) == JS_PROMISE_REJECTED);
+            JS_FreeValue(ctx, parent);
+        }
+        assert(module_freeze_calls == 1);
+    }
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -383,6 +496,9 @@ int main(void)
     test_combinator_oom("(function() { return Promise.all([1]); })");
     test_combinator_oom("(function() { return Promise.allSettled([1]); })");
     test_combinator_oom("(function() { return Promise.any([1]); })");
+    test_async_module_late_setup_failure(0);
+    test_async_module_late_setup_failure(1);
+    test_async_module_late_setup_failure(2);
     test_async_generator_start_throw();
     test_async_generator_oom(0);
     test_async_generator_oom(1);
