@@ -44,6 +44,8 @@
 #undef js_realloc2
 #undef js_malloc_usable_size
 #include "cutils.h"
+#include "oom-allocator.h"
+#include "pool-padding.h"
 #include "qjsc-allocation-probe.h"
 
 static uint8_t allocator_test_byte(size_t block, size_t offset)
@@ -4026,6 +4028,98 @@ static void test_promise_constructor_bit(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_proxy_property_failures(int descriptor)
+{
+    static const char source[] =
+        "new Proxy({}, { defineProperty() { return true; } })";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue anchor, target = JS_UNDEFINED, handler = JS_UNDEFINED;
+        JSValue proxy, method = JS_UNDEFINED, result = JS_UNDEFINED;
+        JSAtom key = JS_ATOM_NULL;
+        void *padding;
+        int status;
+
+        assert(ctx);
+        anchor = JS_NewObject(ctx); /* Keep an empty shape shared. */
+        if (descriptor) {
+            proxy = JS_Eval(ctx, source, sizeof(source) - 1,
+                            "proxy-descriptor-oom", JS_EVAL_TYPE_GLOBAL);
+            key = JS_NewAtom(ctx, "x");
+            assert(key != JS_ATOM_NULL);
+        } else {
+            JSValue global = JS_GetGlobalObject(ctx);
+            JSValue constructor = JS_GetPropertyStr(ctx, global, "Proxy");
+
+            method = JS_GetPropertyStr(ctx, constructor, "revocable");
+            target = JS_NewObject(ctx);
+            handler = JS_NewObject(ctx);
+            proxy = constructor;
+            JS_FreeValue(ctx, global);
+        }
+        assert(!JS_IsException(anchor) && !JS_IsException(proxy) &&
+               !JS_IsException(method) && !JS_IsException(target) &&
+               !JS_IsException(handler));
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step ? step : (size_t)-1);
+        if (descriptor) {
+            status = JS_DefineProperty(ctx, proxy, key, JS_NewInt32(ctx, 1),
+                                       JS_UNDEFINED, JS_UNDEFINED,
+                                       JS_PROP_C_W_E | JS_PROP_HAS_VALUE |
+                                       JS_PROP_HAS_WRITABLE | JS_PROP_HAS_ENUMERABLE |
+                                       JS_PROP_HAS_CONFIGURABLE);
+        } else {
+            JSValueConst arguments[2] = { target, handler };
+
+            result = JS_Call(ctx, method, proxy, 2, arguments);
+            status = JS_IsException(result) ? -1 : 1;
+        }
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128 && status > 0 && !JS_HasException(ctx));
+        } else {
+            assert(allocator.failures == 1);
+            if (status < 0) {
+                assert(JS_HasException(ctx));
+                JS_FreeValue(ctx, JS_GetException(ctx));
+            } else {
+                assert(!JS_HasException(ctx));
+            }
+        }
+        if (!descriptor && status > 0) {
+            JSValue value = JS_GetPropertyStr(ctx, result, "proxy");
+            JSValue revoke = JS_GetPropertyStr(ctx, result, "revoke");
+
+            assert(JS_IsProxy(value) && JS_IsFunction(ctx, revoke));
+            JS_FreeValue(ctx, value);
+            JS_FreeValue(ctx, revoke);
+        }
+        JS_FreeValue(ctx, result);
+        if (key != JS_ATOM_NULL)
+            JS_FreeAtom(ctx, key);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, proxy);
+        JS_FreeValue(ctx, target);
+        JS_FreeValue(ctx, handler);
+        JS_FreeValue(ctx, anchor);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
+static void test_proxy_property_oom(void)
+{
+    test_proxy_property_failures(0);
+    test_proxy_property_failures(1);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -4055,6 +4149,7 @@ int main(int argc, char **argv)
         { "string-conversion-public-api", test_string_conversion_public_api },
         { "conversion-public-api", test_conversion_public_api },
         { "utf16-public-api", test_utf16_public_api },
+        { "proxy-property-oom", test_proxy_property_oom },
         { "utf16-public-api-oom", test_utf16_public_api_oom },
         { "well-known-symbol-api", test_well_known_symbol_api },
         { "typed-array-public-api", test_typed_array_public_api },
