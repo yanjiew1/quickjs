@@ -4568,12 +4568,68 @@ static void test_collection_growth_oom(void)
     }
 }
 
+static void test_eval_compile_oom(void)
+{
+    static const char * const sources[] = {
+        "function outer(a) { let x = 1;"
+        "return function inner() { eval('x'); }; } outer;",
+        "(function named(a = eval('1')) { return () => eval('arguments'); });",
+        "class Base {} class Derived extends Base {"
+        "constructor(a = 1) { eval(''); super(); } } Derived;",
+    };
+    size_t i;
+
+    for (i = 0; i < countof(sources); i++) {
+        size_t step, calls = 0;
+
+        for (step = 0; step <= calls; step++) {
+            OOMTestAllocator allocator;
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSValue compiled, result;
+            void *padding;
+
+            assert(ctx);
+            padding = test_pool_padding(rt);
+            oom_test_begin(&allocator, step);
+            compiled = JS_Eval(ctx, sources[i], strlen(sources[i]), "eval-oom.js",
+                               JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+            oom_test_end(&allocator);
+            if (!step) {
+                calls = allocator.calls;
+                assert(calls && calls < 256);
+            } else {
+                assert(allocator.failures == 1);
+            }
+            if (JS_IsException(compiled)) {
+                assert(step);
+                oom_test_check_exception(ctx);
+            } else {
+                /* Allocation failure must not publish incomplete bytecode
+                   or leave an exception pending behind a successful result. */
+                assert(!JS_HasException(ctx));
+                result = JS_EvalFunction(ctx, compiled);
+                compiled = JS_UNDEFINED;
+                assert(!JS_IsException(result) && JS_IsFunction(ctx, result));
+                JS_FreeValue(ctx, result);
+            }
+            JS_FreeValue(ctx, compiled);
+            test_pool_padding_free(rt, padding);
+            JS_FreeContext(ctx);
+            JS_RunGC(rt);
+            JS_FreeRuntime(rt);
+            assert(!allocator.live);
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "eval-compile-oom", test_eval_compile_oom },
         { "module-namespace-oom", test_module_namespace_oom },
         { "collection-growth-oom", test_collection_growth_oom },
         { "weakref-checkpoints", test_weakref_checkpoints },
