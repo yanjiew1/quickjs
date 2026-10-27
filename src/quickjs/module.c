@@ -1695,6 +1695,8 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
                 goto exception;
             }
             attributes = JS_NewObjectProto(ctx, JS_NULL);
+            if (JS_IsException(attributes))
+                goto exception;
             if (JS_GetOwnPropertyNamesInternal(ctx, &atoms, &atoms_len, JS_VALUE_GET_OBJ(attributes_obj),
                                                JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)) {
                 goto exception;
@@ -1721,6 +1723,7 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
                 goto exception;
             }
             JS_FreeValue(ctx, attributes_obj);
+            attributes_obj = JS_UNDEFINED;
         }
     }
 
@@ -1732,7 +1735,8 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
     
     /* cannot run JS_LoadModuleInternal synchronously because it would
        cause an unexpected recursion in js_evaluate_module() */
-    JS_EnqueueJob(ctx, js_dynamic_import_job, 5, args);
+    if (JS_EnqueueJob(ctx, js_dynamic_import_job, 5, args) < 0)
+        goto exception;
  done:
     JS_FreeValue(ctx, basename_val);
     JS_FreeValue(ctx, resolving_funcs[0]);

@@ -26,6 +26,58 @@
 
 static void *nested_padding;
 static JSValue nested_error;
+static void *import_padding;
+static JSValue import_attributes;
+static int import_armed;
+
+static JSValue fail_import_allocation(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+
+    import_armed = 1;
+    import_padding = test_pool_padding(rt);
+    JS_SetMemoryLimit(rt, 0);
+    return JS_DupValue(ctx, import_attributes);
+}
+
+static void test_dynamic_import_oom(int with_attributes)
+{
+    static const char source[] =
+        "import('./absent.js', { get with() { return failImport(); } })";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, result, error;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "failImport",
+               JS_NewCFunction(ctx, fail_import_allocation, "failImport", 0)) > 0);
+    import_attributes = with_attributes ? JS_NewObject(ctx) : JS_UNDEFINED;
+    assert(!JS_IsException(import_attributes));
+    if (with_attributes)
+        assert(JS_SetPropertyStr(ctx, import_attributes, "type",
+                                 JS_NewString(ctx, "json")) > 0);
+    import_padding = NULL;
+    import_armed = 0;
+    result = JS_Eval(ctx, source, sizeof(source) - 1,
+                     "<import-oom>", JS_EVAL_TYPE_GLOBAL);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(!JS_IsException(result) && !JS_HasException(ctx));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+    error = JS_PromiseResult(ctx, result);
+    assert(!JS_IsJobPending(rt) && import_armed);
+    assert(JS_IsError(ctx, error) || JS_IsNull(error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, import_attributes);
+    import_attributes = JS_UNDEFINED;
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, import_padding);
+    import_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
 
 static JSValue resolve_inner(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int magic,
@@ -145,6 +197,8 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_dynamic_import_oom(0);
+    test_dynamic_import_oom(1);
     test_reaction_enqueue_failure(0);
     test_reaction_enqueue_failure(1);
     test_reaction_enqueue_failure(2);
