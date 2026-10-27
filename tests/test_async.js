@@ -1043,6 +1043,34 @@ async function test_async_generator_completed_queue()
 
 await test_async_generator_completed_queue();
 
+async function test_async_generator_return_constructor_failure()
+{
+    const generator = (async function*() {})();
+    const marker = {};
+    const events = [];
+    const value = Promise.resolve(42);
+
+    await generator.next();
+    Object.defineProperty(value, "constructor", {
+        get() { throw marker; }
+    });
+    generator.return(value).catch(error => {
+        assert(error, marker);
+        events.push("return");
+    });
+    generator.next().then(result => {
+        assert(result.done, true);
+        events.push("next");
+    });
+    Promise.resolve().then(() => events.push("tick"));
+    for (let i = 0; i < 16; i++)
+        await 0;
+    /* Failed PromiseResolve completes the request without an extra await. */
+    assert(events.join(","), "return,next,tick");
+}
+
+await test_async_generator_return_constructor_failure();
+
 
 async function assert_array_from_async_rejects(operation, expected)
 {

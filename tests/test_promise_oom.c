@@ -1,4 +1,4 @@
-/* Promise thenable job allocation failure.
+/* Promise and async-generator allocation failures.
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,6 +23,7 @@
 #include <string.h>
 #include "quickjs.h"
 #include "pool-padding.h"
+#include "oom-allocator.h"
 
 static void *nested_padding;
 static JSValue nested_error;
@@ -189,6 +190,87 @@ static void test_reaction_enqueue_failure(int mode)
     JS_FreeRuntime(rt);
 }
 
+static void test_async_generator_oom(int is_return)
+{
+    static const char source[] = "(async function*() {})()";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue generator, next, method, promise, value;
+        JSValueConst arg = JS_NewInt32(ctx, 42);
+        void *padding;
+        int jobs = 0;
+
+        assert(ctx);
+        generator = JS_Eval(ctx, source, sizeof(source) - 1, "generator-oom.js",
+                            JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(generator));
+        next = JS_GetPropertyStr(ctx, generator, "next");
+        method = JS_GetPropertyStr(ctx, generator, is_return ? "return" : "next");
+        assert(!JS_IsException(next) && !JS_IsException(method));
+        promise = JS_Call(ctx, next, generator, 0, NULL);
+        assert(!JS_IsException(promise));
+        while (JS_IsJobPending(rt)) {
+            assert(++jobs < 16);
+            assert(JS_ExecutePendingJob(rt, NULL) > 0);
+        }
+        JS_FreeValue(ctx, promise);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        promise = JS_Call(ctx, method, generator, 1, &arg);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(promise)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            while (JS_IsJobPending(rt)) {
+                assert(++jobs < 16);
+                assert(JS_ExecutePendingJob(rt, NULL) > 0);
+            }
+            /* Failed return setup must reject, not strand a request without
+               a scheduled continuation or fulfill it with JS_EXCEPTION. */
+            assert(JS_PromiseState(ctx, promise) != JS_PROMISE_PENDING);
+            value = JS_PromiseResult(ctx, promise);
+            assert(!JS_IsException(value));
+            if (JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED)
+                assert(step && JS_IsError(ctx, value));
+            else
+                assert(JS_IsObject(value));
+            JS_FreeValue(ctx, value);
+        }
+        JS_FreeValue(ctx, promise);
+        assert(!JS_HasException(ctx));
+        /* Recovery must also leave the completed generator usable. */
+        promise = JS_Call(ctx, next, generator, 0, NULL);
+        assert(!JS_IsException(promise));
+        while (JS_IsJobPending(rt)) {
+            assert(++jobs < 16);
+            assert(JS_ExecutePendingJob(rt, NULL) > 0);
+        }
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+        assert(!JS_HasException(ctx));
+        JS_FreeValue(ctx, promise);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, next);
+        JS_FreeValue(ctx, generator);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -197,6 +279,8 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_async_generator_oom(0);
+    test_async_generator_oom(1);
     test_dynamic_import_oom(0);
     test_dynamic_import_oom(1);
     test_reaction_enqueue_failure(0);

@@ -638,11 +638,15 @@ static void js_async_generator_resolve(JSContext *ctx,
                                        BOOL done)
 {
     JSValue result;
+    BOOL is_reject;
+
     result = js_create_iterator_result(ctx, JS_DupValue(ctx, value), done);
-    /* XXX: better exception handling ? */
-    js_async_generator_resolve_or_reject(ctx, s, result, 0);
+    is_reject = JS_IsException(result);
+    if (is_reject)
+        result = JS_GetException(ctx);
+    js_async_generator_resolve_or_reject(ctx, s, result, is_reject);
     JS_FreeValue(ctx, result);
- }
+}
 
 static void js_async_generator_reject(JSContext *ctx,
                                        JSAsyncGeneratorData *s,
@@ -668,19 +672,12 @@ static int js_async_generator_completed_return(JSContext *ctx,
     JSValue promise, resolving_funcs[2], resolving_funcs1[2];
     int res;
 
-    // Can fail looking up JS_ATOM_constructor when is_reject==0.
+    /* PromiseResolve can throw while reading the constructor. The caller
+       rejects that request and resumes the queue without another await. */
     promise = js_promise_resolve(ctx, ctx->promise_ctor, 1, &value,
                                  /*is_reject*/0);
-    // A poisoned .constructor property is observable and the resulting
-    // exception should be delivered to the catch handler.
-    if (JS_IsException(promise)) {
-        JSValue err = JS_GetException(ctx);
-        promise = js_promise_resolve(ctx, ctx->promise_ctor, 1, (JSValueConst *)&err,
-                                     /*is_reject*/1);
-        JS_FreeValue(ctx, err);
-        if (JS_IsException(promise))
-            return -1;
-    }
+    if (JS_IsException(promise))
+        return -1;
     if (js_async_generator_resolve_function_create(ctx,
                                                    JS_MKPTR(JS_TAG_OBJECT, s->generator),
                                                    resolving_funcs1,
@@ -727,7 +724,14 @@ static void js_async_generator_resume_next(JSContext *ctx,
                 js_async_generator_resolve(ctx, s, JS_UNDEFINED, TRUE);
             } else if (next->completion_type == GEN_MAGIC_RETURN) {
                 s->state = JS_ASYNC_GENERATOR_STATE_AWAITING_RETURN;
-                js_async_generator_completed_return(ctx, s, next->result);
+                if (js_async_generator_completed_return(ctx, s, next->result) == 0)
+                    goto done;
+                /* No continuation owns this failed await. Restore the
+                   completed state before rejecting and draining the queue. */
+                s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
+                value = JS_GetException(ctx);
+                js_async_generator_reject(ctx, s, value);
+                JS_FreeValue(ctx, value);
             } else {
                 js_async_generator_reject(ctx, s, next->result);
             }
