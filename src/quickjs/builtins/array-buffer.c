@@ -132,8 +132,10 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
             }
             abuf->data = shared_functions.sab_alloc(shared_functions.sab_opaque,
                                                     alloc_len);
-            if (!abuf->data)
+            if (!abuf->data) {
+                JS_ThrowOutOfMemory(ctx);
                 goto fail;
+            }
             uses_shared_callbacks = TRUE;
 #ifdef CONFIG_ATOMICS
             if (!js_array_buffer_atomic_is_aligned(abuf->data)) {

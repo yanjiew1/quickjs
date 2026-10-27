@@ -294,6 +294,15 @@ static void *alloc_shared(void *opaque, size_t size)
     return data->ptr;
 }
 
+static void *fail_alloc_shared(void *opaque, size_t size)
+{
+    SharedBufferData *data = opaque;
+
+    assert(size >= 1);
+    data->allocations++;
+    return NULL;
+}
+
 static void *alloc_misaligned_shared(void *opaque, size_t size)
 {
     SharedBufferData *data = opaque;
@@ -1199,6 +1208,33 @@ static void test_shared_buffer_allocation(void)
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     assert(data.ptr == NULL);
+}
+
+static void test_shared_buffer_allocator_failure(void)
+{
+    SharedBufferData data = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        fail_alloc_shared, free_shared, dup_shared, &data,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue result, error;
+    static const char source[] = "new SharedArrayBuffer(8)";
+
+    assert(rt);
+    JS_SetSharedArrayBufferFunctions(rt, &functions);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    result = JS_Eval(ctx, source, sizeof(source) - 1,
+                     "shared-allocator-failure", JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    assert(data.allocations == 1 && data.releases == 0 &&
+           data.references == 0 && data.ptr == NULL);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
 }
 
 static void check_typed_array_arguments(JSContext *ctx, int argc,
@@ -4032,6 +4068,7 @@ int main(int argc, char **argv)
         { "allocator-capacity", test_allocator_capacity_and_reuse },
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
+        { "shared-buffer-allocator-failure", test_shared_buffer_allocator_failure },
         { "shared-buffer-growth", test_default_shared_buffer_growth },
         { "shared-buffer-clone", test_shared_buffer_clone_views },
         { "shared-buffer-slice-clone", test_shared_slice_clone_species },
