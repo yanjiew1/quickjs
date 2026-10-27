@@ -4102,3 +4102,12 @@ function test_exception_operand_cleanup()
 }
 
 test_exception_operand_cleanup();
+
+function test_scope_limit()
+{
+    /* Scope operands are 16-bit. Reject overflow instead of silently using
+       an earlier scope's initialization and closure-cleanup instructions. */
+    assert_throws(InternalError, () => Function("{0;}".repeat(65536)));
+}
+
+test_scope_limit();

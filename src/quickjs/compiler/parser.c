@@ -477,7 +477,10 @@ int push_scope(JSParseState *s) {
     if (s->cur_func) {
         JSFunctionDef *fd = s->cur_func;
         int scope = fd->scope_count;
-        /* XXX: should check for scope overflow */
+        if (scope > UINT16_MAX) {
+            JS_ThrowInternalError(s->ctx, "too many lexical scopes");
+            return -1;
+        }
         if ((fd->scope_count + 1) > fd->scope_size) {
             int new_size;
             size_t slack;
