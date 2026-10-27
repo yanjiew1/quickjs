@@ -1002,6 +1002,47 @@ async function test_async_generator_return_await_order()
 
 await test_async_generator_return_await_order();
 
+async function test_async_generator_completed_queue()
+{
+    for (const mode of ["next", "return", "reject"]) {
+        const events = [];
+        const marker = {};
+        const generator = (async function*() { await 0; })();
+        let requests;
+
+        if (mode === "next") {
+            requests = Array.from({ length: 4 }, () => generator.next());
+        } else {
+            await generator.next();
+            const value = mode === "reject" ? Promise.reject(marker) : 42;
+            requests = [generator.return(value), generator.next(),
+                        generator.throw(marker), generator.next()];
+        }
+        requests.forEach((request, index) => request.then(
+            result => events.push([index, result.value, result.done]),
+            error => events.push([index, error])));
+
+        /* Keep the test bounded even if the generator strands a request.
+           Awaiting Promise.all here could leave the module pending forever. */
+        for (let i = 0; i < 16; i++)
+            await 0;
+        assert(events.length, 4);
+        for (let i = 0; i < 4; i++) {
+            assert(events[i][0], i);
+            const rejected = mode !== "next" &&
+                (i === 2 || (mode === "reject" && i === 0));
+            if (rejected) {
+                assert(events[i][1], marker);
+            } else {
+                assert(events[i][1], mode === "return" && i === 0 ? 42 : undefined);
+                assert(events[i][2], true);
+            }
+        }
+    }
+}
+
+await test_async_generator_completed_queue();
+
 
 async function assert_array_from_async_rejects(operation, expected)
 {
