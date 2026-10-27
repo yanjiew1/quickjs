@@ -4383,6 +4383,128 @@ static void test_weakref_kept_oom(void)
     test_weakref_oom(1);
 }
 
+static const char * const namespace_oom_sources[] = {
+    "export const a = 42; export const b = 42;",
+    "export const a = 42; export { a as '0', a as '1' };",
+};
+
+static JSModuleDef *namespace_oom_loader(JSContext *ctx, const char *name,
+                                       void *opaque)
+{
+    const char *source = opaque;
+    JSValue compiled;
+    JSModuleDef *module;
+
+    compiled = JS_Eval(ctx, source, strlen(source), name,
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(compiled))
+        return NULL;
+    module = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return module;
+}
+
+static void test_module_namespace_failure(int mode)
+{
+    const char *source = namespace_oom_sources[mode / 2];
+    int dynamic_import = mode & 1;
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSModuleDef *module = NULL;
+        JSValue result = JS_UNDEFINED, promise = JS_UNDEFINED, value;
+        void *padding;
+        int ret = 0, jobs = 0;
+
+        assert(ctx);
+        if (dynamic_import) {
+            JS_SetModuleLoaderFunc(rt, NULL, namespace_oom_loader, (void *)source);
+            promise = JS_LoadModule(ctx, "", "namespace-oom");
+            assert(!JS_IsException(promise));
+        } else {
+            JSValue compiled = JS_Eval(ctx, source, strlen(source), "namespace-oom",
+                JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+
+            assert(!JS_IsException(compiled));
+            module = JS_VALUE_GET_PTR(compiled);
+            value = JS_EvalFunction(ctx, compiled);
+            assert(!JS_IsException(value));
+            JS_FreeValue(ctx, value);
+        }
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        if (dynamic_import)
+            ret = JS_ExecutePendingJob(rt, NULL);
+        else
+            result = JS_GetModuleNamespace(ctx, module);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (ret < 0 || JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+        }
+        if (dynamic_import) {
+            /* Namespace failure rejects the import; the rejected reason and
+               any queued reactions must still be released during teardown. */
+            while (JS_IsJobPending(rt)) {
+                assert(++jobs < 16);
+                assert(JS_ExecutePendingJob(rt, NULL) > 0);
+            }
+            if (ret > 0)
+                assert(JS_PromiseState(ctx, promise) != JS_PROMISE_PENDING);
+        } else {
+            JS_FreeValue(ctx, result);
+            /* Failed namespaces must not be cached: a later attempt can
+               construct the complete namespace after allocation recovers. */
+            result = JS_GetModuleNamespace(ctx, module);
+            assert(!JS_IsException(result) && !JS_HasException(ctx));
+            value = JS_GetPropertyStr(ctx, result, "a");
+            assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 42)));
+            JS_FreeValue(ctx, value);
+            {
+                JSValue symbol = JS_GetWellKnownSymbol(ctx,
+                    JS_WELL_KNOWN_SYMBOL_TO_STRING_TAG);
+                JSAtom atom = JS_ValueToAtom(ctx, symbol);
+                const char *tag;
+
+                assert(atom != JS_ATOM_NULL);
+                value = JS_GetProperty(ctx, result, atom);
+                JS_FreeAtom(ctx, atom);
+                JS_FreeValue(ctx, symbol);
+                tag = JS_ToCString(ctx, value);
+                assert(tag && !strcmp(tag, "Module"));
+                JS_FreeCString(ctx, tag);
+                JS_FreeValue(ctx, value);
+            }
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, promise);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
+static void test_module_namespace_oom(void)
+{
+    int mode;
+
+    for (mode = 0; mode < 4; mode++)
+        test_module_namespace_failure(mode);
+}
+
 /* Exercise mandatory record allocation and optional table growth separately. */
 static void test_collection_growth_oom(void)
 {
@@ -4452,6 +4574,7 @@ int main(int argc, char **argv)
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "module-namespace-oom", test_module_namespace_oom },
         { "collection-growth-oom", test_collection_growth_oom },
         { "weakref-checkpoints", test_weakref_checkpoints },
         { "weakref-kept-oom", test_weakref_kept_oom },

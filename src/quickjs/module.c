@@ -944,7 +944,7 @@ static int exported_names_cmp(const void *p1, const void *p2, void *opaque)
     str1 = JS_AtomToString(ctx, me1->export_name);
     str2 = JS_AtomToString(ctx, me2->export_name);
     if (JS_IsException(str1) || JS_IsException(str2)) {
-        /* XXX: raise an error ? */
+        /* rqsort cannot return an error; the caller checks the exception. */
         ret = 0;
     } else {
         ret = js_string_compare(JS_VALUE_GET_STRING(str1),
@@ -1045,6 +1045,9 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
     /* sort the exported names */
     rqsort(s->exported_names, s->exported_names_count,
            sizeof(s->exported_names[0]), exported_names_cmp, ctx);
+    /* Comparing integer atoms materializes strings and can fail. */
+    if (JS_HasException(ctx))
+        goto fail;
 
     for(i = 0; i < s->exported_names_count; i++) {
         ExportedNameEntry *en = &s->exported_names[i];
@@ -1075,11 +1078,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
         }
     }
 
+    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_Symbol_toStringTag,
+                              JS_AtomToString(ctx, JS_ATOM_Module), 0) < 0)
+        goto fail;
     js_free(ctx, s->exported_names);
-
-    JS_DefinePropertyValue(ctx, obj, JS_ATOM_Symbol_toStringTag,
-                           JS_AtomToString(ctx, JS_ATOM_Module),
-                           0);
 
     p->extensible = FALSE;
     return obj;
@@ -1541,6 +1543,7 @@ static JSValue js_load_module_fulfilled(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(ns)) {
         JSValue err = JS_GetException(ctx);
         js_load_module_rejected(ctx, JS_UNDEFINED, 1, (JSValueConst *)&err, 0, func_data);
+        JS_FreeValue(ctx, err);
         return JS_UNDEFINED;
     }
     ret = JS_Call(ctx, resolving_funcs[0], JS_UNDEFINED,
