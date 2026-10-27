@@ -394,8 +394,48 @@ static void test_point_initialization_failures(void)
     assert(failures);
 }
 
+static void test_import_meta_failures(void)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue module, meta;
+        void *padding;
+        int status;
+
+        assert(ctx);
+        module = JS_Eval(ctx, "", 0, "meta-oom.js",
+                         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(module));
+        meta = JS_GetImportMeta(ctx, JS_VALUE_GET_PTR(module));
+        assert(!JS_IsException(meta));
+        JS_FreeValue(ctx, meta);
+        /* Reach the allocator even when PATH_MAX keeps the URL pool-sized. */
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        status = js_module_set_import_meta(ctx, module, FALSE, TRUE);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 32 && status == 0 && !JS_HasException(ctx));
+        } else {
+            assert(allocator.failures == 1 && status < 0);
+            oom_test_check_exception(ctx);
+        }
+        test_pool_padding_free(rt, padding);
+        JS_FreeValue(ctx, module);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
+    test_import_meta_failures();
     test_point_export_failure();
     test_point_initialization_failures();
     test_json_export_failure(0);

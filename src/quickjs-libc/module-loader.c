@@ -104,7 +104,7 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
 {
     JSModuleDef *m;
     char buf[PATH_MAX + 16];
-    JSValue meta_obj;
+    JSValue meta_obj, url;
     JSAtom module_name_atom;
     const char *module_name;
 
@@ -142,12 +142,14 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     meta_obj = JS_GetImportMeta(ctx, m);
     if (JS_IsException(meta_obj))
         return -1;
-    JS_DefinePropertyValueStr(ctx, meta_obj, "url",
-                              JS_NewString(ctx, buf),
-                              JS_PROP_C_W_E);
-    JS_DefinePropertyValueStr(ctx, meta_obj, "main",
-                              JS_NewBool(ctx, is_main),
-                              JS_PROP_C_W_E);
+    url = JS_NewString(ctx, buf);
+    if (JS_IsException(url) ||
+        JS_DefinePropertyValueStr(ctx, meta_obj, "url", url, JS_PROP_C_W_E) < 0 ||
+        JS_DefinePropertyValueStr(ctx, meta_obj, "main",
+                                  JS_NewBool(ctx, is_main), JS_PROP_C_W_E) < 0) {
+        JS_FreeValue(ctx, meta_obj);
+        return -1;
+    }
     JS_FreeValue(ctx, meta_obj);
     return 0;
 }
@@ -287,8 +289,10 @@ JSModuleDef *js_module_loader(JSContext *ctx,
             js_free(ctx, buf);
             if (JS_IsException(func_val))
                 return NULL;
-            /* XXX: could propagate the exception */
-            js_module_set_import_meta(ctx, func_val, TRUE, FALSE);
+            if (js_module_set_import_meta(ctx, func_val, TRUE, FALSE) < 0) {
+                JS_FreeValue(ctx, func_val);
+                return NULL;
+            }
             /* the module is already referenced, so we must free it */
             m = JS_VALUE_GET_PTR(func_val);
             JS_FreeValue(ctx, func_val);
