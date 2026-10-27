@@ -337,6 +337,10 @@ function test_os_exec()
     fds = os.pipe();
     pid = os.exec(["cat"], { block: false, stdin: fds[0] } );
     assert(pid >= 0);
+    /* The blocked child has no exit status yet; the tuple uses zero. */
+    [ret, status] = os.waitpid(pid, os.WNOHANG);
+    assert(ret, 0);
+    assert(status, 0);
     os.close(fds[0]);
     assert(os.kill(pid, os.SIGTERM), 0);
     [ret, status] = os.waitpid(pid, 0);

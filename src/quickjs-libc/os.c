@@ -1067,7 +1067,7 @@ static JSValue js_os_getpid(JSContext *ctx, JSValueConst this_val,
 static JSValue js_os_waitpid(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
-    int pid, status, options, ret;
+    int pid, status = 0, options, ret;
     JSValue obj;
 
     if (JS_ToInt32(ctx, &pid, argv[0]))
