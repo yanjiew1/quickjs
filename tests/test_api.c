@@ -2092,6 +2092,23 @@ static void test_utf16_public_api(void)
     JS_FreeCStringUTF16(ctx, wide);
     JS_FreeValue(ctx, value);
 
+    {
+        static const char malformed[] = { (char)0x80, 'A' };
+
+        value = JS_NewStringLen(ctx, malformed, sizeof(malformed));
+        assert(!JS_IsException(value));
+        wide = JS_ToCStringLenUTF16(ctx, &length, value);
+        assert(wide && length == 2 && wide[0] == 0xfffd && wide[1] == 'A');
+        JS_FreeCStringUTF16(ctx, wide);
+        JS_FreeValue(ctx, value);
+        value = JS_NewStringLen(ctx, NULL, 0);
+        assert(!JS_IsException(value));
+        wide = JS_ToCStringLenUTF16(ctx, &length, value);
+        assert(wide && length == 0);
+        JS_FreeCStringUTF16(ctx, wide);
+        JS_FreeValue(ctx, value);
+    }
+
     value = utf16_api_eval(ctx, "'x'.repeat(10000) + '\\ud800\\u0000\\udc00'");
     assert(JS_VALUE_GET_TAG(value) == JS_TAG_STRING_ROPE);
     wide = JS_ToCStringLenUTF16(ctx, &length, value);

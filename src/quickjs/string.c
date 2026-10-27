@@ -266,6 +266,8 @@ JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len)
     size_t len1;
 
     p_start = (const uint8_t *)buf;
+    if (!buf_len)
+        return JS_AtomToString(ctx, JS_ATOM_empty_string);
     p_end = p_start + buf_len;
     len1 = count_ascii(p_start, buf_len);
     p = p_start + len1;
@@ -294,15 +296,12 @@ JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len)
                 } else {
                     /* invalid char */
                     c = 0xfffd;
-                    /* skip the invalid chars */
-                    /* XXX: seems incorrect. Why not just use c = *p++; ? */
+                    /* Consume the malformed sequence, preserving the next
+                       valid UTF-8 starter. */
+                    if (*p >= 0xc0)
+                        p++;
                     while (p < p_end && (*p >= 0x80 && *p < 0xc0))
                         p++;
-                    if (p < p_end) {
-                        p++;
-                        while (p < p_end && (*p >= 0x80 && *p < 0xc0))
-                            p++;
-                    }
                 }
                 string_buffer_putc16(b, c);
             }
