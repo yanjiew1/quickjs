@@ -244,6 +244,53 @@ static void test_reaction_enqueue_failure(int mode)
     JS_FreeRuntime(rt);
 }
 
+static void test_combinator_oom(const char *source)
+{
+    size_t step, calls = 0;
+
+    /* Sweep construction allocations separately from the later promise jobs. */
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue function, result;
+        void *padding;
+        int jobs = 0;
+
+        assert(ctx);
+        function = JS_Eval(ctx, source, strlen(source), "combinator-oom.js",
+                           JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(function));
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            while (JS_IsJobPending(rt)) {
+                assert(++jobs < 16);
+                assert(JS_ExecutePendingJob(rt, NULL) > 0);
+            }
+            assert(JS_PromiseState(ctx, result) != JS_PROMISE_PENDING);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, function);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static void test_async_generator_oom(int is_return)
 {
     static const char source[] = "(async function*() {})()";
@@ -333,6 +380,9 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_combinator_oom("(function() { return Promise.all([1]); })");
+    test_combinator_oom("(function() { return Promise.allSettled([1]); })");
+    test_combinator_oom("(function() { return Promise.any([1]); })");
     test_async_generator_start_throw();
     test_async_generator_oom(0);
     test_async_generator_oom(1);
