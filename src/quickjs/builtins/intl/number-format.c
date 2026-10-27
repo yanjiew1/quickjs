@@ -64,7 +64,7 @@ static QJSIntlStatus system_supported(void *opaque, QJSIntlBytes value, int *out
     return qjs_intl_number_system_supported(capabilities->service, capabilities->locale, value, out);
 }
 
-static QJSIntlNumberService *number_service(JSContext *ctx)
+QJSIntlNumberService *js_intl_number_service(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     if (!rt->intl_number) {
@@ -79,11 +79,6 @@ static QJSIntlNumberService *number_service(JSContext *ctx)
         rt->intl_number = service;
     }
     return rt->intl_number;
-}
-
-QJSIntlNumberService *js_intl_number_service(JSContext *ctx)
-{
-    return number_service(ctx);
 }
 
 static void number_finalizer(JSRuntime *rt, JSValue value)
@@ -166,7 +161,7 @@ static JSValue number_constructor(JSContext *ctx, JSValueConst active_function,
     if (JS_IsException(options) || js_intl_locale_matcher(ctx, options) < 0 ||
         js_intl_unicode_type_option(ctx, options, "numberingSystem", &option, &owned_option))
         goto done;
-    service = number_service(ctx);
+    service = js_intl_number_service(ctx);
     if (!service || js_intl_error(ctx, qjs_intl_number_available(service, &available, &count),
                                     "number locales") ||
         js_intl_resolve_locale_match(ctx, available, count, &requested, &match) ||
@@ -420,7 +415,7 @@ done:
 
 static JSValue number_supported(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    QJSIntlNumberService *service = number_service(ctx);
+    QJSIntlNumberService *service = js_intl_number_service(ctx);
     const QJSIntlBytes *available;
     size_t count;
     if (!service || js_intl_error(ctx, qjs_intl_number_available(service, &available, &count),
