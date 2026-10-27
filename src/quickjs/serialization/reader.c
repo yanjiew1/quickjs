@@ -667,7 +667,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
     JSValue obj;
     JSModuleDef *m = NULL;
     JSAtom module_name;
-    int i;
+    int i, count;
     uint8_t v8;
 
     if (bc_get_atom(s, &module_name))
@@ -679,13 +679,15 @@ static JSValue JS_ReadModule(BCReaderState *s)
     if (!m)
         goto fail;
     obj = JS_NewModuleValue(m);
-    if (bc_get_leb128_int(s, &m->req_module_entries_count))
+    /* GC may inspect a registered module during any allocation. Publish table
+       counts only after their zero-initialized storage is available. */
+    if (bc_get_leb128_int(s, &count))
         goto fail;
-    if (m->req_module_entries_count != 0) {
-        m->req_module_entries_size = m->req_module_entries_count;
-        m->req_module_entries = js_mallocz(ctx, sizeof(m->req_module_entries[0]) * m->req_module_entries_size);
+    if (count != 0) {
+        m->req_module_entries = js_mallocz(ctx, sizeof(m->req_module_entries[0]) * count);
         if (!m->req_module_entries)
             goto fail;
+        m->req_module_entries_size = m->req_module_entries_count = count;
         for(i = 0; i < m->req_module_entries_count; i++) {
             JSReqModuleEntry *rme = &m->req_module_entries[i];
             JSValue val;
@@ -698,13 +700,13 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &m->export_entries_count))
+    if (bc_get_leb128_int(s, &count))
         goto fail;
-    if (m->export_entries_count != 0) {
-        m->export_entries_size = m->export_entries_count;
-        m->export_entries = js_mallocz(ctx, sizeof(m->export_entries[0]) * m->export_entries_size);
+    if (count != 0) {
+        m->export_entries = js_mallocz(ctx, sizeof(m->export_entries[0]) * count);
         if (!m->export_entries)
             goto fail;
+        m->export_entries_size = m->export_entries_count = count;
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
             if (bc_get_u8(s, &v8))
@@ -728,13 +730,13 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &m->star_export_entries_count))
+    if (bc_get_leb128_int(s, &count))
         goto fail;
-    if (m->star_export_entries_count != 0) {
-        m->star_export_entries_size = m->star_export_entries_count;
-        m->star_export_entries = js_mallocz(ctx, sizeof(m->star_export_entries[0]) * m->star_export_entries_size);
+    if (count != 0) {
+        m->star_export_entries = js_mallocz(ctx, sizeof(m->star_export_entries[0]) * count);
         if (!m->star_export_entries)
             goto fail;
+        m->star_export_entries_size = m->star_export_entries_count = count;
         for(i = 0; i < m->star_export_entries_count; i++) {
             JSStarExportEntry *se = &m->star_export_entries[i];
             if (bc_get_leb128_int(s, &se->req_module_idx))
@@ -742,13 +744,13 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &m->import_entries_count))
+    if (bc_get_leb128_int(s, &count))
         goto fail;
-    if (m->import_entries_count != 0) {
-        m->import_entries_size = m->import_entries_count;
-        m->import_entries = js_mallocz(ctx, sizeof(m->import_entries[0]) * m->import_entries_size);
+    if (count != 0) {
+        m->import_entries = js_mallocz(ctx, sizeof(m->import_entries[0]) * count);
         if (!m->import_entries)
             goto fail;
+        m->import_entries_size = m->import_entries_count = count;
         for(i = 0; i < m->import_entries_count; i++) {
             JSImportEntry *mi = &m->import_entries[i];
             uint8_t v8;

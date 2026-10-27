@@ -27,6 +27,7 @@
 
 #include "quickjs.h"
 #include "oom-allocator.h"
+#include "pool-padding.h"
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
 #include "../src/quickjs/internal/string.h"
@@ -635,8 +636,70 @@ static void test_truncated_function_atoms(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_module_read_oom(void)
+{
+    static const char source[] =
+        "import { local as value } from 'module-read-oom';"
+        "export { value }; export * from 'module-read-oom';"
+        "export const local = 1;";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue module;
+    uint8_t *encoded, *copy;
+    size_t size, step, calls = 0;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    module = JS_Eval(ctx, source, sizeof(source) - 1, "module-read-oom",
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(module));
+    encoded = JS_WriteObject(ctx, &size, module, JS_WRITE_OBJ_BYTECODE);
+    assert(encoded && size);
+    copy = malloc(size);
+    assert(copy);
+    memcpy(copy, encoded, size);
+    js_free(ctx, encoded);
+    JS_FreeValue(ctx, module);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        void *padding;
+
+        rt = oom_test_runtime(&allocator);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        module = JS_ReadObject(ctx, copy, size, JS_READ_OBJ_BYTECODE);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(module)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+        }
+        JS_FreeValue(ctx, module);
+        test_pool_padding_free(rt, padding);
+        /* Failed readers leave registered modules for GC to visit and free. */
+        JS_RunGC(rt);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    free(copy);
+}
+
 int main(void)
 {
+    test_module_read_oom();
     test_truncated_function_atoms();
     test_rope_serialization();
     test_bytecode_roundtrip(
