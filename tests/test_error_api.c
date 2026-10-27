@@ -301,8 +301,53 @@ static void test_constructor_property_failure(int aggregate)
     assert(!allocator.live);
 }
 
+static void test_throwing_allocation_failures(void)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result, error;
+        void *padding;
+
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_ThrowTypeError(ctx, "allocation %d", 42);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        assert(JS_IsException(result) && JS_HasException(ctx));
+        error = JS_GetException(ctx);
+        /* Throwing helpers deliberately fall back to null or an incomplete
+           Error under OOM, but must not publish JS_EXCEPTION as its message. */
+        assert(JS_IsNull(error) || JS_IsError(ctx, error));
+        if (JS_IsObject(error)) {
+            JSValue message = JS_GetPropertyStr(ctx, error, "message");
+
+            assert(JS_IsString(message));
+            JS_FreeValue(ctx, message);
+            if (!step)
+                check_string(ctx, error, "message", "allocation 42");
+        }
+        assert(!JS_HasException(ctx));
+        JS_FreeValue(ctx, error);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
+    test_throwing_allocation_failures();
     test_constructor_property_failure(0);
     test_constructor_property_failure(1);
     test_realms_and_pending_exception();

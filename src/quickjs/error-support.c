@@ -348,7 +348,7 @@ JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
                        const char *fmt, va_list ap, BOOL add_backtrace)
 {
     char buf[256];
-    JSValue obj, ret;
+    JSValue obj, ret, message;
 
     vsnprintf(buf, sizeof(buf), fmt, ap);
     obj = JS_NewObjectProtoClass(ctx, ctx->native_error_proto[error_num],
@@ -357,9 +357,13 @@ JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
         /* out of memory: throw JS_NULL to avoid recursing */
         obj = JS_NULL;
     } else {
-        JS_DefinePropertyValue(ctx, obj, JS_ATOM_message,
-                               JS_NewString(ctx, buf),
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        message = JS_NewString(ctx, buf);
+        /* Error construction is best effort under OOM, but an exception
+           sentinel must never become an ordinary property value. */
+        if (!JS_IsException(message)) {
+            JS_DefinePropertyValue(ctx, obj, JS_ATOM_message, message,
+                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        }
         if (add_backtrace) {
             build_backtrace(ctx, obj, NULL, 0, 0, 0);
         }
