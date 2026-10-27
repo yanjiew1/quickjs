@@ -91,6 +91,37 @@ function test_file1()
     f.close();
 }
 
+function test_file_error_object()
+{
+    const marker = {};
+    const error = { set errno(value) { throw marker; } };
+    const calls = [
+        () => std.tmpfile(error),
+        () => std.open("tests/test_std.js", "r", error),
+        () => std.open("missing-file-error-object", "r", error),
+        () => std.fdopen(-1, "r", error),
+    ];
+
+    for (const call of calls) {
+        let caught;
+        try {
+            const file = call();
+            if (file)
+                file.close();
+        } catch (e) {
+            caught = e;
+        }
+        assert(caught, marker);
+    }
+
+    const status = {};
+    const file = std.tmpfile(status);
+    assert(status.errno, 0);
+    file.close();
+}
+
+test_file_error_object();
+
 function test_empty_buffer_io()
 {
     const f = std.tmpfile();

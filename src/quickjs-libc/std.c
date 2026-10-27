@@ -696,30 +696,41 @@ static JSValue js_std_parseExtJSON(JSContext *ctx, JSValueConst this_val,
 
 static JSValue js_new_std_file(JSContext *ctx, FILE *f,
                                BOOL close_in_finalizer,
-                               BOOL is_popen)
+                               BOOL is_popen, JSValueConst error_obj)
 {
     JSSTDFile *s;
     JSValue obj;
+    /* Capture the I/O error before reporting it can run user code. */
+    int err = f ? 0 : errno;
+
+    if (!JS_IsUndefined(error_obj) &&
+        JS_SetPropertyStr(ctx, error_obj, "errno", JS_NewInt32(ctx, err)) < 0)
+        goto fail;
+    if (!f)
+        return JS_NULL;
     obj = JS_NewObjectClass(ctx, js_std_file_class_id);
     if (JS_IsException(obj))
-        return obj;
+        goto fail;
     s = js_mallocz(ctx, sizeof(*s));
     if (!s) {
         JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
+        goto fail;
     }
     s->close_in_finalizer = close_in_finalizer;
     s->is_popen = is_popen;
     s->f = f;
     JS_SetOpaque(obj, s);
     return obj;
-}
-
-static void js_set_error_object(JSContext *ctx, JSValueConst obj, int err)
-{
-    if (!JS_IsUndefined(obj)) {
-        JS_SetPropertyStr(ctx, obj, "errno", JS_NewInt32(ctx, err));
+ fail:
+    /* Acquired streams transfer to this helper; borrowed standard streams
+       remain open even when creating their wrapper fails. */
+    if (f && close_in_finalizer) {
+        if (is_popen)
+            pclose(f);
+        else
+            fclose(f);
     }
+    return JS_EXCEPTION;
 }
 
 static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
@@ -727,7 +738,7 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
 {
     const char *filename, *mode = NULL;
     FILE *f;
-    int err;
+    JSValue result;
 
     filename = JS_ToCString(ctx, argv[0]);
     if (!filename)
@@ -741,17 +752,11 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
     }
 
     f = fopen(filename, mode);
-    if (!f)
-        err = errno;
-    else
-        err = 0;
-    if (argc >= 3)
-        js_set_error_object(ctx, argv[2], err);
+    result = js_new_std_file(ctx, f, TRUE, FALSE,
+                             argc >= 3 ? argv[2] : JS_UNDEFINED);
     JS_FreeCString(ctx, filename);
     JS_FreeCString(ctx, mode);
-    if (!f)
-        return JS_NULL;
-    return js_new_std_file(ctx, f, TRUE, FALSE);
+    return result;
  fail:
     JS_FreeCString(ctx, filename);
     JS_FreeCString(ctx, mode);
@@ -763,7 +768,7 @@ static JSValue js_std_popen(JSContext *ctx, JSValueConst this_val,
 {
     const char *filename, *mode = NULL;
     FILE *f;
-    int err;
+    JSValue result;
 
     filename = JS_ToCString(ctx, argv[0]);
     if (!filename)
@@ -777,17 +782,11 @@ static JSValue js_std_popen(JSContext *ctx, JSValueConst this_val,
     }
 
     f = popen(filename, mode);
-    if (!f)
-        err = errno;
-    else
-        err = 0;
-    if (argc >= 3)
-        js_set_error_object(ctx, argv[2], err);
+    result = js_new_std_file(ctx, f, TRUE, TRUE,
+                             argc >= 3 ? argv[2] : JS_UNDEFINED);
     JS_FreeCString(ctx, filename);
     JS_FreeCString(ctx, mode);
-    if (!f)
-        return JS_NULL;
-    return js_new_std_file(ctx, f, TRUE, TRUE);
+    return result;
  fail:
     JS_FreeCString(ctx, filename);
     JS_FreeCString(ctx, mode);
@@ -799,7 +798,8 @@ static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
 {
     const char *mode;
     FILE *f;
-    int fd, err;
+    JSValue result;
+    int fd;
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
@@ -812,16 +812,10 @@ static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
     }
 
     f = fdopen(fd, mode);
-    if (!f)
-        err = errno;
-    else
-        err = 0;
-    if (argc >= 3)
-        js_set_error_object(ctx, argv[2], err);
+    result = js_new_std_file(ctx, f, TRUE, FALSE,
+                             argc >= 3 ? argv[2] : JS_UNDEFINED);
     JS_FreeCString(ctx, mode);
-    if (!f)
-        return JS_NULL;
-    return js_new_std_file(ctx, f, TRUE, FALSE);
+    return result;
  fail:
     JS_FreeCString(ctx, mode);
     return JS_EXCEPTION;
@@ -832,11 +826,8 @@ static JSValue js_std_tmpfile(JSContext *ctx, JSValueConst this_val,
 {
     FILE *f;
     f = tmpfile();
-    if (argc >= 1)
-        js_set_error_object(ctx, argv[0], f ? 0 : errno);
-    if (!f)
-        return JS_NULL;
-    return js_new_std_file(ctx, f, TRUE, FALSE);
+    return js_new_std_file(ctx, f, TRUE, FALSE,
+                           argc >= 1 ? argv[0] : JS_UNDEFINED);
 }
 
 static JSValue js_std_sprintf(JSContext *ctx, JSValueConst this_val,
@@ -1458,7 +1449,7 @@ static int js_std_init(JSContext *ctx, JSModuleDef *m)
                               countof(js_std_funcs)) < 0)
         return -1;
     for (i = 0; i < countof(streams); i++) {
-        value = js_new_std_file(ctx, streams[i], FALSE, FALSE);
+        value = js_new_std_file(ctx, streams[i], FALSE, FALSE, JS_UNDEFINED);
         if (JS_IsException(value))
             return -1;
         if (JS_SetModuleExport(ctx, m, names[i], value) < 0)

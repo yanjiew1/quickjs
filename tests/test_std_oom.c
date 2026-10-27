@@ -119,6 +119,52 @@ static FILE *test_stream(int mode)
     return f;
 }
 
+static void test_file_wrapper_failure(int owned, int is_popen)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result;
+        FILE *f = tmpfile();
+        void *padding;
+        int fd;
+
+        assert(ctx && f);
+        fd = fileno(f);
+        JS_NewClassID(&js_std_file_class_id);
+        assert(JS_NewClass(rt, js_std_file_class_id, &js_std_file_class) == 0);
+        JS_SetClassProto(ctx, js_std_file_class_id, JS_NewObject(ctx));
+        padding = test_pool_padding(rt);
+        test_pipe_closed = 0;
+        oom_test_begin(&allocator, step);
+        result = js_new_std_file(ctx, f, owned, is_popen, JS_UNDEFINED);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 16);
+        } else {
+            assert(allocator.failures == 1 && JS_IsException(result));
+            oom_test_check_exception(ctx);
+        }
+        JS_FreeValue(ctx, result);
+        if (owned) {
+            /* Both allocation failure and the successful wrapper consume f. */
+            assert(dup(fd) < 0 && errno == EBADF);
+            assert(test_pipe_closed == is_popen);
+        } else {
+            assert(fputc('x', f) == 'x');
+            assert(fclose(f) == 0);
+        }
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static void test_failure(int mode)
 {
     size_t fail_at, allocations = 0;
@@ -138,7 +184,7 @@ static void test_failure(int mode)
             JS_NewClassID(&js_std_file_class_id);
             assert(JS_NewClass(rt, js_std_file_class_id, &js_std_file_class) == 0);
             JS_SetClassProto(ctx, js_std_file_class_id, JS_NewObject(ctx));
-            receiver = js_new_std_file(ctx, f, TRUE, FALSE);
+            receiver = js_new_std_file(ctx, f, TRUE, FALSE, JS_UNDEFINED);
             assert(!JS_IsException(receiver));
             args[0] = args[1] = JS_UNDEFINED;
         } else {
@@ -566,6 +612,9 @@ static void test_os_result_oom(int mode)
 
 int main(void)
 {
+    test_file_wrapper_failure(TRUE, FALSE);
+    test_file_wrapper_failure(TRUE, TRUE);
+    test_file_wrapper_failure(FALSE, FALSE);
     test_os_result_oom(0);
 #ifndef _WIN32
     test_os_result_oom(1);
