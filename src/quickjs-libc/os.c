@@ -499,68 +499,89 @@ static JSValue js_os_stat(JSContext *ctx, JSValueConst this_val,
         obj = JS_NewObject(ctx);
         if (JS_IsException(obj))
             return JS_EXCEPTION;
-        JS_DefinePropertyValueStr(ctx, obj, "dev",
-                                  JS_NewInt64(ctx, st.st_dev),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "ino",
-                                  JS_NewInt64(ctx, st.st_ino),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "mode",
-                                  JS_NewInt32(ctx, st.st_mode),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "nlink",
-                                  JS_NewInt64(ctx, st.st_nlink),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "uid",
-                                  JS_NewInt64(ctx, st.st_uid),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "gid",
-                                  JS_NewInt64(ctx, st.st_gid),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "rdev",
-                                  JS_NewInt64(ctx, st.st_rdev),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "size",
-                                  JS_NewInt64(ctx, st.st_size),
-                                  JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "dev",
+                                      JS_NewInt64(ctx, st.st_dev),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "ino",
+                                      JS_NewInt64(ctx, st.st_ino),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "mode",
+                                      JS_NewInt32(ctx, st.st_mode),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "nlink",
+                                      JS_NewInt64(ctx, st.st_nlink),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "uid",
+                                      JS_NewInt64(ctx, st.st_uid),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "gid",
+                                      JS_NewInt64(ctx, st.st_gid),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "rdev",
+                                      JS_NewInt64(ctx, st.st_rdev),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "size",
+                                      JS_NewInt64(ctx, st.st_size),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
 #if !defined(_WIN32)
-        JS_DefinePropertyValueStr(ctx, obj, "blocks",
-                                  JS_NewInt64(ctx, st.st_blocks),
-                                  JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "blocks",
+                                      JS_NewInt64(ctx, st.st_blocks),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
 #endif
 #if defined(_WIN32)
-        JS_DefinePropertyValueStr(ctx, obj, "atime",
-                                  JS_NewInt64(ctx, (int64_t)st.st_atime * 1000),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "mtime",
-                                  JS_NewInt64(ctx, (int64_t)st.st_mtime * 1000),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "ctime",
-                                  JS_NewInt64(ctx, (int64_t)st.st_ctime * 1000),
-                                  JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "atime",
+                                      JS_NewInt64(ctx, (int64_t)st.st_atime * 1000),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "mtime",
+                                      JS_NewInt64(ctx, (int64_t)st.st_mtime * 1000),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "ctime",
+                                      JS_NewInt64(ctx, (int64_t)st.st_ctime * 1000),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
 #elif defined(__APPLE__)
-        JS_DefinePropertyValueStr(ctx, obj, "atime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_atimespec)),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "mtime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_mtimespec)),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "ctime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_ctimespec)),
-                                  JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "atime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_atimespec)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "mtime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_mtimespec)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "ctime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_ctimespec)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
 #else
-        JS_DefinePropertyValueStr(ctx, obj, "atime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_atim)),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "mtime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_mtim)),
-                                  JS_PROP_C_W_E);
-        JS_DefinePropertyValueStr(ctx, obj, "ctime",
-                                  JS_NewInt64(ctx, timespec_to_ms(&st.st_ctim)),
-                                  JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "atime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_atim)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "mtime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_mtim)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
+        if (JS_DefinePropertyValueStr(ctx, obj, "ctime",
+                                      JS_NewInt64(ctx, timespec_to_ms(&st.st_ctim)),
+                                      JS_PROP_C_W_E) < 0)
+            goto exception;
 #endif
     }
     return js_os_pair(ctx, obj, err);
+ exception:
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
 }
 
 #if !defined(_WIN32)

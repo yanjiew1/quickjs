@@ -493,6 +493,8 @@ static void test_os_result_oom(int mode)
             input = JS_UNDEFINED;
         } else if (mode == 2) {
             result = js_os_readdir(ctx, JS_UNDEFINED, 1, (JSValueConst *)&input);
+        } else if (mode == 4) {
+            result = js_os_stat(ctx, JS_UNDEFINED, 1, (JSValueConst *)&input, 0);
         } else if (mode == 3) {
 #ifndef _WIN32
             JSValueConst args[2] = { JS_NewInt32(ctx, INT32_MAX),
@@ -534,7 +536,12 @@ static void test_os_result_oom(int mode)
                 assert(JS_IsString(value));
             else if (mode == 2)
                 assert(JS_IsArray(ctx, value));
-            else if (mode == 3) {
+            else if (mode == 4) {
+                JSValue field = JS_GetPropertyStr(ctx, value, "mode");
+
+                assert(JS_IsObject(value) && JS_IsNumber(field));
+                JS_FreeValue(ctx, field);
+            } else if (mode == 3) {
                 int32_t pid;
 
                 assert(JS_ToInt32(ctx, &pid, value) == 0 && pid < 0);
@@ -565,6 +572,7 @@ int main(void)
     test_os_result_oom(3);
 #endif
     test_os_result_oom(2);
+    test_os_result_oom(4);
     test_import_meta_failures();
     test_point_export_failure();
     test_point_initialization_failures();
