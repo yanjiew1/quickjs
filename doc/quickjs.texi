@@ -1071,6 +1071,20 @@ contract. A null or empty name selects the empty string. The @code{name} and
 @code{length} properties are configurable, non-writable and non-enumerable.
 Construction failure leaves the caller's captures owned by the caller.
 
+@subsection Weak reference checkpoints
+
+WeakRef construction and successful @code{deref()} retain their targets until
+the host completes a job and its pending microtasks. @code{JS_RunGC()} preserves
+these targets, including symbols. A custom event loop should call
+@code{JS_ClearKeptObjects(rt)} after draining pending jobs and before dispatching
+the next host event. Nested evaluation remains part of the current job: the
+function does nothing while JavaScript is executing. Runtime destruction also
+releases the retained targets.
+
+The standard host loop and its nonblocking @code{js_std_loop_once()} helper
+perform this checkpoint. Embedders using only @code{JS_ExecutePendingJob()} or
+@code{js_std_poll_io()} control checkpoints explicitly.
+
 @subsection Stepping the host event loop
 
 @code{js_std_loop_once(ctx)} drains pending jobs and polls without waiting,

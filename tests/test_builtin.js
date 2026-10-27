@@ -4494,12 +4494,34 @@ function test_weak_ref()
         assert(w2.deref(), o);
         
         o = null;
-        assert(w1.deref(), undefined);
-        assert(w2.deref(), undefined);
+        // Constructor/deref targets survive GC until the host checkpoint.
+        assert(w1.deref(), w2.deref());
         std.gc();
-        assert(w1.deref(), undefined);
-        assert(w2.deref(), undefined);
+        assert(w1.deref(), w2.deref());
+        assert(w1.deref() !== undefined);
+        const retained = w1;
+        Promise.resolve().then(() => {
+            std.gc();
+            assert(retained.deref() !== undefined);
+        }).catch(e => {
+            console.log(e.stack);
+            std.exit(1);
+        });
+        os.setTimeout(() => {
+            try {
+                std.gc();
+                assert(retained.deref(), undefined);
+            } catch (e) {
+                // Timer exceptions alone do not fail the shell process.
+                console.log(e.stack);
+                std.exit(1);
+            }
+        }, 0);
     }
+    // More distinct targets than the initial kept table can hold.
+    const refs = Array.from({ length: 40 }, () => new WeakRef({}));
+    std.gc();
+    assert(refs.every(ref => ref.deref() !== undefined));
 }
 
 function test_finalization_registry()

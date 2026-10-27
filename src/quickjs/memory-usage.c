@@ -134,6 +134,11 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
 
+    if (rt->kept_objects) {
+        s->memory_used_count++;
+        s->memory_used_size += sizeof(JSValue) * rt->kept_objects_size;
+    }
+
     list_for_each(el, &rt->context_list) {
         JSContext *ctx = list_entry(el, JSContext, link);
         JSShape *sh = ctx->array_shape;

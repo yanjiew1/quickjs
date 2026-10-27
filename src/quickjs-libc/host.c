@@ -370,6 +370,7 @@ int js_std_loop_once(JSContext *ctx)
         progress = 1;
     if (ret < 0)
         return -1;
+    JS_ClearKeptObjects(rt);
     ret = js_std_poll(ctx, 0);
     if (ret < -1)
         return -1;
@@ -393,6 +394,9 @@ void js_std_loop(JSContext *ctx)
         }
 
         js_std_promise_rejection_check(ctx);
+        /* A job error can leave microtasks queued for a later host step. */
+        if (!JS_IsJobPending(JS_GetRuntime(ctx)))
+            JS_ClearKeptObjects(JS_GetRuntime(ctx));
 
         err = js_std_poll(ctx, -1);
         if (err == -3) {
@@ -432,6 +436,7 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
                 js_std_dump_error(ctx);
             }
             if (err == 0) {
+                JS_ClearKeptObjects(JS_GetRuntime(ctx));
                 js_std_promise_rejection_check(ctx);
                 err = js_std_poll(ctx, -1);
                 if (err == -3)

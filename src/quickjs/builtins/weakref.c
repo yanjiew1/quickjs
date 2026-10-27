@@ -104,6 +104,88 @@ JSValue js_weakref_new(JSValueConst val)
     return (JSValue)val;
 }
 
+/* The table owns strong roots without relying on the lifetime of WeakRef
+   instances. Pointer identity works for both objects and non-global symbols. */
+static uint32_t js_kept_object_hash(JSValueConst value)
+{
+    uintptr_t ptr = (uintptr_t)JS_VALUE_GET_PTR(value);
+    uint32_t hash = (uint32_t)(ptr >> 3) ^ (uint32_t)((uint64_t)ptr >> 32);
+
+    return (hash ^ (hash >> 16)) * 0x9e3779b1U;
+}
+
+static int js_add_to_kept_objects(JSContext *ctx, JSValueConst value)
+{
+    JSRuntime *rt = ctx->rt;
+    uint32_t size = rt->kept_objects_size, hash, index, i;
+    JSValue held, *table;
+
+    hash = js_kept_object_hash(value);
+    if (size) {
+        index = hash & (size - 1);
+        while (!JS_IsUndefined(rt->kept_objects[index])) {
+            if (JS_VALUE_GET_PTR(rt->kept_objects[index]) == JS_VALUE_GET_PTR(value))
+                return 0;
+            index = (index + 1) & (size - 1);
+        }
+    }
+    /* A dereferenced cycle can otherwise be collected by the resize itself. */
+    held = JS_DupValue(ctx, value);
+    if (!size || rt->kept_objects_count >= size / 2) {
+        if (size > UINT32_MAX / 2 ||
+            (uint64_t)(size ? size * 2 : 16) > SIZE_MAX / sizeof(*table)) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
+        size = size ? size * 2 : 16;
+        table = js_malloc(ctx, (size_t)size * sizeof(*table));
+        if (!table)
+            goto fail;
+        for (i = 0; i < size; i++)
+            table[i] = JS_UNDEFINED;
+        for (i = 0; i < rt->kept_objects_size; i++) {
+            JSValue old = rt->kept_objects[i];
+
+            if (!JS_IsUndefined(old)) {
+                index = js_kept_object_hash(old) & (size - 1);
+                while (!JS_IsUndefined(table[index]))
+                    index = (index + 1) & (size - 1);
+                table[index] = old; /* Transfer the existing strong root. */
+            }
+        }
+        js_free(ctx, rt->kept_objects);
+        rt->kept_objects = table;
+        rt->kept_objects_size = size;
+    }
+    index = hash & (size - 1);
+    while (!JS_IsUndefined(rt->kept_objects[index]))
+        index = (index + 1) & (size - 1);
+    rt->kept_objects[index] = held;
+    rt->kept_objects_count++;
+    return 0;
+ fail:
+    JS_FreeValue(ctx, held);
+    return -1;
+}
+
+void JS_ClearKeptObjects(JSRuntime *rt)
+{
+    JSValue *table;
+    uint32_t size, i;
+
+    /* Nested host evaluation is part of the running job, not a checkpoint. */
+    if (rt->current_stack_frame)
+        return;
+    table = rt->kept_objects;
+    size = rt->kept_objects_size;
+    rt->kept_objects = NULL;
+    rt->kept_objects_size = rt->kept_objects_count = 0;
+    /* Detach first: releasing a target may invoke a host finalizer. */
+    for (i = 0; i < size; i++)
+        JS_FreeValueRT(rt, table[i]);
+    js_free_rt(rt, table);
+}
+
 /* WeakRef */
 
 typedef struct JSWeakRefData {
@@ -150,6 +232,11 @@ JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
         JS_FreeValue(ctx, obj);
         return JS_EXCEPTION;
     }
+    if (js_add_to_kept_objects(ctx, arg) < 0) {
+        js_free(ctx, wrd);
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
     wrd->target = js_weakref_new(arg);
     wrd->weakref_header.weakref_type = JS_WEAKREF_TYPE_WEAKREF;
     list_add_tail(&wrd->weakref_header.link, &ctx->rt->weakref_list);
@@ -162,10 +249,12 @@ static JSValue js_weakref_deref(JSContext *ctx, JSValueConst this_val, int argc,
     JSWeakRefData *wrd = JS_GetOpaque2(ctx, this_val, JS_CLASS_WEAK_REF);
     if (!wrd)
         return JS_EXCEPTION;
-    if (js_weakref_is_live(wrd->target)) 
+    if (!JS_IsUndefined(wrd->target) && js_weakref_is_live(wrd->target)) {
+        if (js_add_to_kept_objects(ctx, wrd->target) < 0)
+            return JS_EXCEPTION;
         return JS_DupValue(ctx, wrd->target);
-    else
-        return JS_UNDEFINED;
+    }
+    return JS_UNDEFINED;
 }
 
 const JSCFunctionListEntry js_weakref_proto_funcs[] = {

@@ -410,6 +410,9 @@ JS_EXTERN int JS_AddRuntimeFinalizer(JSRuntime *rt, JSRuntimeFinalizer *finalize
 typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
 JS_EXTERN void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 JS_EXTERN void JS_RunGC(JSRuntime *rt);
+/* Release WeakRef targets after a job/microtask checkpoint. Does nothing
+   while JavaScript is executing; JS_RunGC itself preserves these roots. */
+JS_EXTERN void JS_ClearKeptObjects(JSRuntime *rt);
 JS_EXTERN JS_BOOL JS_IsLiveObject(JSRuntime *rt, JSValueConst obj);
 
 JS_EXTERN JSContext *JS_NewContext(JSRuntime *rt);

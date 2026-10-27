@@ -69,6 +69,10 @@ struct JSRuntime {
     JSGCPhaseEnum gc_phase : 8;
     size_t malloc_gc_threshold;
     struct list_head weakref_list; /* list of JSWeakRefHeader.link */
+    /* Strong, deduplicated WeakRef targets retained until a host checkpoint. */
+    JSValue *kept_objects;
+    uint32_t kept_objects_size;
+    uint32_t kept_objects_count;
 #ifdef DUMP_LEAKS
     struct list_head string_list; /* list of JSString.link */
 #endif

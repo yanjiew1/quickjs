@@ -75,6 +75,14 @@ static JSValue job(JSContext *ctx, int argc, JSValueConst *argv)
     return JS_UNDEFINED;
 }
 
+static JSValue checkpoint_error_job(JSContext *ctx, int argc, JSValueConst *argv)
+{
+    run(ctx, "var failedJobWeak = new WeakRef({}); var failedJobLive = false;"
+             "Promise.resolve().then(() => {"
+             " failedJobLive = failedJobWeak.deref() !== undefined; });");
+    return JS_ThrowTypeError(ctx, "checkpoint test job failure");
+}
+
 static void clear_exception(JSContext *ctx)
 {
     JSValue error;
@@ -99,10 +107,16 @@ int main(void)
     JSContext *ctx, *temporary;
     JSValue value;
     double start;
+    int ret;
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
     assert(js_std_loop_once(ctx) == 0 && js_std_poll_io(ctx, -1) == 0);
+    /* A checkpoint follows the complete microtask queue, not each job. */
+    run(ctx, "var weak = new WeakRef({}); var weakLive = false;"
+             "Promise.resolve().then(() => { weakLive = weak.deref() !== undefined; });");
+    assert(js_std_loop_once(ctx) == 1);
+    assert(number(ctx, "weakLive && weak.deref() === undefined") == 1);
     run(ctx, "var order = []");
     assert(JS_EnqueueJob(ctx, job, 0, NULL) == 0);
     assert(JS_EnqueueJob(ctx, job, 0, NULL) == 0);
@@ -125,6 +139,15 @@ int main(void)
     assert(js_std_loop_once(ctx) == 0);
 
     js_std_init_handlers(rt);
+    /* Retain targets when a job error leaves microtasks for a later step. */
+    assert(JS_EnqueueJob(ctx, checkpoint_error_job, 0, NULL) == 0);
+    js_std_loop(ctx);
+    while ((ret = JS_ExecutePendingJob(rt, NULL)) > 0)
+        ;
+    assert(ret == 0 && number(ctx, "failedJobLive") == 1);
+    JS_ClearKeptObjects(rt);
+    assert(number(ctx, "failedJobWeak.deref() === undefined") == 1);
+
     assert(js_init_module_os(ctx, "os"));
     value = eval(ctx, "import * as os from 'os'; globalThis.os = os;",
                  JS_EVAL_TYPE_MODULE);

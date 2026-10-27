@@ -453,6 +453,7 @@ void JS_FreeRuntime(JSRuntime *rt)
 #ifdef CONFIG_ATOMICS
     js_native_jobs_free(rt);
 #endif
+    JS_ClearKeptObjects(rt);
     JS_FreeValueRT(rt, rt->current_exception);
 
     list_for_each_safe(el, el1, &rt->job_list) {

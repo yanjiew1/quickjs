@@ -845,6 +845,7 @@ static void *agent_start(void *arg)
             size_t broadcast_size;
             int32_t broadcast_val;
             BOOL pending;
+            JS_ClearKeptObjects(rt);
             if (agent->leaving ||
                 (JS_IsUndefined(agent->broadcast_func) &&
                  !JS_IsNativeJobPending(rt)))
@@ -1956,6 +1957,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
             } else if (ret == 0) {
                 BOOL needs_progress = is_async ? tls->async_done == 0 :
                     JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING;
+                JS_ClearKeptObjects(JS_GetRuntime(ctx));
                 if (needs_progress && JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
                     if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
                         res_val = JS_ThrowInternalError(ctx, "native job polling failed");
@@ -2654,6 +2656,7 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
                 test262_dump_error(ctx);
                 ret_code = 1;
             } else if (ret == 0) {
+                JS_ClearKeptObjects(JS_GetRuntime(ctx));
                 if (JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
                     if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
                         JS_ThrowInternalError(ctx, "native job polling failed");

@@ -4219,12 +4219,178 @@ static void test_bound_function_oom(void)
     }
 }
 
+static int kept_target_finalized;
+
+static void kept_target_finalizer(JSRuntime *rt, JSValue value)
+{
+    kept_target_finalized++;
+}
+
+static JSValue clear_kept_during_job(JSContext *ctx, JSValueConst self,
+                                     int argc, JSValueConst *argv)
+{
+    JS_ClearKeptObjects(JS_GetRuntime(ctx));
+    return JS_UNDEFINED;
+}
+
+static void test_weakref_checkpoints(void)
+{
+    static const JSClassDef target_class = {
+        "KeptTarget", .finalizer = kept_target_finalizer,
+    };
+    static JSClassID target_class_id;
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, constructor, target, weak, deref, result;
+    JSMemoryUsage before, after;
+    int i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&target_class_id);
+    assert(JS_NewClass(rt, target_class_id, &target_class) == 0);
+    global = JS_GetGlobalObject(ctx);
+    constructor = JS_GetPropertyStr(ctx, global, "WeakRef");
+    assert(JS_SetPropertyStr(ctx, global, "clearDuringJob",
+                             JS_NewCFunction(ctx, clear_kept_during_job,
+                                             "clearDuringJob", 0)) >= 0);
+    target = JS_NewObjectClass(ctx, target_class_id);
+    assert(!JS_IsException(target));
+    assert(JS_SetPropertyStr(ctx, target, "self", JS_DupValue(ctx, target)) >= 0);
+    weak = JS_CallConstructor(ctx, constructor, 1, (JSValueConst *)&target);
+    assert(!JS_IsException(weak));
+    deref = JS_GetPropertyStr(ctx, weak, "deref");
+    assert(!JS_IsException(deref));
+    /* Repeated deref must not grow the kept set or require new allocations. */
+    JS_ComputeMemoryUsage(rt, &before);
+    JS_SetMemoryLimit(rt, 0);
+    for (i = 0; i < 1000; i++) {
+        result = JS_Call(ctx, deref, weak, 0, NULL);
+        assert(JS_StrictEq(ctx, result, target));
+        JS_FreeValue(ctx, result);
+    }
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    JS_ComputeMemoryUsage(rt, &after);
+    assert(before.memory_used_size == after.memory_used_size);
+    JS_FreeValue(ctx, deref);
+    JS_FreeValue(ctx, weak);
+    JS_FreeValue(ctx, target);
+    kept_target_finalized = 0;
+    JS_RunGC(rt);
+    assert(kept_target_finalized == 0);
+    JS_ClearKeptObjects(rt);
+    JS_RunGC(rt);
+    assert(kept_target_finalized == 1);
+    JS_ClearKeptObjects(rt); /* An idle checkpoint is harmless. */
+
+    /* A later successful deref must establish a new kept root. */
+    target = JS_NewObjectClass(ctx, target_class_id);
+    weak = JS_CallConstructor(ctx, constructor, 1, (JSValueConst *)&target);
+    assert(!JS_IsException(weak));
+    deref = JS_GetPropertyStr(ctx, weak, "deref");
+    assert(!JS_IsException(deref));
+    JS_ClearKeptObjects(rt);
+    result = JS_Call(ctx, deref, weak, 0, NULL);
+    assert(JS_StrictEq(ctx, result, target));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, target);
+    JS_RunGC(rt);
+    assert(kept_target_finalized == 1);
+    JS_ClearKeptObjects(rt);
+    JS_RunGC(rt);
+    assert(kept_target_finalized == 2);
+    result = JS_Call(ctx, deref, weak, 0, NULL);
+    assert(JS_IsUndefined(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, deref);
+    JS_FreeValue(ctx, weak);
+
+    check_eval(ctx, "globalThis.symbolWeak = new WeakRef(Symbol('kept'));"
+                    "globalThis.objectWeak = new WeakRef({});"
+                    "clearDuringJob();"
+                    "symbolWeak.deref() !== undefined && objectWeak.deref() !== undefined");
+    JS_RunGC(rt);
+    check_eval(ctx, "symbolWeak.deref() !== undefined && objectWeak.deref() !== undefined");
+    JS_ClearKeptObjects(rt);
+    JS_RunGC(rt);
+    check_eval(ctx, "symbolWeak.deref() === undefined && objectWeak.deref() === undefined");
+
+    JS_FreeValue(ctx, constructor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_weakref_oom(int dereference)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue global, constructor, target, weak = JS_UNDEFINED;
+        JSValue method = JS_UNDEFINED, result;
+        void *padding;
+
+        assert(ctx);
+        global = JS_GetGlobalObject(ctx);
+        constructor = JS_GetPropertyStr(ctx, global, "WeakRef");
+        target = JS_NewObject(ctx);
+        assert(!JS_IsException(constructor) && !JS_IsException(target));
+        if (dereference) {
+            weak = JS_CallConstructor(ctx, constructor, 1, (JSValueConst *)&target);
+            assert(!JS_IsException(weak));
+            method = JS_GetPropertyStr(ctx, weak, "deref");
+            assert(!JS_IsException(method));
+            JS_ClearKeptObjects(rt);
+        }
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = dereference ? JS_Call(ctx, method, weak, 0, NULL) :
+            JS_CallConstructor(ctx, constructor, 1, (JSValueConst *)&target);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            assert(dereference ? JS_StrictEq(ctx, result, target) : JS_IsWeakRef(result));
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, weak);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, target);
+        JS_FreeValue(ctx, constructor);
+        JS_FreeValue(ctx, global);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
+static void test_weakref_kept_oom(void)
+{
+    test_weakref_oom(0);
+    test_weakref_oom(1);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "weakref-checkpoints", test_weakref_checkpoints },
+        { "weakref-kept-oom", test_weakref_kept_oom },
         { "bound-function-oom", test_bound_function_oom },
         { "shared-write-retry", test_shared_write_retry },
         { "promise-constructor-bit", test_promise_constructor_bit },
