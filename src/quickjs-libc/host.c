@@ -127,36 +127,57 @@ static JSValue js_console_log(JSContext *ctx, JSValueConst this_val,
 
 void js_std_add_helpers(JSContext *ctx, int argc, char **argv)
 {
-    JSValue global_obj, console, args, performance;
+    JSValue global_obj, obj = JS_UNDEFINED, value;
     int i;
 
     /* XXX: should these global definitions be enumerable? */
     global_obj = JS_GetGlobalObject(ctx);
 
-    console = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, console, "log",
-                      JS_NewCFunction(ctx, js_console_log, "log", 1));
-    JS_SetPropertyStr(ctx, global_obj, "console", console);
+    /* Publish each helper only after its members have been initialized. */
+    obj = JS_NewObject(ctx);
+    if (JS_IsException(obj))
+        goto done;
+    value = JS_NewCFunction(ctx, js_console_log, "log", 1);
+    if (JS_IsException(value) || JS_SetPropertyStr(ctx, obj, "log", value) < 0)
+        goto done;
+    if (JS_SetPropertyStr(ctx, global_obj, "console", JS_DupValue(ctx, obj)) < 0)
+        goto done;
+    JS_FreeValue(ctx, obj);
 
-    performance = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, performance, "now",
-                      JS_NewCFunction(ctx, js_os_now, "now", 0));
-    JS_SetPropertyStr(ctx, global_obj, "performance", performance);
+    obj = JS_NewObject(ctx);
+    if (JS_IsException(obj))
+        goto done;
+    value = JS_NewCFunction(ctx, js_os_now, "now", 0);
+    if (JS_IsException(value) || JS_SetPropertyStr(ctx, obj, "now", value) < 0)
+        goto done;
+    if (JS_SetPropertyStr(ctx, global_obj, "performance", JS_DupValue(ctx, obj)) < 0)
+        goto done;
+    JS_FreeValue(ctx, obj);
+    obj = JS_UNDEFINED;
 
     /* same methods as the mozilla JS shell */
     if (argc >= 0) {
-        args = JS_NewArray(ctx);
+        obj = JS_NewArray(ctx);
+        if (JS_IsException(obj))
+            goto done;
         for(i = 0; i < argc; i++) {
-            JS_SetPropertyUint32(ctx, args, i, JS_NewString(ctx, argv[i]));
+            value = JS_NewString(ctx, argv[i]);
+            if (JS_IsException(value) || JS_SetPropertyUint32(ctx, obj, i, value) < 0)
+                goto done;
         }
-        JS_SetPropertyStr(ctx, global_obj, "scriptArgs", args);
+        if (JS_SetPropertyStr(ctx, global_obj, "scriptArgs", JS_DupValue(ctx, obj)) < 0)
+            goto done;
     }
 
-    JS_SetPropertyStr(ctx, global_obj, "print",
-                      JS_NewCFunction(ctx, js_print, "print", 1));
-    JS_SetPropertyStr(ctx, global_obj, "__loadScript",
-                      JS_NewCFunction(ctx, js_loadScript, "__loadScript", 1));
+    value = JS_NewCFunction(ctx, js_print, "print", 1);
+    if (JS_IsException(value) || JS_SetPropertyStr(ctx, global_obj, "print", value) < 0)
+        goto done;
+    value = JS_NewCFunction(ctx, js_loadScript, "__loadScript", 1);
+    if (!JS_IsException(value))
+        JS_SetPropertyStr(ctx, global_obj, "__loadScript", value);
 
+ done:
+    JS_FreeValue(ctx, obj);
     JS_FreeValue(ctx, global_obj);
 }
 

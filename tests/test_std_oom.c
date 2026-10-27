@@ -716,8 +716,76 @@ static void test_os_result_oom(int mode)
     }
 }
 
+static void test_helper_initialization_failures(void)
+{
+    char arg0[] = "helper-test", arg1[] = "argument";
+    char *argv[] = { arg0, arg1 };
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue global, value, member;
+        void *padding;
+        int i;
+        const char *objects[] = { "console", "performance", "scriptArgs" };
+        const char *members[] = { "log", "now" };
+        const char *functions[] = { "print", "__loadScript" };
+
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        js_std_add_helpers(ctx, 2, argv);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_HasException(ctx))
+            oom_test_check_exception(ctx);
+        global = JS_GetGlobalObject(ctx);
+        /* Earlier helpers may remain installed after failure, but each
+           published helper must contain only completed JavaScript values. */
+        for (i = 0; i < 3; i++) {
+            value = JS_GetPropertyStr(ctx, global, objects[i]);
+            if (!JS_IsUndefined(value)) {
+                assert(JS_IsObject(value));
+                if (i < 2) {
+                    member = JS_GetPropertyStr(ctx, value, members[i]);
+                    assert(JS_IsFunction(ctx, member));
+                    JS_FreeValue(ctx, member);
+                } else {
+                    int j;
+
+                    for (j = 0; j < 2; j++) {
+                        member = JS_GetPropertyUint32(ctx, value, j);
+                        assert(JS_IsString(member));
+                        JS_FreeValue(ctx, member);
+                    }
+                }
+            }
+            JS_FreeValue(ctx, value);
+        }
+        for (i = 0; i < 2; i++) {
+            value = JS_GetPropertyStr(ctx, global, functions[i]);
+            assert(JS_IsUndefined(value) || JS_IsFunction(ctx, value));
+            JS_FreeValue(ctx, value);
+        }
+        assert(!JS_HasException(ctx));
+        JS_FreeValue(ctx, global);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
+    test_helper_initialization_failures();
     test_file_wrapper_failure(TRUE, FALSE);
     test_file_wrapper_failure(TRUE, TRUE);
     test_file_wrapper_failure(FALSE, FALSE);
