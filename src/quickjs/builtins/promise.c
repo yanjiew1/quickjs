@@ -152,17 +152,18 @@ void JS_SetHostPromiseRejectionTracker(JSRuntime *rt,
     rt->host_promise_rejection_tracker_opaque = opaque;
 }
 
-static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
-                                      JSValueConst value, BOOL is_reject)
+static int fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
+                                     JSValueConst value, BOOL is_reject)
 {
     JSRuntime *rt;
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
     JSPromiseReactionData *rd;
     JSValueConst args[5];
+    int ret = 0;
 
     if (!s || s->promise_state != JS_PROMISE_PENDING)
-        return; /* should never happen */
+        return 0; /* should never happen */
     rt = ctx->rt;
     set_value(rt, &s->promise_result, JS_DupValue(ctx, value));
     s->promise_state = JS_PROMISE_FULFILLED + is_reject;
@@ -184,7 +185,8 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         args[2] = rd->handler;
         args[3] = JS_NewBool(ctx, is_reject);
         args[4] = value;
-        JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
+        if (JS_EnqueueJob(ctx, promise_reaction_job, 5, args) < 0)
+            ret = -1;
         list_del(&rd->link);
         promise_reaction_data_free(rt, rd);
     }
@@ -194,12 +196,7 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         list_del(&rd->link);
         promise_reaction_data_free(rt, rd);
     }
-}
-
-static void reject_promise(JSContext *ctx, JSValueConst promise,
-                           JSValueConst value)
-{
-    fulfill_or_reject_promise(ctx, promise, value, TRUE);
+    return ret;
 }
 
 static JSValue js_promise_resolve_thenable_job(JSContext *ctx,
@@ -338,12 +335,15 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
         JSValue error;
     fail_reject:
         error = JS_GetException(ctx);
-        reject_promise(ctx, s->promise, error);
+        ret = fulfill_or_reject_promise(ctx, s->promise, error, TRUE);
         JS_FreeValue(ctx, error);
+        if (ret < 0)
+            return JS_EXCEPTION;
     } else if (!JS_IsFunction(ctx, then)) {
         JS_FreeValue(ctx, then);
     done:
-        fulfill_or_reject_promise(ctx, s->promise, resolution, is_reject);
+        if (fulfill_or_reject_promise(ctx, s->promise, resolution, is_reject) < 0)
+            return JS_EXCEPTION;
     } else {
         args[0] = s->promise;
         args[1] = resolution;

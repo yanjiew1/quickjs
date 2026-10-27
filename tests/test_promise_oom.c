@@ -92,6 +92,51 @@ static void test_nested(JSContext *ctx)
     nested_padding = NULL;
 }
 
+static void test_reaction_enqueue_failure(int mode)
+{
+    static const char source[] = "({ get then() { throw 42; } })";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, funcs[2], children[2], resolution, result;
+    void *padding;
+    int i;
+
+    assert(rt && ctx);
+    promise = JS_NewPromiseCapability(ctx, funcs);
+    assert(!JS_IsException(promise));
+    for (i = 0; i < 2; i++) {
+        children[i] = JS_PromiseThen(ctx, promise, JS_UNDEFINED, JS_UNDEFINED);
+        assert(!JS_IsException(children[i]));
+    }
+    resolution = mode == 2 ?
+        JS_Eval(ctx, source, sizeof(source) - 1, "<reaction-oom>", JS_EVAL_TYPE_GLOBAL) :
+        JS_NewInt32(ctx, 42);
+    assert(!JS_IsException(resolution));
+    padding = test_pool_padding(rt);
+    JS_SetMemoryLimit(rt, 0);
+    result = JS_Call(ctx, funcs[mode == 1], JS_UNDEFINED, 1, (JSValueConst *)&resolution);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(JS_PromiseState(ctx, promise) ==
+           (mode ? JS_PROMISE_REJECTED : JS_PROMISE_FULFILLED));
+    assert(!JS_IsJobPending(rt));
+    /* Settlement is already published; retrying must not settle it again. */
+    result = JS_Call(ctx, funcs[0], JS_UNDEFINED, 0, NULL);
+    assert(JS_IsUndefined(result) && !JS_HasException(ctx));
+    for (i = 0; i < 2; i++) {
+        assert(JS_PromiseState(ctx, children[i]) == JS_PROMISE_PENDING);
+        JS_FreeValue(ctx, children[i]);
+    }
+    JS_FreeValue(ctx, resolution);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, funcs[0]);
+    JS_FreeValue(ctx, funcs[1]);
+    test_pool_padding_free(rt, padding);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -100,6 +145,9 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_reaction_enqueue_failure(0);
+    test_reaction_enqueue_failure(1);
+    test_reaction_enqueue_failure(2);
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
