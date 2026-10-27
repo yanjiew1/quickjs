@@ -6600,6 +6600,46 @@ function test_nested_proxy_extensibility()
 
 test_nested_proxy_extensibility();
 
+function test_proxy_own_keys_revoke_during_trap()
+{
+    for (const duringGetter of [false, true]) {
+        const target = Object.defineProperty({}, "a", {
+            value: 1, configurable: false,
+        });
+        let revocable;
+        const handler = duringGetter ? {
+            get ownKeys() {
+                revocable.revoke();
+                return () => ["a"];
+            }
+        } : {
+            ownKeys() {
+                revocable.revoke();
+                return ["a"];
+            }
+        };
+        revocable = Proxy.revocable(target, handler);
+        assert(Reflect.ownKeys(revocable.proxy).join(), "a");
+        assert_throws(TypeError, () => Reflect.ownKeys(revocable.proxy));
+    }
+
+    /* Revocation can also happen while checking the target's own keys,
+       after the outer trap has returned. */
+    let outer;
+    const inner = new Proxy(Object.defineProperty({}, "a", {
+        value: 1, configurable: false,
+    }), {
+        ownKeys(target) {
+            outer.revoke();
+            return Reflect.ownKeys(target);
+        }
+    });
+    outer = Proxy.revocable(inner, { ownKeys() { return ["a"]; } });
+    assert(Reflect.ownKeys(outer.proxy).join(), "a");
+}
+
+test_proxy_own_keys_revoke_during_trap();
+
 function test_proxy_own_keys_result_object()
 {
     for (const result of [null, undefined, false, true, 0, 1, NaN, "", "abc", 1n, Symbol()]) {
