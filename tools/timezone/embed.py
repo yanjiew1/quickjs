@@ -23,6 +23,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 
 from acquire import atomic_write
 from bundle import HEADER, INDEX, unpack
@@ -134,8 +135,13 @@ def generate(input_path, output_path, describe_path):
     contents = unpack(binary)
     spans = sorted({(r['offset'], r['length']) for r in contents['records']})
     request = ''.join('%d:%d\n' % row for row in spans).encode('ascii')
-    result = subprocess.run([str(describe_path.resolve()), str(input_path.resolve())],
-                            input=request, stdout=subprocess.PIPE, check=True, timeout=60)
+    # Descriptors and embedded bytes must come from the same input snapshot,
+    # even if the caller replaces its source pack while generation is running.
+    with tempfile.TemporaryDirectory(prefix='timezone-embed-') as directory:
+        snapshot = Path(directory) / 'input.bin'
+        snapshot.write_bytes(binary)
+        result = subprocess.run([str(describe_path.resolve()), str(snapshot)],
+                                input=request, stdout=subprocess.PIPE, check=True, timeout=60)
     source = render(binary, contents['records'], spans, json.loads(result.stdout))
     atomic_write(output_path, source.encode('ascii'))
 
