@@ -552,6 +552,39 @@ static void check_shared_serialization_rejection(JSContext *ctx, JSValueConst bu
     JS_FreeValue(ctx, exception);
 }
 
+/* A rejected serialization must not poison the next write's cycle check. */
+static void test_shared_write_retry(void)
+{
+    SharedBufferData data = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        alloc_shared, free_shared, dup_shared, &data,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue buffer, error;
+    uint8_t *encoded;
+    size_t size;
+
+    assert(rt);
+    JS_SetSharedArrayBufferFunctions(rt, &functions);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    buffer = JS_NewArrayBuffer(ctx, NULL, 0, NULL, NULL, TRUE);
+    assert(!JS_IsException(buffer));
+    encoded = JS_WriteObject(ctx, &size, buffer, 0);
+    assert(!encoded && !size && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    encoded = JS_WriteObject(ctx, &size, buffer, JS_WRITE_OBJ_SAB);
+    assert(encoded && size && !JS_HasException(ctx));
+    js_free(ctx, encoded);
+    JS_FreeValue(ctx, buffer);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(data.references == 0 && data.releases == 1);
+}
+
 static void check_shared_write_cleanup(JSContext *ctx, JSValueConst array,
                                        int reject)
 {
@@ -4193,6 +4226,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "bound-function-oom", test_bound_function_oom },
+        { "shared-write-retry", test_shared_write_retry },
         { "promise-constructor-bit", test_promise_constructor_bit },
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "async-realm-job-roots", test_async_realm_job_roots },

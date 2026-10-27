@@ -767,6 +767,8 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             JSObject *p = JS_VALUE_GET_OBJ(obj);
             int ret, idx;
 
+            if (p->class_id == JS_CLASS_SHARED_ARRAY_BUFFER && !s->allow_sab)
+                goto invalid_tag;
             if (s->allow_reference) {
                 idx = js_object_list_find(&s->object_list, p);
                 if (idx >= 0) {
@@ -795,8 +797,6 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
                 ret = JS_WriteArrayBuffer(s, obj);
                 break;
             case JS_CLASS_SHARED_ARRAY_BUFFER:
-                if (!s->allow_sab)
-                    goto invalid_tag;
                 ret = JS_WriteSharedArrayBuffer(s, obj);
                 break;
             case JS_CLASS_DATE:
