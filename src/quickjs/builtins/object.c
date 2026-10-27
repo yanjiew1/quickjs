@@ -54,7 +54,8 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
                                                  JSValueConst obj,
                                                  JSValueConst properties)
 {
-    JSValue props, *descs = NULL;
+    JSValue props;
+    JSPropertyDescriptor *descs = NULL;
     JSObject *p;
     JSPropertyEnum *atoms;
     uint32_t len, i;
@@ -70,11 +71,21 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
     p = JS_VALUE_GET_OBJ(props);
     if (JS_GetOwnPropertyNamesInternal(ctx, &atoms, &len, p, JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK) < 0)
         goto exception;
+#if SIZE_MAX <= UINT32_MAX
+    if (len > SIZE_MAX / sizeof(descs[0])) {
+        JS_ThrowOutOfMemory(ctx);
+        goto exception;
+    }
+#endif
     descs = js_malloc(ctx, sizeof(descs[0]) * len);
     if (!descs)
         goto exception;
-    for(i = 0; i < len; i++)
-        descs[i] = JS_UNDEFINED;
+    for(i = 0; i < len; i++) {
+        descs[i].flags = 0;
+        descs[i].value = JS_UNDEFINED;
+        descs[i].getter = JS_UNDEFINED;
+        descs[i].setter = JS_UNDEFINED;
+    }
     for(i = 0; i < len; i++) {
         JSPropertyDescriptor prop_desc;
         int res;
@@ -90,7 +101,10 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
                 desc = JS_GetProperty(ctx, props, atoms[i].atom);
                 if (JS_IsException(desc))
                     goto exception;
-                descs[i] = desc;
+                res = js_obj_to_desc(ctx, &descs[i], desc);
+                JS_FreeValue(ctx, desc);
+                if (res < 0)
+                    goto exception;
             }
         } else {
             atoms[i].is_enumerable = FALSE;
@@ -98,7 +112,10 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
     }
     for(i = 0; i < len; i++) {
         if (atoms[i].is_enumerable) {
-            if (JS_DefinePropertyDesc(ctx, obj, atoms[i].atom, descs[i], JS_PROP_THROW) < 0)
+            JSPropertyDescriptor *d = &descs[i];
+            if (JS_DefineProperty(ctx, obj, atoms[i].atom,
+                                  d->value, d->getter, d->setter,
+                                  d->flags | JS_PROP_THROW) < 0)
                 goto exception;
         }
     }
@@ -107,7 +124,7 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
 exception:
     if (descs) {
         for(i = 0; i < len; i++)
-            JS_FreeValue(ctx, descs[i]);
+            js_free_desc(ctx->rt, &descs[i]);
         js_free(ctx, descs);
     }
     JS_FreePropertyEnum(ctx, atoms, len);

@@ -6530,6 +6530,37 @@ function test_property_descriptor_abrupt_completion()
 
 test_property_descriptor_abrupt_completion();
 
+function test_object_define_properties_descriptor_order()
+{
+    const target = {}, marker = {};
+    let caught;
+    try {
+        Object.defineProperties(target, {
+            a: { value: 1 },
+            b: { get value() { throw marker; } },
+        });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === marker, true);
+    assert(Object.hasOwn(target, "a"), false);
+
+    const descriptor = { value: 1 };
+    const source = {
+        a: descriptor,
+        get b() {
+            descriptor.value = 2;
+            return { value: 3 };
+        }
+    };
+    const result = {};
+    Object.defineProperties(result, source);
+    assert(result.a, 1);
+    assert(result.b, 3);
+}
+
+test_object_define_properties_descriptor_order();
+
 function test_nested_proxy_extensibility()
 {
     const operations = [
