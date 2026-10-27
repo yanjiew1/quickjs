@@ -486,7 +486,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     if (bc_get_u8(s, &v8))
         goto fail;
     bc.js_mode = v8;
-    if (bc_get_atom(s, &bc.func_name))  //@ atom leak if failure
+    if (bc_get_atom(s, &bc.func_name))
         goto fail;
     if (bc_get_leb128_u16(s, &bc.arg_count))
         goto fail;
@@ -523,14 +523,18 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         function_size += bc.byte_code_len;
     }
 
-    if (function_size > INT32_MAX)
-        return JS_ThrowOutOfMemory(ctx);
+    if (function_size > INT32_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
+    }
 
     b = js_mallocz(ctx, function_size);
     if (!b)
-        return JS_EXCEPTION;
+        goto fail;
 
     memcpy(b, &bc, offsetof(JSFunctionBytecode, debug));
+    /* The allocated bytecode now owns the name, including on later failure. */
+    bc.func_name = JS_ATOM_NULL;
     if (local_count != 0) {
         b->vardefs = (void *)((uint8_t*)b + vardefs_offset);
     }
@@ -652,6 +656,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     b->realm = JS_DupContext(ctx);
     return obj;
  fail:
+    JS_FreeAtom(ctx, bc.func_name);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
 }

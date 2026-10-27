@@ -601,8 +601,43 @@ static void test_writer_allocation_failure(int kind)
     }
 }
 
+static void test_truncated_function_atoms(void)
+{
+    static const char source[] = "(function truncated_function_name() { return 123; })";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue compiled, result;
+    JSMemoryUsage before, after;
+    uint8_t *buf;
+    size_t length, cut;
+
+    assert(rt && ctx);
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "truncated-function.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    buf = JS_WriteObject(ctx, &length, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf && length);
+    JS_FreeValue(ctx, compiled);
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &before);
+    /* Exercise every header/body boundary without coupling the test to byte
+       offsets. Failed reads must release atoms acquired before allocation. */
+    for (cut = 0; cut < length; cut++) {
+        result = JS_ReadObject(ctx, buf, cut, JS_READ_OBJ_BYTECODE);
+        assert(JS_IsException(result));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        JS_RunGC(rt);
+        JS_ComputeMemoryUsage(rt, &after);
+        assert(after.atom_count == before.atom_count);
+    }
+    js_free(ctx, buf);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_truncated_function_atoms();
     test_rope_serialization();
     test_bytecode_roundtrip(
         "var fn = function self() {"
