@@ -270,22 +270,28 @@ static JSMapRecord *map_find_record(JSMapState *s,
     return NULL;
 }
 
-static void map_hash_resize(JSContext *ctx, JSMapState *s)
+static void map_hash_resize(JSRuntime *rt, JSMapState *s)
 {
     uint32_t new_hash_size, h;
+    size_t new_hash_bytes;
     int new_hash_bits;
     struct list_head *el;
     JSMapRecord *mr, **new_hash_table;
 
-    /* XXX: no reporting of memory allocation failure */
-    new_hash_bits = min_int(s->hash_bits + 1, 31);
+    if (s->hash_bits == 31)
+        return;
+    new_hash_bits = s->hash_bits + 1;
     new_hash_size = 1U << new_hash_bits;
-    new_hash_table = js_realloc(ctx, s->hash_table,
-                                sizeof(new_hash_table[0]) * new_hash_size);
+    new_hash_bytes = (size_t)new_hash_size * sizeof(new_hash_table[0]);
+    if (new_hash_bytes / sizeof(new_hash_table[0]) != new_hash_size)
+        return;
+    /* Resizing is optional: retain the existing table without throwing if
+       growth fails. The newly linked record is not fully initialized yet. */
+    new_hash_table = js_realloc_rt(rt, s->hash_table, new_hash_bytes);
     if (!new_hash_table)
         return;
 
-    memset(new_hash_table, 0, sizeof(new_hash_table[0]) * new_hash_size);
+    memset(new_hash_table, 0, new_hash_bytes);
 
     list_for_each(el, &s->records) {
         mr = list_entry(el, JSMapRecord, link);
@@ -299,7 +305,8 @@ static void map_hash_resize(JSContext *ctx, JSMapState *s)
     s->hash_table = new_hash_table;
     s->hash_bits = new_hash_bits;
     s->hash_size = new_hash_size;
-    s->record_count_threshold = new_hash_size * 2;
+    s->record_count_threshold = new_hash_size == (1U << 31) ? UINT32_MAX :
+                               new_hash_size * 2;
 }
 
 static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
@@ -324,7 +331,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
     list_add_tail(&mr->link, &s->records);
     s->record_count++;
     if (s->record_count >= s->record_count_threshold) {
-        map_hash_resize(ctx, s);
+        map_hash_resize(ctx->rt, s);
     }
     return mr;
 }

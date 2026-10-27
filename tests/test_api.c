@@ -4383,12 +4383,76 @@ static void test_weakref_kept_oom(void)
     test_weakref_oom(1);
 }
 
+/* Exercise mandatory record allocation and optional table growth separately. */
+static void test_collection_growth_oom(void)
+{
+    static const char * const constructors[] = {
+        "Map", "Set", "WeakMap", "WeakSet", "Map", "WeakMap",
+    };
+    size_t kind;
+
+    for (kind = 0; kind < countof(constructors); kind++) {
+        size_t step, calls = 0;
+
+        for (step = 0; step <= calls; step++) {
+            OOMTestAllocator allocator;
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSValue insert, result;
+            void *padding;
+            char source[512];
+            int is_set = kind == 1 || kind == 3;
+
+            assert(ctx);
+            snprintf(source, sizeof(source),
+                     "(() => { const m = new %s(); const keys = [{},{},{},{}];"
+                     "for (let i = 0; i < 3; i++) m.%s(keys[i], i);"
+                     "return () => { m.%s(keys[3], 42);"
+                     "return m.has(keys[0]) && m.has(keys[3])%s; }; })()",
+                     constructors[kind], is_set ? "add" : "set",
+                     kind >= 4 ? "getOrInsert" : is_set ? "add" : "set",
+                     is_set ? "" : " && m.get(keys[3]) === 42");
+            insert = JS_Eval(ctx, source, strlen(source), "collection-oom.js",
+                             JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(insert));
+            padding = test_pool_padding(rt);
+            oom_test_begin(&allocator, step);
+            result = JS_Call(ctx, insert, JS_UNDEFINED, 0, NULL);
+            oom_test_end(&allocator);
+            if (!step) {
+                calls = allocator.calls;
+                assert(calls && calls < 16);
+            } else {
+                assert(allocator.failures == 1);
+            }
+            if (JS_IsException(result)) {
+                assert(step);
+                oom_test_check_exception(ctx);
+            } else {
+                assert(!JS_HasException(ctx) && JS_ToBool(ctx, result) == 1);
+            }
+            JS_FreeValue(ctx, result);
+            /* A failed optional resize must leave the old table usable. */
+            result = JS_Call(ctx, insert, JS_UNDEFINED, 0, NULL);
+            assert(!JS_IsException(result) && !JS_HasException(ctx));
+            assert(JS_ToBool(ctx, result) == 1);
+            JS_FreeValue(ctx, result);
+            JS_FreeValue(ctx, insert);
+            test_pool_padding_free(rt, padding);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(!allocator.live);
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "collection-growth-oom", test_collection_growth_oom },
         { "weakref-checkpoints", test_weakref_checkpoints },
         { "weakref-kept-oom", test_weakref_kept_oom },
         { "bound-function-oom", test_bound_function_oom },
