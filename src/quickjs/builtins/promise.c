@@ -716,6 +716,19 @@ static JSValue js_promise_all_resolve_element(JSContext *ctx,
     return JS_UNDEFINED;
 }
 
+static JSValue js_promise_all_settled_reject_element(JSContext *ctx,
+                                                     JSValueConst this_val,
+                                                     int argc, JSValueConst *argv,
+                                                     int magic, JSValue *func_data)
+{
+    JSCFunctionDataRecord *s = JS_GetOpaque(func_data[0], JS_CLASS_C_FUNCTION_DATA);
+
+    /* Both callbacks share the resolve callback's AlreadyCalled cell. Keeping
+       that callback alive needs no separate state object or GC ownership. */
+    return js_promise_all_resolve_element(ctx, this_val, argc, argv,
+                                          magic, s->data);
+}
+
 /* magic = 0: Promise.all 1: Promise.allSettled */
 static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int magic)
@@ -796,8 +809,8 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
 
             if (magic == PROMISE_MAGIC_allSettled) {
                 reject_element =
-                    JS_NewCFunctionData(ctx, js_promise_all_resolve_element, 1,
-                                        magic | 4, 5, resolve_element_data);
+                    JS_NewCFunctionData(ctx, js_promise_all_settled_reject_element, 1,
+                                        magic | 4, 1, (JSValueConst *)&resolve_element);
                 if (JS_IsException(reject_element)) {
                     JS_FreeValue(ctx, next_promise);
                     JS_FreeValue(ctx, resolve_element);

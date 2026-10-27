@@ -2388,3 +2388,46 @@ async function test_exception_operand_cleanup_async()
 }
 
 await test_exception_operand_cleanup_async();
+
+async function test_all_settled_shared_callback_state()
+{
+    /* A custom resolve exposes the combinator's callbacks directly, bypassing
+       the normal Promise resolution functions' own single-call guard. */
+    for (const rejectFirst of [false, true]) {
+        for (const immediate of [false, true]) {
+            const callbacks = [];
+            class CustomPromise extends Promise {
+                static resolve(index) {
+                    return { then(resolve, reject) {
+                        callbacks[index] = [resolve, reject];
+                        if (immediate && index === 0) {
+                            callbacks[0][+rejectFirst]("first");
+                            callbacks[0][+!rejectFirst]("ignored");
+                        }
+                    } };
+                }
+            }
+            let settled = false;
+            const result = CustomPromise.allSettled([0, 1]);
+            result.then(() => { settled = true; });
+            if (!immediate) {
+                callbacks[0][+rejectFirst]("first");
+                callbacks[0][+!rejectFirst]("ignored");
+            }
+            await Promise.resolve();
+            assert(settled, false);
+            callbacks[1][0]("last");
+            const values = await result;
+            assert(values.length, 2);
+            assert(values[0].status, rejectFirst ? "rejected" : "fulfilled");
+            assert(values[0][rejectFirst ? "reason" : "value"], "first");
+            assert(values[1].status, "fulfilled");
+            assert(values[1].value, "last");
+            /* Late calls cannot mutate the array after it has been exposed. */
+            callbacks[0][+!rejectFirst]("late");
+            assert(values[0][rejectFirst ? "reason" : "value"], "first");
+        }
+    }
+}
+
+await test_all_settled_shared_callback_state();
