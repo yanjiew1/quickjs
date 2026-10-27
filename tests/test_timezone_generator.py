@@ -202,6 +202,30 @@ class AcquisitionTests(unittest.TestCase):
 
 
 class EmbeddingTests(unittest.TestCase):
+    def test_embedding_uses_one_input_snapshot(self):
+        binary = bundle.pack({'UTC': ('UTC', b'TZif2' + bytes(39))}, 'test', 'test')
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'input.bin'
+            output = Path(directory) / 'output.c'
+            source.write_bytes(binary)
+            helper_inputs = []
+
+            def describe(command, **kwargs):
+                # An atomic data update after Python read the input must not
+                # change the rule bytes examined by the C descriptor helper.
+                source.write_bytes(b'replacement')
+                helper_input = Path(command[1])
+                helper_inputs.append(helper_input)
+                self.assertEqual(helper_input.read_bytes(), binary)
+                return subprocess.CompletedProcess(command, 0, b'[]')
+
+            with mock.patch.object(embed.subprocess, 'run', side_effect=describe):
+                with mock.patch.object(embed, 'render', return_value='generated') as render:
+                    embed.generate(source, output, Path(directory) / 'reader')
+            self.assertEqual(render.call_args[0][0], binary)
+            self.assertEqual(output.read_text(), 'generated')
+            self.assertFalse(helper_inputs[0].exists())
+
     def test_requires_canonical_core_utc(self):
         blob = b'TZif2' + bytes(39)
         for zones in ({'utc': ('utc', blob)}, {'Zulu': ('Zulu', blob)},
