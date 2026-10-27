@@ -126,8 +126,9 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
                 JSValue cause = JS_GetProperty(ctx, options, JS_ATOM_cause);
                 if (JS_IsException(cause))
                     goto exception;
-                JS_DefinePropertyValue(ctx, obj, JS_ATOM_cause, cause,
-                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+                if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_cause, cause,
+                                           JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+                    goto exception;
             }
         }
     }
@@ -136,8 +137,9 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
         JSValue error_list = iterator_to_array(ctx, argv[0]);
         if (JS_IsException(error_list))
             goto exception;
-        JS_DefinePropertyValue(ctx, obj, JS_ATOM_errors, error_list,
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_errors, error_list,
+                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+            goto exception;
     }
 
     if (magic == JS_SUPPRESSED_ERROR) {
@@ -236,8 +238,11 @@ JSValue js_aggregate_error_constructor(JSContext *ctx,
                                  JS_CLASS_ERROR);
     if (JS_IsException(obj))
         return obj;
-    JS_DefinePropertyValue(ctx, obj, JS_ATOM_errors, JS_DupValue(ctx, errors),
-                           JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_errors, JS_DupValue(ctx, errors),
+                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
     return obj;
 }
 

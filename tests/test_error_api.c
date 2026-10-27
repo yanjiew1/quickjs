@@ -226,8 +226,85 @@ static void test_allocation_failures(void)
     assert(calls > 0);
 }
 
+static OOMTestAllocator *property_allocator;
+static void *property_padding;
+
+static JSValue fail_property_allocation(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv)
+{
+    property_padding = test_pool_padding(JS_GetRuntime(ctx));
+    oom_test_begin(property_allocator, 1);
+    return JS_TRUE;
+}
+
+static void test_constructor_property_failure(int aggregate)
+{
+    static const char iterator_source[] =
+        "(record => ({ [Symbol.iterator]() { return this; },"
+        "next() { return record; } }))";
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, constructor, record, getter, prototype, anchor;
+    JSValue factory = JS_UNDEFINED;
+    JSValue input = JS_UNDEFINED, result, args[2];
+    JSAtom key;
+
+    assert(ctx);
+    global = JS_GetGlobalObject(ctx);
+    constructor = JS_GetPropertyStr(ctx, global, aggregate ? "AggregateError" : "Error");
+    prototype = JS_GetPropertyStr(ctx, constructor, "prototype");
+    /* Retain the empty shape so adding the error's first property must clone it. */
+    anchor = JS_NewObjectProto(ctx, prototype);
+    JS_FreeValue(ctx, prototype);
+    record = JS_NewObject(ctx);
+    getter = JS_NewCFunction(ctx, fail_property_allocation, "armFailure", 0);
+    assert(!JS_IsException(constructor) && !JS_IsException(anchor) && !JS_IsException(record) &&
+           !JS_IsException(getter));
+    key = JS_NewAtom(ctx, aggregate ? "done" : "cause");
+    assert(key != JS_ATOM_NULL);
+    assert(JS_DefinePropertyGetSet(ctx, record, key, getter, JS_UNDEFINED,
+                                  JS_PROP_CONFIGURABLE) >= 0);
+    JS_FreeAtom(ctx, key);
+    if (aggregate) {
+        factory = JS_Eval(ctx, iterator_source, sizeof(iterator_source) - 1,
+                          "<error-iterator>", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(factory));
+        input = JS_Call(ctx, factory, JS_UNDEFINED, 1, (JSValueConst *)&record);
+        assert(!JS_IsException(input));
+        args[0] = input;
+    } else {
+        args[0] = JS_UNDEFINED;
+        args[1] = record;
+    }
+    /* Arm only after the cause getter or final iterator step. This targets
+       required property creation rather than optional backtrace allocation. */
+    property_allocator = &allocator;
+    property_padding = NULL;
+    result = JS_CallConstructor(ctx, constructor, aggregate ? 1 : 2,
+                                (JSValueConst *)args);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    oom_test_check_exception(ctx);
+    test_pool_padding_free(rt, property_padding);
+    property_padding = NULL;
+    property_allocator = NULL;
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, input);
+    JS_FreeValue(ctx, factory);
+    JS_FreeValue(ctx, record);
+    JS_FreeValue(ctx, anchor);
+    JS_FreeValue(ctx, constructor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
 int main(void)
 {
+    test_constructor_property_failure(0);
+    test_constructor_property_failure(1);
     test_realms_and_pending_exception();
     test_exception_flags_and_raw_context();
     test_allocation_failures();
