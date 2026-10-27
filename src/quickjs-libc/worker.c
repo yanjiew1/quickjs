@@ -98,7 +98,7 @@ static void js_waker_signal(JSWaker *w)
         ret = write(w->write_fd, "", 1);
         if (ret == 1)
             break;
-        if (ret < 0 && (errno != EAGAIN || errno != EINTR))
+        if (ret < 0 && (errno != EAGAIN && errno != EINTR))
             break;
     }
 }
@@ -613,7 +613,7 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
     }
     js_free(ctx, data);
     js_free(ctx, sab_tab);
-    return JS_EXCEPTION;
+    return JS_ThrowOutOfMemory(ctx);
 
 }
 

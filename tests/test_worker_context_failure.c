@@ -49,6 +49,11 @@ static int test_thread_created, test_completed;
 static pthread_mutex_t test_completion_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t test_completion_cond = PTHREAD_COND_INITIALIZER;
 static void *(*test_worker_entry)(void *);
+static size_t test_message_fail_at, test_message_calls;
+#ifndef _WIN32
+static int test_waker_checks, test_waker_calls;
+static ssize_t test_waker_write(int fd, const void *buffer, size_t size);
+#endif
 
 static JSRuntime *test_new_runtime(void);
 static int test_init_handlers(JSRuntime *rt);
@@ -60,6 +65,7 @@ static JSValue test_load_module(JSContext *ctx, const char *basename,
                                const char *filename);
 static void test_loop(JSContext *ctx);
 static void test_free(void *ptr);
+static void *test_message_malloc(size_t size);
 static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
                               void *(*entry)(void *), void *argument);
 
@@ -74,6 +80,10 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 #define JS_LoadModule test_load_module
 #define js_std_loop test_loop
 #define free test_free
+#define malloc test_message_malloc
+#ifndef _WIN32
+#define write test_waker_write
+#endif
 #define pthread_create test_create_thread
 #include "../src/quickjs-libc/worker.c"
 #undef JS_NewRuntime
@@ -85,7 +95,84 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 #undef JS_LoadModule
 #undef js_std_loop
 #undef free
+#undef malloc
+#ifndef _WIN32
+#undef write
+#endif
 #undef pthread_create
+
+static void *test_message_malloc(size_t size)
+{
+    if (test_message_fail_at && ++test_message_calls == test_message_fail_at)
+        return NULL;
+    return malloc(size);
+}
+
+#ifndef _WIN32
+static ssize_t test_waker_write(int fd, const void *buffer, size_t size)
+{
+    if (test_waker_checks && ++test_waker_calls == 1) {
+        errno = EINTR;
+        return -1;
+    }
+    return write(fd, buffer, size);
+}
+
+static void test_interrupted_wakeup(void)
+{
+    JSWaker waker;
+
+    assert(!js_waker_init(&waker));
+    test_waker_checks = 1;
+    js_waker_signal(&waker);
+    test_waker_checks = 0;
+    /* Check before reading so a missed wakeup fails without blocking. */
+    assert(test_waker_calls == 2);
+    js_waker_clear(&waker);
+    js_waker_close(&waker);
+}
+#endif
+
+static void test_message_allocation_failure(void)
+{
+    static const char source[] = "new SharedArrayBuffer(4)";
+    size_t step;
+
+    for (step = 1; step <= 3; step++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSWorkerMessagePipe *recv, *send;
+        JSValue worker, input, result;
+
+        assert(rt && ctx);
+        JS_NewClassID(&js_worker_class_id);
+        assert(!JS_NewClass(rt, js_worker_class_id, &js_worker_class));
+        JS_SetClassProto(ctx, js_worker_class_id, JS_NewObject(ctx));
+        js_std_init_handlers(rt);
+        recv = js_new_message_pipe();
+        send = js_new_message_pipe();
+        assert(recv && send);
+        worker = js_worker_ctor_internal(ctx, JS_UNDEFINED, recv, send);
+        input = JS_Eval(ctx, source, sizeof(source) - 1, "<worker-message-oom>",
+                        JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(worker) && !JS_IsException(input));
+        /* Cross-thread buffers use system malloc, not the JS allocator. */
+        test_message_calls = 0;
+        test_message_fail_at = step;
+        result = js_worker_postMessage(ctx, worker, 1, (JSValueConst *)&input);
+        test_message_fail_at = 0;
+        assert(test_message_calls == step && JS_IsException(result));
+        assert(JS_HasException(ctx) && list_empty(&send->msg_queue));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        JS_FreeValue(ctx, input);
+        JS_FreeValue(ctx, worker);
+        js_free_message_pipe(recv);
+        js_free_message_pipe(send);
+        js_std_free_handlers(rt);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
 
 static void *test_malloc(JSMallocState *state, size_t size)
 {
@@ -353,6 +440,10 @@ static void test_failure(int mode)
 
 int main(void)
 {
+#ifndef _WIN32
+    test_interrupted_wakeup();
+#endif
+    test_message_allocation_failure();
     test_failure(0);
     test_failure(1);
     test_failure(2);
