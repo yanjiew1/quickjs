@@ -302,47 +302,6 @@ static int valid_list_result(const QJSIntlFormatted *formatted)
     return end == formatted->length;
 }
 
-static JSValue list_parts(JSContext *ctx, const QJSIntlFormatted *formatted)
-{
-    JSValue array;
-    size_t i;
-    if (formatted->part_count > UINT32_MAX)
-        return JS_ThrowRangeError(ctx, "too many ListFormat parts");
-    array = JS_NewArray(ctx);
-    if (JS_IsException(array))
-        return array;
-    for (i = 0; i < formatted->part_count; i++) {
-        const QJSIntlPart *part = &formatted->parts[i];
-        JSValue object = JS_NewObject(ctx), value;
-        if (JS_IsException(object))
-            goto fail;
-        value = JS_NewString(ctx, part->type == QJS_INTL_PART_ELEMENT ? "element"
-                                                                      : "literal");
-        if (JS_IsException(value) ||
-            JS_DefinePropertyValueStr(ctx, object, "type", value,
-                                      JS_PROP_C_W_E | JS_PROP_THROW) < 0)
-            goto part_fail;
-        value = JS_NewStringUTF16(
-            ctx, formatted->text ? formatted->text + part->start : NULL,
-            part->end - part->start);
-        if (JS_IsException(value) ||
-            JS_DefinePropertyValueStr(ctx, object, "value", value,
-                                      JS_PROP_C_W_E | JS_PROP_THROW) < 0)
-            goto part_fail;
-        if (JS_DefinePropertyValueUint32(ctx, array, (uint32_t)i, object,
-                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0)
-            goto fail;
-        continue;
-    part_fail:
-        JS_FreeValue(ctx, object);
-        goto fail;
-    }
-    return array;
-fail:
-    JS_FreeValue(ctx, array);
-    return JS_EXCEPTION;
-}
-
 static JSValue list_format(JSContext *ctx, JSValueConst this_val, int argc,
                            JSValueConst *argv, int parts)
 {
@@ -364,8 +323,16 @@ static JSValue list_format(JSContext *ctx, JSValueConst this_val, int argc,
         JS_ThrowInternalError(ctx, "invalid Intl list result");
         goto done;
     }
-    result = parts ? list_parts(ctx, &formatted)
-                   : JS_NewStringUTF16(ctx, formatted.text, formatted.length);
+    if (parts) {
+        static const char *const names[] = {
+            [QJS_INTL_PART_LITERAL] = "literal",
+            [QJS_INTL_PART_ELEMENT] = "element",
+        };
+
+        result = js_intl_format_parts(ctx, &formatted, NULL, names, countof(names));
+    } else {
+        result = JS_NewStringUTF16(ctx, formatted.text, formatted.length);
+    }
 done:
     qjs_intl_list_result_clear(&allocator, &formatted);
     string_list_clear(ctx->rt, &strings);
