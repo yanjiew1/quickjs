@@ -224,6 +224,53 @@ static void test_environ_failure(void)
     }
 }
 
+static void test_load_file_failure(void)
+{
+    static const char filename[] = "std-load-oom.tmp";
+    size_t step, calls = 0;
+    FILE *f = fopen(filename, "wb");
+    int i;
+
+    assert(f);
+    for (i = 0; i < 8192; i++)
+        assert(fputc('d', f) == 'd');
+    assert(fclose(f) == 0);
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue input, result;
+        void *padding;
+
+        assert(ctx);
+        input = JS_NewString(ctx, filename);
+        assert(!JS_IsException(input));
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = js_std_loadFile(ctx, JS_UNDEFINED, 1, (JSValueConst *)&input);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 16);
+        } else {
+            assert(allocator.failures == 1 && JS_IsException(result));
+            oom_test_check_exception(ctx);
+        }
+        if (!JS_IsException(result)) {
+            assert(!JS_HasException(ctx));
+            check_body(ctx, result);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, input);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    assert(remove(filename) == 0);
+}
+
 static void test_failure(int mode)
 {
     size_t fail_at, allocations = 0;
@@ -675,6 +722,7 @@ int main(void)
     test_file_wrapper_failure(TRUE, TRUE);
     test_file_wrapper_failure(FALSE, FALSE);
     test_environ_failure();
+    test_load_file_failure();
     test_os_result_oom(0);
 #ifndef _WIN32
     test_os_result_oom(1);

@@ -387,7 +387,7 @@ static JSValue js_std_loadFile(JSContext *ctx, JSValueConst this_val,
     buf = js_load_file(ctx, &buf_len, filename);
     JS_FreeCString(ctx, filename);
     if (!buf)
-        return JS_NULL;
+        return JS_HasException(ctx) ? JS_EXCEPTION : JS_NULL;
     ret = JS_NewStringLen(ctx, (char *)buf, buf_len);
     js_free(ctx, buf);
     return ret;
