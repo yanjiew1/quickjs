@@ -218,23 +218,6 @@ static JSValue js_get_async_dispose_method(JSContext *ctx, JSValueConst value)
     return wrapper;
 }
 
-static JSValue js_get_dispose_method(JSContext *ctx, JSValueConst value)
-{
-    JSValue method = JS_GetProperty(ctx, value, JS_ATOM_Symbol_dispose);
-
-    if (JS_IsException(method))
-        return method;
-    if (JS_IsNull(method)) {
-        JS_FreeValue(ctx, method);
-        return JS_UNDEFINED;
-    }
-    if (!JS_IsUndefined(method) && !JS_IsFunction(ctx, method)) {
-        JS_FreeValue(ctx, method);
-        return JS_ThrowTypeError(ctx, "dispose method is not callable");
-    }
-    return method;
-}
-
 static int js_disposable_resource_add(JSContext *ctx,
                                       JSValueConst resources,
                                       JSValueConst value, JSValue method,
@@ -273,7 +256,7 @@ int js_add_disposable_resource(JSContext *ctx,
     }
     method = nullish ? JS_UNDEFINED : kind == JS_DISPOSAL_ASYNC ?
         js_get_async_dispose_method(ctx, value) :
-        js_get_dispose_method(ctx, value);
+        js_get_disposal_method(ctx, value, JS_ATOM_Symbol_dispose);
     if (JS_IsUndefined(method) && !nullish)
         method = JS_ThrowTypeError(ctx, "resource has no dispose method");
     if (JS_IsException(method))
