@@ -1658,6 +1658,9 @@ function test_empty_array_buffer()
                                            new ArrayBuffer(0);
                 const moved = source[method](length);
                 assert(source.detached, true);
+                assert(source.byteLength, 0);
+                assert(source.maxByteLength, 0);
+                assert(source.resizable, resizable);
                 assert(moved.byteLength, length);
                 assert([...new Uint8Array(moved)].every(x => x === 0));
             }

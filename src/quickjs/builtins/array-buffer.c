@@ -437,6 +437,8 @@ static JSValue js_array_buffer_get_maxByteLength(JSContext *ctx,
     JSArrayBuffer *abuf = JS_GetOpaque2(ctx, this_val, class_id);
     if (!abuf)
         return JS_EXCEPTION;
+    if (abuf->detached)
+        return JS_NewUint32(ctx, 0);
     if (array_buffer_is_resizable(abuf))
         return JS_NewUint32(ctx, abuf->max_byte_length);
     return JS_NewUint32(ctx, js_array_buffer_byte_length(abuf));
