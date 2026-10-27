@@ -432,7 +432,8 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                     goto exception;
                 }
                 if (!JS_ToBoolFree(ctx->rt, present)) {
-                    JS_SetPropertyInt64(ctx, jsc->property_list, j++, v);
+                    if (JS_SetPropertyInt64(ctx, jsc->property_list, j++, v) < 0)
+                        goto exception;
                 } else {
                     JS_FreeValue(ctx, v);
                 }

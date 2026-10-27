@@ -22,6 +22,8 @@
 #include <assert.h>
 #include <string.h>
 #include "../src/quickjs/value/conversion.h"
+#include "oom-allocator.h"
+#include "pool-padding.h"
 
 static JSValue failing_index_string(JSContext *ctx, JSValue value);
 #define JS_ToStringFree failing_index_string
@@ -58,8 +60,60 @@ static JSValue get_element(JSContext *ctx, JSValueConst this_val,
     return value;
 }
 
+static void test_replacer_list_oom(void)
+{
+    static const char source[] =
+        "Array.from({ length: 80 }, (_, i) => 'k' + i)";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue object, replacer, result;
+        void *padding;
+        const char *text;
+
+        assert(ctx);
+        object = JS_NewObject(ctx);
+        assert(!JS_IsException(object));
+        assert(JS_SetPropertyStr(ctx, object, "k0", JS_NewInt32(ctx, 1)) >= 0);
+        assert(JS_SetPropertyStr(ctx, object, "k79", JS_NewInt32(ctx, 2)) >= 0);
+        replacer = JS_Eval(ctx, source, sizeof(source) - 1, "replacer-oom",
+                           JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(replacer));
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_JSONStringify(ctx, object, replacer, JS_UNDEFINED);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            text = JS_ToCString(ctx, result);
+            assert(text && !strcmp(text, "{\"k0\":1,\"k79\":2}"));
+            JS_FreeCString(ctx, text);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, replacer);
+        JS_FreeValue(ctx, object);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
+    test_replacer_list_oom();
     static const JSClassDef element_def = {
         "StringifyElement", .finalizer = element_finalizer,
     };
