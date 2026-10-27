@@ -388,6 +388,9 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     jsc->stack = JS_NewArray(ctx);
     if (JS_IsException(jsc->stack))
         goto exception;
+    /* Internal Lists must not inherit user-defined indexed setters. */
+    if (JS_SetPrototype(ctx, jsc->stack, JS_NULL) < 0)
+        goto exception;
     if (JS_IsFunction(ctx, replacer)) {
         jsc->replacer_func = replacer;
     } else {
@@ -397,7 +400,8 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
         if (res) {
             /* XXX: enumeration is not fully correct */
             jsc->property_list = JS_NewArray(ctx);
-            if (JS_IsException(jsc->property_list))
+            if (JS_IsException(jsc->property_list) ||
+                JS_SetPrototype(ctx, jsc->property_list, JS_NULL) < 0)
                 goto exception;
             if (js_get_length64(ctx, &n, replacer))
                 goto exception;

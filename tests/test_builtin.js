@@ -1964,6 +1964,30 @@ function test_json()
     assert_json_error('\n{ "a": @x }"');
 }
 
+function test_json_internal_lists_ignore_array_prototype()
+{
+    const replacer = ["x"];
+    const saved = Object.getOwnPropertyDescriptor(Array.prototype, "0");
+    let setterCalls = 0;
+
+    Object.defineProperty(Array.prototype, "0", {
+        configurable: true,
+        set() { setterCalls++; throw Error("array prototype setter"); }
+    });
+    try {
+        assert(JSON.stringify({ x: 1 }), '{"x":1}');
+        assert(JSON.stringify(1, replacer), "1");
+        assert(setterCalls, 0);
+    } finally {
+        if (saved)
+            Object.defineProperty(Array.prototype, "0", saved);
+        else
+            delete Array.prototype["0"];
+    }
+}
+
+test_json_internal_lists_ignore_array_prototype();
+
 function test_json_parse_source_duplicates()
 {
     const cases = [
