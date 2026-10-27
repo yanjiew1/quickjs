@@ -827,6 +827,18 @@ function test_math()
     assert(Math.hypot(3, 4), 5);
     assert(Math.abs(Math.hypot(3, 4, 5) - 7.0710678118654755) <= 1e-15);
     assert(Math.sumPrecise([1,Number.EPSILON/2,Number.MIN_VALUE]), 1.0000000000000002);
+
+    // Exercise the carry budget and repeated negative normalization.
+    const tiny = (2 - 2 ** -52) * 2 ** -1019;
+    const large = 2 ** 1000;
+    for (const n of [127, 128, 129, 250, 500, 1000]) {
+        assert(Math.sumPrecise(Array(n).fill(tiny)), n * tiny);
+        assert(Math.sumPrecise(Array(n).fill(-tiny)), -n * tiny);
+        assert(Math.sumPrecise(Array(n).fill(-large)), -n * large);
+    }
+    assert(Math.sumPrecise([
+        ...Array(500).fill(-large), 0.5, ...Array(500).fill(large)
+    ]), 0.5);
 }
 
 function test_number()

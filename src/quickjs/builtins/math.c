@@ -225,7 +225,9 @@ typedef enum {
 /* we add one extra limb to avoid having to test for overflows during the sum */
 #define SUM_PRECISE_ACC_LEN 39
 
-#define SUM_PRECISE_COUNTER_INIT 250
+/* A normalized limb and 127 additions leave room for the incoming carry
+   within INT64_MAX, even when every contribution fills all 56 bits. */
+#define SUM_PRECISE_COUNTER_INIT 127
 
 typedef struct {
     SumPreciseStateEnum state;
@@ -250,15 +252,24 @@ static void sum_precise_renorm(SumPreciseState *s)
     int i;
     
     carry = 0;
-    for(i = 0; i < s->n_limbs; i++) {
+    for(i = 0; i + 1 < s->n_limbs; i++) {
         v = s->acc[i] + carry;
         s->acc[i] = v & (((uint64_t)1 << SP_LIMB_BITS) - 1);
         carry = v >> SP_LIMB_BITS;
     }
-    /* we add a failsafe but it should be never reached in a
-       reasonnable amount of time */
-    if (carry != 0 && s->n_limbs < SUM_PRECISE_ACC_LEN)
-        s->acc[s->n_limbs++] = carry;
+    if (s->n_limbs != 0) {
+        v = s->acc[i] + carry;
+        /* Keep the signed top digit instead of growing a redundant negative
+           sign extension at every normalization. */
+        if ((v >= ((int64_t)1 << SP_LIMB_BITS) ||
+             v <= -((int64_t)1 << SP_LIMB_BITS)) &&
+            s->n_limbs < SUM_PRECISE_ACC_LEN) {
+            s->acc[i] = v & (((uint64_t)1 << SP_LIMB_BITS) - 1);
+            s->acc[s->n_limbs++] = v >> SP_LIMB_BITS;
+        } else {
+            s->acc[i] = v;
+        }
+    }
 }
 
 static void sum_precise_add(SumPreciseState *s, double d)
