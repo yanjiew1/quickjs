@@ -189,6 +189,25 @@ static JSValue js_os_isatty(JSContext *ctx, JSValueConst this_val,
     return JS_NewBool(ctx, isatty(fd));
 }
 
+static JSValue js_os_pair(JSContext *ctx, JSValue first, int second)
+{
+    JSValue arr;
+    if (JS_IsException(first))
+        return first;
+    arr = JS_NewArray(ctx);
+    if (JS_IsException(arr)) {
+        JS_FreeValue(ctx, first);
+        return JS_EXCEPTION;
+    }
+    if (JS_DefinePropertyValueUint32(ctx, arr, 0, first, JS_PROP_C_W_E) < 0 ||
+        JS_DefinePropertyValueUint32(ctx, arr, 1, JS_NewInt32(ctx, second),
+                                     JS_PROP_C_W_E) < 0) {
+        JS_FreeValue(ctx, arr);
+        return JS_EXCEPTION;
+    }
+    return arr;
+}
+
 #if defined(_WIN32)
 static JSValue js_os_ttyGetWinSize(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv)
@@ -196,7 +215,6 @@ static JSValue js_os_ttyGetWinSize(JSContext *ctx, JSValueConst this_val,
     int fd;
     HANDLE handle;
     CONSOLE_SCREEN_BUFFER_INFO info;
-    JSValue obj;
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
@@ -204,12 +222,7 @@ static JSValue js_os_ttyGetWinSize(JSContext *ctx, JSValueConst this_val,
 
     if (!GetConsoleScreenBufferInfo(handle, &info))
         return JS_NULL;
-    obj = JS_NewArray(ctx);
-    if (JS_IsException(obj))
-        return obj;
-    JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, info.dwSize.X), JS_PROP_C_W_E);
-    JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, info.dwSize.Y), JS_PROP_C_W_E);
-    return obj;
+    return js_os_pair(ctx, JS_NewInt32(ctx, info.dwSize.X), info.dwSize.Y);
 }
 
 /* Windows 10 built-in VT100 emulation */
@@ -239,18 +252,12 @@ static JSValue js_os_ttyGetWinSize(JSContext *ctx, JSValueConst this_val,
 {
     int fd;
     struct winsize ws;
-    JSValue obj;
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
     if (ioctl(fd, TIOCGWINSZ, &ws) == 0 &&
         ws.ws_col >= 4 && ws.ws_row >= 4) {
-        obj = JS_NewArray(ctx);
-        if (JS_IsException(obj))
-            return obj;
-        JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, ws.ws_col), JS_PROP_C_W_E);
-        JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, ws.ws_row), JS_PROP_C_W_E);
-        return obj;
+        return js_os_pair(ctx, JS_NewInt32(ctx, ws.ws_col), ws.ws_row);
     } else {
         return JS_NULL;
     }
@@ -341,32 +348,11 @@ static JSValue js_os_rename(JSContext *ctx, JSValueConst this_val,
 }
 
 
-static JSValue make_obj_error(JSContext *ctx,
-                              JSValue obj,
-                              int err)
-{
-    JSValue arr;
-    if (JS_IsException(obj))
-        return obj;
-    arr = JS_NewArray(ctx);
-    if (JS_IsException(arr)) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-    if (JS_DefinePropertyValueUint32(ctx, arr, 0, obj, JS_PROP_C_W_E) < 0 ||
-        JS_DefinePropertyValueUint32(ctx, arr, 1, JS_NewInt32(ctx, err),
-                                     JS_PROP_C_W_E) < 0) {
-        JS_FreeValue(ctx, arr);
-        return JS_EXCEPTION;
-    }
-    return arr;
-}
-
 static JSValue make_string_error(JSContext *ctx,
                                  const char *buf,
                                  int err)
 {
-    return make_obj_error(ctx, JS_NewString(ctx, buf), err);
+    return js_os_pair(ctx, JS_NewString(ctx, buf), err);
 }
 
 /* return [cwd, errorcode] */
@@ -468,7 +454,7 @@ static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
     }
     closedir(f);
  done:
-    return make_obj_error(ctx, obj, err);
+    return js_os_pair(ctx, obj, err);
  exception:
     closedir(f);
     JS_FreeValue(ctx, obj);
@@ -574,7 +560,7 @@ static JSValue js_os_stat(JSContext *ctx, JSValueConst this_val,
                                   JS_PROP_C_W_E);
 #endif
     }
-    return make_obj_error(ctx, obj, err);
+    return js_os_pair(ctx, obj, err);
 }
 
 #if !defined(_WIN32)
@@ -1068,7 +1054,6 @@ static JSValue js_os_waitpid(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
     int pid, status = 0, options, ret;
-    JSValue obj;
 
     if (JS_ToInt32(ctx, &pid, argv[0]))
         return JS_EXCEPTION;
@@ -1081,14 +1066,7 @@ static JSValue js_os_waitpid(JSContext *ctx, JSValueConst this_val,
         status = 0;
     }
 
-    obj = JS_NewArray(ctx);
-    if (JS_IsException(obj))
-        return obj;
-    JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, ret),
-                                 JS_PROP_C_W_E);
-    JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, status),
-                                 JS_PROP_C_W_E);
-    return obj;
+    return js_os_pair(ctx, JS_NewInt32(ctx, ret), status);
 }
 
 /* pipe() -> [read_fd, write_fd] or null if error */
@@ -1101,21 +1079,13 @@ static JSValue js_os_pipe(JSContext *ctx, JSValueConst this_val,
     ret = pipe(pipe_fds);
     if (ret < 0)
         return JS_NULL;
-    obj = JS_NewArray(ctx);
-    if (JS_IsException(obj))
-        goto exception;
-    if (JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, pipe_fds[0]),
-                                     JS_PROP_C_W_E) < 0 ||
-        JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, pipe_fds[1]),
-                                     JS_PROP_C_W_E) < 0)
-        goto exception;
+    obj = js_os_pair(ctx, JS_NewInt32(ctx, pipe_fds[0]), pipe_fds[1]);
+    if (JS_IsException(obj)) {
+        /* Descriptor ownership transfers only when the entire pair is returned. */
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+    }
     return obj;
- exception:
-    /* Descriptor ownership transfers only when the entire pair is returned. */
-    close(pipe_fds[0]);
-    close(pipe_fds[1]);
-    JS_FreeValue(ctx, obj);
-    return JS_EXCEPTION;
 }
 
 /* kill(pid, sig) */

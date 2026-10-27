@@ -478,7 +478,7 @@ static void test_os_result_oom(int mode)
         if (!mode) {
             memset(payload, 'x', sizeof(payload));
             input = JS_NewStringLen(ctx, payload, sizeof(payload));
-        } else if (mode == 2) {
+        } else if (mode >= 2) {
             input = JS_NewString(ctx, ".");
         }
         assert(!JS_IsException(input));
@@ -489,10 +489,19 @@ static void test_os_result_oom(int mode)
 #endif
         oom_test_begin(&allocator, step);
         if (!mode) {
-            result = make_obj_error(ctx, input, 0);
+            result = js_os_pair(ctx, input, 0);
             input = JS_UNDEFINED;
         } else if (mode == 2) {
             result = js_os_readdir(ctx, JS_UNDEFINED, 1, (JSValueConst *)&input);
+        } else if (mode == 3) {
+#ifndef _WIN32
+            JSValueConst args[2] = { JS_NewInt32(ctx, INT32_MAX),
+                                    JS_NewInt32(ctx, WNOHANG) };
+
+            result = js_os_waitpid(ctx, JS_UNDEFINED, 2, args);
+#else
+            abort();
+#endif
         } else {
 #ifndef _WIN32
             result = js_os_pipe(ctx, JS_UNDEFINED, 0, NULL);
@@ -525,6 +534,11 @@ static void test_os_result_oom(int mode)
                 assert(JS_IsString(value));
             else if (mode == 2)
                 assert(JS_IsArray(ctx, value));
+            else if (mode == 3) {
+                int32_t pid;
+
+                assert(JS_ToInt32(ctx, &pid, value) == 0 && pid < 0);
+            }
             JS_FreeValue(ctx, value);
 #ifndef _WIN32
             if (mode == 1) {
@@ -548,6 +562,7 @@ int main(void)
     test_os_result_oom(0);
 #ifndef _WIN32
     test_os_result_oom(1);
+    test_os_result_oom(3);
 #endif
     test_os_result_oom(2);
     test_import_meta_failures();
