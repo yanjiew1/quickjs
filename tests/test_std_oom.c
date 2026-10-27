@@ -53,6 +53,34 @@ static int test_pclose(FILE *f)
 #undef pclose
 #include "../src/quickjs-libc/event-loop.h"
 
+#ifndef _WIN32
+static int os_pipe_fds[2], os_pipe_closes;
+
+static int test_os_pipe(int fds[2])
+{
+    int ret = pipe(fds);
+
+    assert(ret == 0);
+    memcpy(os_pipe_fds, fds, sizeof(os_pipe_fds));
+    return ret;
+}
+
+static int test_os_close(int fd)
+{
+    if (fd == os_pipe_fds[0] || fd == os_pipe_fds[1])
+        os_pipe_closes++;
+    return close(fd);
+}
+
+#define pipe test_os_pipe
+#define close test_os_close
+#endif
+#include "../src/quickjs-libc/os.c"
+#ifndef _WIN32
+#undef pipe
+#undef close
+#endif
+
 /* Exercise the example's real private initializer and module entry point. */
 #define js_init_module point_example_module
 #include "../examples/point.c"
@@ -433,8 +461,95 @@ static void test_import_meta_failures(void)
     }
 }
 
+/* Results own their payloads; pipe descriptors transfer only on success. */
+static void test_os_result_oom(int mode)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue input = JS_UNDEFINED, result, value;
+        void *padding;
+        char payload[1024];
+
+        assert(ctx);
+        if (!mode) {
+            memset(payload, 'x', sizeof(payload));
+            input = JS_NewStringLen(ctx, payload, sizeof(payload));
+        } else if (mode == 2) {
+            input = JS_NewString(ctx, ".");
+        }
+        assert(!JS_IsException(input));
+        padding = test_pool_padding(rt);
+#ifndef _WIN32
+        os_pipe_fds[0] = os_pipe_fds[1] = -1;
+        os_pipe_closes = 0;
+#endif
+        oom_test_begin(&allocator, step);
+        if (!mode) {
+            result = make_obj_error(ctx, input, 0);
+            input = JS_UNDEFINED;
+        } else if (mode == 2) {
+            result = js_os_readdir(ctx, JS_UNDEFINED, 1, (JSValueConst *)&input);
+        } else {
+#ifndef _WIN32
+            result = js_os_pipe(ctx, JS_UNDEFINED, 0, NULL);
+#else
+            abort();
+#endif
+        }
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+#ifndef _WIN32
+            if (mode == 1) {
+                assert(os_pipe_closes == 2);
+                assert(fcntl(os_pipe_fds[0], F_GETFD) < 0 && errno == EBADF);
+                assert(fcntl(os_pipe_fds[1], F_GETFD) < 0 && errno == EBADF);
+            }
+#endif
+        } else {
+            assert(!JS_HasException(ctx));
+            value = JS_GetPropertyUint32(ctx, result, 0);
+            assert(!JS_IsException(value));
+            if (!mode)
+                assert(JS_IsString(value));
+            else if (mode == 2)
+                assert(JS_IsArray(ctx, value));
+            JS_FreeValue(ctx, value);
+#ifndef _WIN32
+            if (mode == 1) {
+                assert(os_pipe_closes == 0);
+                assert(close(os_pipe_fds[0]) == 0);
+                assert(close(os_pipe_fds[1]) == 0);
+            }
+#endif
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, input);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(void)
 {
+    test_os_result_oom(0);
+#ifndef _WIN32
+    test_os_result_oom(1);
+#endif
+    test_os_result_oom(2);
     test_import_meta_failures();
     test_point_export_failure();
     test_point_initialization_failures();

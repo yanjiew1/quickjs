@@ -349,12 +349,16 @@ static JSValue make_obj_error(JSContext *ctx,
     if (JS_IsException(obj))
         return obj;
     arr = JS_NewArray(ctx);
-    if (JS_IsException(arr))
+    if (JS_IsException(arr)) {
+        JS_FreeValue(ctx, obj);
         return JS_EXCEPTION;
-    JS_DefinePropertyValueUint32(ctx, arr, 0, obj,
-                                 JS_PROP_C_W_E);
-    JS_DefinePropertyValueUint32(ctx, arr, 1, JS_NewInt32(ctx, err),
-                                 JS_PROP_C_W_E);
+    }
+    if (JS_DefinePropertyValueUint32(ctx, arr, 0, obj, JS_PROP_C_W_E) < 0 ||
+        JS_DefinePropertyValueUint32(ctx, arr, 1, JS_NewInt32(ctx, err),
+                                     JS_PROP_C_W_E) < 0) {
+        JS_FreeValue(ctx, arr);
+        return JS_EXCEPTION;
+    }
     return arr;
 }
 
@@ -427,7 +431,7 @@ static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
     const char *path;
     DIR *f;
     struct dirent *d;
-    JSValue obj;
+    JSValue obj, name;
     int err;
     uint32_t len;
 
@@ -455,13 +459,20 @@ static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
             err = errno;
             break;
         }
-        JS_DefinePropertyValueUint32(ctx, obj, len++,
-                                     JS_NewString(ctx, d->d_name),
-                                     JS_PROP_C_W_E);
+        name = JS_NewString(ctx, d->d_name);
+        if (JS_IsException(name))
+            goto exception;
+        if (JS_DefinePropertyValueUint32(ctx, obj, len++, name,
+                                         JS_PROP_C_W_E) < 0)
+            goto exception;
     }
     closedir(f);
  done:
     return make_obj_error(ctx, obj, err);
+ exception:
+    closedir(f);
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
 }
 
 #if !defined(_WIN32)
@@ -1092,12 +1103,19 @@ static JSValue js_os_pipe(JSContext *ctx, JSValueConst this_val,
         return JS_NULL;
     obj = JS_NewArray(ctx);
     if (JS_IsException(obj))
-        return obj;
-    JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, pipe_fds[0]),
-                                 JS_PROP_C_W_E);
-    JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, pipe_fds[1]),
-                                 JS_PROP_C_W_E);
+        goto exception;
+    if (JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, pipe_fds[0]),
+                                     JS_PROP_C_W_E) < 0 ||
+        JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewInt32(ctx, pipe_fds[1]),
+                                     JS_PROP_C_W_E) < 0)
+        goto exception;
     return obj;
+ exception:
+    /* Descriptor ownership transfers only when the entire pair is returned. */
+    close(pipe_fds[0]);
+    close(pipe_fds[1]);
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
 }
 
 /* kill(pid, sig) */
