@@ -224,6 +224,52 @@ static void test_environ_failure(void)
     }
 }
 
+static void test_module_loader_file_oom(void)
+{
+    static const char filename[] = "module-loader-oom.js";
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *module;
+    JSValue error, name;
+    const char *text;
+    void *padding;
+    FILE *f = fopen(filename, "wb");
+
+    assert(ctx && f);
+    assert(fputs("export const value = 1;\n", f) >= 0);
+    assert(fclose(f) == 0);
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    module = js_module_loader(ctx, filename, NULL, JS_UNDEFINED);
+    oom_test_end(&allocator);
+    assert(!module && allocator.failures == 1 && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, error, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "InternalError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, error);
+    test_pool_padding_free(rt, padding);
+
+    module = js_module_loader(ctx, "missing-module-loader-oom.js", NULL,
+                              JS_UNDEFINED);
+    assert(!module && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, error, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "ReferenceError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, error);
+
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+    assert(remove(filename) == 0);
+}
+
 static void test_load_file_failure(void)
 {
     static const char filename[] = "std-load-oom.tmp";
@@ -790,6 +836,7 @@ int main(void)
     test_file_wrapper_failure(TRUE, TRUE);
     test_file_wrapper_failure(FALSE, FALSE);
     test_environ_failure();
+    test_module_loader_file_oom();
     test_load_file_failure();
     test_os_result_oom(0);
 #ifndef _WIN32

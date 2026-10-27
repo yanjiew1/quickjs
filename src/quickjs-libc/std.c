@@ -361,7 +361,8 @@ JSValue js_loadScript(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     buf = js_load_file(ctx, &buf_len, filename);
     if (!buf) {
-        JS_ThrowReferenceError(ctx, "could not load '%s'", filename);
+        if (!JS_HasException(ctx))
+            JS_ThrowReferenceError(ctx, "could not load '%s'", filename);
         JS_FreeCString(ctx, filename);
         return JS_EXCEPTION;
     }

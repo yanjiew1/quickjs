@@ -88,8 +88,9 @@ static JSModuleDef *js_module_loader_so(JSContext *ctx,
 
     m = init(ctx, module_name);
     if (!m) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error",
-                               module_name);
+        if (!JS_HasException(ctx))
+            JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error",
+                                   module_name);
     fail:
         if (hd)
             dlclose(hd);
@@ -262,8 +263,9 @@ JSModuleDef *js_module_loader(JSContext *ctx,
 
         buf = js_load_file(ctx, &buf_len, module_name);
         if (!buf) {
-            JS_ThrowReferenceError(ctx, "could not load module filename '%s'",
-                                   module_name);
+            if (!JS_HasException(ctx))
+                JS_ThrowReferenceError(ctx, "could not load module filename '%s'",
+                                       module_name);
             return NULL;
         }
         if (has_suffix(module_name, ".json") || res > 0) {
