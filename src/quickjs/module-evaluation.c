@@ -201,7 +201,16 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
         if (m->status == JS_MODULE_STATUS_EVALUATED) {
             assert(m->eval_has_exception);
         } else if (m->has_tla) {
-            js_execute_async_module(ctx, m);
+            if (js_execute_async_module(ctx, m) < 0) {
+                JSValue error = JS_GetException(ctx);
+                JSValue m_obj = JS_NewModuleValue(m);
+
+                js_async_module_execution_rejected(ctx, JS_UNDEFINED,
+                                                   1, (JSValueConst *)&error, 0,
+                                                   &m_obj);
+                JS_FreeValue(ctx, m_obj);
+                JS_FreeValue(ctx, error);
+            }
         } else {
             JSValue error;
             if (js_execute_sync_module(ctx, m, &error) < 0) {
@@ -224,7 +233,8 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
 static int js_execute_async_module(JSContext *ctx, JSModuleDef *m)
 {
     JSValue promise, m_obj;
-    JSValue resolve_funcs[2], ret_val;
+    JSValue resolve_funcs[2] = { JS_UNDEFINED, JS_UNDEFINED }, ret_val;
+    int ret = -1;
 #ifdef DUMP_MODULE_EXEC
     js_dump_module(ctx->rt, __func__, m);
 #endif
@@ -233,14 +243,22 @@ static int js_execute_async_module(JSContext *ctx, JSModuleDef *m)
         return -1;
     m_obj = JS_NewModuleValue(m);
     resolve_funcs[0] = JS_NewCFunctionData(ctx, js_async_module_execution_fulfilled, 0, 0, 1, (JSValueConst *)&m_obj);
+    if (JS_IsException(resolve_funcs[0]))
+        goto done;
     resolve_funcs[1] = JS_NewCFunctionData(ctx, js_async_module_execution_rejected, 0, 0, 1, (JSValueConst *)&m_obj);
-    ret_val = js_promise_then(ctx, promise, 2, (JSValueConst *)resolve_funcs);
-    JS_FreeValue(ctx, ret_val);
+    if (JS_IsException(resolve_funcs[1]))
+        goto done;
+    ret_val = JS_PromiseThen(ctx, promise, resolve_funcs[0], resolve_funcs[1]);
+    if (!JS_IsException(ret_val)) {
+        ret = 0;
+        JS_FreeValue(ctx, ret_val);
+    }
+ done:
     JS_FreeValue(ctx, m_obj);
     JS_FreeValue(ctx, resolve_funcs[0]);
     JS_FreeValue(ctx, resolve_funcs[1]);
     JS_FreeValue(ctx, promise);
-    return 0;
+    return ret;
 }
 
 /* return < 0 in case of exception. *pvalue contains the exception. */
@@ -365,7 +383,10 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
         m->async_evaluation = TRUE;
         m->async_evaluation_timestamp =
             ctx->rt->module_async_evaluation_next_timestamp++;
-        js_execute_async_module(ctx, m);
+        if (js_execute_async_module(ctx, m) < 0) {
+            *pvalue = JS_GetException(ctx);
+            return -1;
+        }
     } else {
         if (js_execute_sync_module(ctx, m, pvalue) < 0)
             return -1;

@@ -13,6 +13,7 @@ tests/extras-upstream.json
 tests/fixture_await_using_module.js
 tests/fixture_cyclic_import.js
 tests/fixture_module.js
+tests/fixture_module_species_tla.js
 tests/fixture_module_attributes_cycle_a.js
 tests/fixture_module_attributes_cycle_b.js
 tests/fixture_module_attributes_dual.js

@@ -22,6 +22,7 @@
  */
 
 import * as std from "std";
+import * as os from "os";
 import { assert, assertThrows } from "./assert.js";
 import "./test_module_json_so_attributes.js";
 import "./test_module_import_attributes.js";
@@ -357,3 +358,32 @@ async function test_suspended_import_reference()
 }
 
 await test_suspended_import_reference();
+
+function test_internal_module_promise_species()
+{
+    const savedSpecies = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+    let settled = 0, failure;
+
+    Object.defineProperty(Promise, Symbol.species, {
+        configurable: true,
+        get() { throw Error("module code consulted mutable Promise species"); }
+    });
+    const normal = import("./fixture_module.js");
+    const asyncModule = import("./fixture_module_species_tla.js");
+    /* Dynamic imports run as jobs. Restore the descriptor after their module
+       continuations attach, then observe both promises with ordinary .then. */
+    os.setTimeout(() => {
+        Object.defineProperty(Promise, Symbol.species, savedSpecies);
+        normal.then(ns => { assert(ns.mutable, 0); settled++; },
+                    error => { failure = error; settled++; });
+        asyncModule.then(ns => { assert(ns.value, 42); settled++; },
+                         error => { failure = error; settled++; });
+        os.setTimeout(() => {
+            if (failure)
+                throw failure;
+            assert(settled, 2);
+        }, 100);
+    }, 0);
+}
+
+test_internal_module_promise_species();

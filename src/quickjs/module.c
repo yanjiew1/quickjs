@@ -1590,13 +1590,28 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
     func_data[1] = resolving_funcs[1];
     func_data[2] = func_obj;
     evaluate_resolving_funcs[0] = JS_NewCFunctionData(ctx, js_load_module_fulfilled, 0, 0, 3, func_data);
+    if (JS_IsException(evaluate_resolving_funcs[0])) {
+        JS_FreeValue(ctx, func_obj);
+        JS_FreeValue(ctx, evaluate_promise);
+        goto fail;
+    }
     evaluate_resolving_funcs[1] = JS_NewCFunctionData(ctx, js_load_module_rejected, 0, 0, 3, func_data);
     JS_FreeValue(ctx, func_obj);
-    ret = js_promise_then(ctx, evaluate_promise, 2, (JSValueConst *)evaluate_resolving_funcs);
-    JS_FreeValue(ctx, ret);
+    if (JS_IsException(evaluate_resolving_funcs[1])) {
+        JS_FreeValue(ctx, evaluate_resolving_funcs[0]);
+        JS_FreeValue(ctx, evaluate_promise);
+        goto fail;
+    }
+    /* Module evaluation uses the intrinsic Promise continuation, not a
+       user-modifiable species constructor. */
+    ret = JS_PromiseThen(ctx, evaluate_promise,
+                         evaluate_resolving_funcs[0], evaluate_resolving_funcs[1]);
     JS_FreeValue(ctx, evaluate_resolving_funcs[0]);
     JS_FreeValue(ctx, evaluate_resolving_funcs[1]);
     JS_FreeValue(ctx, evaluate_promise);
+    if (JS_IsException(ret))
+        goto fail;
+    JS_FreeValue(ctx, ret);
 }
 
 /* Return a promise or an exception in case of memory error. Used by
