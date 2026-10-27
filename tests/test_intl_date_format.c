@@ -195,6 +195,36 @@ static void ownership(const QJSIntlAllocator *allocator, const QJSIntlDateFormat
     qjs_intl_date_pattern_clear(allocator, &pattern);
 }
 
+static void empty_fragments(const QJSIntlAllocator *allocator,
+                            const QJSIntlDateFormatData *data,
+                            const QJSIntlDateNumberFormats *numbers)
+{
+    QJSIntlDatePatternToken tokens[] = {{{0}, 0, 0}, {{0}, 1, 'O'}, {{0}, 0, 0}};
+    QJSIntlDatePattern pattern = {tokens, countof(tokens), NULL, 0};
+    QJSTimeZoneIdentifier zone;
+    QJSIntlFormatted result, expected;
+    size_t i;
+
+    /* Internal program views can contain empty fragments, although source
+       compilation normally removes empty literals. They must be safe to copy. */
+    assert(!qjs_timezone_parse_identifier(&zone, "UTC", 3));
+    assert(!qjs_intl_date_format(allocator, &pattern, QJS_CAL_GREGORY, 0, 0,
+                                QJS_INTL_DATE_H23, numbers, data, &zone, 1000, &result));
+    pattern.tokens++;
+    pattern.count = 1;
+    assert(!qjs_intl_date_format(allocator, &pattern, QJS_CAL_GREGORY, 0, 0,
+                                QJS_INTL_DATE_H23, numbers, data, &zone, 1000, &expected));
+    assert(result.length == expected.length && result.part_count == expected.part_count);
+    assert(!memcmp(result.text, expected.text, result.length * sizeof(*result.text)));
+    for (i = 0; i < result.part_count; i++) {
+        assert(result.parts[i].start == expected.parts[i].start &&
+               result.parts[i].end == expected.parts[i].end &&
+               result.parts[i].type == expected.parts[i].type);
+    }
+    qjs_intl_formatted_clear(allocator, &result);
+    qjs_intl_formatted_clear(allocator, &expected);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -251,6 +281,7 @@ int main(void)
     assert(en < count);
     numbers = open_numbers(service, en, "latn");
     ownership(&allocator, &data, &numbers);
+    empty_fragments(&allocator, &data, &numbers);
     if (qjs_timezone_count() > 1) {
         result = render(&allocator, &data, &numbers, "y-MM-dd HH:mm:ss.SSS OOOO", "Africa/Monrovia",
                         0, 0, QJS_INTL_DATE_H23, "1969-12-31 23:15:30.000 GMT-00:44:30");
