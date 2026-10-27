@@ -4120,12 +4120,79 @@ static void test_proxy_property_oom(void)
     test_proxy_property_failures(1);
 }
 
+static void test_bound_function_oom(void)
+{
+    static const char source[] = "(function target(a, b) { return a + b; })";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue target, bind, result, value, anchor;
+        JSValueConst args[41];
+        void *padding;
+        int i;
+
+        assert(ctx);
+        target = JS_Eval(ctx, source, sizeof(source) - 1, "bind-oom",
+                         JS_EVAL_TYPE_GLOBAL);
+        bind = JS_GetPropertyStr(ctx, target, "bind");
+        anchor = JS_NewObject(ctx);
+        assert(!JS_IsException(target) && !JS_IsException(bind) &&
+               !JS_IsException(anchor));
+        args[0] = JS_UNDEFINED;
+        for (i = 1; i < 41; i++)
+            args[i] = JS_NewInt32(ctx, i);
+        /* Reach bound-data and property allocations despite allocator pools. */
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_Call(ctx, bind, target, 41, args);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx) && JS_IsFunction(ctx, result));
+            value = JS_Call(ctx, result, JS_UNDEFINED, 0, NULL);
+            assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 3)));
+            JS_FreeValue(ctx, value);
+            value = JS_GetPropertyStr(ctx, result, "length");
+            assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 0)));
+            JS_FreeValue(ctx, value);
+            value = JS_GetPropertyStr(ctx, result, "name");
+            {
+                const char *name = JS_ToCString(ctx, value);
+
+                assert(name && !strcmp(name, "bound target"));
+                JS_FreeCString(ctx, name);
+            }
+            JS_FreeValue(ctx, value);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, target);
+        JS_FreeValue(ctx, bind);
+        JS_FreeValue(ctx, anchor);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "bound-function-oom", test_bound_function_oom },
         { "promise-constructor-bit", test_promise_constructor_bit },
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "async-realm-job-roots", test_async_realm_job_roots },

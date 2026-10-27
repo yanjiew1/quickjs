@@ -314,6 +314,10 @@ void js_bound_function_finalizer(JSRuntime *rt, JSValue val)
     JSBoundFunction *bf = p->u.bound_function;
     int i;
 
+    /* Construction can fail before the bound arguments are allocated. */
+    if (!bf)
+        return;
+
     JS_FreeValueRT(rt, bf->func_obj);
     JS_FreeValueRT(rt, bf->this_val);
     for(i = 0; i < bf->argc; i++) {
@@ -328,6 +332,9 @@ void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSBoundFunction *bf = p->u.bound_function;
     int i;
+
+    if (!bf)
+        return;
 
     JS_MarkValue(rt, bf->func_obj, mark_func);
     JS_MarkValue(rt, bf->this_val, mark_func);
