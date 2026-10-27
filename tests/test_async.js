@@ -1071,6 +1071,80 @@ async function test_async_generator_return_constructor_failure()
 
 await test_async_generator_return_constructor_failure();
 
+async function test_async_generator_reentrant_completion()
+{
+    for (const completed of [false, true]) {
+        for (const rejected of [false, true]) {
+            const generator = (async function*() { await 0; })();
+            const events = [];
+            const marker = {};
+
+            if (completed)
+                await generator.next();
+            try {
+                Object.defineProperty(Object.prototype, "then", {
+                    configurable: true,
+                    get() {
+                        delete Object.prototype.then;
+                        generator.next().then(result => {
+                            assert(result.done, true);
+                            events.push("second");
+                        });
+                        if (rejected)
+                            throw marker;
+                    }
+                });
+                generator.next().then(() => {
+                    assert(rejected, false);
+                    events.push("first");
+                }, error => {
+                    assert(rejected, true);
+                    assert(error, marker);
+                    events.push("first");
+                });
+                for (let i = 0; i < 16; i++)
+                    await 0;
+                /* A completed generator resolves next immediately; a body
+                   still draining its queue must finish the first request. */
+                assert(events.join(","), completed ? "second,first" : "first,second");
+            } finally {
+                delete Object.prototype.then;
+            }
+        }
+    }
+}
+
+await test_async_generator_reentrant_completion();
+
+async function test_async_generator_reentrant_yield()
+{
+    const events = [];
+    const generator = (async function*() {
+        yield 1;
+        events.push("resumed");
+    })();
+
+    try {
+        Object.defineProperty(Object.prototype, "then", {
+            configurable: true,
+            get() {
+                delete Object.prototype.then;
+                generator.next().then(() => events.push("second"));
+                events.push("getter");
+            }
+        });
+        generator.next().then(() => events.push("first"));
+        for (let i = 0; i < 16; i++)
+            await 0;
+        /* Reentrant next must enqueue while the yield result is resolving. */
+        assert(events.join(","), "getter,resumed,first,second");
+    } finally {
+        delete Object.prototype.then;
+    }
+}
+
+await test_async_generator_reentrant_yield();
+
 
 async function assert_array_from_async_rejects(operation, expected)
 {

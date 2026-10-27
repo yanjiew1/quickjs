@@ -31,6 +31,60 @@ static void *import_padding;
 static JSValue import_attributes;
 static int import_armed;
 
+typedef struct AsyncGeneratorReentry {
+    JSValue generator, next;
+    int calls;
+} AsyncGeneratorReentry;
+
+static void reenter_start_throw(JSContext *ctx, JSValueConst promise,
+                                JSValueConst reason, JS_BOOL is_handled,
+                                void *opaque)
+{
+    AsyncGeneratorReentry *test = opaque;
+    JSValue result;
+
+    if (is_handled)
+        return;
+    test->calls++;
+    result = JS_Call(ctx, test->next, test->generator, 0, NULL);
+    /* Throw on an unstarted generator marks it completed before rejection;
+       a host rejection tracker can observe the immediate next result. */
+    assert(!JS_IsException(result));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, result);
+}
+
+static void test_async_generator_start_throw(void)
+{
+    static const char source[] = "(async function*() {})()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    AsyncGeneratorReentry test;
+    JSValue method, result;
+    JSValueConst reason = JS_NewInt32(ctx, 42);
+
+    assert(rt && ctx);
+    test.generator = JS_Eval(ctx, source, sizeof(source) - 1, "start-throw.js",
+                             JS_EVAL_TYPE_GLOBAL);
+    test.next = JS_GetPropertyStr(ctx, test.generator, "next");
+    test.calls = 0;
+    method = JS_GetPropertyStr(ctx, test.generator, "throw");
+    assert(!JS_IsException(test.generator) && !JS_IsException(test.next));
+    assert(!JS_IsException(method));
+    JS_SetHostPromiseRejectionTracker(rt, reenter_start_throw, &test);
+    result = JS_Call(ctx, method, test.generator, 1, &reason);
+    assert(!JS_IsException(result) && !JS_HasException(ctx));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+    assert(test.calls == 1);
+    JS_SetHostPromiseRejectionTracker(rt, NULL, NULL);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, test.next);
+    JS_FreeValue(ctx, test.generator);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static JSValue fail_import_allocation(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv)
 {
@@ -279,6 +333,7 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_async_generator_start_throw();
     test_async_generator_oom(0);
     test_async_generator_oom(1);
     test_dynamic_import_oom(0);

@@ -481,6 +481,7 @@ typedef enum JSAsyncGeneratorStateEnum {
     JS_ASYNC_GENERATOR_STATE_SUSPENDED_YIELD,
     JS_ASYNC_GENERATOR_STATE_SUSPENDED_YIELD_STAR,
     JS_ASYNC_GENERATOR_STATE_EXECUTING,
+    JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE,
     JS_ASYNC_GENERATOR_STATE_AWAITING_RETURN,
     JS_ASYNC_GENERATOR_STATE_COMPLETED,
 } JSAsyncGeneratorStateEnum;
@@ -498,7 +499,7 @@ typedef struct JSAsyncGeneratorRequest {
 typedef struct JSAsyncGeneratorData {
     JSObject *generator; /* back pointer to the object (const) */
     JSAsyncGeneratorStateEnum state;
-    /* func_state is NULL is state AWAITING_RETURN and COMPLETED */
+    /* func_state is NULL while draining, awaiting return, or completed. */
     JSAsyncFunctionState *func_state;
     struct list_head queue; /* list of JSAsyncGeneratorRequest.link */
 } JSAsyncGeneratorData;
@@ -658,11 +659,12 @@ static void js_async_generator_reject(JSContext *ctx,
 static void js_async_generator_complete(JSRuntime *rt,
                                         JSAsyncGeneratorData *s)
 {
-    if (s->state != JS_ASYNC_GENERATOR_STATE_COMPLETED) {
-        s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
-        async_func_free(rt, s->func_state);
-        s->func_state = NULL;
-    }
+    JSAsyncFunctionState *func_state = s->func_state;
+
+    s->func_state = NULL;
+    s->state = JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE;
+    if (func_state)
+        async_func_free(rt, func_state);
 }
 
 static int js_async_generator_completed_return(JSContext *ctx,
@@ -717,8 +719,12 @@ static void js_async_generator_resume_next(JSContext *ctx,
                 goto exec_no_arg;
             } else {
                 js_async_generator_complete(ctx->rt, s);
+                /* Throw on an unstarted generator completes immediately. */
+                if (next->completion_type == GEN_MAGIC_THROW)
+                    s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
             }
             break;
+        case JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE:
         case JS_ASYNC_GENERATOR_STATE_COMPLETED:
             if (next->completion_type == GEN_MAGIC_NEXT) {
                 js_async_generator_resolve(ctx, s, JS_UNDEFINED, TRUE);
@@ -726,9 +732,9 @@ static void js_async_generator_resume_next(JSContext *ctx,
                 s->state = JS_ASYNC_GENERATOR_STATE_AWAITING_RETURN;
                 if (js_async_generator_completed_return(ctx, s, next->result) == 0)
                     goto done;
-                /* No continuation owns this failed await. Restore the
-                   completed state before rejecting and draining the queue. */
-                s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
+                /* No continuation owns this failed await. Resume draining
+                   before rejecting so reentrant requests stay queued. */
+                s->state = JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE;
                 value = JS_GetException(ctx);
                 js_async_generator_reject(ctx, s, value);
                 JS_FreeValue(ctx, value);
@@ -777,12 +783,14 @@ static void js_async_generator_resume_next(JSContext *ctx,
                 switch(func_ret_code) {
                 case FUNC_RET_YIELD:
                 case FUNC_RET_YIELD_STAR:
+                    /* Keep executing while resolving the current result:
+                       a then getter may enqueue the next resumption. */
+                    js_async_generator_resolve(ctx, s, value, FALSE);
+                    JS_FreeValue(ctx, value);
                     if (func_ret_code == FUNC_RET_YIELD_STAR)
                         s->state = JS_ASYNC_GENERATOR_STATE_SUSPENDED_YIELD_STAR;
                     else
                         s->state = JS_ASYNC_GENERATOR_STATE_SUSPENDED_YIELD;
-                    js_async_generator_resolve(ctx, s, value, FALSE);
-                    JS_FreeValue(ctx, value);
                     break;
                 case FUNC_RET_AWAIT:
                     ret = js_async_generator_await(ctx, s, value);
@@ -802,6 +810,8 @@ static void js_async_generator_resume_next(JSContext *ctx,
             abort();
         }
     }
+    if (s->state == JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE)
+        s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
  done: ;
 }
 
@@ -820,7 +830,7 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
         /* resume next case in AWAITING_RETURN state */
         assert(s->state == JS_ASYNC_GENERATOR_STATE_AWAITING_RETURN ||
                s->state == JS_ASYNC_GENERATOR_STATE_COMPLETED);
-        s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
+        s->state = JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE;
         if (is_reject) {
             js_async_generator_reject(ctx, s, arg);
         } else {
@@ -874,7 +884,10 @@ JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
     req->resolving_funcs[0] = resolving_funcs[0];
     req->resolving_funcs[1] = resolving_funcs[1];
     list_add_tail(&req->link, &s->queue);
-    if (s->state != JS_ASYNC_GENERATOR_STATE_EXECUTING) {
+    /* Promise resolution can run a then getter. Reentrant requests during
+       draining belong to the current loop, after the request being settled. */
+    if (s->state != JS_ASYNC_GENERATOR_STATE_EXECUTING &&
+        s->state != JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE) {
         js_async_generator_resume_next(ctx, s);
     }
     return promise;
