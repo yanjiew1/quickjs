@@ -1336,16 +1336,28 @@ static BOOL js_is_standard_regexp(JSValueConst obj)
         return FALSE;
     if (!JS_IsCFunction(pr->u.value, js_regexp_exec, 0))
         return FALSE;
-    /* check the flag getters */
+    /* The intrinsic flags getter reads every flag, even for non-global
+       patterns. Skipping any overridden getter would lose its side effects. */
     ft.getter = js_regexp_get_flags;
     if (!check_regexp_getter(p, JS_ATOM_flags, ft.generic, 0))
         return FALSE;
     ft.getter_magic = js_regexp_get_flag;
+    if (!check_regexp_getter(p, JS_ATOM_hasIndices, ft.generic, LRE_FLAG_INDICES))
+        return FALSE;
     if (!check_regexp_getter(p, JS_ATOM_global, ft.generic, LRE_FLAG_GLOBAL))
+        return FALSE;
+    if (!check_regexp_getter(p, JS_ATOM_ignoreCase, ft.generic, LRE_FLAG_IGNORECASE))
+        return FALSE;
+    if (!check_regexp_getter(p, JS_ATOM_multiline, ft.generic, LRE_FLAG_MULTILINE))
+        return FALSE;
+    if (!check_regexp_getter(p, JS_ATOM_dotAll, ft.generic, LRE_FLAG_DOTALL))
         return FALSE;
     if (!check_regexp_getter(p, JS_ATOM_unicode, ft.generic, LRE_FLAG_UNICODE))
         return FALSE;
-    /* XXX: need to check all accessors, need a faster way.  */
+    if (!check_regexp_getter(p, JS_ATOM_unicodeSets, ft.generic, LRE_FLAG_UNICODE_SETS))
+        return FALSE;
+    if (!check_regexp_getter(p, JS_ATOM_sticky, ft.generic, LRE_FLAG_STICKY))
+        return FALSE;
     return TRUE;
 }
 

@@ -2171,6 +2171,48 @@ function test_regexp_string_set_growth()
     assert(difference.test("s128x"), true);
 }
 
+function test_regexp_replace_flag_getters()
+{
+    const flags = ["hasIndices", "global", "ignoreCase", "multiline",
+                   "dotAll", "unicode", "unicodeSets", "sticky"];
+
+    for (const flag of flags) {
+        for (const inherited of [false, true]) {
+            for (const throwing of [false, true]) {
+                const rx = /a/;
+                /* Materialize lazy intrinsics so the replacement optimization
+                   is eligible before an individual flag getter is replaced. */
+                void rx.flags;
+                void rx.exec;
+                const target = inherited ? RegExp.prototype : rx;
+                const saved = Object.getOwnPropertyDescriptor(target, flag);
+                let calls = 0, caught;
+                Object.defineProperty(target, flag, {
+                    configurable: true,
+                    get() {
+                        calls++;
+                        if (throwing)
+                            throw 42;
+                        return false;
+                    }
+                });
+                try {
+                    assert(rx[Symbol.replace]("a", "b"), "b");
+                } catch (error) {
+                    caught = error;
+                } finally {
+                    if (saved)
+                        Object.defineProperty(target, flag, saved);
+                    else
+                        delete target[flag];
+                }
+                assert(calls, 1);
+                assert(caught, throwing ? 42 : undefined);
+            }
+        }
+    }
+}
+
 function test_regexp_replace_buffer()
 {
     const input = "a".repeat(256);
@@ -5879,6 +5921,7 @@ test_json_parse_source_duplicates();
 test_date();
 test_date_setyear_coercion();
 test_regexp();
+test_regexp_replace_flag_getters();
 test_regexp_replace_buffer();
 test_regexp_string_set_growth();
 test_regexp_unicode_18();
