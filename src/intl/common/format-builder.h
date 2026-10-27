@@ -61,7 +61,7 @@ static inline QJSIntlStatus qjs_intl_format_builder_body(QJSIntlFormatBuilder *b
     if (body->length > builder->limit - builder->length ||
         body->part_count > SIZE_MAX / sizeof(QJSIntlPart) - builder->count)
         return QJS_INTL_OVERFLOW;
-    if (builder->result.text)
+    if (builder->result.text && body->length)
         memcpy(builder->result.text + builder->length, body->text, body->length * sizeof(uint16_t));
     if (builder->result.parts) {
         for (i = 0; i < body->part_count; i++) {
