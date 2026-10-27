@@ -477,7 +477,7 @@ static JSValue js_std_getenviron(JSContext *ctx, JSValueConst this_val,
 {
     char **envp;
     const char *name, *p, *value;
-    JSValue obj;
+    JSValue obj, str;
     uint32_t idx;
     size_t name_len;
     JSAtom atom;
@@ -490,15 +490,19 @@ static JSValue js_std_getenviron(JSContext *ctx, JSValueConst this_val,
     for(idx = 0; envp[idx] != NULL; idx++) {
         name = envp[idx];
         p = strchr(name, '=');
-        name_len = p - name;
         if (!p)
             continue;
+        name_len = p - name;
         value = p + 1;
         atom = JS_NewAtomLen(ctx, name, name_len);
         if (atom == JS_ATOM_NULL)
             goto fail;
-        ret = JS_DefinePropertyValue(ctx, obj, atom, JS_NewString(ctx, value),
-                                     JS_PROP_C_W_E);
+        str = JS_NewString(ctx, value);
+        if (JS_IsException(str)) {
+            JS_FreeAtom(ctx, atom);
+            goto fail;
+        }
+        ret = JS_DefinePropertyValue(ctx, obj, atom, str, JS_PROP_C_W_E);
         JS_FreeAtom(ctx, atom);
         if (ret < 0)
             goto fail;

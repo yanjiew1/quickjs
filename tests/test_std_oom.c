@@ -165,6 +165,65 @@ static void test_file_wrapper_failure(int owned, int is_popen)
     }
 }
 
+static void test_environ_failure(void)
+{
+    static const char prefix[] = "QJS_ENV_TEST=";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result, value;
+        char entry[1024];
+        char malformed[] = "NO_EQUALS";
+        char *entries[] = { malformed, entry, NULL };
+        char **saved;
+        void *padding;
+
+        assert(ctx);
+        memcpy(entry, prefix, sizeof(prefix) - 1);
+        memset(entry + sizeof(prefix) - 1, 'v', sizeof(entry) - sizeof(prefix));
+        entry[sizeof(entry) - 1] = '\0';
+        padding = test_pool_padding(rt);
+        /* Replace only the list read by this synchronous call, then restore
+           it before inspecting results or running any other host operation. */
+        saved = environ;
+        environ = entries;
+        oom_test_begin(&allocator, step);
+        result = js_std_getenviron(ctx, JS_UNDEFINED, 0, NULL);
+        oom_test_end(&allocator);
+        environ = saved;
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 32);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            const char *text;
+
+            assert(!JS_HasException(ctx));
+            value = JS_GetPropertyStr(ctx, result, "QJS_ENV_TEST");
+            text = JS_ToCString(ctx, value);
+            assert(text && !strcmp(text, entry + sizeof(prefix) - 1));
+            JS_FreeCString(ctx, text);
+            JS_FreeValue(ctx, value);
+            value = JS_GetPropertyStr(ctx, result, "NO_EQUALS");
+            assert(JS_IsUndefined(value));
+            JS_FreeValue(ctx, value);
+        }
+        JS_FreeValue(ctx, result);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static void test_failure(int mode)
 {
     size_t fail_at, allocations = 0;
@@ -615,6 +674,7 @@ int main(void)
     test_file_wrapper_failure(TRUE, FALSE);
     test_file_wrapper_failure(TRUE, TRUE);
     test_file_wrapper_failure(FALSE, FALSE);
+    test_environ_failure();
     test_os_result_oom(0);
 #ifndef _WIN32
     test_os_result_oom(1);
