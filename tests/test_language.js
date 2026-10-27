@@ -1824,6 +1824,45 @@ function test_function_expr_name()
     assert_throws(TypeError, f);
 }
 
+function test_function_name_nested_eval()
+{
+    const bodies = [
+        '(() => { eval(""); self = rhs(); })()',
+        '(() => eval("self = rhs()"))()',
+        '((unused = eval("")) => { self = rhs(); })()',
+        '((unused = eval("self = rhs()")) => {})()',
+        '(() => { eval(""); self += rhs(); })()',
+        '(() => { eval(""); [self] = [rhs()]; })()',
+    ];
+
+    for (const strict of [false, true]) {
+        const functions = bodies.map(body => `function self() {
+            ${body};
+            return self;
+        }`);
+        /* This captures self while its own parameter scope is active. */
+        functions.push(`function self(unused = (() => eval("self = rhs()"))()) {
+            return self;
+        }`);
+        for (const source of functions) {
+            let calls = 0;
+            const make = Function("rhs", `${strict ? '"use strict";' : ''}
+                return ${source};`);
+            const fn = make(() => { calls++; return 17; });
+
+            /* An unrelated direct eval must not turn a captured immutable
+               function-name binding into an ordinary writable closure slot. */
+            if (strict)
+                assert_throws(TypeError, fn);
+            else
+                assert(fn(), fn);
+            assert(calls, 1);
+        }
+    }
+}
+
+test_function_name_nested_eval();
+
 function test_readonly_binding_references()
 {
     for (const captured of [false, true]) {

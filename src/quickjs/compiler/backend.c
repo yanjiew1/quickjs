@@ -1532,8 +1532,8 @@ static int add_eval_variables(JSContext *ctx, JSFunctionDef *s)
         }
         is_arg_scope = (scope_idx == ARG_SCOPE_END);
         if (!is_arg_scope) {
-            /* add unscoped variables */
-            /* XXX: propagate is_const and var_kind too ? */
+            /* Preserve readonly function-name metadata when capturing locals
+               for eval, just as for ordinary closure resolution. */
             for(i = 0; i < fd->arg_count; i++) {
                 vd = &fd->args[i];
                 if (vd->var_name != JS_ATOM_NULL &&
@@ -1554,8 +1554,8 @@ static int add_eval_variables(JSContext *ctx, JSFunctionDef *s)
                     vd->var_kind != JS_VAR_PARAMETER_COPY) {
                     capture_var(fd, vd);
                     if (get_closure_var(ctx, s, fd,
-                                        JS_CLOSURE_LOCAL, i, vd->var_name, FALSE,
-                                        vd->is_lexical, JS_VAR_NORMAL) < 0)
+                                        JS_CLOSURE_LOCAL, i, vd->var_name, vd->is_const,
+                                        vd->is_lexical, vd->var_kind) < 0)
                         return -1;
                 }
             }
@@ -1577,8 +1577,8 @@ static int add_eval_variables(JSContext *ctx, JSFunctionDef *s)
                 if (vd->scope_level == 0 && is_var_in_arg_scope(vd->var_name, vd->var_kind)) {
                     capture_var(fd, vd);
                     if (get_closure_var(ctx, s, fd,
-                                        JS_CLOSURE_LOCAL, i, vd->var_name, FALSE,
-                                        vd->is_lexical, JS_VAR_NORMAL) < 0)
+                                        JS_CLOSURE_LOCAL, i, vd->var_name, vd->is_const,
+                                        vd->is_lexical, vd->var_kind) < 0)
                         return -1;
                 }
             }
