@@ -1563,6 +1563,20 @@ function test_typed_array_set_overlap()
     assert([...source].join(","), "1,2,3");
 }
 
+function test_typed_array_slice_overlap()
+{
+    const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+    const source = new Uint8Array(bytes.buffer, 0, 3);
+    source.constructor = {
+        [Symbol.species]: function(length) {
+            return new Uint8Array(bytes.buffer, 1, length);
+        },
+    };
+    assert([...source.slice()].join(","), "1,1,1");
+    assert([...bytes].join(","), "1,1,1,1,5");
+    assert([...new Uint8Array([1, 2]).slice()].join(","), "1,2");
+}
+
 function test_typed_array_constructor_length()
 {
     for (const C of [Uint8Array, Float32Array, BigInt64Array]) {
@@ -6012,6 +6026,7 @@ test_typed_array_constructor_content();
 test_typed_array_from_constructor_order();
 test_typed_array_species_content();
 test_typed_array_set_overlap();
+test_typed_array_slice_overlap();
 test_typed_array_constructor_length();
 test_typed_array_slice_resize();
 test_empty_array_buffer();

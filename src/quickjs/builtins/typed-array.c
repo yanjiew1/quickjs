@@ -1323,7 +1323,12 @@ static JSValue js_typed_array_toReversed(JSContext *ctx, JSValueConst this_val,
 
 static void slice_memcpy(uint8_t *dst, const uint8_t *src, size_t len)
 {
-    if (dst + len <= src || dst >= src + len) {
+    /* Source and destination may belong to different ArrayBuffers. */
+    uintptr_t dst_addr = (uintptr_t)dst;
+    uintptr_t src_addr = (uintptr_t)src;
+
+    if (dst_addr <= src_addr ? src_addr - dst_addr >= len :
+                               dst_addr - src_addr >= len) {
         /* no overlap: can use memcpy */
         memcpy(dst, src, len);
     } else {
