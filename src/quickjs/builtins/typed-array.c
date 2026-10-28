@@ -1584,8 +1584,17 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
         b_idx = *(uint32_t *)b;
         argv[0] = psc->getfun(ctx, psc->array +
                               a_idx * (size_t)psc->elt_size);
+        if (JS_IsException(argv[0])) {
+            psc->exception = 1;
+            return 0;
+        }
         argv[1] = psc->getfun(ctx, psc->array +
                               b_idx * (size_t)(psc->elt_size));
+        if (JS_IsException(argv[1])) {
+            psc->exception = 1;
+            JS_FreeValue(ctx, (JSValue)argv[0]);
+            return 0;
+        }
         res = JS_Call(ctx, psc->cmp, JS_UNDEFINED, 2, argv);
         if (JS_IsException(res)) {
             psc->exception = 1;

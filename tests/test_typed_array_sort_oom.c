@@ -28,6 +28,7 @@ static void *sort_malloc(JSContext *ctx, size_t size);
 #undef js_malloc
 
 static int fail_next, reject_large, failures, comparisons;
+static int bigint_gets, bigint_fail_at, bigint_comparisons;
 
 static void *sort_malloc(JSContext *ctx, size_t size)
 {
@@ -53,6 +54,22 @@ static JSValue compare(JSContext *ctx, JSValueConst this_val,
     return JS_NewInt32(ctx, a % 10 - b % 10);
 }
 
+static JSValue compare_bigint(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
+{
+    assert(argc == 2);
+    assert(!JS_IsException(argv[0]) && !JS_IsException(argv[1]));
+    bigint_comparisons++;
+    return JS_NewInt32(ctx, 0);
+}
+
+static JSValue get_bigint_or_fail(JSContext *ctx, const void *a)
+{
+    if (++bigint_gets == bigint_fail_at)
+        return JS_ThrowOutOfMemory(ctx);
+    return js_TA_get_uint64(ctx, a);
+}
+
 static JSValue view_of(JSContext *ctx, uint8_t *storage, size_t length)
 {
     JSValue buffer, view;
@@ -73,6 +90,34 @@ static void clear_error(JSContext *ctx)
     JSValue error = JS_GetException(ctx);
     assert(JS_IsError(ctx, error));
     JS_FreeValue(ctx, error);
+}
+
+static void test_bigint_comparator_oom(JSContext *ctx)
+{
+    uint64_t values[2] = { UINT64_MAX, UINT64_MAX - 1 };
+    uint32_t first = 0, second = 1;
+    struct TA_sort_context sort_ctx;
+    JSValue callback;
+    int result;
+
+    callback = JS_NewCFunction(ctx, compare_bigint, "compareBigInt", 2);
+    assert(!JS_IsException(callback));
+    sort_ctx.ctx = ctx;
+    sort_ctx.array = (uint8_t *)values;
+    sort_ctx.cmp = callback;
+    sort_ctx.getfun = get_bigint_or_fail;
+    sort_ctx.elt_size = sizeof(values[0]);
+
+    /* Fail each argument conversion in turn, independent of allocator pools. */
+    for (bigint_fail_at = 1; bigint_fail_at <= 2; bigint_fail_at++) {
+        bigint_gets = bigint_comparisons = 0;
+        sort_ctx.exception = 0;
+        result = js_TA_cmp_generic(&first, &second, &sort_ctx);
+        assert(result == 0 && sort_ctx.exception == 1);
+        assert(bigint_gets == bigint_fail_at && bigint_comparisons == 0);
+        clear_error(ctx);
+    }
+    JS_FreeValue(ctx, callback);
 }
 
 int main(void)
@@ -109,6 +154,7 @@ int main(void)
     clear_error(ctx);
     JS_FreeValue(ctx, view);
 #endif
+    test_bigint_comparator_oom(ctx);
     JS_FreeValue(ctx, callback);
     assert(!JS_HasException(ctx));
     JS_FreeContext(ctx);
