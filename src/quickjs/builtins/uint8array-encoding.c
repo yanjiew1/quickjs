@@ -345,7 +345,15 @@ static size_t u8a_hex_encode(const uint8_t *src, size_t len, char *dst)
     return len * 2;
 }
 
-/* Decode hex string to bytes.
+/* The stored length counts UTF-16 code units, unlike JS_ToCStringLen's bytes. */
+static uint32_t u8a_hex_source_length(JSValueConst string)
+{
+    if (JS_IsStringRope(string))
+        return JS_VALUE_GET_STRING_ROPE(string)->len;
+    return JS_VALUE_GET_STRING(string)->len;
+}
+
+/* Decode after the caller checks UTF-16 source length parity.
    Returns bytes written. Sets *p_read to chars consumed, *p_err on error. */
 static size_t u8a_hex_decode(const char *src, size_t src_len,
                              uint8_t *dst, size_t max_len,
@@ -354,12 +362,7 @@ static size_t u8a_hex_decode(const char *src, size_t src_len,
     size_t written = 0, i = 0;
     *p_err = 0;
 
-    if (src_len & 1) {
-        *p_err = 1;
-        return 0;
-    }
-
-    while (i < src_len && written < max_len) {
+    while (i + 1 < src_len && written < max_len) {
         int hi = from_hex(src[i]);
         int lo = from_hex(src[i + 1]);
         if (hi < 0 || lo < 0) {
@@ -368,6 +371,11 @@ static size_t u8a_hex_decode(const char *src, size_t src_len,
         }
         dst[written++] = (uint8_t)((hi << 4) | lo);
         i += 2;
+    }
+
+    if (i < src_len && written < max_len) {
+        *p_err = 1;
+        return 0;
     }
 
     *p_read = i;
@@ -649,6 +657,7 @@ static JSValue js_uint8array_from_hex(JSContext *ctx, JSValueConst this_val,
 {
     const char *str;
     size_t str_len, read_pos, decoded_len, out_cap;
+    uint32_t source_len;
     int err;
     uint8_t *buf;
     JSValue result;
@@ -656,11 +665,15 @@ static JSValue js_uint8array_from_hex(JSContext *ctx, JSValueConst this_val,
     if (!JS_IsString(argv[0]))
         return JS_ThrowTypeError(ctx, "expected string");
 
+    source_len = u8a_hex_source_length(argv[0]);
+    if (source_len & 1)
+        return JS_ThrowSyntaxError(ctx, "invalid hex string");
+
     str = JS_ToCStringLen(ctx, &str_len, argv[0]);
     if (!str)
         return JS_EXCEPTION;
 
-    out_cap = str_len / 2 + 1;
+    out_cap = source_len / 2 + 1;
     buf = js_malloc(ctx, out_cap);
     if (!buf) {
         JS_FreeCString(ctx, str);
@@ -765,6 +778,7 @@ static JSValue js_uint8array_set_from_hex(JSContext *ctx,
     size_t len;
     const char *str;
     size_t str_len, read_pos, decoded_len;
+    uint32_t source_len;
     JSObject *p;
     int err;
 
@@ -775,14 +789,18 @@ static JSValue js_uint8array_set_from_hex(JSContext *ctx,
     if (!JS_IsString(argv[0]))
         return JS_ThrowTypeError(ctx, "expected string");
 
+    if (get_uint8array_bytes(ctx, p, &data, &len))
+        return JS_EXCEPTION;
+
+    source_len = u8a_hex_source_length(argv[0]);
+    if (source_len & 1)
+        return JS_ThrowSyntaxError(ctx, "invalid hex string");
+    if (len == 0)
+        return js_make_read_written(ctx, 0, 0);
+
     str = JS_ToCStringLen(ctx, &str_len, argv[0]);
     if (!str)
         return JS_EXCEPTION;
-
-    if (get_uint8array_bytes(ctx, p, &data, &len)) {
-        JS_FreeCString(ctx, str);
-        return JS_EXCEPTION;
-    }
 
     decoded_len = u8a_hex_decode(str, str_len, data, len, &read_pos, &err);
     JS_FreeCString(ctx, str);

@@ -1577,6 +1577,25 @@ function test_typed_array_slice_overlap()
     assert([...new Uint8Array([1, 2]).slice()].join(","), "1,2");
 }
 
+function test_uint8array_hex_code_unit_length()
+{
+    const bytes = new Uint8Array(1);
+    assert_throws(SyntaxError, () => bytes.setFromHex("41é"));
+    assert(bytes[0], 0);
+    assert_throws(SyntaxError, () => new Uint8Array(0).setFromHex("é"));
+
+    let result = new Uint8Array(0).setFromHex("é€");
+    assert(result.read, 0);
+    assert(result.written, 0);
+
+    result = bytes.setFromHex("41é€");
+    assert(result.read, 2);
+    assert(result.written, 1);
+    assert(bytes[0], 0x41);
+    assert_throws(SyntaxError, () => Uint8Array.fromHex("é€"));
+    assert([...Uint8Array.fromHex("41")].join(","), "65");
+}
+
 function test_typed_array_constructor_length()
 {
     for (const C of [Uint8Array, Float32Array, BigInt64Array]) {
@@ -6027,6 +6046,7 @@ test_typed_array_from_constructor_order();
 test_typed_array_species_content();
 test_typed_array_set_overlap();
 test_typed_array_slice_overlap();
+test_uint8array_hex_code_unit_length();
 test_typed_array_constructor_length();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
