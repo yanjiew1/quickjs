@@ -1689,6 +1689,21 @@ function test_spread()
 
     x = [ ...[ , ] ];
     assert(Object.getOwnPropertyNames(x).toString(), "0,length");
+
+    let reads = 0;
+    const source = [1, 2];
+    Object.defineProperty(source, Symbol.iterator, {
+        get() {
+            reads++;
+            return reads === 1 ? function* () { yield 9; } :
+                                 Array.prototype[Symbol.iterator];
+        },
+    });
+    assert([...source].toString(), "9");
+    assert(reads, 1);
+    reads = 0;
+    assert(Array.of(...source).toString(), "9");
+    assert(reads, 1);
 }
 
 function test_function_length()
