@@ -173,10 +173,54 @@ static void test_substitution_oom(void)
     assert(!allocator.live);
 }
 
+static void test_regexp_replace_oom(void)
+{
+    OOMTestAllocator allocator;
+    StringOOMState state = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue regexp, method, input, callback, result;
+    JSValueConst args[2];
+    char text[10001];
+
+    assert(ctx);
+    memset(text, 'x', sizeof(text) - 1);
+    text[sizeof(text) - 1] = '\0';
+    state.allocator = &allocator;
+    state.long_string = JS_NewString(ctx, text);
+    JS_SetContextOpaque(ctx, &state);
+    regexp = JS_Eval(ctx, "/a/g", 4, "regexp-oom.js", JS_EVAL_TYPE_GLOBAL);
+    method = JS_GetProperty(ctx, regexp, JS_ATOM_Symbol_replace);
+    input = JS_NewString(ctx, "aaa");
+    callback = JS_NewCFunction(ctx, first_value, "replacement", 0);
+    assert(!JS_IsException(state.long_string) && !JS_IsException(regexp) &&
+           !JS_IsException(method) && !JS_IsException(input) &&
+           !JS_IsException(callback));
+    args[0] = input;
+    args[1] = callback;
+
+    result = JS_Call(ctx, method, regexp, 2, args);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(state.first_calls == 1);
+    oom_test_check_exception(ctx);
+
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, callback);
+    JS_FreeValue(ctx, input);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, regexp);
+    JS_FreeValue(ctx, state.long_string);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
 int main(void)
 {
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);
     test_substitution_oom();
+    test_regexp_replace_oom();
     return 0;
 }

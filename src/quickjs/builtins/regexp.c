@@ -484,12 +484,15 @@ static JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
     if (!JS_IsObject(this_val))
         return JS_ThrowTypeErrorNotAnObject(ctx);
 
-    string_buffer_init(ctx, b, 0);
-    string_buffer_putc8(b, '/');
+    if (string_buffer_init(ctx, b, 0))
+        return JS_EXCEPTION;
+    if (string_buffer_putc8(b, '/'))
+        goto fail;
     pattern = JS_GetProperty(ctx, this_val, JS_ATOM_source);
     if (string_buffer_concat_value_free(b, pattern))
         goto fail;
-    string_buffer_putc8(b, '/');
+    if (string_buffer_putc8(b, '/'))
+        goto fail;
     flags = JS_GetProperty(ctx, this_val, JS_ATOM_flags);
     if (string_buffer_concat_value_free(b, flags))
         goto fail;
@@ -859,7 +862,8 @@ static JSValue js_regexp_replace(JSContext *ctx, JSValueConst this_val, JSValueC
     if (group_name_ptr)
         return JS_UNDEFINED; /* group names are not supported yet */
     
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        return JS_EXCEPTION;
 
     capture = NULL;
     str_val = JS_ToString(ctx, arg);
@@ -1384,7 +1388,8 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
     if (!JS_IsObject(rx))
         return JS_ThrowTypeErrorNotAnObject(ctx);
 
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        return JS_EXCEPTION;
     value_buffer_init(ctx, results);
 
     rep_val = JS_UNDEFINED;
@@ -1524,8 +1529,11 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
                 namedCaptures1 = JS_UNDEFINED;
             }
             JS_FreeValue(ctx, rep_str);
-            
-            string_buffer_init(ctx, b1, 0);
+            rep_str = JS_UNDEFINED;
+            if (string_buffer_init(ctx, b1, 0)) {
+                JS_FreeValue(ctx, namedCaptures1);
+                goto exception;
+            }
             ret = js_string_GetSubstitution(ctx, b1, matched, sp, position,
                                             tab, namedCaptures1, rep_val,
                                             NULL, 0);
@@ -1537,12 +1545,14 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(rep_str))
             goto exception;
         if (position >= nextSourcePosition) {
-            string_buffer_concat(b, sp, nextSourcePosition, position);
-            string_buffer_concat_value(b, rep_str);
+            if (string_buffer_concat(b, sp, nextSourcePosition, position) ||
+                string_buffer_concat_value(b, rep_str))
+                goto exception;
             nextSourcePosition = position + JS_VALUE_GET_STRING(matched)->len;
         }
     }
-    string_buffer_concat(b, sp, nextSourcePosition, sp->len);
+    if (string_buffer_concat(b, sp, nextSourcePosition, sp->len))
+        goto exception;
     res = string_buffer_end(b);
     goto done1;
 
