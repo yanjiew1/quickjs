@@ -1,5 +1,5 @@
 /*
- * String builder allocation-failure ordering tests
+ * String builder error and allocation-failure tests
  * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -216,8 +216,40 @@ static void test_regexp_replace_oom(void)
     assert(!allocator.live);
 }
 
+static void test_empty_write_after_failed_init(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    StringBuffer buffer;
+    JSValue error, result;
+    int ret;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    ret = string_buffer_init(ctx, &buffer, -1);
+    assert(ret < 0);
+    ret = string_buffer_write8(&buffer, NULL, 0);
+    assert(ret < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    string_buffer_free(&buffer);
+
+    ret = string_buffer_init(ctx, &buffer, 0);
+    assert(ret == 0);
+    ret = string_buffer_write8(&buffer, NULL, 0);
+    assert(ret == 0);
+    result = string_buffer_end(&buffer);
+    assert(!JS_IsException(result) && JS_IsEmptyString(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_empty_write_after_failed_init();
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);
     test_substitution_oom();

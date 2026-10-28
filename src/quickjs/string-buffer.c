@@ -193,6 +193,9 @@ int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len)
 {
     int i;
 
+    if (unlikely(s->error_status || len == 0))
+        return s->error_status;
+
     if (s->len + len > s->size) {
         if (string_buffer_realloc(s, s->len + len, 0))
             return -1;
