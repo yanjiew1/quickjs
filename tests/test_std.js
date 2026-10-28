@@ -381,6 +381,21 @@ function test_os_exec()
     os.close(fds[1]);
 }
 
+function test_os_exec_empty_path_entry()
+{
+    const oldPath = std.getenv("PATH");
+
+    try {
+        std.setenv("PATH", ":/definitely-nonexistent");
+        assert(os.exec(["sh", "-c", "exit 0"], { cwd: "/bin" }), 0);
+    } finally {
+        if (oldPath === undefined)
+            std.unsetenv("PATH");
+        else
+            std.setenv("PATH", oldPath);
+    }
+}
+
 function test_timer()
 {
     var th, i;
@@ -437,6 +452,7 @@ test_getline();
 test_popen();
 test_os();
 test_os_exec();
+test_os_exec_empty_path_entry();
 test_timer();
 test_ext_json();
 test_async_gc();

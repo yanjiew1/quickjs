@@ -824,10 +824,14 @@ static int my_execvpe(const char *filename, char **argv, char **envp)
         /* path too long */
         if ((path_len + 1 + filename_len + 1) > PATH_MAX)
             continue;
-        memcpy(buf, p, path_len);
-        buf[path_len] = '/';
-        memcpy(buf + path_len + 1, filename, filename_len);
-        buf[path_len + 1 + filename_len] = '\0';
+        if (path_len) {
+            memcpy(buf, p, path_len);
+            buf[path_len] = '/';
+            memcpy(buf + path_len + 1, filename, filename_len + 1);
+        } else {
+            /* An empty PATH entry names the current directory. */
+            memcpy(buf, filename, filename_len + 1);
+        }
 
         execve(buf, argv, envp);
 
