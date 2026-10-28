@@ -291,6 +291,52 @@ static void test_combinator_oom(const char *source)
     }
 }
 
+static void test_with_resolvers_oom(void)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue global, ctor, method, result;
+        void *padding;
+
+        assert(ctx);
+        global = JS_GetGlobalObject(ctx);
+        ctor = JS_GetPropertyStr(ctx, global, "Promise");
+        method = JS_GetPropertyStr(ctx, ctor, "withResolvers");
+        assert(!JS_IsException(global) && !JS_IsException(ctor));
+        assert(!JS_IsException(method));
+        padding = test_pool_padding(rt);
+
+        oom_test_begin(&allocator, step);
+        result = JS_Call(ctx, method, ctor, 0, NULL);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(JS_IsObject(result) && !JS_HasException(ctx));
+        }
+
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, ctor);
+        JS_FreeValue(ctx, global);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static void test_async_generator_oom(int is_return)
 {
     static const char source[] = "(async function*() {})()";
@@ -496,6 +542,7 @@ int main(void)
     test_combinator_oom("(function() { return Promise.all([1]); })");
     test_combinator_oom("(function() { return Promise.allSettled([1]); })");
     test_combinator_oom("(function() { return Promise.any([1]); })");
+    test_with_resolvers_oom();
     test_async_module_late_setup_failure(0);
     test_async_module_late_setup_failure(1);
     test_async_module_late_setup_failure(2);

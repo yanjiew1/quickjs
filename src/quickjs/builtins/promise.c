@@ -572,6 +572,7 @@ static JSValue js_promise_withResolvers(JSContext *ctx,
                                         int argc, JSValueConst *argv)
 {
     JSValue result_promise, resolving_funcs[2], obj;
+    int ret;
     if (!JS_IsObject(this_val))
         return JS_ThrowTypeErrorNotAnObject(ctx);
     result_promise = js_new_promise_capability(ctx, resolving_funcs, this_val);
@@ -580,20 +581,21 @@ static JSValue js_promise_withResolvers(JSContext *ctx,
     obj = JS_NewObject(ctx);
     if (JS_IsException(obj))
         goto exception;
-    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_promise, result_promise,
-                               JS_PROP_C_W_E) < 0) {
-        goto exception;
-    }
+    ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_promise, result_promise,
+                                 JS_PROP_C_W_E);
     result_promise = JS_UNDEFINED;
-    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_resolve, resolving_funcs[0],
-                               JS_PROP_C_W_E) < 0) {
+    if (ret < 0)
         goto exception;
-    }
+    ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_resolve, resolving_funcs[0],
+                                 JS_PROP_C_W_E);
     resolving_funcs[0] = JS_UNDEFINED;
-    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_reject, resolving_funcs[1],
-                               JS_PROP_C_W_E) < 0) {
+    if (ret < 0)
         goto exception;
-    }
+    ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_reject, resolving_funcs[1],
+                                 JS_PROP_C_W_E);
+    resolving_funcs[1] = JS_UNDEFINED;
+    if (ret < 0)
+        goto exception;
     return obj;
 exception:
     JS_FreeValue(ctx, resolving_funcs[0]);
