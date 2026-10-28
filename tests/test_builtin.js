@@ -511,6 +511,30 @@ function test_array_sort_writeback()
     assert_throws(TypeError, () => rejected.sort());
 }
 
+function test_array_copy_reads()
+{
+    function check(method, args, expected, reads) {
+        const seen = [];
+        const source = new Proxy({ 0: "a", 1: "b", length: 2 }, {
+            has() { throw Error("unexpected HasProperty"); },
+            get(target, key, receiver) {
+                if (key === "0" || key === "1")
+                    seen.push(key);
+                return Reflect.get(target, key, receiver);
+            },
+        });
+        const result = Array.prototype[method].apply(source, args);
+        assert(JSON.stringify(result), JSON.stringify(expected), method);
+        assert(JSON.stringify(seen), JSON.stringify(reads), method);
+    }
+
+    check("at", [0], "a", ["0"]);
+    check("with", [1, "x"], ["a", "x"], ["0"]);
+    check("toReversed", [], ["b", "a"], ["1", "0"]);
+    check("toSpliced", [1, 0, "x"], ["a", "x", "b"], ["0", "1"]);
+    check("toSorted", [], ["a", "b"], ["0", "1"]);
+}
+
 function test_array()
 {
     var a, err;
@@ -5912,6 +5936,7 @@ test_copy_data_property_reentrancy();
 test_array();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
+test_array_copy_reads();
 test_string();
 test_string_html_attribute_coercion();
 test_string_unicode_18();

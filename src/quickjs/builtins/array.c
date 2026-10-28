@@ -413,11 +413,9 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
     } else if (js_get_fast_array(obj, &arrp, &count) && idx < count) {
         ret = JS_DupValue(ctx, arrp[idx]);
     } else {
-        int present = JS_TryGetPropertyInt64(ctx, obj, idx, &ret);
-        if (present < 0)
+        ret = JS_GetPropertyInt64(ctx, obj, idx);
+        if (JS_IsException(ret))
             goto exception;
-        if (!present)
-            ret = JS_UNDEFINED;
     }
     JS_FreeValue(ctx, obj);
     return ret;
@@ -465,12 +463,15 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
         for (i++, pval++; i < len; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
     } else {
-        for (; i < idx; i++, pval++)
-            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+        for (; i < idx; i++, pval++) {
+            *pval = JS_GetPropertyInt64(ctx, obj, i);
+            if (JS_IsException(*pval))
                 goto exception;
+        }
         *pval = JS_DupValue(ctx, argv[1]);
         for (i++, pval++; i < len; i++, pval++) {
-            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+            *pval = JS_GetPropertyInt64(ctx, obj, i);
+            if (JS_IsException(*pval))
                 goto exception;
         }
     }
@@ -1364,7 +1365,8 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
         } else {
             // Query order is observable; test262 expects descending order.
             for (; i >= 0; i--, pval++) {
-                if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+                *pval = JS_GetPropertyInt64(ctx, obj, i);
+                if (JS_IsException(*pval))
                     goto exception;
             }
         }
@@ -1623,14 +1625,18 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
         for (i += del; i < len; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
     } else {
-        for (i = 0; i < start; i++, pval++)
-            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+        for (i = 0; i < start; i++, pval++) {
+            *pval = JS_GetPropertyInt64(ctx, obj, i);
+            if (JS_IsException(*pval))
                 goto exception;
+        }
         for (j = 0; j < add; j++, pval++)
             *pval = JS_DupValue(ctx, argv[2 + j]);
-        for (i += del; i < len; i++, pval++)
-            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+        for (i += del; i < len; i++, pval++) {
+            *pval = JS_GetPropertyInt64(ctx, obj, i);
+            if (JS_IsException(*pval))
                 goto exception;
+        }
     }
 
     assert(pval == &p->u.array.u.values[newlen]);
@@ -1974,7 +1980,8 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {
             for (; i < len; i++, pval++) {
-                if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
+                *pval = JS_GetPropertyInt64(ctx, obj, i);
+                if (JS_IsException(*pval))
                     goto exception;
             }
         }
