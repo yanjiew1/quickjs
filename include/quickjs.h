@@ -968,8 +968,9 @@ JS_EXTERN JSValue JS_CallConstructor(JSContext *ctx, JSValueConst func_obj,
 JS_EXTERN JSValue JS_CallConstructor2(JSContext *ctx, JSValueConst func_obj,
                                       JSValueConst new_target,
                                       int argc, JSValueConst *argv);
+/* JS_DetectModule(), JS_Eval(), and JS_EvalThis() require
+   input[input_len] = '\0'. */
 JS_EXTERN JS_BOOL JS_DetectModule(const char *input, size_t input_len);
-/* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
 JS_EXTERN JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
                           const char *filename, int eval_flags);
 /* same as JS_Eval() but with an explicit 'this_obj' parameter */
@@ -1184,7 +1185,8 @@ JS_EXTERN int JS_PollNativeJobs(JSRuntime *rt, int timeout_ms);
 
 /* Object Writer/Reader (currently only used to handle precompiled code) */
 #define JS_WRITE_OBJ_BYTECODE  (1 << 0) /* allow function/module */
-#define JS_WRITE_OBJ_BSWAP     (1 << 1) /* byte swapped output */
+/* Accepted for compatibility; bytecode is always little-endian. */
+#define JS_WRITE_OBJ_BSWAP     (1 << 1)
 #define JS_WRITE_OBJ_SAB       (1 << 2) /* allow SharedArrayBuffer */
 #define JS_WRITE_OBJ_REFERENCE (1 << 3) /* allow object references to
                                            encode arbitrary object

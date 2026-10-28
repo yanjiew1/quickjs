@@ -478,7 +478,7 @@ void help(void)
            "-m          compile as Javascript module (default=autodetect)\n"
            "-D module_name         compile a dynamically loaded module or worker\n"
            "-M module_name[,cname] add initialization code for an external C module\n"
-           "-x          byte swapped output\n"
+           "-x          accepted for compatibility (no effect)\n"
            "-p prefix   set the prefix of the generated C names\n"
            "-S n        set the maximum stack size to 'n' bytes (default=%d)\n"
            "-s            strip all the debug info\n"

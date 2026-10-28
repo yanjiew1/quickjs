@@ -205,7 +205,8 @@ Add initialization code for an external C module. See the
 @code{c_module} example.
 
 @item -x
-Byte swapped output (only used for cross compilation).
+Accepted for compatibility. Bytecode uses a fixed little-endian format, so
+this option has no effect.
 
 @item -flto
 Accepted for compatibility. Executable output uses the LTO setting selected
@@ -729,9 +730,10 @@ object containing optional parameters:
   @table @code
   @item block
   Boolean (default = true). If true, wait until the process is
-  terminated. In this case, @code{exec} return the exit code if positive
-  or the negated signal number if the process was interrupted by a
-  signal. If false, do not block and return the process id of the child.
+  terminated. In this case, @code{exec} returns the exit status (including
+  zero), the negated signal number if terminated by a signal, or a negative
+  @code{errno} value if waiting fails. If false, do not block and return the
+  process id of the child.
 
   @item usePath
   Boolean (default = true). If true, the file is searched in the
