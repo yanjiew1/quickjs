@@ -1039,7 +1039,7 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
             goto exception;
         args[0] = val;
         args[1] = index_val;
-        args[2] = this_val;
+        args[2] = obj;
         res = JS_Call(ctx, func, this_arg, 3, args);
         if (JS_IsException(res))
             goto exception;

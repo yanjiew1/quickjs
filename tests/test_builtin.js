@@ -535,6 +535,25 @@ function test_array_copy_reads()
     check("toSorted", [], ["a", "b"], ["0", "1"]);
 }
 
+function test_array_find_receiver()
+{
+    for (const [method, expected] of [
+        ["find", "a"], ["findIndex", 0],
+        ["findLast", "c"], ["findLastIndex", 2],
+    ]) {
+        let calls = 0;
+        const result = Array.prototype[method].call("abc", (value, index, obj) => {
+            calls++;
+            assert(obj instanceof String, true, method);
+            assert(String(obj), "abc", method);
+            assert(obj[index], value, method);
+            return true;
+        });
+        assert(result, expected, method);
+        assert(calls, 1, method);
+    }
+}
+
 function test_array()
 {
     var a, err;
@@ -5937,6 +5956,7 @@ test_array();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
 test_array_copy_reads();
+test_array_find_receiver();
 test_string();
 test_string_html_attribute_coercion();
 test_string_unicode_18();
