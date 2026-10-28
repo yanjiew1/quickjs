@@ -1028,6 +1028,12 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     if (block_flag) {
         for(;;) {
             ret = waitpid(pid, &status, 0);
+            if (ret < 0) {
+                if (errno == EINTR)
+                    continue;
+                ret = -errno;
+                break;
+            }
             if (ret == pid) {
                 if (WIFEXITED(status)) {
                     ret = WEXITSTATUS(status);

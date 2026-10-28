@@ -470,6 +470,7 @@ if host_machine.system() == 'windows'
 else
   js_tests += {
     'std': ['tests/test_std.js'],
+    'os-exec-wait-error': ['tests/test_os_exec_wait_error.js'],
     'var-ref': ['tests/test_var_ref.js'],
     'rw-handler': ['tests/test_rw_handler.js'],
   }
@@ -511,7 +512,7 @@ foreach name, args : js_tests
     suite: suites + ['integration'],
     workdir: test_workdir,
     depends: js_test_deps,
-    timeout: 120,
+    timeout: name == 'os-exec-wait-error' ? 5 : 120,
   )
 endforeach
 test(

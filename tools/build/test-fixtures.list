@@ -144,6 +144,7 @@ tests/test_module_import_attributes.js
 tests/test_module_json_so_attributes.js
 tests/test_module_names.js
 tests/test_module_namespace_review.js
+tests/test_os_exec_wait_error.js
 tests/test_qjs_import_meta.js
 tests/test_qjs_std.js
 tests/test_realm.js
