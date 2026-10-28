@@ -939,9 +939,9 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(obj))
             goto fail1;
         
+        /* Defining the property consumes obj even on failure. */
         if (JS_DefinePropertyValue(ctx, root, JS_ATOM_empty_string, obj,
                                    JS_PROP_C_W_E) < 0) {
-            JS_FreeValue(ctx, obj);
         fail1:
             json_free_parse_record(ctx, pr);
             JS_FreeValue(ctx, root);
