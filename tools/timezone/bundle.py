@@ -26,7 +26,6 @@ TZif_length. All starts are absolute byte offsets. Strings are ASCII/NUL.
 Payloads are deduplicated complete fat TZif files, not filesystem paths.
 """
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
-import hashlib
 import re
 import struct
 
@@ -127,23 +126,19 @@ def unpack(binary):
     if tz_at != strings or cldr_at != strings + len(tz_version) + 1:
         raise ValueError('noncanonical version storage')
     metadata = tz_version.encode('ascii') + b'\0' + cldr_version.encode('ascii') + b'\0'
-    records, extents = [], {}
+    records, extents = [], set()
     for row in range(count):
         name_at, primary_at, offset, length = INDEX.unpack_from(binary, index + row * INDEX.size)
         name, primary = string_at(name_at), string_at(primary_at)
         if offset < payload or offset > total or length > total - offset:
             raise ValueError("invalid payload extent")
         extent = offset, length
-        checksum = extents.get(extent)
-        if checksum is None:
-            blob = binary[offset:offset + length]
-            _blob(blob)
-            checksum = hashlib.sha256(blob).hexdigest()
-            extents[extent] = checksum
+        if extent not in extents:
+            _blob(binary[offset:offset + length])
+            extents.add(extent)
         records.append({"identifier": name, "primary": primary,
                         "identifier_offset": name_at, "primary_offset": primary_at,
-                        "offset": offset, "length": length,
-                        "sha256": checksum})
+                        "offset": offset, "length": length})
     names = [record["identifier"] for record in records]
     if names != sorted(names) or len({name.lower() for name in names}) != count:
         raise ValueError("invalid identifier ordering")
