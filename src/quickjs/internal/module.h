@@ -152,7 +152,7 @@ JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 JSValue JS_NewModuleValue(JSModuleDef *m);
 
 JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
-JSValue js_import_meta(JSContext *ctx);
+JSValue js_import_meta(JSContext *ctx, JSModuleDef *m);
 JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
                               void *opaque);
 void js_free_module_def(JSRuntime *rt, JSModuleDef *m);

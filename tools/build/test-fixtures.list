@@ -28,6 +28,7 @@ tests/fixture_module_attributes_json.js
 tests/fixture_module_attributes_self.js
 tests/fixture_module_attributes_source.js
 tests/fixture_module_attributes_static.js
+tests/fixture_module_import_meta_identity.js
 tests/fixture_module_names.js
 tests/fixture_module_names_chain.js
 tests/fixture_module_names_invalid_destination_surrogate.js

@@ -537,20 +537,6 @@ static int js_find_loaded_module(JSContext *ctx, JSAtom name,
     return 0;
 }
 
-static JSModuleDef *js_find_loaded_module_by_name(JSContext *ctx, JSAtom name)
-{
-    struct list_head *el;
-    JSModuleDef *m;
-
-    /* first look at the loaded modules */
-    list_for_each(el, &ctx->loaded_modules) {
-        m = list_entry(el, JSModuleDef, link);
-        if (m->module_name == name)
-            return m;
-    }
-    return NULL;
-}
-
 /* return NULL in case of exception (e.g. module could not be loaded) */
 static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
                                                     const char *base_cname,
@@ -1487,24 +1473,10 @@ JSValue JS_GetImportMeta(JSContext *ctx, JSModuleDef *m)
     return JS_DupValue(ctx, obj);
 }
 
-JSValue js_import_meta(JSContext *ctx)
+JSValue js_import_meta(JSContext *ctx, JSModuleDef *m)
 {
-    JSAtom filename;
-    JSModuleDef *m;
-
-    filename = JS_GetScriptOrModuleName(ctx, 0);
-    if (filename == JS_ATOM_NULL)
-        goto fail;
-
-    /* XXX: inefficient, need to add a module or script pointer in
-       JSFunctionBytecode */
-    m = js_find_loaded_module_by_name(ctx, filename);
-    JS_FreeAtom(ctx, filename);
-    if (!m) {
-    fail:
-        JS_ThrowTypeError(ctx, "import.meta not supported in this context");
-        return JS_EXCEPTION;
-    }
+    if (!m)
+        return JS_ThrowTypeError(ctx, "import.meta not supported in this context");
     return JS_GetImportMeta(ctx, m);
 }
 

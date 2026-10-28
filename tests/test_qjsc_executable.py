@@ -66,6 +66,22 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
 
+    source.write_text('function readMeta() { return import.meta; }\n'
+                      'if (typeof import.meta !== "object" || '
+                      'readMeta() !== import.meta) '
+                      'throw Error("missing import.meta");\n'
+                      'print("qjsc-stripped-import-meta-ok");\n')
+    compiled = subprocess.run([qjsc, "-m", "-s", "-o", str(executable),
+                               str(source)], stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=30)
+    assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+    completed = subprocess.run([str(executable)], cwd=str(scratch),
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               timeout=30)
+    assert completed.returncode == 0, (completed.returncode, completed.stderr)
+    assert b"qjsc-stripped-import-meta-ok" in completed.stdout.splitlines(), (
+        completed.stdout, completed.stderr)
+
     # Supply argv[0] separately so this also covers hosts with short path limits.
     source.write_text('print(42);\n')
     for name in ['x' * 1100, '/' + 'x' * 1015 + '/qjsc']:

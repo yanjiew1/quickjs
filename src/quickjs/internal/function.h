@@ -127,6 +127,7 @@ typedef struct JSFunctionBytecode {
     uint16_t stack_size; /* maximum stack size */
     uint16_t var_ref_count; /* number of local variable references */
     JSContext *realm; /* function realm */
+    JSModuleDef *module; /* originating module for import.meta; not serialized */
     JSValue *cpool; /* constant pool (self pointer) */
     int cpool_count;
     int closure_var_count;

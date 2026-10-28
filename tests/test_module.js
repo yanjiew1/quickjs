@@ -30,11 +30,22 @@ import * as keyNamespace from "./fixture_module_namespace_keys.js";
 import { mutable as imported, update } from "./fixture_module.js";
 import * as namespace from "./fixture_module.js";
 import * as selfNamespace from "./test_module.js";
+import * as plainMetaModule from "./fixture_module_import_meta_identity.js";
+import * as attributedMetaModule from "./fixture_module_import_meta_identity.js"
+    with { type: "js" };
 import { module_const_write_tdz as uninitializedImport } from "./test_module.js";
 
 import "./test_module_bindings_review.js";
 
 import "./test_module_namespace_review.js";
+
+assert(plainMetaModule.meta !== attributedMetaModule.meta);
+assert(plainMetaModule.readMeta() === plainMetaModule.meta);
+assert(attributedMetaModule.readMeta() === attributedMetaModule.meta);
+assert(new plainMetaModule.MetaReader().read() === plainMetaModule.meta);
+assert(new attributedMetaModule.MetaReader().read() === attributedMetaModule.meta);
+plainMetaModule.meta.marker = 1;
+assert(attributedMetaModule.meta.marker === undefined);
 
 assert(Reflect.set(namespace, "mutable", 9), false);
 assertThrows(TypeError, () => { namespace.mutable = 9; });

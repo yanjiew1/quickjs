@@ -2218,6 +2218,21 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
     p->u.func.function_bytecode = b;
     p->u.func.home_object = NULL;
     p->u.func.var_refs = NULL;
+    if (!m && !is_eval && sf && JS_IsObject(sf->cur_func)) {
+        JSObject *parent = JS_VALUE_GET_OBJ(sf->cur_func);
+        if (js_class_has_bytecode(parent->class_id))
+            m = parent->u.func.function_bytecode->module;
+    }
+    if (m) {
+        if (b->module && b->module != m) {
+            JS_ThrowInternalError(ctx, "bytecode belongs to another module");
+            goto fail;
+        }
+        if (!b->module) {
+            b->module = m;
+            js_rc(m)->ref_count++;
+        }
+    }
     if (b->closure_var_count) {
         var_refs = js_mallocz(ctx, sizeof(var_refs[0]) * b->closure_var_count);
         if (!var_refs)
@@ -2760,7 +2775,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     *sp++ = ret_val;
                     break;
                 case OP_SPECIAL_OBJECT_IMPORT_META:
-                    ret_val = js_import_meta(ctx);
+                    ret_val = js_import_meta(ctx, b->module);
                     if (unlikely(JS_IsException(ret_val)))
                         goto exception;
                     *sp++ = ret_val;

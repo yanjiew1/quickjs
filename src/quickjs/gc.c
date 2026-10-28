@@ -324,6 +324,8 @@ static void mark_children(JSRuntime *rt, JSGCObjectHeader *gp,
             for(i = 0; i < b->cpool_count; i++) {
                 JS_MarkValue(rt, b->cpool[i], mark_func);
             }
+            if (b->module)
+                JS_MarkValue(rt, JS_MKPTR(JS_TAG_MODULE, b->module), mark_func);
             if (b->realm)
                 mark_func(rt, &b->realm->header);
         }

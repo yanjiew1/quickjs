@@ -63,6 +63,8 @@ void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
         JSClosureVar *cv = &b->closure_var[i];
         JS_FreeAtomRT(rt, cv->var_name);
     }
+    if (b->module)
+        JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_MODULE, b->module));
     if (b->realm)
         JS_FreeContext(b->realm);
 
