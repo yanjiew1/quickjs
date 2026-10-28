@@ -781,8 +781,6 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
 
         index = 0;
         for(;;) {
-            /* XXX: conformance: should close the iterator if error on 'done'
-               access, but not on 'value' access */
             item = JS_IteratorNext(ctx, iter, next_method, &done);
             if (JS_IsException(item))
                 goto fail_reject;
@@ -915,8 +913,6 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
             goto fail_reject;
 
         for(;;) {
-            /* XXX: conformance: should close the iterator if error on 'done'
-               access, but not on 'value' access */
             item = JS_IteratorNext(ctx, iter, next_method, &done);
             if (JS_IsException(item))
                 goto fail_reject;
