@@ -680,6 +680,22 @@ static JSValue plain_partial_to_date(JSContext *ctx, JSValueConst this_val,
                                                PLAIN_DATE, value);
 }
 
+static int year_month_first_day(JSContext *ctx, PlainValue *value)
+{
+    JSTemporalFields fields;
+    int error = js_temporal_iso_date_to_fields(ctx, value->calendar,
+                                               value->datetime.date, &fields);
+    if (!error) {
+        restrict_fields(&fields, PLAIN_YEAR_MONTH);
+        fields.calendar.day = 1;
+        fields.calendar.present |= QJS_TEMPORAL_FIELD_DAY;
+        error = resolve_fields(ctx, PLAIN_DATE, value->calendar, &fields,
+                                 QJS_TEMPORAL_OVERFLOW_CONSTRAIN, value);
+    }
+    js_temporal_fields_free(ctx, &fields);
+    return error;
+}
+
 static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int magic)
 {
@@ -729,17 +745,7 @@ static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
             normalized.time.low || normalized.time.high)
             return JS_ThrowRangeError(ctx,
                                       "YearMonth accepts only years/months");
-        error = js_temporal_iso_date_to_fields(ctx, value.calendar,
-                                               value.datetime.date, &fields);
-        if (!error) {
-            restrict_fields(&fields, PLAIN_YEAR_MONTH);
-            fields.calendar.day = 1;
-            fields.calendar.present |= QJS_TEMPORAL_FIELD_DAY;
-            error = resolve_fields(ctx, PLAIN_DATE, value.calendar, &fields,
-                                     QJS_TEMPORAL_OVERFLOW_CONSTRAIN, &value);
-        }
-        js_temporal_fields_free(ctx, &fields);
-        if (error)
+        if (year_month_first_day(ctx, &value))
             return JS_EXCEPTION;
     } else if (kind == PLAIN_DATETIME) {
         if (qjs_temporal_time_add(&value.datetime.time, &overflow_days,
@@ -791,22 +797,6 @@ int js_temporal_plain_datetime_difference_total(
                                                       unit, result));
 }
 
-static int year_month_first_day(JSContext *ctx, PlainValue *value)
-{
-    JSTemporalFields fields;
-    int error = js_temporal_iso_date_to_fields(ctx, value->calendar,
-                                               value->datetime.date, &fields);
-    if (!error) {
-        restrict_fields(&fields, PLAIN_YEAR_MONTH);
-        fields.calendar.day = 1;
-        fields.calendar.present |= QJS_TEMPORAL_FIELD_DAY;
-        error = resolve_fields(ctx, PLAIN_DATE, value->calendar, &fields,
-                                 QJS_TEMPORAL_OVERFLOW_CONSTRAIN, value);
-    }
-    js_temporal_fields_free(ctx, &fields);
-    return error;
-}
-
 static JSValue plain_difference(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv, int magic)
 {
@@ -850,18 +840,7 @@ static JSValue plain_difference(JSContext *ctx, JSValueConst this_val,
     if (kind == PLAIN_YEAR_MONTH &&
         (year_month_first_day(ctx, &one) || year_month_first_day(ctx, &two)))
         return JS_EXCEPTION;
-    if (kind != PLAIN_DATETIME &&
-        settings.smallest_unit == (kind == PLAIN_YEAR_MONTH ?
-                                QJS_TEMPORAL_MONTH : QJS_TEMPORAL_DAY) &&
-        settings.rounding_increment == 1) {
-        difference.time = (QJSTemporalEpochNs){ 0, 0 };
-        error = js_temporal_calendar_error(ctx,
-          qjs_temporal_calendar_date_until(one.calendar, one.datetime.date,
-                      two.datetime.date, settings.largest_unit,
-                      &difference.date));
-        if (kind == PLAIN_YEAR_MONTH)
-            difference.date.weeks = difference.date.days = 0;
-    } else if (kind != PLAIN_DATETIME) {
+    if (kind != PLAIN_DATETIME) {
         difference.time = (QJSTemporalEpochNs){ 0, 0 };
         error = qjs_temporal_calendar_date_until(one.calendar,
                   one.datetime.date, two.datetime.date,
@@ -869,9 +848,14 @@ static JSValue plain_difference(JSContext *ctx, JSValueConst this_val,
         if (!error) {
             if (kind == PLAIN_YEAR_MONTH)
                 difference.date.weeks = difference.date.days = 0;
-            error = qjs_temporal_plain_relative_round(one.datetime,
-                         two.datetime, one.calendar, difference,
-                         &settings, &difference);
+            /* Whole dates at their native precision need no rounding. */
+            if (settings.smallest_unit != (kind == PLAIN_YEAR_MONTH ?
+                                           QJS_TEMPORAL_MONTH : QJS_TEMPORAL_DAY) ||
+                settings.rounding_increment != 1) {
+                error = qjs_temporal_plain_relative_round(one.datetime,
+                             two.datetime, one.calendar, difference,
+                             &settings, &difference);
+            }
         }
         error = js_temporal_calendar_error(ctx, error);
     } else {
