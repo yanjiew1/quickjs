@@ -148,6 +148,8 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
         if (JS_IsUndefined(method) || JS_IsNull(method)) {
             if (magic == GEN_MAGIC_RETURN) {
                 err = js_create_iterator_result(ctx, JS_DupValue(ctx, argv[0]), TRUE);
+                if (JS_IsException(err))
+                    goto reject;
                 is_reject = 0;
                 goto done_resolve;
             } else {
