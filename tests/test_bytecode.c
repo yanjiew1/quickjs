@@ -739,8 +739,34 @@ static void test_module_read_oom(void)
     free(copy);
 }
 
+static void test_invalid_object_tag(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue result, error;
+    uint8_t *buf;
+    size_t len;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    buf = JS_WriteObject(ctx, &len, JS_NULL, 0);
+    assert(buf && len > 0);
+    /* Keep a valid header and replace the single value's tag. */
+    buf[len - 1] = UINT8_MAX;
+    result = JS_ReadObject(ctx, buf, len, 0);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    js_free(ctx, buf);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_invalid_object_tag();
     test_rom_bytecode_endianness();
     test_module_read_oom();
     test_truncated_function_atoms();
