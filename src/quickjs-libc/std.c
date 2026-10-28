@@ -427,6 +427,8 @@ static void setenv(const char *name, const char *value, int overwrite)
     name_len = strlen(name);
     value_len = strlen(value);
     str = malloc(name_len + 1 + value_len + 1);
+    if (!str)
+        return;
     memcpy(str, name, name_len);
     str[name_len] = '=';
     memcpy(str + name_len + 1, value, value_len);
