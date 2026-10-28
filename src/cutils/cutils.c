@@ -497,6 +497,8 @@ void rqsort(void *base, size_t nmemb, size_t size, cmp_f cmp, void *opaque)
             }
         }
         /* Use insertion sort for small fragments */
+        if (nmemb < 2)
+            continue;
         for (pi = ptr + size, top = ptr + nmemb * size; pi < top; pi += size) {
             for (pj = pi; pj > ptr && cmp(pj - size, pj, opaque) > 0; pj -= size)
                 swap(pj, pj - size, size);

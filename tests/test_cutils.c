@@ -176,6 +176,37 @@ static void test_typed_buffer_growth(void)
     assert(a.frees == 1);
 }
 
+static int compare_int(const void *a, const void *b, void *opaque)
+{
+    int x = *(const int *)a;
+    int y = *(const int *)b;
+
+    return (x > y) - (x < y);
+}
+
+static void test_rqsort_small_fragments(void)
+{
+    int equal[8] = { 3, 3, 3, 3, 3, 3, 3, 3 };
+    int singleton[7] = { 7, 1, 0, 2, 3, 4, 5 };
+    int mixed[9] = { 4, 1, 3, 2, 4, 0, 2, 1, 3 };
+    const int expected[9] = { 0, 1, 1, 2, 2, 3, 3, 4, 4 };
+    size_t i;
+
+    rqsort(equal, countof(equal), sizeof(equal[0]), compare_int, NULL);
+    for (i = 0; i < countof(equal); i++)
+        assert(equal[i] == 3);
+
+    rqsort(singleton, countof(singleton), sizeof(singleton[0]), compare_int,
+           NULL);
+    for (i = 0; i < countof(singleton) - 1; i++)
+        assert(singleton[i] == (int)i);
+    assert(singleton[countof(singleton) - 1] == 7);
+
+    rqsort(mixed, countof(mixed), sizeof(mixed[0]), compare_int, NULL);
+    for (i = 0; i < countof(mixed); i++)
+        assert(mixed[i] == expected[i]);
+}
+
 int main(void)
 {
     test_empty_dbuf();
@@ -183,5 +214,6 @@ int main(void)
     test_buffer_size_overflow();
     test_bounded_strings();
     test_typed_buffer_growth();
+    test_rqsort_small_fragments();
     return 0;
 }
