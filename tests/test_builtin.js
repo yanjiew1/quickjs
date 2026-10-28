@@ -2052,6 +2052,9 @@ function test_json()
  ]
 ]`);
 
+    const ropeGap = " ".repeat(8193) + "x";
+    assert(JSON.stringify({ x: 1 }, null, ropeGap), '{\n          "x": 1\n}');
+
     assert_json_error('\n"  \\@x"');
     assert_json_error('\n{ "a": @x }"');
 }
