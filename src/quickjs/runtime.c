@@ -322,10 +322,17 @@ int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
     JSRuntime *rt = ctx->rt;
     JSJobEntry *e;
     int i;
-    size_t size = sizeof(*e) + argc * sizeof(JSValue);
+    size_t size = sizeof(*e);
+
+    if (argc < 0 || (size_t)argc > (SIZE_MAX - size) / sizeof(JSValue))
+        goto invalid_count;
+    size += (size_t)argc * sizeof(JSValue);
 #ifdef CONFIG_ATOMICS
-    if (rt->native_jobs)
+    if (rt->native_jobs) {
+        if (size > SIZE_MAX - sizeof(JSNativeWaitEvent))
+            goto invalid_count;
         size += sizeof(JSNativeWaitEvent);
+    }
 #endif
     if (no_exception)
         e = js_malloc_rt(rt, size);
@@ -347,6 +354,11 @@ int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
     }
 #endif
     return 0;
+
+ invalid_count:
+    if (!no_exception)
+        JS_ThrowRangeError(ctx, "invalid job argument count");
+    return -1;
 }
 
 /* return 0 if OK, < 0 if exception */

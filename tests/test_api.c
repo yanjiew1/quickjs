@@ -1626,6 +1626,27 @@ static void test_native_function_initial_name(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue unused_job(JSContext *ctx, int argc, JSValueConst *argv)
+{
+    return JS_UNDEFINED;
+}
+
+static void test_invalid_job_argc(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue error;
+
+    assert(rt && ctx);
+    assert(JS_EnqueueJob(ctx, unused_job, -1, NULL) < 0);
+    assert(!JS_IsJobPending(rt));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_allocator_size_overflow(void)
 {
     static const size_t requests[] = { SIZE_MAX, SIZE_MAX - 1, SIZE_MAX - 7 };
@@ -4666,6 +4687,7 @@ int main(int argc, char **argv)
         { "int64-property-api", test_int64_property_api },
         { "regexp-interrupt", test_regexp_interrupt },
         { "allocator-overflow", test_allocator_size_overflow },
+        { "invalid-job-argc", test_invalid_job_argc },
         { "native-name", test_native_function_initial_name },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },
