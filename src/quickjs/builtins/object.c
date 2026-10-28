@@ -707,7 +707,7 @@ static JSValue js_object_isSealed(JSContext *ctx, JSValueConst this_val,
     }
     res = JS_IsExtensible(ctx, obj);
     if (res < 0)
-        return JS_EXCEPTION;
+        goto exception;
     res ^= 1;
 done:
     JS_FreePropertyEnum(ctx, props, len);

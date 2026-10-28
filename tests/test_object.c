@@ -1,5 +1,5 @@
 /*
- * QuickJS property hash tests
+ * QuickJS object and property hash tests
  *
  * Copyright (c) 2026 Yan-Jie Wang
  *
@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <string.h>
 
 #include "../src/quickjs/internal/object.h"
 
@@ -118,6 +119,49 @@ static void test_compact_minimum(JSContext *ctx)
     JS_FreeValue(ctx, obj);
 }
 
+static void eval_ok(JSContext *ctx, const char *source)
+{
+    JSValue result = JS_Eval(ctx, source, strlen(source), "object-test.js",
+                             JS_EVAL_TYPE_GLOBAL);
+
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, result);
+}
+
+static void test_integrity_proxy_cleanup(JSContext *ctx)
+{
+    static const char setup[] =
+        "const target = {};"
+        "Object.defineProperty(target, 'a', {value: 1});"
+        "const integrityProxy = new Proxy(target, {"
+        "  isExtensible() { throw 1; }"
+        "});";
+    static const char exercise[] =
+        "(() => {"
+        "  let caught = 0;"
+        "  for (let i = 0; i < 100; i++) {"
+        "    try { Object.isSealed(integrityProxy); }"
+        "    catch (e) { if (e !== 1) throw e; caught++; }"
+        "    try { Object.isFrozen(integrityProxy); }"
+        "    catch (e) { if (e !== 1) throw e; caught++; }"
+        "  }"
+        "  if (caught !== 200) throw 0;"
+        "})()";
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSMemoryUsage before, after;
+
+    eval_ok(ctx, setup);
+    eval_ok(ctx, exercise);
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &before);
+
+    /* The throwing trap must not retain each call's property enumeration. */
+    eval_ok(ctx, exercise);
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &after);
+    assert(after.malloc_count <= before.malloc_count + 4);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -129,6 +173,7 @@ int main(void)
     test_compact_minimum(ctx);
     test_property_hash(ctx, 128, 24);
     test_property_hash(ctx, 1024, 16);
+    test_integrity_proxy_cleanup(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;
