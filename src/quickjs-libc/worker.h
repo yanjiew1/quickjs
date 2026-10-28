@@ -32,6 +32,7 @@
 #endif
 #ifdef USE_WORKER
 #include <pthread.h>
+#include <stdatomic.h>
 #endif
 
 typedef struct {
@@ -51,7 +52,7 @@ typedef struct JSWaker {
 } JSWaker;
 
 struct JSWorkerMessagePipe {
-    int ref_count;
+    _Atomic int ref_count;
 #ifdef USE_WORKER
     pthread_mutex_t mutex;
 #endif

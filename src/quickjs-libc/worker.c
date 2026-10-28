@@ -217,7 +217,7 @@ typedef struct {
 } WorkerFuncArgs;
 
 typedef struct {
-    int ref_count;
+    _Atomic int ref_count;
     /* Native atomic types may require stricter alignment than integers. */
     _Alignas(_Atomic(uint8_t)) _Alignas(_Atomic(uint16_t))
     _Alignas(_Atomic(uint32_t)) _Alignas(_Atomic(uint64_t)) uint8_t buf[];
@@ -229,9 +229,9 @@ typedef JSContext *JSWorkerContextFactory(JSRuntime *rt);
 static _Atomic(JSWorkerRuntimeFactory *) js_worker_new_runtime_func = JS_NewRuntime;
 static _Atomic(JSWorkerContextFactory *) js_worker_new_context_func;
 
-static int atomic_add_int(int *ptr, int v)
+static int atomic_add_int(_Atomic int *ptr, int v)
 {
-    return atomic_fetch_add((_Atomic(uint32_t) *)ptr, v) + v;
+    return atomic_fetch_add(ptr, v) + v;
 }
 
 /* shared array buffer allocator */
