@@ -978,13 +978,34 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     if (pid == 0) {
         /* child */
 
-        /* remap the stdin/stdout/stderr handles if necessary */
+        /* Preserve original standard descriptors before a remap overwrites
+           one that another target still needs. */
+        int saved_fds[3] = { -1, -1, -1 };
+
+        /* A temporary must not turn an invalid source handle into a valid one. */
         for(i = 0; i < 3; i++) {
-            if (std_fds[i] != i) {
-                if (dup2(std_fds[i], i) < 0)
+            if (std_fds[i] >= 3 && fcntl(std_fds[i], F_GETFD) < 0)
+                _exit(127);
+        }
+
+        for(i = 0; i < 3; i++) {
+            int fd = std_fds[i];
+            if (fd >= 0 && fd < 3 && fd != i && saved_fds[fd] < 0) {
+                saved_fds[fd] = fcntl(fd, F_DUPFD, 3);
+                if (saved_fds[fd] < 0)
                     _exit(127);
             }
         }
+        for(i = 0; i < 3; i++) {
+            int fd = std_fds[i];
+            if (fd >= 0 && fd < 3 && saved_fds[fd] >= 0)
+                fd = saved_fds[fd];
+            if (fd != i && dup2(fd, i) < 0)
+                _exit(127);
+        }
+        for(i = 0; i < 3; i++)
+            if (saved_fds[i] >= 0)
+                close(saved_fds[i]);
 #if defined(HAVE_CLOSEFROM)
         /* closefrom() is available on many recent unix systems:
            Linux with glibc 2.34+, Solaris 9+, FreeBSD 7.3+,

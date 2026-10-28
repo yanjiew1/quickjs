@@ -396,6 +396,40 @@ function test_os_exec_empty_path_entry()
     }
 }
 
+function test_os_exec_overlapping_fds()
+{
+    const first = os.pipe();
+    const second = os.pipe();
+    const savedIn = os.dup(0);
+    const savedOut = os.dup(1);
+    const byte = new Uint8Array(1);
+
+    assert(savedOut >= 0);
+    try {
+        assert(os.dup2(first[1], 0), 0);
+        assert(os.dup2(second[1], 1), 1);
+        assert(os.exec(["/bin/sh", "-c", "printf X"], {
+            usePath: false, stdin: 1, stdout: 0,
+        }), 0);
+    } finally {
+        if (savedIn >= 0) {
+            os.dup2(savedIn, 0);
+            os.close(savedIn);
+        } else {
+            os.close(0);
+        }
+        os.dup2(savedOut, 1);
+        os.close(savedOut);
+        os.close(first[1]);
+        os.close(second[1]);
+    }
+    assert(os.read(first[0], byte.buffer, 0, 1), 1);
+    assert(byte[0], 88);
+    assert(os.read(second[0], byte.buffer, 0, 1), 0);
+    os.close(first[0]);
+    os.close(second[0]);
+}
+
 function test_timer()
 {
     var th, i;
@@ -453,6 +487,7 @@ test_popen();
 test_os();
 test_os_exec();
 test_os_exec_empty_path_entry();
+test_os_exec_overlapping_fds();
 test_timer();
 test_ext_json();
 test_async_gc();
