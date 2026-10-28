@@ -1214,7 +1214,9 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
     s->buf_end = buf + buf_len;
     s->ptr = buf;
     s->allow_bytecode = ((flags & JS_READ_OBJ_BYTECODE) != 0);
-    s->is_rom_data = ((flags & JS_READ_OBJ_ROM_DATA) != 0);
+    /* Bytecode operands need writable storage for swapping on big-endian hosts. */
+    s->is_rom_data = ((flags & JS_READ_OBJ_ROM_DATA) != 0) &&
+                     !(s->allow_bytecode && is_be());
     s->allow_sab = ((flags & JS_READ_OBJ_SAB) != 0);
     s->allow_reference = ((flags & JS_READ_OBJ_REFERENCE) != 0);
     if (s->allow_bytecode)

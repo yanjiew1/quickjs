@@ -150,6 +150,48 @@ static void test_bytecode_roundtrip(const char *source)
     JS_FreeRuntime(rt);
 }
 
+static void test_rom_bytecode_endianness(void)
+{
+    static const char source[] = "258;";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled, loaded, result;
+    JSFunctionBytecode *b;
+    uint8_t *buf, *saved;
+    size_t len;
+    int32_t value;
+
+    assert(rt);
+    JS_SetStripInfo(rt, JS_STRIP_DEBUG);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "rom.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    JS_FreeValue(ctx, compiled);
+    assert(buf && len > 2 && buf[1] == 0); /* no atom relocation */
+    saved = js_malloc(ctx, len);
+    assert(saved);
+    memcpy(saved, buf, len);
+
+    loaded = JS_ReadObject(ctx, buf, len,
+                           JS_READ_OBJ_BYTECODE | JS_READ_OBJ_ROM_DATA);
+    assert(!JS_IsException(loaded));
+    assert(JS_VALUE_GET_TAG(loaded) == JS_TAG_FUNCTION_BYTECODE);
+    assert(memcmp(buf, saved, len) == 0);
+    b = JS_VALUE_GET_PTR(loaded);
+    assert(b->read_only_bytecode == !is_be());
+    result = JS_EvalFunction(ctx, loaded);
+    assert(!JS_IsException(result));
+    assert(JS_ToInt32(ctx, &value, result) == 0 && value == 258);
+    JS_FreeValue(ctx, result);
+    js_free(ctx, saved);
+    js_free(ctx, buf);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_import_bytecode_roundtrip(void)
 {
     static const char source[] =
@@ -699,6 +741,7 @@ static void test_module_read_oom(void)
 
 int main(void)
 {
+    test_rom_bytecode_endianness();
     test_module_read_oom();
     test_truncated_function_atoms();
     test_rope_serialization();
