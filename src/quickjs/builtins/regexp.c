@@ -546,10 +546,12 @@ static JSValue js_regexp_escape(JSContext *ctx, JSValueConst this_val,
             if (c >= 9 && c <= 13) {
                 string_buffer_putc8(b, '\\');
                 string_buffer_putc8(b, "tnvfr"[c - 9]);
-            } else {
+            } else if (c == ' ') {
                 goto hex2;
+            } else {
+                string_buffer_putc8(b, c);
             }
-        } else if (c < 128) {
+        } else if (c < 127) {
             if ((c >= '0' && c <= '9')
              || (c >= 'A' && c <= 'Z')
              || (c >= 'a' && c <= 'z')) {
@@ -562,6 +564,10 @@ static JSValue js_regexp_escape(JSContext *ctx, JSValueConst this_val,
             }
             string_buffer_putc8(b, c);
         } else if (c < 256) {
+            if (!lre_is_space(c)) {
+                string_buffer_putc8(b, c);
+                continue;
+            }
         hex2:
             snprintf(s, sizeof(s), "\\x%02x", c);
             string_buffer_puts8(b, s);

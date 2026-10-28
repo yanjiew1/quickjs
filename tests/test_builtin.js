@@ -2260,6 +2260,18 @@ function test_regexp_string_set_growth()
     assert(difference.test("s128x"), true);
 }
 
+function test_regexp_escape_ordinary_characters()
+{
+    for (const input of ["\0", "\x01", "\x1f", "\x7f", "\x85",
+                         "é", "ÿ", "\xad"]) {
+        assert(RegExp.escape(input), input,
+               "U+" + input.charCodeAt(0).toString(16));
+    }
+    assert(new RegExp(RegExp.escape("\x7f"), "u").test("\x7f"));
+    assert(RegExp.escape("\u00a0"), "\\xa0");
+    assert(RegExp.escape("a"), "\\x61");
+}
+
 function test_regexp_replace_flag_getters()
 {
     const flags = ["hasIndices", "global", "ignoreCase", "multiline",
@@ -6013,6 +6025,7 @@ test_json_parse_source_duplicates();
 test_date();
 test_date_setyear_coercion();
 test_regexp();
+test_regexp_escape_ordinary_characters();
 test_regexp_replace_flag_getters();
 test_regexp_replace_buffer();
 test_regexp_string_set_growth();
