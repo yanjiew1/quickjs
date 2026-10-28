@@ -1074,9 +1074,13 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
 
     sp = JS_VALUE_GET_STRING(s);
+    if (sp->len >= countof(buf))
+        goto done;
     /* convert the string as a byte array */
-    for (i = 0; i < sp->len && i < (int)countof(buf) - 1; i++) {
+    for (i = 0; i < sp->len; i++) {
         c = string_get(sp, i);
+        if (c == 0)
+            goto done;
         if (c > 255)
             c = (c == 0x2212) ? '-' : 'x';
         buf[i] = c;
@@ -1101,6 +1105,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
             rv = JS_NewFloat64(ctx, d);
         }
     }
+done:
     JS_FreeValue(ctx, s);
     return rv;
 }

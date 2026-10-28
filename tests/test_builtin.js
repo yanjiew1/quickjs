@@ -2117,6 +2117,9 @@ function test_date()
     assert(Date.parse("2000-01-01T00:00:00.100Z"), 946684800100);
     assert(Date.parse("2000-01-01T00:00:00.1000Z"), 946684800100);
     assert(Date.parse("2000-01-01T00:00:00+00:00"), 946684800000);
+    assert(Date.parse("2000-01-01T00:00:00Z\0garbage"), NaN);
+    assert(Date.parse("Wed Jan 01 2020 00:00:00 GMT" +
+                      " ".repeat(99) + "garbage"), NaN);
     //assert(Date.parse("2000-01-01T00:00:00+00:30"), 946686600000);
     var d = new Date("2000T00:00");  // Jan 1st 2000, 0:00:00 local time
     assert(typeof d === 'object' && d.toString() != 'Invalid Date');
