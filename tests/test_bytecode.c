@@ -739,6 +739,74 @@ static void test_module_read_oom(void)
     free(copy);
 }
 
+static void test_reference_read_oom(int is_array)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue input, result;
+    uint8_t *encoded, *copy;
+    size_t size, step, calls = 0;
+
+    assert(rt && ctx);
+    /* A failed constructor must not replace its OOM with a bad self-reference. */
+    input = is_array ? JS_NewArray(ctx) : JS_NewObject(ctx);
+    assert(!JS_IsException(input));
+    if (is_array)
+        assert(JS_SetPropertyUint32(ctx, input, 0, JS_DupValue(ctx, input)) == 1);
+    else
+        assert(JS_SetPropertyStr(ctx, input, "self", JS_DupValue(ctx, input)) == 1);
+    encoded = JS_WriteObject(ctx, &size, input, JS_WRITE_OBJ_REFERENCE);
+    assert(encoded && size);
+    copy = malloc(size);
+    assert(copy);
+    memcpy(copy, encoded, size);
+    js_free(ctx, encoded);
+    JS_FreeValue(ctx, input);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        void *padding;
+
+        rt = oom_test_runtime(&allocator);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_ReadObject(ctx, copy, size, JS_READ_OBJ_REFERENCE);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            JSValue error, message;
+            const char *text;
+
+            assert(step);
+            error = JS_GetException(ctx);
+            assert(JS_IsError(ctx, error));
+            message = JS_GetPropertyStr(ctx, error, "message");
+            text = JS_ToCString(ctx, message);
+            assert(text && !strcmp(text, "out of memory"));
+            JS_FreeCString(ctx, text);
+            JS_FreeValue(ctx, message);
+            JS_FreeValue(ctx, error);
+        } else {
+            assert(!JS_HasException(ctx));
+        }
+        JS_FreeValue(ctx, result);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    free(copy);
+}
+
 static void test_invalid_object_tag(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -769,6 +837,8 @@ int main(void)
     test_invalid_object_tag();
     test_rom_bytecode_endianness();
     test_module_read_oom();
+    test_reference_read_oom(0);
+    test_reference_read_oom(1);
     test_truncated_function_atoms();
     test_rope_serialization();
     test_bytecode_roundtrip(
