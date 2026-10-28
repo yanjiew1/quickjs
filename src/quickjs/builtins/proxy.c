@@ -820,18 +820,17 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
                                 tab2[i].atom);
         if (res < 0)
             goto fail;
-        if (res) {  /* safety, property should be found */
+        if (res)
             js_free_desc(ctx->rt, &desc);
-            if (!(desc.flags & JS_PROP_CONFIGURABLE) || !is_extensible) {
-                key = find_prop_key(tab, len, tab2[i].atom);
-                if (!key) {
-                    JS_ThrowTypeError(ctx, "proxy: target property must be present in proxy ownKeys");
-                    goto fail;
-                }
-                /* mark the property as found */
-                if (!is_extensible)
-                    key->is_enumerable = TRUE;
+        if (!is_extensible || (res && !(desc.flags & JS_PROP_CONFIGURABLE))) {
+            key = find_prop_key(tab, len, tab2[i].atom);
+            if (!key) {
+                JS_ThrowTypeError(ctx, "proxy: target property must be present in proxy ownKeys");
+                goto fail;
             }
+            /* mark the property as found */
+            if (!is_extensible)
+                key->is_enumerable = TRUE;
         }
     }
     if (!is_extensible) {

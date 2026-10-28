@@ -6773,6 +6773,27 @@ function test_proxy_own_keys_revoke_during_trap()
 
 test_proxy_own_keys_revoke_during_trap();
 
+function test_proxy_own_keys_disappearing_descriptor()
+{
+    function makeProxy(keys) {
+        const base = Object.preventExtensions(
+            Object.defineProperty({}, "a", { value: 1, configurable: true }));
+        const inner = new Proxy(base, {
+            ownKeys(target) { return Reflect.ownKeys(target); },
+            getOwnPropertyDescriptor(target, key) {
+                delete target[key];
+                return Reflect.getOwnPropertyDescriptor(target, key);
+            },
+        });
+        return new Proxy(inner, { ownKeys() { return keys; } });
+    }
+
+    assert(Reflect.ownKeys(makeProxy(["a"])).join(), "a");
+    assert_throws(TypeError, () => Reflect.ownKeys(makeProxy([])));
+}
+
+test_proxy_own_keys_disappearing_descriptor();
+
 function test_proxy_own_keys_result_object()
 {
     for (const result of [null, undefined, false, true, 0, 1, NaN, "", "abc", 1n, Symbol()]) {
