@@ -432,6 +432,22 @@ function test_enum()
     assert(tab, ["1","4294967294","x","18014398509481984","9007199254740992","9007199254740991","4294967296","4294967295","y"], "keys");
 }
 
+function test_reflect_construct_order()
+{
+    let reads = 0;
+    const args = {
+        get length() {
+            reads++;
+            throw Error("argument list was read");
+        },
+    };
+
+    assert_throws(TypeError, () => Reflect.construct({}, args));
+    assert_throws(TypeError, () => Reflect.construct({}, args, {}));
+    assert_throws(TypeError, () => Reflect.construct(Array, args, {}));
+    assert(reads, 0);
+}
+
 function test_array_constructor_own_elements()
 {
     for (const values of [["first"], ["first", "second"]]) {
@@ -5953,6 +5969,7 @@ test_function_constructor_boundaries();
 test_enum();
 test_copy_data_property_reentrancy();
 test_array();
+test_reflect_construct_order();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
 test_array_copy_reads();

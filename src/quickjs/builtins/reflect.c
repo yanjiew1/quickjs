@@ -48,6 +48,8 @@ static JSValue js_reflect_construct(JSContext *ctx, JSValueConst this_val,
 
     func = argv[0];
     array_arg = argv[1];
+    if (!JS_IsConstructor(ctx, func))
+        return JS_ThrowTypeErrorNotAConstructor(ctx, func);
     if (argc > 2) {
         new_target = argv[2];
         if (!JS_IsConstructor(ctx, new_target))
