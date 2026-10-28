@@ -251,7 +251,8 @@ static JSValue js_string_raw(JSContext *ctx, JSValueConst this_val,
     StringBuffer b_s, *b = &b_s;
     int64_t i, n;
 
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        return JS_EXCEPTION;
     raw = JS_UNDEFINED;
     cooked = JS_ToObject(ctx, argv[0]);
     if (JS_IsException(cooked))
@@ -266,7 +267,8 @@ static JSValue js_string_raw(JSContext *ctx, JSValueConst this_val,
         val = JS_ToStringFree(ctx, JS_GetPropertyInt64(ctx, raw, i));
         if (JS_IsException(val))
             goto exception;
-        string_buffer_concat_value_free(b, val);
+        if (string_buffer_concat_value_free(b, val))
+            goto exception;
         if (i < n - 1 && i + 1 < argc) {
             if (string_buffer_concat_value(b, argv[i + 1]))
                 goto exception;
@@ -782,22 +784,28 @@ int js_string_GetSubstitution(JSContext *ctx,
         j = string_indexof_char(rp, '$', i);
         if (j < 0 || j + 1 >= len)
             break;
-        string_buffer_concat(b, rp, i, j);
+        if (string_buffer_concat(b, rp, i, j))
+            goto exception;
         j0 = j++;
         c = string_get(rp, j++);
         if (c == '$') {
-            string_buffer_putc8(b, '$');
+            if (string_buffer_putc8(b, '$'))
+                goto exception;
         } else if (c == '&') {
             if (captures) {
-                string_buffer_concat(b, sp, position, position + matched_len);
+                if (string_buffer_concat(b, sp, position,
+                                         position + matched_len))
+                    goto exception;
             } else {
                 if (string_buffer_concat_value(b, matched))
                     goto exception;
             }
         } else if (c == '`') {
-            string_buffer_concat(b, sp, 0, position);
+            if (string_buffer_concat(b, sp, 0, position))
+                goto exception;
         } else if (c == '\'') {
-            string_buffer_concat(b, sp, position + matched_len, sp->len);
+            if (string_buffer_concat(b, sp, position + matched_len, sp->len))
+                goto exception;
         } else if (c >= '0' && c <= '9') {
             k = c - '0';
             if (j < len) {
@@ -819,7 +827,8 @@ int js_string_GetSubstitution(JSContext *ctx,
                     if (captures[2 * k] && captures[2 * k + 1]) {
                         start = (captures[2 * k] - sp->u.str8) >> shift;
                         end = (captures[2 * k + 1] - sp->u.str8) >> shift;
-                        string_buffer_concat(b, sp, start, end);
+                        if (string_buffer_concat(b, sp, start, end))
+                            goto exception;
                     }
                 } else {
                     s = JS_GetPropertyInt64(ctx, captures_val, k);
@@ -850,12 +859,12 @@ int js_string_GetSubstitution(JSContext *ctx,
             j = k + 1;
         } else {
         norep:
-            string_buffer_concat(b, rp, j0, j);
+            if (string_buffer_concat(b, rp, j0, j))
+                goto exception;
         }
         i = j;
     }
-    string_buffer_concat(b, rp, i, rp->len);
-    return 0;
+    return string_buffer_concat(b, rp, i, rp->len);
 exception:
     return -1;
 }
@@ -895,7 +904,8 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             return JS_CallFree(ctx, replacer, searchValue, 2, args);
         }
     }
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        return JS_EXCEPTION;
 
     str = JS_ToString(ctx, O);
     if (JS_IsException(str))
@@ -936,7 +946,8 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             }
         }
 
-        string_buffer_concat(b, sp, endOfLastMatch, pos);
+        if (string_buffer_concat(b, sp, endOfLastMatch, pos))
+            goto exception;
 
         if (functionalReplace) {
             args[0] = search_str;
@@ -945,7 +956,8 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             repl_str = JS_ToStringFree(ctx, JS_Call(ctx, replaceValue, JS_UNDEFINED, 3, args));
             if (JS_IsException(repl_str))
                 goto exception;
-            string_buffer_concat_value_free(b, repl_str);
+            if (string_buffer_concat_value_free(b, repl_str))
+                goto exception;
         } else {
             if (js_string_GetSubstitution(ctx, b, search_str, sp, pos,
                                           JS_UNDEFINED, JS_UNDEFINED, replaceValue_str,

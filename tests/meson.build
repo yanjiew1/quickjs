@@ -92,6 +92,7 @@ native_test_names = [
   'test_iterator',
   'test_allocator_policy',
   'test_json_stringify_oom',
+  'test_string_buffer_oom',
   'test_std_interrupt',
   'test_std_oom',
   'test_typed_array_sort_oom',
