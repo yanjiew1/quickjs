@@ -50,6 +50,8 @@ static pthread_mutex_t test_completion_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t test_completion_cond = PTHREAD_COND_INITIALIZER;
 static void *(*test_worker_entry)(void *);
 static size_t test_message_fail_at, test_message_calls;
+static int test_pthread_failure, test_reject_thread_creation;
+static int test_unexpected_thread_create;
 #ifndef _WIN32
 static int test_waker_checks, test_waker_calls;
 static ssize_t test_waker_write(int fd, const void *buffer, size_t size);
@@ -68,6 +70,10 @@ static void test_free(void *ptr);
 static void *test_message_malloc(size_t size);
 static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
                               void *(*entry)(void *), void *argument);
+static int test_mutex_init(pthread_mutex_t *mutex,
+                           const pthread_mutexattr_t *attributes);
+static int test_attr_init(pthread_attr_t *attributes);
+static int test_attr_setdetachstate(pthread_attr_t *attributes, int state);
 
 /* Headers precede redirection. Compile the actual Worker implementation;
    its exported definitions also replace the archive's normal worker object. */
@@ -85,6 +91,9 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 #define write test_waker_write
 #endif
 #define pthread_create test_create_thread
+#define pthread_mutex_init test_mutex_init
+#define pthread_attr_init test_attr_init
+#define pthread_attr_setdetachstate test_attr_setdetachstate
 #include "../src/quickjs-libc/worker.c"
 #undef JS_NewRuntime
 #undef js_std_init_handlers_checked
@@ -100,6 +109,72 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 #undef write
 #endif
 #undef pthread_create
+#undef pthread_mutex_init
+#undef pthread_attr_init
+#undef pthread_attr_setdetachstate
+
+static int test_mutex_init(pthread_mutex_t *mutex,
+                           const pthread_mutexattr_t *attributes)
+{
+    if (test_pthread_failure == 1) {
+        test_pthread_failure = 0;
+        return EAGAIN;
+    }
+    return pthread_mutex_init(mutex, attributes);
+}
+
+static int test_attr_init(pthread_attr_t *attributes)
+{
+    if (test_pthread_failure == 2) {
+        test_pthread_failure = 0;
+        return EAGAIN;
+    }
+    return pthread_attr_init(attributes);
+}
+
+static int test_attr_setdetachstate(pthread_attr_t *attributes, int state)
+{
+    if (test_pthread_failure == 3) {
+        test_pthread_failure = 0;
+        return EINVAL;
+    }
+    return pthread_attr_setdetachstate(attributes, state);
+}
+
+static void test_pthread_setup_failures(void)
+{
+    static const char source[] =
+        "import { Worker } from 'os';"
+        "try { new Worker('unused.js'); throw Error('worker started'); }"
+        "catch (error) { if (!(error instanceof TypeError)) throw error; }";
+    int mode;
+
+    test_pthread_failure = 1;
+    assert(!js_new_message_pipe());
+    assert(!test_pthread_failure);
+    for (mode = 2; mode <= 3; mode++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result;
+
+        assert(rt && ctx);
+        js_std_init_handlers(rt);
+        assert(js_init_module_os(ctx, "os"));
+        test_pthread_failure = mode;
+        test_reject_thread_creation = 1;
+        test_unexpected_thread_create = 0;
+        result = JS_Eval(ctx, source, sizeof(source) - 1,
+                         "tests/worker-pthread-failure.js", JS_EVAL_TYPE_MODULE);
+        result = js_std_await(ctx, result);
+        assert(!JS_IsException(result) && !JS_HasException(ctx));
+        JS_FreeValue(ctx, result);
+        assert(!test_pthread_failure && !test_unexpected_thread_create);
+        test_reject_thread_creation = 0;
+        js_std_free_handlers(rt);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
 
 static void *test_message_malloc(size_t size)
 {
@@ -310,6 +385,10 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 {
     WorkerFuncArgs *args = argument;
     int detach_state, result;
+    if (test_reject_thread_creation) {
+        test_unexpected_thread_create++;
+        return EAGAIN;
+    }
     assert(!test_thread_created && attr);
     if (pthread_attr_getdetachstate(attr, &detach_state))
         abort();
@@ -444,6 +523,7 @@ int main(void)
     test_interrupted_wakeup();
 #endif
     test_message_allocation_failure();
+    test_pthread_setup_failures();
     test_failure(0);
     test_failure(1);
     test_failure(2);

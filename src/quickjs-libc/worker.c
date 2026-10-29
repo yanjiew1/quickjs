@@ -277,7 +277,11 @@ static JSWorkerMessagePipe *js_new_message_pipe(void)
     }
     ps->ref_count = 1;
     init_list_head(&ps->msg_queue);
-    pthread_mutex_init(&ps->mutex, NULL);
+    if (pthread_mutex_init(&ps->mutex, NULL)) {
+        js_waker_close(&ps->waker);
+        free(ps);
+        return NULL;
+    }
     return ps;
 }
 
@@ -521,11 +525,14 @@ static JSValue js_worker_ctor(JSContext *ctx, JSValueConst new_target,
     if (JS_IsException(obj))
         goto fail;
 
-    pthread_attr_init(&attr);
-    /* no join at the end */
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    ret = pthread_create(&tid, &attr, worker_func, args);
-    pthread_attr_destroy(&attr);
+    ret = pthread_attr_init(&attr);
+    if (!ret) {
+        /* no join at the end */
+        ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        if (!ret)
+            ret = pthread_create(&tid, &attr, worker_func, args);
+        pthread_attr_destroy(&attr);
+    }
     if (ret != 0) {
         JS_ThrowTypeError(ctx, "could not create worker");
         goto fail;
