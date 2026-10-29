@@ -486,7 +486,10 @@ void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len,
         goto exception;
     if (load_only) {
         if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
-            js_module_set_import_meta(ctx, obj, FALSE, FALSE);
+            if (js_module_set_import_meta(ctx, obj, FALSE, FALSE) < 0) {
+                JS_FreeValue(ctx, obj);
+                goto exception;
+            }
         }
         JS_FreeValue(ctx, obj);
     } else {
@@ -495,19 +498,24 @@ void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len,
                 JS_FreeValue(ctx, obj);
                 goto exception;
             }
-            js_module_set_import_meta(ctx, obj, FALSE, TRUE);
+            if (js_module_set_import_meta(ctx, obj, FALSE, TRUE) < 0) {
+                JS_FreeValue(ctx, obj);
+                goto exception;
+            }
             val = JS_EvalFunction(ctx, obj);
             val = js_std_await(ctx, val);
         } else {
             val = JS_EvalFunction(ctx, obj);
         }
-        if (JS_IsException(val)) {
-        exception:
-            js_std_dump_error(ctx);
-            exit(1);
-        }
+        if (JS_IsException(val))
+            goto exception;
         JS_FreeValue(ctx, val);
     }
+    return;
+
+ exception:
+    js_std_dump_error(ctx);
+    exit(1);
 }
 
 void js_std_eval_binary_json_module(JSContext *ctx,
