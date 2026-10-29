@@ -136,12 +136,7 @@ void dump_byte_code(JSContext *ctx, int pass,
         op = tab[pos];
         if (source && b) {
             int col_num;
-            if (b) {
-                line1 = find_line_num(b, pos, &col_num) - line_num + 1;
-            } else if (op == OP_line_num) {
-                /* XXX: no longer works */
-                line1 = get_u32(tab + pos + 1) - line_num + 1;
-            }
+            line1 = find_line_num(b, pos, &col_num) - line_num + 1;
             if (line1 > line) {
                 if (!in_source)
                     printf("\n");
