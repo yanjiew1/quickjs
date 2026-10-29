@@ -539,6 +539,42 @@ static void test_point_export_failure(void)
     assert(allocator.live == 0);
 }
 
+static void test_host_module_export_failures(int is_os)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSModuleDef *module;
+        void *padding;
+
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        module = is_os ? js_init_module_os(ctx, "os-exports-oom") :
+                         js_init_module_std(ctx, "std-exports-oom");
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(module && calls > 2 && calls < 128);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_HasException(ctx)) {
+            assert(step && module == NULL);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(module);
+        }
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static OOMTestAllocator *point_allocator;
 static size_t point_fail_at;
 static int point_init_result;
@@ -847,6 +883,8 @@ int main(void)
     test_os_result_oom(4);
     test_import_meta_failures();
     test_point_export_failure();
+    test_host_module_export_failures(0);
+    test_host_module_export_failures(1);
     test_point_initialization_failures();
     test_json_export_failure(0);
     test_json_export_failure(1);

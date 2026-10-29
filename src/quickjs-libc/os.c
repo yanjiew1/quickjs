@@ -1299,9 +1299,12 @@ JSModuleDef *js_init_module_os(JSContext *ctx, const char *module_name)
     m = JS_NewCModule(ctx, module_name, js_os_init);
     if (!m)
         return NULL;
-    JS_AddModuleExportList(ctx, m, js_os_funcs, countof(js_os_funcs));
+    if (JS_AddModuleExportList(ctx, m, js_os_funcs,
+                               countof(js_os_funcs)) < 0)
+        return NULL;
 #ifdef USE_WORKER
-    JS_AddModuleExport(ctx, m, "Worker");
+    if (JS_AddModuleExport(ctx, m, "Worker") < 0)
+        return NULL;
 #endif
     return m;
 }

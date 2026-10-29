@@ -1471,9 +1471,11 @@ JSModuleDef *js_init_module_std(JSContext *ctx, const char *module_name)
     m = JS_NewCModule(ctx, module_name, js_std_init);
     if (!m)
         return NULL;
-    JS_AddModuleExportList(ctx, m, js_std_funcs, countof(js_std_funcs));
-    JS_AddModuleExport(ctx, m, "in");
-    JS_AddModuleExport(ctx, m, "out");
-    JS_AddModuleExport(ctx, m, "err");
+    if (JS_AddModuleExportList(ctx, m, js_std_funcs,
+                               countof(js_std_funcs)) < 0 ||
+        JS_AddModuleExport(ctx, m, "in") < 0 ||
+        JS_AddModuleExport(ctx, m, "out") < 0 ||
+        JS_AddModuleExport(ctx, m, "err") < 0)
+        return NULL;
     return m;
 }
