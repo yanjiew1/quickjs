@@ -1087,7 +1087,7 @@ int JS_AddIntrinsicProxy(JSContext *ctx)
         goto fail;
     if (JS_DefinePropertyValueStr(ctx, ctx->global_obj, "Proxy",
                                   obj1, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
-        goto fail;
+        return -1; /* JS_DefinePropertyValueStr consumed obj1. */
     return 0;
  fail:
     JS_FreeValue(ctx, obj1);

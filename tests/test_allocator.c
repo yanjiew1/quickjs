@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "oom-allocator.h"
+#include "pool-padding.h"
 
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
@@ -968,6 +969,43 @@ static void test_raw_context_allocation_failure(void)
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     assert(failure.live_allocations == 0);
+}
+
+static void test_proxy_registration_allocation_failure(void)
+{
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSContext *other;
+        void *padding;
+        int status;
+
+        assert(ctx);
+        other = JS_NewContextRaw(rt);
+        assert(other && JS_AddIntrinsicBaseObjects(other) == 0);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        status = JS_AddIntrinsicProxy(other);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(status == 0 && calls > 0 && calls < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        assert((status < 0) == !!JS_HasException(ctx));
+        if (status < 0)
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(other);
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
 }
 
 static void check_backtrace_allocation_failure(unsigned fail_at)
@@ -2211,6 +2249,7 @@ int main(void)
     test_backtrace_allocation_failure();
     test_pending_backtrace_allocation_failure();
     test_raw_context_allocation_failure();
+    test_proxy_registration_allocation_failure();
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
     test_gc_accounting_overflow();
