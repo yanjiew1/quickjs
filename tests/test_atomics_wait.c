@@ -117,6 +117,11 @@ typedef enum {
     TEST_WAIT_NOTIFY_TIMEOUT_RACE,
     TEST_WAIT_SPURIOUS_NOTIFY,
     TEST_WAIT_FRACTIONAL_TIMEOUT,
+    TEST_WAIT_LARGE_TIMEOUT,
+    TEST_WAIT_LARGE_TIMEOUT_EXPIRES,
+    TEST_WAIT_DELAYED_RESUME,
+    TEST_WAIT_TIME_LIMIT,
+    TEST_WAIT_TIME_LIMIT_CARRY,
     TEST_WAIT_CLOCK_ERROR,
     TEST_WAIT_COND_ERROR,
 } TestWaitMode;
@@ -128,11 +133,33 @@ static struct timespec test_wait_deadline;
 
 static int test_clock_gettime(clockid_t id, struct timespec *time)
 {
+    if (test_wait_mode == TEST_WAIT_TIME_LIMIT ||
+        test_wait_mode == TEST_WAIT_TIME_LIMIT_CARRY) {
+        assert(id == CLOCK_REALTIME);
+        time->tv_sec = sizeof(time_t) == 4 ? INT32_MAX : INT64_MAX;
+        time->tv_nsec = test_wait_mode == TEST_WAIT_TIME_LIMIT ? 0 : 999500000;
+        if (test_wait_mode == TEST_WAIT_TIME_LIMIT_CARRY)
+            test_wait_calls++;
+        return 0;
+    }
     if (test_wait_mode == TEST_WAIT_CLOCK_ERROR) {
         assert(id == CLOCK_REALTIME);
         test_wait_calls++;
         time->tv_sec = time->tv_nsec = 0;
         return -1;
+    }
+    if (test_wait_mode == TEST_WAIT_DELAYED_RESUME) {
+        assert(id == CLOCK_REALTIME);
+        time->tv_sec = 1234 + test_wait_calls * 172800;
+        time->tv_nsec = 0;
+        return 0;
+    }
+    if (test_wait_mode == TEST_WAIT_LARGE_TIMEOUT ||
+        test_wait_mode == TEST_WAIT_LARGE_TIMEOUT_EXPIRES) {
+        assert(id == CLOCK_REALTIME);
+        time->tv_sec = 1234 + test_wait_calls * 86400;
+        time->tv_nsec = 0;
+        return 0;
     }
     if (test_wait_mode == TEST_WAIT_FRACTIONAL_TIMEOUT) {
         assert(id == CLOCK_REALTIME);
@@ -171,6 +198,31 @@ static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                               const struct timespec *deadline)
 {
+    if (test_wait_mode == TEST_WAIT_TIME_LIMIT) {
+        assert(++test_wait_calls == 1);
+        test_wait_deadline = *deadline;
+        return ETIMEDOUT;
+    }
+    if (test_wait_mode == TEST_WAIT_DELAYED_RESUME) {
+        assert(++test_wait_calls <= 2);
+        assert(deadline->tv_sec == 1234 + (test_wait_calls == 1 ? 86400 : 172800));
+        assert(deadline->tv_nsec == 0);
+        return ETIMEDOUT;
+    }
+    if (test_wait_mode == TEST_WAIT_LARGE_TIMEOUT_EXPIRES) {
+        assert(++test_wait_calls <= 2);
+        assert(deadline->tv_sec == 1234 + 86400);
+        assert(deadline->tv_nsec == (test_wait_calls == 1 ? 0 : 1000000));
+        return ETIMEDOUT;
+    }
+    if (test_wait_mode == TEST_WAIT_LARGE_TIMEOUT) {
+        assert(++test_wait_calls <= 2);
+        assert(deadline->tv_sec == 1234 + test_wait_calls * 86400);
+        assert(deadline->tv_nsec == 0);
+        if (test_wait_calls == 2)
+            test_notify_while_unlocked(mutex);
+        return ETIMEDOUT;
+    }
     if (test_wait_mode == TEST_WAIT_COND_ERROR) {
         test_wait_calls++;
         return EINVAL;
@@ -311,6 +363,22 @@ int main(void)
     test_concurrent_expected_value(ctx);
     test_wait_notification_predicate(ctx);
     test_wait_fractional_deadline(ctx);
+    /* A chunk timeout is not completion; notification must still win. */
+    test_wait_result(ctx, TEST_WAIT_LARGE_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, 2147483648000)", "ok", 2);
+    test_wait_result(ctx, TEST_WAIT_LARGE_TIMEOUT_EXPIRES,
+        "Atomics.wait(testWords, 0, 0, 86400001)", "timed-out", 2);
+    test_wait_result(ctx, TEST_WAIT_DELAYED_RESUME,
+        "Atomics.wait(testWords, 0, 0, 172800000)", "timed-out", 2);
+    /* The last representable second is valid unless nanoseconds carry. */
+    test_wait_result(ctx, TEST_WAIT_TIME_LIMIT,
+        "Atomics.wait(testWords, 0, 0, 0)", "timed-out", 1);
+    assert(test_wait_deadline.tv_sec == (sizeof(time_t) == 4 ? INT32_MAX : INT64_MAX));
+    assert(test_wait_deadline.tv_nsec == 0);
+    test_wait_result(ctx, TEST_WAIT_TIME_LIMIT,
+        "Atomics.wait(testWords, 0, 0, 999)", "timed-out", 1);
+    assert(test_wait_deadline.tv_nsec == 999000000);
+    test_wait_host_error(ctx, TEST_WAIT_TIME_LIMIT_CARRY);
     test_wait_host_error(ctx, TEST_WAIT_CLOCK_ERROR);
     test_wait_host_error(ctx, TEST_WAIT_COND_ERROR);
     JS_FreeContext(ctx);
