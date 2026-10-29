@@ -515,7 +515,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
     int32_t v32;
     uint64_t idx;
     void *ptr;
-    int64_t timeout;
+    int64_t timeout, interval, seconds;
     struct timespec ts;
     JSAtomicsWaiter waiter_s, *waiter;
     JSNativeWaitQueue *queue;
@@ -577,7 +577,12 @@ static JSValue js_atomics_wait(JSContext *ctx,
     js_native_wait_add_locked(queue, &waiter->native, ptr, NULL,
                               &waiter->cond, JS_NATIVE_WAIT_FOREVER);
 
+    interval = 0;
+ restart_timeout:
     if (timeout != INT64_MAX) {
+        /* Bound each absolute wait so a large finite duration does not wrap
+           a 32-bit time_t. Spurious wakes reuse this interval's deadline. */
+        interval = min_int64(timeout, 86400000);
         /* XXX: use clock monotonic */
         if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
             js_native_wait_finish_sync_locked(queue, &waiter->native, TRUE);
@@ -585,8 +590,16 @@ static JSValue js_atomics_wait(JSContext *ctx,
             pthread_cond_destroy(&waiter->cond);
             return JS_ThrowInternalError(ctx, "native wait clock failed");
         }
-        ts.tv_sec += timeout / 1000;
-        ts.tv_nsec += (timeout % 1000) * 1000000;
+        seconds = interval / 1000;
+        if (ts.tv_sec > INT64_MAX - seconds - 1 ||
+            (sizeof(time_t) == 4 && ts.tv_sec > INT32_MAX - seconds - 1)) {
+            js_native_wait_finish_sync_locked(queue, &waiter->native, TRUE);
+            js_native_wait_queue_unlock(queue);
+            pthread_cond_destroy(&waiter->cond);
+            return JS_ThrowInternalError(ctx, "native wait deadline out of range");
+        }
+        ts.tv_sec += seconds;
+        ts.tv_nsec += (interval % 1000) * 1000000;
         if (ts.tv_nsec >= 1000000000) {
             ts.tv_nsec -= 1000000000;
             ts.tv_sec++;
@@ -598,6 +611,14 @@ static JSValue js_atomics_wait(JSContext *ctx,
             ret = pthread_cond_wait(&waiter->cond, &queue->mutex);
         else
             ret = pthread_cond_timedwait(&waiter->cond, &queue->mutex, &ts);
+        if (ret == ETIMEDOUT && timeout > interval && timeout != INT64_MAX) {
+            result = js_native_wait_finish_sync_locked(queue, &waiter->native, FALSE);
+            if (result == JS_NATIVE_WAIT_NO_EVENT) {
+                timeout -= interval;
+                goto restart_timeout;
+            }
+            break;
+        }
         result = js_native_wait_finish_sync_locked(queue, &waiter->native,
                                                    ret != 0);
     } while (result == JS_NATIVE_WAIT_NO_EVENT);
