@@ -134,6 +134,58 @@ static void test_dynamic_import_oom(int with_attributes)
     JS_FreeRuntime(rt);
 }
 
+static JSModuleDef *reject_import_loader(JSContext *ctx, const char *name,
+                                         void *opaque)
+{
+    JS_Throw(ctx, JS_NewInt32(ctx, 42));
+    return NULL;
+}
+
+static void test_dynamic_import_reject_job_oom(void)
+{
+    static const char source[] =
+        "globalThis.p = import('missing'); p.catch(() => {});";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result;
+        void *padding;
+        int ret;
+
+        assert(ctx);
+        JS_SetModuleLoaderFunc(rt, NULL, reject_import_loader, NULL);
+        result = JS_Eval(ctx, source, sizeof(source) - 1,
+                         "import-reject-oom.js", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(result));
+        JS_FreeValue(ctx, result);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        ret = JS_ExecutePendingJob(rt, NULL);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls > 0 && calls < 16);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        assert(ret == 1 || (step && ret == -1));
+        assert((ret == -1) == !!JS_HasException(ctx));
+        if (ret == -1)
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        while (JS_IsJobPending(rt)) {
+            assert(JS_ExecutePendingJob(rt, NULL) == 1);
+            assert(!JS_HasException(ctx));
+        }
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static JSValue resolve_inner(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int magic,
                               JSValue *data)
@@ -603,6 +655,7 @@ int main(void)
     test_async_generator_oom(1);
     test_dynamic_import_oom(0);
     test_dynamic_import_oom(1);
+    test_dynamic_import_reject_job_oom();
     test_reaction_enqueue_failure(0);
     test_reaction_enqueue_failure(1);
     test_reaction_enqueue_failure(2);

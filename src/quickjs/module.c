@@ -1490,17 +1490,13 @@ static JSValue js_load_module_rejected(JSContext *ctx, JSValueConst this_val,
 {
     JSValueConst *resolving_funcs = (JSValueConst *)func_data;
     JSValueConst error;
-    JSValue ret;
 
     /* XXX: check if the test is necessary */
     if (argc >= 1)
         error = argv[0];
     else
         error = JS_UNDEFINED;
-    ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
-                  1, &error);
-    JS_FreeValue(ctx, ret);
-    return JS_UNDEFINED;
+    return JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED, 1, &error);
 }
 
 static JSValue js_load_module_fulfilled(JSContext *ctx, JSValueConst this_val,
@@ -1514,21 +1510,21 @@ static JSValue js_load_module_fulfilled(JSContext *ctx, JSValueConst this_val,
     ns = JS_GetModuleNamespace(ctx, m);
     if (JS_IsException(ns)) {
         JSValue err = JS_GetException(ctx);
-        js_load_module_rejected(ctx, JS_UNDEFINED, 1, (JSValueConst *)&err, 0, func_data);
+        ret = js_load_module_rejected(ctx, JS_UNDEFINED, 1,
+                                      (JSValueConst *)&err, 0, func_data);
         JS_FreeValue(ctx, err);
-        return JS_UNDEFINED;
+        return ret;
     }
     ret = JS_Call(ctx, resolving_funcs[0], JS_UNDEFINED,
                    1, (JSValueConst *)&ns);
-    JS_FreeValue(ctx, ret);
     JS_FreeValue(ctx, ns);
-    return JS_UNDEFINED;
+    return ret;
 }
 
-static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
-                                  const char *filename,
-                                  JSValueConst *resolving_funcs,
-                                  JSValueConst attributes)
+static int JS_LoadModuleInternal(JSContext *ctx, const char *basename,
+                                 const char *filename,
+                                 JSValueConst *resolving_funcs,
+                                 JSValueConst attributes)
 {
     JSValue evaluate_promise;
     JSModuleDef *m;
@@ -1552,9 +1548,11 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
         err = JS_GetException(ctx);
         ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                       1, (JSValueConst *)&err);
-        JS_FreeValue(ctx, ret); /* XXX: what to do if exception ? */
         JS_FreeValue(ctx, err);
-        return;
+        if (JS_IsException(ret))
+            return -1;
+        JS_FreeValue(ctx, ret);
+        return 0;
     }
 
     func_obj = JS_NewModuleValue(m);
@@ -1584,6 +1582,7 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
     if (JS_IsException(ret))
         goto fail;
     JS_FreeValue(ctx, ret);
+    return 0;
 }
 
 /* Return a promise or an exception in case of memory error. Used by
@@ -1592,14 +1591,19 @@ JSValue JS_LoadModule(JSContext *ctx, const char *basename,
                       const char *filename)
 {
     JSValue promise, resolving_funcs[2];
+    int ret;
 
     promise = JS_NewPromiseCapability(ctx, resolving_funcs);
     if (JS_IsException(promise))
         return JS_EXCEPTION;
-    JS_LoadModuleInternal(ctx, basename, filename,
-                          (JSValueConst *)resolving_funcs, JS_UNDEFINED);
+    ret = JS_LoadModuleInternal(ctx, basename, filename,
+                                (JSValueConst *)resolving_funcs, JS_UNDEFINED);
     JS_FreeValue(ctx, resolving_funcs[0]);
     JS_FreeValue(ctx, resolving_funcs[1]);
+    if (ret < 0) {
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     return promise;
 }
 
@@ -1612,6 +1616,7 @@ static JSValue js_dynamic_import_job(JSContext *ctx,
     JSValueConst attributes = argv[4];
     const char *basename = NULL, *filename;
     JSValue ret, err;
+    int status;
 
     if (!JS_IsString(basename_val)) {
         JS_ThrowTypeError(ctx, "no function filename for import()");
@@ -1625,19 +1630,18 @@ static JSValue js_dynamic_import_job(JSContext *ctx,
     if (!filename)
         goto exception;
 
-    JS_LoadModuleInternal(ctx, basename, filename,
-                          resolving_funcs, attributes);
+    status = JS_LoadModuleInternal(ctx, basename, filename,
+                                   resolving_funcs, attributes);
     JS_FreeCString(ctx, filename);
     JS_FreeCString(ctx, basename);
-    return JS_UNDEFINED;
+    return status < 0 ? JS_EXCEPTION : JS_UNDEFINED;
  exception:
     err = JS_GetException(ctx);
     ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                    1, (JSValueConst *)&err);
-    JS_FreeValue(ctx, ret); /* XXX: what to do if exception ? */
     JS_FreeValue(ctx, err);
     JS_FreeCString(ctx, basename);
-    return JS_UNDEFINED;
+    return ret;
 }
 
 JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options)
@@ -1739,7 +1743,12 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
     err = JS_GetException(ctx);
     ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                    1, (JSValueConst *)&err);
-    JS_FreeValue(ctx, ret);
+    if (JS_IsException(ret)) {
+        JS_FreeValue(ctx, promise);
+        promise = JS_EXCEPTION;
+    } else {
+        JS_FreeValue(ctx, ret);
+    }
     JS_FreeValue(ctx, err);
     goto done;
 }
