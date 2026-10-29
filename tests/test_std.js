@@ -55,6 +55,23 @@ function test_printf()
     assert(std.sprintf("%lx", -2), "fffffffffffffffe");
     assert(std.sprintf("%10.1f", 2.1), "       2.1");
     assert(std.sprintf("%*.*f", 10, 2, -2.13), "     -2.13");
+    assert(std.sprintf("%.*s", -1, "abc"), "abc");
+    assert(std.sprintf("%.*f", -1, 1.25), "1.250000");
+    assert(std.sprintf("%u %lu", -1, -1), "4294967295 18446744073709551615");
+    /* Reject an overflowing field and a truncated synthesized format. */
+    for (const [format, args] of [
+        ["prefix %999999999999d suffix", [1]],
+        ["%" + "-".repeat(29) + "*s", [2147483647, "x"]],
+        ["%" + "-".repeat(28) + ".*s", [2147483647, "x"]],
+    ]) {
+        let failed = false;
+        try {
+            std.sprintf(format, ...args);
+        } catch (e) {
+            failed = e instanceof TypeError;
+        }
+        assert(failed);
+    }
     assert(std.sprintf("%#lx", 0x7fffffffffffffffn), "0x7fffffffffffffff");
 
     /* A leading format specifier appends zero bytes to a pristine DynBuf. */
