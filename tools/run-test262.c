@@ -1180,8 +1180,16 @@ static JSValue js_agent_report(JSContext *ctx, JSValueConst this_val,
     if (!str)
         return JS_EXCEPTION;
     rep = malloc(sizeof(*rep));
+    if (!rep) {
+        JS_FreeCString(ctx, str);
+        return JS_ThrowOutOfMemory(ctx);
+    }
     rep->str = strdup(str);
     JS_FreeCString(ctx, str);
+    if (!rep->str) {
+        free(rep);
+        return JS_ThrowOutOfMemory(ctx);
+    }
 
     pthread_mutex_lock(&tls->report_mutex);
     list_add_tail(&rep->link, &tls->report_list);
@@ -1207,8 +1215,13 @@ static JSValue js_new_agent(JSContext *ctx)
 {
     JSValue agent;
     agent = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, agent, js_agent_funcs,
-                               countof(js_agent_funcs));
+    if (JS_IsException(agent))
+        return agent;
+    if (JS_SetPropertyFunctionList(ctx, agent, js_agent_funcs,
+                                   countof(js_agent_funcs)) < 0) {
+        JS_FreeValue(ctx, agent);
+        return JS_EXCEPTION;
+    }
     return agent;
 }
 
@@ -1240,49 +1253,69 @@ static JSValue js_gc(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
+static int set_test_function(JSContext *ctx, JSValueConst target,
+                             const char *name, JSCFunction *func, int length)
+{
+    JSValue value = JS_NewCFunction(ctx, func, name, length);
+    if (JS_IsException(value))
+        return -1;
+    return JS_SetPropertyStr(ctx, target, name, value);
+}
+
 static JSValue add_helpers1(JSContext *ctx)
 {
     JSValue global_obj;
-    JSValue obj262, obj;
+    JSValue obj262 = JS_UNDEFINED, obj;
 
     global_obj = JS_GetGlobalObject(ctx);
 
-    JS_SetPropertyStr(ctx, global_obj, "print",
-                      JS_NewCFunction(ctx, js_print, "print", 1));
+    if (set_test_function(ctx, global_obj, "print", js_print, 1) < 0)
+        goto fail;
 
     /* $262 special object used by the tests */
     obj262 = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, obj262, "detachArrayBuffer",
-                      JS_NewCFunction(ctx, js_detachArrayBuffer,
-                                      "detachArrayBuffer", 1));
-    JS_SetPropertyStr(ctx, obj262, "evalScript",
-                      JS_NewCFunction(ctx, js_evalScript,
-                                      "evalScript", 1));
-    JS_SetPropertyStr(ctx, obj262, "codePointRange",
-                      JS_NewCFunction(ctx, js_string_codePointRange,
-                                      "codePointRange", 2));
-    JS_SetPropertyStr(ctx, obj262, "agent", js_new_agent(ctx));
-
-    JS_SetPropertyStr(ctx, obj262, "global",
-                      JS_DupValue(ctx, global_obj));
-    JS_SetPropertyStr(ctx, obj262, "createRealm",
-                      JS_NewCFunction(ctx, js_createRealm,
-                                      "createRealm", 0));
+    if (JS_IsException(obj262))
+        goto fail;
+    if (set_test_function(ctx, obj262, "detachArrayBuffer",
+                          js_detachArrayBuffer, 1) < 0 ||
+        set_test_function(ctx, obj262, "evalScript", js_evalScript, 1) < 0 ||
+        set_test_function(ctx, obj262, "codePointRange",
+                          js_string_codePointRange, 2) < 0)
+        goto fail;
+    obj = js_new_agent(ctx);
+    if (JS_IsException(obj))
+        goto fail;
+    if (JS_SetPropertyStr(ctx, obj262, "agent", obj) < 0 ||
+        JS_SetPropertyStr(ctx, obj262, "global",
+                          JS_DupValue(ctx, global_obj)) < 0 ||
+        set_test_function(ctx, obj262, "createRealm", js_createRealm, 0) < 0)
+        goto fail;
     obj = JS_NewCFunction(ctx, js_IsHTMLDDA, "IsHTMLDDA", 0);
+    if (JS_IsException(obj))
+        goto fail;
     JS_SetIsHTMLDDA(ctx, obj);
-    JS_SetPropertyStr(ctx, obj262, "IsHTMLDDA", obj);
-    JS_SetPropertyStr(ctx, obj262, "gc",
-                      JS_NewCFunction(ctx, js_gc, "gc", 0));
+    if (JS_SetPropertyStr(ctx, obj262, "IsHTMLDDA", obj) < 0 ||
+        set_test_function(ctx, obj262, "gc", js_gc, 0) < 0)
+        goto fail;
 
-    JS_SetPropertyStr(ctx, global_obj, "$262", JS_DupValue(ctx, obj262));
+    if (JS_SetPropertyStr(ctx, global_obj, "$262",
+                          JS_DupValue(ctx, obj262)) < 0)
+        goto fail;
 
     JS_FreeValue(ctx, global_obj);
     return obj262;
+ fail:
+    JS_FreeValue(ctx, global_obj);
+    JS_FreeValue(ctx, obj262);
+    return JS_EXCEPTION;
 }
 
 static void add_helpers(JSContext *ctx)
 {
-    JS_FreeValue(ctx, add_helpers1(ctx));
+    JSValue helpers = add_helpers1(ctx);
+    if (JS_IsException(helpers))
+        fatal(1, "cannot install Test262 helpers");
+    JS_FreeValue(ctx, helpers);
 }
 
 static char *load_file(const char *filename, size_t *lenp)
