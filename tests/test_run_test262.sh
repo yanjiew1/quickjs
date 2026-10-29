@@ -100,6 +100,13 @@ invoke_runner() {
     fi
 }
 
+for invalid_threads in -1 invalid 1025 999999999999999999999; do
+    invoke_runner no -q -c "$test262_tmp/config" -T "$invalid_threads" \
+        -d "$test262_tmp/failure"
+    [ "$test262_status" -eq 2 ]
+    grep -Fq 'invalid thread count' "$test262_tmp/err"
+done
+
 # Timings depend on host speed and do not describe test output. Match only
 # the complete timing line emitted by run-test262 after a slow test.
 normalize_report() {

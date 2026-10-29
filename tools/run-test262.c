@@ -59,6 +59,7 @@
 #endif
 
 #define CMD_NAME "run-test262"
+#define MAX_TEST262_THREADS 1024
 
 typedef struct namelist_t {
     char **array;
@@ -264,11 +265,11 @@ static int cpu_count(void)
 static void init_thread_local_storage(ThreadLocalStorage *tls)
 {
     memset(tls, 0, sizeof(*tls));
-    pthread_mutex_init(&tls->agent_mutex, NULL);
-    pthread_cond_init(&tls->agent_cond, NULL);
+    if (pthread_mutex_init(&tls->agent_mutex, NULL) ||
+        pthread_cond_init(&tls->agent_cond, NULL) ||
+        pthread_mutex_init(&tls->report_mutex, NULL))
+        fatal(1, "cannot initialize thread state");
     init_list_head(&tls->agent_list);
-
-    pthread_mutex_init(&tls->report_mutex, NULL);
     init_list_head(&tls->report_list);
 }
 
@@ -926,13 +927,16 @@ static JSValue js_agent_start(JSContext *ctx, JSValueConst this_val,
         return JS_ThrowOutOfMemory(ctx);
     }
     list_add_tail(&agent->link, &tls->agent_list);
-    pthread_attr_init(&attr);
-    // musl libc gives threads 80 kb stacks, much smaller than
-    // JS_DEFAULT_STACK_SIZE (256 kb)
-    pthread_attr_setstacksize(&attr, 2 << 20); // 2 MB, glibc default
     {
-        int ret = pthread_create(&agent->tid, &attr, agent_start, agent);
-        pthread_attr_destroy(&attr);
+        int ret = pthread_attr_init(&attr);
+        if (!ret) {
+            // musl libc gives threads 80 kb stacks, much smaller than
+            // JS_DEFAULT_STACK_SIZE (256 kb)
+            ret = pthread_attr_setstacksize(&attr, 2 << 20); // 2 MB, glibc default
+            if (!ret)
+                ret = pthread_create(&agent->tid, &attr, agent_start, agent);
+            pthread_attr_destroy(&attr);
+        }
         if (ret) {
             list_del(&agent->link);
             agent_wake_close(agent);
@@ -2868,8 +2872,9 @@ int main(int argc, char **argv)
     clock_t clocks;
     
     init_thread_local_storage(tls);
-    pthread_mutex_init(&stats_mutex, NULL);
-    pthread_mutex_init(&error_list_mutex, NULL);
+    if (pthread_mutex_init(&stats_mutex, NULL) ||
+        pthread_mutex_init(&error_list_mutex, NULL))
+        fatal(1, "cannot initialize test state");
 
 #if !defined(_WIN32)
     /* Date tests assume California local time */
@@ -2941,7 +2946,17 @@ int main(int argc, char **argv)
         } else if (str_equal(arg, "--progress-log")) {
             execution_progress_filename = get_opt_arg(arg, argv[optind++]);
         } else if (str_equal(arg, "-T")) {
-            nthreads = atoi(get_opt_arg(arg, argv[optind++]));
+            const char *value = get_opt_arg(arg, argv[optind++]);
+            char *end;
+            long count;
+
+            errno = 0;
+            count = strtol(value, &end, 10);
+            if (errno || end == value || *end || count < 0 ||
+                count > MAX_TEST262_THREADS)
+                fatal(2, "invalid thread count (expected 0..%d)",
+                      MAX_TEST262_THREADS);
+            nthreads = count;
         } else if (str_equal(arg, "-N")) {
             is_test262_harness = TRUE;
         } else if (str_equal(arg, "--module")) {
@@ -2972,7 +2987,7 @@ int main(int argc, char **argv)
             nthreads--;
         }
     }
-    nthreads = max_int(nthreads, 1);
+    nthreads = min_int(max_int(nthreads, 1), MAX_TEST262_THREADS);
 
     if (error_filename) {
         error_file = load_file(error_filename, NULL);
@@ -3063,26 +3078,37 @@ int main(int argc, char **argv)
             }
         }
 
-        pthread_cond_init(&progress_cond, NULL);
-        pthread_mutex_init(&progress_mutex, NULL);
-        if (enable_progress) {
-            pthread_create(&progress_thread, NULL, show_progress, NULL);
-        }
+        if (pthread_cond_init(&progress_cond, NULL) ||
+            pthread_mutex_init(&progress_mutex, NULL))
+            fatal(1, "cannot initialize progress state");
+        if (enable_progress &&
+            pthread_create(&progress_thread, NULL, show_progress, NULL))
+            enable_progress = FALSE;
         
-        threads = malloc(sizeof(threads[0]) * nthreads);
+        threads = malloc(sizeof(threads[0]) * (size_t)nthreads);
+        if (!threads)
+            fatal(1, "cannot allocate test threads");
         for (i = 0; i < nthreads; i++) {
             RunTestDirThread *th = &threads[i];
             pthread_attr_t attr;
+            int ret;
 
             th->thread_index = i;
             
-            pthread_attr_init(&attr);
-            pthread_attr_setstacksize(&attr, 2 << 20); // 2 MB, glibc default
-            pthread_create(&th->tid, &attr, run_test_dir_list, th);
-            pthread_attr_destroy(&attr);
+            ret = pthread_attr_init(&attr);
+            if (!ret) {
+                ret = pthread_attr_setstacksize(&attr, 2 << 20); // 2 MB, glibc default
+                if (!ret)
+                    ret = pthread_create(&th->tid, &attr, run_test_dir_list, th);
+                pthread_attr_destroy(&attr);
+            }
+            /* A missing worker would silently skip its test-list stripe. */
+            if (ret)
+                fatal(1, "cannot start test thread: %s", strerror(ret));
         }
         for (i = 0; i < nthreads; i++)
-            pthread_join(threads[i].tid, NULL);
+            if (pthread_join(threads[i].tid, NULL))
+                fatal(1, "cannot join test thread");
         free(threads);
 
         if (enable_progress) {
