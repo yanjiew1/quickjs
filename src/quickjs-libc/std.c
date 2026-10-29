@@ -96,7 +96,7 @@ static JSValue js_printf_internal(JSContext *ctx,
     const uint8_t *fmt, *fmt_end;
     const uint8_t *p;
     char *q;
-    int i, c, len, mod;
+    int i, c, len, mod, ret, field;
     size_t fmt_len;
     int32_t int32_arg;
     int64_t int64_arg;
@@ -143,12 +143,22 @@ static JSValue js_printf_internal(JSContext *ctx,
                     goto missing;
                 if (JS_ToInt32(ctx, &int32_arg, argv[i++]))
                     goto fail;
-                q += snprintf(q, fmtbuf + sizeof(fmtbuf) - q, "%d", int32_arg);
+                /* A negative width is its positive magnitude plus '-'. */
+                if (int32_arg == INT32_MIN)
+                    goto invalid;
+                len = snprintf(q, fmtbuf + sizeof(fmtbuf) - q, "%d", int32_arg);
+                if (len < 0 || len >= fmtbuf + sizeof(fmtbuf) - q)
+                    goto invalid;
+                q += len;
                 fmt++;
             } else {
+                field = 0;
                 while (my_isdigit(*fmt)) {
-                    if (q >= fmtbuf + sizeof(fmtbuf) - 1)
+                    /* libc overflow handling differs; validate before calling it. */
+                    if (field > (INT_MAX - (*fmt - '0')) / 10 ||
+                        q >= fmtbuf + sizeof(fmtbuf) - 1)
                         goto invalid;
+                    field = field * 10 + (*fmt - '0');
                     *q++ = *fmt++;
                 }
             }
@@ -161,12 +171,24 @@ static JSValue js_printf_internal(JSContext *ctx,
                         goto missing;
                     if (JS_ToInt32(ctx, &int32_arg, argv[i++]))
                         goto fail;
-                    q += snprintf(q, fmtbuf + sizeof(fmtbuf) - q, "%d", int32_arg);
+                    /* printf treats a negative dynamic precision as omitted. */
+                    if (int32_arg < 0) {
+                        q--;
+                    } else {
+                        len = snprintf(q, fmtbuf + sizeof(fmtbuf) - q,
+                                       "%d", int32_arg);
+                        if (len < 0 || len >= fmtbuf + sizeof(fmtbuf) - q)
+                            goto invalid;
+                        q += len;
+                    }
                     fmt++;
                 } else {
+                    field = 0;
                     while (my_isdigit(*fmt)) {
-                        if (q >= fmtbuf + sizeof(fmtbuf) - 1)
+                        if (field > (INT_MAX - (*fmt - '0')) / 10 ||
+                            q >= fmtbuf + sizeof(fmtbuf) - 1)
                             goto invalid;
+                        field = field * 10 + (*fmt - '0');
                         *q++ = *fmt++;
                     }
                 }
@@ -227,18 +249,29 @@ static JSValue js_printf_internal(JSContext *ctx,
                     q[0] = '6';
                     q[1] = '4';
                     q[3] = '\0';
-                    dbuf_printf_fun(&dbuf, fmtbuf, (int64_t)int64_arg);
+                    if (c == 'd' || c == 'i')
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (int64_t)int64_arg);
+                    else
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (uint64_t)int64_arg);
 #else
                     if (q >= fmtbuf + sizeof(fmtbuf) - 2)
                         goto invalid;
                     q[1] = q[-1];
                     q[-1] = q[0] = 'l';
                     q[2] = '\0';
-                    dbuf_printf_fun(&dbuf, fmtbuf, (long long)int64_arg);
+                    if (c == 'd' || c == 'i')
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (long long)int64_arg);
+                    else
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (unsigned long long)int64_arg);
 #endif
                 } else {
-                    dbuf_printf_fun(&dbuf, fmtbuf, (int)int64_arg);
+                    if (c == 'd' || c == 'i')
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (int)int64_arg);
+                    else
+                        ret = dbuf_printf_fun(&dbuf, fmtbuf, (unsigned int)int64_arg);
                 }
+                if (ret < 0)
+                    goto format_error;
                 break;
 
             case 's':
@@ -248,8 +281,10 @@ static JSValue js_printf_internal(JSContext *ctx,
                 string_arg = JS_ToCString(ctx, argv[i++]);
                 if (!string_arg)
                     goto fail;
-                dbuf_printf_fun(&dbuf, fmtbuf, string_arg);
+                ret = dbuf_printf_fun(&dbuf, fmtbuf, string_arg);
                 JS_FreeCString(ctx, string_arg);
+                if (ret < 0)
+                    goto format_error;
                 break;
 
             case 'e':
@@ -264,7 +299,8 @@ static JSValue js_printf_internal(JSContext *ctx,
                     goto missing;
                 if (JS_ToFloat64(ctx, &double_arg, argv[i++]))
                     goto fail;
-                dbuf_printf_fun(&dbuf, fmtbuf, double_arg);
+                if (dbuf_printf_fun(&dbuf, fmtbuf, double_arg) < 0)
+                    goto format_error;
                 break;
 
             case '%':
@@ -296,6 +332,11 @@ static JSValue js_printf_internal(JSContext *ctx,
     dbuf_free(&dbuf);
     return res;
 
+format_error:
+    if (dbuf.error)
+        JS_ThrowOutOfMemory(ctx);
+    else
+        JS_ThrowTypeError(ctx, "cannot format conversion");
 fail:
     JS_FreeCString(ctx, fmt_str);
     dbuf_free(&dbuf);
