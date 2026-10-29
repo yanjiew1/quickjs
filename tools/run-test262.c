@@ -1297,8 +1297,7 @@ static int json_module_init_test(JSContext *ctx, JSModuleDef *m)
 {
     JSValue val;
     val = JS_GetModulePrivateValue(ctx, m);
-    JS_SetModuleExport(ctx, m, "default", val);
-    return 0;
+    return JS_SetModuleExport(ctx, m, "default", val);
 }
 
 static JSModuleDef *js_module_loader_test(JSContext *ctx,
@@ -1343,7 +1342,10 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
             return NULL;
         }
         /* only export the "default" symbol which will contain the JSON object */
-        JS_AddModuleExport(ctx, m, "default");
+        if (JS_AddModuleExport(ctx, m, "default") < 0) {
+            JS_FreeValue(ctx, val);
+            return NULL;
+        }
         JS_SetModulePrivateValue(ctx, m, val);
     } else {
         JSValue func_val;
