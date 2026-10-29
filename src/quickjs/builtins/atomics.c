@@ -579,7 +579,12 @@ static JSValue js_atomics_wait(JSContext *ctx,
 
     if (timeout != INT64_MAX) {
         /* XXX: use clock monotonic */
-        clock_gettime(CLOCK_REALTIME, &ts);
+        if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+            js_native_wait_finish_sync_locked(queue, &waiter->native, TRUE);
+            js_native_wait_queue_unlock(queue);
+            pthread_cond_destroy(&waiter->cond);
+            return JS_ThrowInternalError(ctx, "native wait clock failed");
+        }
         ts.tv_sec += timeout / 1000;
         ts.tv_nsec += (timeout % 1000) * 1000000;
         if (ts.tv_nsec >= 1000000000) {
@@ -602,6 +607,8 @@ static JSValue js_atomics_wait(JSContext *ctx,
     pthread_cond_destroy(&waiter->cond);
     if (ret == ETIMEDOUT) {
         return JS_AtomToString(ctx, JS_ATOM_timed_out);
+    } else if (ret) {
+        return JS_ThrowInternalError(ctx, "native wait failed");
     } else {
         return JS_AtomToString(ctx, JS_ATOM_ok);
     }

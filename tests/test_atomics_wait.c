@@ -117,6 +117,8 @@ typedef enum {
     TEST_WAIT_NOTIFY_TIMEOUT_RACE,
     TEST_WAIT_SPURIOUS_NOTIFY,
     TEST_WAIT_FRACTIONAL_TIMEOUT,
+    TEST_WAIT_CLOCK_ERROR,
+    TEST_WAIT_COND_ERROR,
 } TestWaitMode;
 
 static TestWaitMode test_wait_mode;
@@ -126,6 +128,12 @@ static struct timespec test_wait_deadline;
 
 static int test_clock_gettime(clockid_t id, struct timespec *time)
 {
+    if (test_wait_mode == TEST_WAIT_CLOCK_ERROR) {
+        assert(id == CLOCK_REALTIME);
+        test_wait_calls++;
+        time->tv_sec = time->tv_nsec = 0;
+        return -1;
+    }
     if (test_wait_mode == TEST_WAIT_FRACTIONAL_TIMEOUT) {
         assert(id == CLOCK_REALTIME);
         time->tv_sec = 1234;
@@ -163,6 +171,12 @@ static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                               const struct timespec *deadline)
 {
+    if (test_wait_mode == TEST_WAIT_COND_ERROR) {
+        test_wait_calls++;
+        return EINVAL;
+    }
+    if (test_wait_mode == TEST_WAIT_CLOCK_ERROR)
+        return ETIMEDOUT;
     if (test_wait_mode == TEST_WAIT_FRACTIONAL_TIMEOUT) {
         assert(++test_wait_calls == 1);
         test_wait_deadline = *deadline;
@@ -241,6 +255,25 @@ static void test_wait_notification_predicate(JSContext *ctx)
         "Atomics.wait(testWords, 0, 0)", "ok", 3);
 }
 
+static void test_wait_host_error(JSContext *ctx, TestWaitMode mode)
+{
+    static const char source[] = "Atomics.wait(testWords, 0, 0, 1)";
+    JSValue result, error;
+
+    result = test_eval(ctx, "Atomics.store(testWords, 0, 0)");
+    JS_FreeValue(ctx, result);
+    test_wait_mode = mode;
+    test_wait_calls = 0;
+    result = JS_Eval(ctx, source, sizeof(source) - 1,
+                     "wait-host-error.js", JS_EVAL_TYPE_GLOBAL);
+    test_wait_mode = TEST_WAIT_NORMAL;
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error) && test_wait_calls == 1);
+    assert(!js_native_jobs_wait_queue()->first);
+    JS_FreeValue(ctx, error);
+}
+
 #endif
 
 #ifdef CONFIG_ATOMICS
@@ -278,6 +311,8 @@ int main(void)
     test_concurrent_expected_value(ctx);
     test_wait_notification_predicate(ctx);
     test_wait_fractional_deadline(ctx);
+    test_wait_host_error(ctx, TEST_WAIT_CLOCK_ERROR);
+    test_wait_host_error(ctx, TEST_WAIT_COND_ERROR);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 #endif
