@@ -2,9 +2,9 @@
   "format": "QJTZ",
   "format_version": 2,
   "algorithm_version": 1,
-  "tz_release": "2026e",
-  "tz_commit": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
-  "tz_archive_sha256": "5b62258a9a868813f00b070983b9b3e7279634575571a0fcc732be6a1f7047c1",
+  "tz_release": "2026f",
+  "tz_commit": "a6cb1a1cebcc96269a02b25323c1a9424e3349a8",
+  "tz_archive_sha256": "2fe4b4f27f75beea17970dfdd242ffb7f099fad9447950a39d0fe8eae522d8e2",
   "cldr_timezone_sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae",
   "cldr_release": "49",
   "cldr_commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
@@ -17,8 +17,8 @@
   "range_limited": false,
   "runtime_tzcode": false,
   "final_binary_files": 1,
-  "data_sha256": "7de351a61e3648769f2d40b7c01d6b9d4995878dd741a2cfb23a0c33e0d3653a",
-  "binary_size": 481873,
+  "data_sha256": "2f96820090bab6614d8eb3671c36e3f75c67863bbbbaa316f9f69c109b9ae4aa",
+  "binary_size": 481845,
   "records": [
     {
       "identifier": "Africa/Abidjan",
@@ -1034,14 +1034,14 @@
       "identifier_offset": 11834,
       "primary_offset": 11834,
       "offset": 115851,
-      "length": 2416
+      "length": 2388
     },
     {
       "identifier": "America/Hermosillo",
       "primary": "America/Hermosillo",
       "identifier_offset": 11849,
       "primary_offset": 11849,
-      "offset": 118267,
+      "offset": 118239,
       "length": 388
     },
     {
@@ -1057,7 +1057,7 @@
       "primary": "America/Indiana/Knox",
       "identifier_offset": 11897,
       "primary_offset": 11897,
-      "offset": 118655,
+      "offset": 118627,
       "length": 2444
     },
     {
@@ -1065,7 +1065,7 @@
       "primary": "America/Indiana/Marengo",
       "identifier_offset": 11918,
       "primary_offset": 11918,
-      "offset": 121099,
+      "offset": 121071,
       "length": 1738
     },
     {
@@ -1073,7 +1073,7 @@
       "primary": "America/Indiana/Petersburg",
       "identifier_offset": 11942,
       "primary_offset": 11942,
-      "offset": 122837,
+      "offset": 122809,
       "length": 1920
     },
     {
@@ -1081,7 +1081,7 @@
       "primary": "America/Indiana/Tell_City",
       "identifier_offset": 11969,
       "primary_offset": 11969,
-      "offset": 124757,
+      "offset": 124729,
       "length": 1700
     },
     {
@@ -1089,7 +1089,7 @@
       "primary": "America/Indiana/Vevay",
       "identifier_offset": 11995,
       "primary_offset": 11995,
-      "offset": 126457,
+      "offset": 126429,
       "length": 1430
     },
     {
@@ -1097,7 +1097,7 @@
       "primary": "America/Indiana/Vincennes",
       "identifier_offset": 12017,
       "primary_offset": 12017,
-      "offset": 127887,
+      "offset": 127859,
       "length": 1710
     },
     {
@@ -1105,7 +1105,7 @@
       "primary": "America/Indiana/Winamac",
       "identifier_offset": 12043,
       "primary_offset": 12043,
-      "offset": 129597,
+      "offset": 129569,
       "length": 1794
     },
     {
@@ -1121,7 +1121,7 @@
       "primary": "America/Inuvik",
       "identifier_offset": 12088,
       "primary_offset": 12088,
-      "offset": 131391,
+      "offset": 131363,
       "length": 1768
     },
     {
@@ -1129,7 +1129,7 @@
       "primary": "America/Iqaluit",
       "identifier_offset": 12103,
       "primary_offset": 12103,
-      "offset": 133159,
+      "offset": 133131,
       "length": 2202
     },
     {
@@ -1137,7 +1137,7 @@
       "primary": "America/Jamaica",
       "identifier_offset": 12119,
       "primary_offset": 12119,
-      "offset": 135361,
+      "offset": 135333,
       "length": 482
     },
     {
@@ -1153,7 +1153,7 @@
       "primary": "America/Juneau",
       "identifier_offset": 12149,
       "primary_offset": 12149,
-      "offset": 135843,
+      "offset": 135815,
       "length": 2353
     },
     {
@@ -1161,7 +1161,7 @@
       "primary": "America/Kentucky/Louisville",
       "identifier_offset": 12164,
       "primary_offset": 12164,
-      "offset": 138196,
+      "offset": 138168,
       "length": 2788
     },
     {
@@ -1169,7 +1169,7 @@
       "primary": "America/Kentucky/Monticello",
       "identifier_offset": 12192,
       "primary_offset": 12192,
-      "offset": 140984,
+      "offset": 140956,
       "length": 2368
     },
     {
@@ -1177,7 +1177,7 @@
       "primary": "America/Indiana/Knox",
       "identifier_offset": 12220,
       "primary_offset": 11897,
-      "offset": 118655,
+      "offset": 118627,
       "length": 2444
     },
     {
@@ -1185,7 +1185,7 @@
       "primary": "America/Kralendijk",
       "identifier_offset": 12236,
       "primary_offset": 12236,
-      "offset": 143352,
+      "offset": 143324,
       "length": 246
     },
     {
@@ -1193,7 +1193,7 @@
       "primary": "America/La_Paz",
       "identifier_offset": 12255,
       "primary_offset": 12255,
-      "offset": 143598,
+      "offset": 143570,
       "length": 218
     },
     {
@@ -1201,7 +1201,7 @@
       "primary": "America/Lima",
       "identifier_offset": 12270,
       "primary_offset": 12270,
-      "offset": 143816,
+      "offset": 143788,
       "length": 392
     },
     {
@@ -1209,7 +1209,7 @@
       "primary": "America/Los_Angeles",
       "identifier_offset": 12283,
       "primary_offset": 12283,
-      "offset": 144208,
+      "offset": 144180,
       "length": 2852
     },
     {
@@ -1217,7 +1217,7 @@
       "primary": "America/Kentucky/Louisville",
       "identifier_offset": 12303,
       "primary_offset": 12164,
-      "offset": 138196,
+      "offset": 138168,
       "length": 2788
     },
     {
@@ -1225,7 +1225,7 @@
       "primary": "America/Lower_Princes",
       "identifier_offset": 12322,
       "primary_offset": 12322,
-      "offset": 143352,
+      "offset": 143324,
       "length": 246
     },
     {
@@ -1233,7 +1233,7 @@
       "primary": "America/Maceio",
       "identifier_offset": 12344,
       "primary_offset": 12344,
-      "offset": 147060,
+      "offset": 147032,
       "length": 730
     },
     {
@@ -1241,7 +1241,7 @@
       "primary": "America/Managua",
       "identifier_offset": 12359,
       "primary_offset": 12359,
-      "offset": 147790,
+      "offset": 147762,
       "length": 430
     },
     {
@@ -1249,7 +1249,7 @@
       "primary": "America/Manaus",
       "identifier_offset": 12375,
       "primary_offset": 12375,
-      "offset": 148220,
+      "offset": 148192,
       "length": 590
     },
     {
@@ -1257,7 +1257,7 @@
       "primary": "America/Marigot",
       "identifier_offset": 12390,
       "primary_offset": 12390,
-      "offset": 143352,
+      "offset": 143324,
       "length": 246
     },
     {
@@ -1265,7 +1265,7 @@
       "primary": "America/Martinique",
       "identifier_offset": 12406,
       "primary_offset": 12406,
-      "offset": 148810,
+      "offset": 148782,
       "length": 232
     },
     {
@@ -1273,7 +1273,7 @@
       "primary": "America/Matamoros",
       "identifier_offset": 12425,
       "primary_offset": 12425,
-      "offset": 149042,
+      "offset": 149014,
       "length": 1418
     },
     {
@@ -1281,7 +1281,7 @@
       "primary": "America/Mazatlan",
       "identifier_offset": 12443,
       "primary_offset": 12443,
-      "offset": 150460,
+      "offset": 150432,
       "length": 1060
     },
     {
@@ -1297,7 +1297,7 @@
       "primary": "America/Menominee",
       "identifier_offset": 12476,
       "primary_offset": 12476,
-      "offset": 151520,
+      "offset": 151492,
       "length": 2274
     },
     {
@@ -1305,7 +1305,7 @@
       "primary": "America/Merida",
       "identifier_offset": 12494,
       "primary_offset": 12494,
-      "offset": 153794,
+      "offset": 153766,
       "length": 1004
     },
     {
@@ -1313,7 +1313,7 @@
       "primary": "America/Metlakatla",
       "identifier_offset": 12509,
       "primary_offset": 12509,
-      "offset": 154798,
+      "offset": 154770,
       "length": 1423
     },
     {
@@ -1321,7 +1321,7 @@
       "primary": "America/Mexico_City",
       "identifier_offset": 12528,
       "primary_offset": 12528,
-      "offset": 156221,
+      "offset": 156193,
       "length": 1222
     },
     {
@@ -1329,7 +1329,7 @@
       "primary": "America/Miquelon",
       "identifier_offset": 12548,
       "primary_offset": 12548,
-      "offset": 157443,
+      "offset": 157415,
       "length": 1652
     },
     {
@@ -1337,7 +1337,7 @@
       "primary": "America/Moncton",
       "identifier_offset": 12565,
       "primary_offset": 12565,
-      "offset": 159095,
+      "offset": 159067,
       "length": 3154
     },
     {
@@ -1345,7 +1345,7 @@
       "primary": "America/Monterrey",
       "identifier_offset": 12581,
       "primary_offset": 12581,
-      "offset": 162249,
+      "offset": 162221,
       "length": 1114
     },
     {
@@ -1353,7 +1353,7 @@
       "primary": "America/Montevideo",
       "identifier_offset": 12599,
       "primary_offset": 12599,
-      "offset": 163363,
+      "offset": 163335,
       "length": 1496
     },
     {
@@ -1361,7 +1361,7 @@
       "primary": "America/Toronto",
       "identifier_offset": 12618,
       "primary_offset": 13514,
-      "offset": 164859,
+      "offset": 164831,
       "length": 3494
     },
     {
@@ -1369,7 +1369,7 @@
       "primary": "America/Montserrat",
       "identifier_offset": 12635,
       "primary_offset": 12635,
-      "offset": 168353,
+      "offset": 168325,
       "length": 148
     },
     {
@@ -1377,7 +1377,7 @@
       "primary": "America/Nassau",
       "identifier_offset": 12654,
       "primary_offset": 12654,
-      "offset": 168501,
+      "offset": 168473,
       "length": 2388
     },
     {
@@ -1385,7 +1385,7 @@
       "primary": "America/New_York",
       "identifier_offset": 12669,
       "primary_offset": 12669,
-      "offset": 170889,
+      "offset": 170861,
       "length": 3552
     },
     {
@@ -1393,7 +1393,7 @@
       "primary": "America/Toronto",
       "identifier_offset": 12686,
       "primary_offset": 13514,
-      "offset": 164859,
+      "offset": 164831,
       "length": 3494
     },
     {
@@ -1401,7 +1401,7 @@
       "primary": "America/Nome",
       "identifier_offset": 12702,
       "primary_offset": 12702,
-      "offset": 174441,
+      "offset": 174413,
       "length": 2367
     },
     {
@@ -1409,7 +1409,7 @@
       "primary": "America/Noronha",
       "identifier_offset": 12715,
       "primary_offset": 12715,
-      "offset": 176808,
+      "offset": 176780,
       "length": 702
     },
     {
@@ -1417,7 +1417,7 @@
       "primary": "America/North_Dakota/Beulah",
       "identifier_offset": 12731,
       "primary_offset": 12731,
-      "offset": 177510,
+      "offset": 177482,
       "length": 2396
     },
     {
@@ -1425,7 +1425,7 @@
       "primary": "America/North_Dakota/Center",
       "identifier_offset": 12759,
       "primary_offset": 12759,
-      "offset": 179906,
+      "offset": 179878,
       "length": 2396
     },
     {
@@ -1433,7 +1433,7 @@
       "primary": "America/North_Dakota/New_Salem",
       "identifier_offset": 12787,
       "primary_offset": 12787,
-      "offset": 182302,
+      "offset": 182274,
       "length": 2396
     },
     {
@@ -1449,7 +1449,7 @@
       "primary": "America/Ojinaga",
       "identifier_offset": 12831,
       "primary_offset": 12831,
-      "offset": 184698,
+      "offset": 184670,
       "length": 1524
     },
     {
@@ -1457,7 +1457,7 @@
       "primary": "America/Panama",
       "identifier_offset": 12847,
       "primary_offset": 12847,
-      "offset": 186222,
+      "offset": 186194,
       "length": 182
     },
     {
@@ -1465,7 +1465,7 @@
       "primary": "America/Iqaluit",
       "identifier_offset": 12862,
       "primary_offset": 12103,
-      "offset": 133159,
+      "offset": 133131,
       "length": 2202
     },
     {
@@ -1473,7 +1473,7 @@
       "primary": "America/Paramaribo",
       "identifier_offset": 12882,
       "primary_offset": 12882,
-      "offset": 186404,
+      "offset": 186376,
       "length": 248
     },
     {
@@ -1481,7 +1481,7 @@
       "primary": "America/Phoenix",
       "identifier_offset": 12901,
       "primary_offset": 12901,
-      "offset": 186652,
+      "offset": 186624,
       "length": 360
     },
     {
@@ -1489,7 +1489,7 @@
       "primary": "America/Port-au-Prince",
       "identifier_offset": 12917,
       "primary_offset": 12917,
-      "offset": 187012,
+      "offset": 186984,
       "length": 1434
     },
     {
@@ -1497,7 +1497,7 @@
       "primary": "America/Port_of_Spain",
       "identifier_offset": 12940,
       "primary_offset": 12940,
-      "offset": 188446,
+      "offset": 188418,
       "length": 148
     },
     {
@@ -1505,7 +1505,7 @@
       "primary": "America/Rio_Branco",
       "identifier_offset": 12962,
       "primary_offset": 13130,
-      "offset": 188594,
+      "offset": 188566,
       "length": 614
     },
     {
@@ -1513,7 +1513,7 @@
       "primary": "America/Porto_Velho",
       "identifier_offset": 12981,
       "primary_offset": 12981,
-      "offset": 189208,
+      "offset": 189180,
       "length": 562
     },
     {
@@ -1521,7 +1521,7 @@
       "primary": "America/Puerto_Rico",
       "identifier_offset": 13001,
       "primary_offset": 13001,
-      "offset": 143352,
+      "offset": 143324,
       "length": 246
     },
     {
@@ -1529,7 +1529,7 @@
       "primary": "America/Punta_Arenas",
       "identifier_offset": 13021,
       "primary_offset": 13021,
-      "offset": 189770,
+      "offset": 189742,
       "length": 1902
     },
     {
@@ -1537,7 +1537,7 @@
       "primary": "America/Winnipeg",
       "identifier_offset": 13042,
       "primary_offset": 13598,
-      "offset": 191672,
+      "offset": 191644,
       "length": 2566
     },
     {
@@ -1545,7 +1545,7 @@
       "primary": "America/Rankin_Inlet",
       "identifier_offset": 13062,
       "primary_offset": 13062,
-      "offset": 194238,
+      "offset": 194210,
       "length": 2066
     },
     {
@@ -1553,7 +1553,7 @@
       "primary": "America/Recife",
       "identifier_offset": 13083,
       "primary_offset": 13083,
-      "offset": 196304,
+      "offset": 196276,
       "length": 702
     },
     {
@@ -1561,7 +1561,7 @@
       "primary": "America/Regina",
       "identifier_offset": 13098,
       "primary_offset": 13098,
-      "offset": 197006,
+      "offset": 196978,
       "length": 980
     },
     {
@@ -1569,7 +1569,7 @@
       "primary": "America/Resolute",
       "identifier_offset": 13113,
       "primary_offset": 13113,
-      "offset": 197986,
+      "offset": 197958,
       "length": 2066
     },
     {
@@ -1577,7 +1577,7 @@
       "primary": "America/Rio_Branco",
       "identifier_offset": 13130,
       "primary_offset": 13130,
-      "offset": 188594,
+      "offset": 188566,
       "length": 614
     },
     {
@@ -1601,7 +1601,7 @@
       "primary": "America/Santarem",
       "identifier_offset": 13186,
       "primary_offset": 13186,
-      "offset": 200052,
+      "offset": 200024,
       "length": 588
     },
     {
@@ -1609,7 +1609,7 @@
       "primary": "America/Santiago",
       "identifier_offset": 13203,
       "primary_offset": 13203,
-      "offset": 200640,
+      "offset": 200612,
       "length": 2515
     },
     {
@@ -1617,7 +1617,7 @@
       "primary": "America/Santo_Domingo",
       "identifier_offset": 13220,
       "primary_offset": 13220,
-      "offset": 203155,
+      "offset": 203127,
       "length": 458
     },
     {
@@ -1625,7 +1625,7 @@
       "primary": "America/Sao_Paulo",
       "identifier_offset": 13242,
       "primary_offset": 13242,
-      "offset": 203613,
+      "offset": 203585,
       "length": 1430
     },
     {
@@ -1633,7 +1633,7 @@
       "primary": "America/Scoresbysund",
       "identifier_offset": 13260,
       "primary_offset": 13260,
-      "offset": 205043,
+      "offset": 205015,
       "length": 1935
     },
     {
@@ -1649,7 +1649,7 @@
       "primary": "America/Sitka",
       "identifier_offset": 13298,
       "primary_offset": 13298,
-      "offset": 206978,
+      "offset": 206950,
       "length": 2329
     },
     {
@@ -1657,7 +1657,7 @@
       "primary": "America/St_Barthelemy",
       "identifier_offset": 13312,
       "primary_offset": 13312,
-      "offset": 143352,
+      "offset": 143324,
       "length": 246
     },
     {
@@ -1665,7 +1665,7 @@
       "primary": "America/St_Johns",
       "identifier_offset": 13334,
       "primary_offset": 13334,
-      "offset": 209307,
+      "offset": 209279,
       "length": 3655
     },
     {
@@ -1673,7 +1673,7 @@
       "primary": "America/St_Kitts",
       "identifier_offset": 13351,
       "primary_offset": 13351,
-      "offset": 212962,
+      "offset": 212934,
       "length": 148
     },
     {
@@ -1681,7 +1681,7 @@
       "primary": "America/St_Lucia",
       "identifier_offset": 13368,
       "primary_offset": 13368,
-      "offset": 213110,
+      "offset": 213082,
       "length": 182
     },
     {
@@ -1689,7 +1689,7 @@
       "primary": "America/St_Thomas",
       "identifier_offset": 13385,
       "primary_offset": 13385,
-      "offset": 213292,
+      "offset": 213264,
       "length": 148
     },
     {
@@ -1697,7 +1697,7 @@
       "primary": "America/St_Vincent",
       "identifier_offset": 13403,
       "primary_offset": 13403,
-      "offset": 213440,
+      "offset": 213412,
       "length": 182
     },
     {
@@ -1705,7 +1705,7 @@
       "primary": "America/Swift_Current",
       "identifier_offset": 13422,
       "primary_offset": 13422,
-      "offset": 213622,
+      "offset": 213594,
       "length": 560
     },
     {
@@ -1713,7 +1713,7 @@
       "primary": "America/Tegucigalpa",
       "identifier_offset": 13444,
       "primary_offset": 13444,
-      "offset": 214182,
+      "offset": 214154,
       "length": 252
     },
     {
@@ -1721,7 +1721,7 @@
       "primary": "America/Thule",
       "identifier_offset": 13464,
       "primary_offset": 13464,
-      "offset": 214434,
+      "offset": 214406,
       "length": 1502
     },
     {
@@ -1729,7 +1729,7 @@
       "primary": "America/Toronto",
       "identifier_offset": 13478,
       "primary_offset": 13514,
-      "offset": 164859,
+      "offset": 164831,
       "length": 3494
     },
     {
@@ -1745,7 +1745,7 @@
       "primary": "America/Toronto",
       "identifier_offset": 13514,
       "primary_offset": 13514,
-      "offset": 164859,
+      "offset": 164831,
       "length": 3494
     },
     {
@@ -1753,7 +1753,7 @@
       "primary": "America/Tortola",
       "identifier_offset": 13530,
       "primary_offset": 13530,
-      "offset": 215936,
+      "offset": 215908,
       "length": 148
     },
     {
@@ -1761,7 +1761,7 @@
       "primary": "America/Vancouver",
       "identifier_offset": 13546,
       "primary_offset": 13546,
-      "offset": 216084,
+      "offset": 216056,
       "length": 2590
     },
     {
@@ -1769,7 +1769,7 @@
       "primary": "America/St_Thomas",
       "identifier_offset": 13564,
       "primary_offset": 13385,
-      "offset": 213292,
+      "offset": 213264,
       "length": 148
     },
     {
@@ -1777,7 +1777,7 @@
       "primary": "America/Whitehorse",
       "identifier_offset": 13579,
       "primary_offset": 13579,
-      "offset": 218674,
+      "offset": 218646,
       "length": 1614
     },
     {
@@ -1785,7 +1785,7 @@
       "primary": "America/Winnipeg",
       "identifier_offset": 13598,
       "primary_offset": 13598,
-      "offset": 191672,
+      "offset": 191644,
       "length": 2566
     },
     {
@@ -1793,7 +1793,7 @@
       "primary": "America/Yakutat",
       "identifier_offset": 13615,
       "primary_offset": 13615,
-      "offset": 220288,
+      "offset": 220260,
       "length": 2305
     },
     {
@@ -1809,7 +1809,7 @@
       "primary": "Antarctica/Casey",
       "identifier_offset": 13651,
       "primary_offset": 13651,
-      "offset": 222593,
+      "offset": 222565,
       "length": 423
     },
     {
@@ -1817,7 +1817,7 @@
       "primary": "Antarctica/Davis",
       "identifier_offset": 13668,
       "primary_offset": 13668,
-      "offset": 223016,
+      "offset": 222988,
       "length": 283
     },
     {
@@ -1825,7 +1825,7 @@
       "primary": "Antarctica/DumontDUrville",
       "identifier_offset": 13685,
       "primary_offset": 13685,
-      "offset": 223299,
+      "offset": 223271,
       "length": 180
     },
     {
@@ -1833,7 +1833,7 @@
       "primary": "Antarctica/Macquarie",
       "identifier_offset": 13711,
       "primary_offset": 13711,
-      "offset": 223479,
+      "offset": 223451,
       "length": 2260
     },
     {
@@ -1841,7 +1841,7 @@
       "primary": "Antarctica/Mawson",
       "identifier_offset": 13732,
       "primary_offset": 13732,
-      "offset": 225739,
+      "offset": 225711,
       "length": 185
     },
     {
@@ -1849,7 +1849,7 @@
       "primary": "Antarctica/McMurdo",
       "identifier_offset": 13750,
       "primary_offset": 13750,
-      "offset": 225924,
+      "offset": 225896,
       "length": 1993
     },
     {
@@ -1857,7 +1857,7 @@
       "primary": "Antarctica/Palmer",
       "identifier_offset": 13769,
       "primary_offset": 13769,
-      "offset": 227917,
+      "offset": 227889,
       "length": 1404
     },
     {
@@ -1865,7 +1865,7 @@
       "primary": "Antarctica/Rothera",
       "identifier_offset": 13787,
       "primary_offset": 13787,
-      "offset": 229321,
+      "offset": 229293,
       "length": 150
     },
     {
@@ -1873,7 +1873,7 @@
       "primary": "Antarctica/McMurdo",
       "identifier_offset": 13806,
       "primary_offset": 13750,
-      "offset": 225924,
+      "offset": 225896,
       "length": 1993
     },
     {
@@ -1881,7 +1881,7 @@
       "primary": "Antarctica/Syowa",
       "identifier_offset": 13828,
       "primary_offset": 13828,
-      "offset": 229471,
+      "offset": 229443,
       "length": 151
     },
     {
@@ -1889,7 +1889,7 @@
       "primary": "Antarctica/Troll",
       "identifier_offset": 13845,
       "primary_offset": 13845,
-      "offset": 229622,
+      "offset": 229594,
       "length": 1148
     },
     {
@@ -1897,7 +1897,7 @@
       "primary": "Antarctica/Vostok",
       "identifier_offset": 13862,
       "primary_offset": 13862,
-      "offset": 230770,
+      "offset": 230742,
       "length": 213
     },
     {
@@ -1905,7 +1905,7 @@
       "primary": "Arctic/Longyearbyen",
       "identifier_offset": 13880,
       "primary_offset": 13880,
-      "offset": 230983,
+      "offset": 230955,
       "length": 2298
     },
     {
@@ -1913,7 +1913,7 @@
       "primary": "Asia/Aden",
       "identifier_offset": 13900,
       "primary_offset": 13900,
-      "offset": 233281,
+      "offset": 233253,
       "length": 151
     },
     {
@@ -1921,7 +1921,7 @@
       "primary": "Asia/Almaty",
       "identifier_offset": 13910,
       "primary_offset": 13910,
-      "offset": 233432,
+      "offset": 233404,
       "length": 983
     },
     {
@@ -1929,7 +1929,7 @@
       "primary": "Asia/Amman",
       "identifier_offset": 13922,
       "primary_offset": 13922,
-      "offset": 234415,
+      "offset": 234387,
       "length": 1433
     },
     {
@@ -1937,7 +1937,7 @@
       "primary": "Asia/Anadyr",
       "identifier_offset": 13933,
       "primary_offset": 13933,
-      "offset": 235848,
+      "offset": 235820,
       "length": 1174
     },
     {
@@ -1945,7 +1945,7 @@
       "primary": "Asia/Aqtau",
       "identifier_offset": 13945,
       "primary_offset": 13945,
-      "offset": 237022,
+      "offset": 236994,
       "length": 969
     },
     {
@@ -1953,7 +1953,7 @@
       "primary": "Asia/Aqtobe",
       "identifier_offset": 13956,
       "primary_offset": 13956,
-      "offset": 237991,
+      "offset": 237963,
       "length": 997
     },
     {
@@ -1961,7 +1961,7 @@
       "primary": "Asia/Ashgabat",
       "identifier_offset": 13968,
       "primary_offset": 13968,
-      "offset": 238988,
+      "offset": 238960,
       "length": 605
     },
     {
@@ -1969,7 +1969,7 @@
       "primary": "Asia/Ashgabat",
       "identifier_offset": 13982,
       "primary_offset": 13968,
-      "offset": 238988,
+      "offset": 238960,
       "length": 605
     },
     {
@@ -1977,7 +1977,7 @@
       "primary": "Asia/Atyrau",
       "identifier_offset": 13997,
       "primary_offset": 13997,
-      "offset": 239593,
+      "offset": 239565,
       "length": 977
     },
     {
@@ -1985,7 +1985,7 @@
       "primary": "Asia/Baghdad",
       "identifier_offset": 14009,
       "primary_offset": 14009,
-      "offset": 240570,
+      "offset": 240542,
       "length": 969
     },
     {
@@ -1993,7 +1993,7 @@
       "primary": "Asia/Bahrain",
       "identifier_offset": 14022,
       "primary_offset": 14022,
-      "offset": 241539,
+      "offset": 241511,
       "length": 223
     },
     {
@@ -2001,7 +2001,7 @@
       "primary": "Asia/Baku",
       "identifier_offset": 14035,
       "primary_offset": 14035,
-      "offset": 241762,
+      "offset": 241734,
       "length": 1213
     },
     {
@@ -2009,7 +2009,7 @@
       "primary": "Asia/Bangkok",
       "identifier_offset": 14045,
       "primary_offset": 14045,
-      "offset": 242975,
+      "offset": 242947,
       "length": 185
     },
     {
@@ -2017,7 +2017,7 @@
       "primary": "Asia/Barnaul",
       "identifier_offset": 14058,
       "primary_offset": 14058,
-      "offset": 243160,
+      "offset": 243132,
       "length": 1207
     },
     {
@@ -2025,7 +2025,7 @@
       "primary": "Asia/Beirut",
       "identifier_offset": 14071,
       "primary_offset": 14071,
-      "offset": 244367,
+      "offset": 244339,
       "length": 2154
     },
     {
@@ -2033,7 +2033,7 @@
       "primary": "Asia/Bishkek",
       "identifier_offset": 14083,
       "primary_offset": 14083,
-      "offset": 246521,
+      "offset": 246493,
       "length": 969
     },
     {
@@ -2041,7 +2041,7 @@
       "primary": "Asia/Brunei",
       "identifier_offset": 14096,
       "primary_offset": 14096,
-      "offset": 247490,
+      "offset": 247462,
       "length": 189
     },
     {
@@ -2049,7 +2049,7 @@
       "primary": "Asia/Kolkata",
       "identifier_offset": 14108,
       "primary_offset": 14518,
-      "offset": 247679,
+      "offset": 247651,
       "length": 285
     },
     {
@@ -2057,7 +2057,7 @@
       "primary": "Asia/Chita",
       "identifier_offset": 14122,
       "primary_offset": 14122,
-      "offset": 247964,
+      "offset": 247936,
       "length": 1207
     },
     {
@@ -2065,7 +2065,7 @@
       "primary": "Asia/Ulaanbaatar",
       "identifier_offset": 14133,
       "primary_offset": 15074,
-      "offset": 249171,
+      "offset": 249143,
       "length": 877
     },
     {
@@ -2073,7 +2073,7 @@
       "primary": "Asia/Shanghai",
       "identifier_offset": 14149,
       "primary_offset": 14895,
-      "offset": 250048,
+      "offset": 250020,
       "length": 561
     },
     {
@@ -2081,7 +2081,7 @@
       "primary": "Asia/Shanghai",
       "identifier_offset": 14164,
       "primary_offset": 14895,
-      "offset": 250048,
+      "offset": 250020,
       "length": 561
     },
     {
@@ -2089,7 +2089,7 @@
       "primary": "Asia/Colombo",
       "identifier_offset": 14179,
       "primary_offset": 14179,
-      "offset": 250609,
+      "offset": 250581,
       "length": 358
     },
     {
@@ -2097,7 +2097,7 @@
       "primary": "Asia/Dhaka",
       "identifier_offset": 14192,
       "primary_offset": 14217,
-      "offset": 250967,
+      "offset": 250939,
       "length": 323
     },
     {
@@ -2105,7 +2105,7 @@
       "primary": "Asia/Damascus",
       "identifier_offset": 14203,
       "primary_offset": 14203,
-      "offset": 251290,
+      "offset": 251262,
       "length": 1873
     },
     {
@@ -2113,7 +2113,7 @@
       "primary": "Asia/Dhaka",
       "identifier_offset": 14217,
       "primary_offset": 14217,
-      "offset": 250967,
+      "offset": 250939,
       "length": 323
     },
     {
@@ -2121,7 +2121,7 @@
       "primary": "Asia/Dili",
       "identifier_offset": 14228,
       "primary_offset": 14228,
-      "offset": 253163,
+      "offset": 253135,
       "length": 257
     },
     {
@@ -2129,7 +2129,7 @@
       "primary": "Asia/Dubai",
       "identifier_offset": 14238,
       "primary_offset": 14238,
-      "offset": 253420,
+      "offset": 253392,
       "length": 151
     },
     {
@@ -2137,7 +2137,7 @@
       "primary": "Asia/Dushanbe",
       "identifier_offset": 14249,
       "primary_offset": 14249,
-      "offset": 253571,
+      "offset": 253543,
       "length": 577
     },
     {
@@ -2145,7 +2145,7 @@
       "primary": "Asia/Famagusta",
       "identifier_offset": 14263,
       "primary_offset": 14263,
-      "offset": 254148,
+      "offset": 254120,
       "length": 2028
     },
     {
@@ -2153,7 +2153,7 @@
       "primary": "Asia/Gaza",
       "identifier_offset": 14278,
       "primary_offset": 14278,
-      "offset": 256176,
+      "offset": 256148,
       "length": 3844
     },
     {
@@ -2161,7 +2161,7 @@
       "primary": "Asia/Shanghai",
       "identifier_offset": 14288,
       "primary_offset": 14895,
-      "offset": 250048,
+      "offset": 250020,
       "length": 561
     },
     {
@@ -2169,7 +2169,7 @@
       "primary": "Asia/Hebron",
       "identifier_offset": 14300,
       "primary_offset": 14300,
-      "offset": 260020,
+      "offset": 259992,
       "length": 3872
     },
     {
@@ -2177,7 +2177,7 @@
       "primary": "Asia/Ho_Chi_Minh",
       "identifier_offset": 14312,
       "primary_offset": 14312,
-      "offset": 263892,
+      "offset": 263864,
       "length": 329
     },
     {
@@ -2185,7 +2185,7 @@
       "primary": "Asia/Hong_Kong",
       "identifier_offset": 14329,
       "primary_offset": 14329,
-      "offset": 264221,
+      "offset": 264193,
       "length": 1233
     },
     {
@@ -2193,7 +2193,7 @@
       "primary": "Asia/Hovd",
       "identifier_offset": 14344,
       "primary_offset": 14344,
-      "offset": 265454,
+      "offset": 265426,
       "length": 877
     },
     {
@@ -2201,7 +2201,7 @@
       "primary": "Asia/Irkutsk",
       "identifier_offset": 14354,
       "primary_offset": 14354,
-      "offset": 266331,
+      "offset": 266303,
       "length": 1229
     },
     {
@@ -2209,7 +2209,7 @@
       "primary": "Europe/Istanbul",
       "identifier_offset": 14367,
       "primary_offset": 16772,
-      "offset": 267560,
+      "offset": 267532,
       "length": 1933
     },
     {
@@ -2217,7 +2217,7 @@
       "primary": "Asia/Jakarta",
       "identifier_offset": 14381,
       "primary_offset": 14381,
-      "offset": 269493,
+      "offset": 269465,
       "length": 383
     },
     {
@@ -2225,7 +2225,7 @@
       "primary": "Asia/Jayapura",
       "identifier_offset": 14394,
       "primary_offset": 14394,
-      "offset": 269876,
+      "offset": 269848,
       "length": 221
     },
     {
@@ -2233,7 +2233,7 @@
       "primary": "Asia/Jerusalem",
       "identifier_offset": 14408,
       "primary_offset": 14408,
-      "offset": 270097,
+      "offset": 270069,
       "length": 2388
     },
     {
@@ -2241,7 +2241,7 @@
       "primary": "Asia/Kabul",
       "identifier_offset": 14423,
       "primary_offset": 14423,
-      "offset": 272485,
+      "offset": 272457,
       "length": 194
     },
     {
@@ -2249,7 +2249,7 @@
       "primary": "Asia/Kamchatka",
       "identifier_offset": 14434,
       "primary_offset": 14434,
-      "offset": 272679,
+      "offset": 272651,
       "length": 1152
     },
     {
@@ -2257,7 +2257,7 @@
       "primary": "Asia/Karachi",
       "identifier_offset": 14449,
       "primary_offset": 14449,
-      "offset": 273831,
+      "offset": 273803,
       "length": 379
     },
     {
@@ -2265,7 +2265,7 @@
       "primary": "Asia/Urumqi",
       "identifier_offset": 14462,
       "primary_offset": 15107,
-      "offset": 274210,
+      "offset": 274182,
       "length": 151
     },
     {
@@ -2273,7 +2273,7 @@
       "primary": "Asia/Kathmandu",
       "identifier_offset": 14475,
       "primary_offset": 14475,
-      "offset": 274361,
+      "offset": 274333,
       "length": 198
     },
     {
@@ -2281,7 +2281,7 @@
       "primary": "Asia/Kathmandu",
       "identifier_offset": 14490,
       "primary_offset": 14475,
-      "offset": 274361,
+      "offset": 274333,
       "length": 198
     },
     {
@@ -2289,7 +2289,7 @@
       "primary": "Asia/Khandyga",
       "identifier_offset": 14504,
       "primary_offset": 14504,
-      "offset": 274559,
+      "offset": 274531,
       "length": 1257
     },
     {
@@ -2297,7 +2297,7 @@
       "primary": "Asia/Kolkata",
       "identifier_offset": 14518,
       "primary_offset": 14518,
-      "offset": 247679,
+      "offset": 247651,
       "length": 285
     },
     {
@@ -2305,7 +2305,7 @@
       "primary": "Asia/Krasnoyarsk",
       "identifier_offset": 14531,
       "primary_offset": 14531,
-      "offset": 275816,
+      "offset": 275788,
       "length": 1193
     },
     {
@@ -2313,7 +2313,7 @@
       "primary": "Asia/Kuala_Lumpur",
       "identifier_offset": 14548,
       "primary_offset": 14548,
-      "offset": 277009,
+      "offset": 276981,
       "length": 401
     },
     {
@@ -2321,7 +2321,7 @@
       "primary": "Asia/Kuching",
       "identifier_offset": 14566,
       "primary_offset": 14566,
-      "offset": 277410,
+      "offset": 277382,
       "length": 469
     },
     {
@@ -2329,7 +2329,7 @@
       "primary": "Asia/Kuwait",
       "identifier_offset": 14579,
       "primary_offset": 14579,
-      "offset": 277879,
+      "offset": 277851,
       "length": 151
     },
     {
@@ -2337,7 +2337,7 @@
       "primary": "Asia/Macau",
       "identifier_offset": 14591,
       "primary_offset": 14602,
-      "offset": 278030,
+      "offset": 278002,
       "length": 1227
     },
     {
@@ -2345,7 +2345,7 @@
       "primary": "Asia/Macau",
       "identifier_offset": 14602,
       "primary_offset": 14602,
-      "offset": 278030,
+      "offset": 278002,
       "length": 1227
     },
     {
@@ -2353,7 +2353,7 @@
       "primary": "Asia/Magadan",
       "identifier_offset": 14613,
       "primary_offset": 14613,
-      "offset": 279257,
+      "offset": 279229,
       "length": 1208
     },
     {
@@ -2361,7 +2361,7 @@
       "primary": "Asia/Makassar",
       "identifier_offset": 14626,
       "primary_offset": 14626,
-      "offset": 280465,
+      "offset": 280437,
       "length": 254
     },
     {
@@ -2369,7 +2369,7 @@
       "primary": "Asia/Manila",
       "identifier_offset": 14640,
       "primary_offset": 14640,
-      "offset": 280719,
+      "offset": 280691,
       "length": 422
     },
     {
@@ -2377,7 +2377,7 @@
       "primary": "Asia/Muscat",
       "identifier_offset": 14652,
       "primary_offset": 14652,
-      "offset": 281141,
+      "offset": 281113,
       "length": 151
     },
     {
@@ -2385,7 +2385,7 @@
       "primary": "Asia/Nicosia",
       "identifier_offset": 14664,
       "primary_offset": 14664,
-      "offset": 281292,
+      "offset": 281264,
       "length": 2002
     },
     {
@@ -2393,7 +2393,7 @@
       "primary": "Asia/Novokuznetsk",
       "identifier_offset": 14677,
       "primary_offset": 14677,
-      "offset": 283294,
+      "offset": 283266,
       "length": 1151
     },
     {
@@ -2401,7 +2401,7 @@
       "primary": "Asia/Novosibirsk",
       "identifier_offset": 14695,
       "primary_offset": 14695,
-      "offset": 284445,
+      "offset": 284417,
       "length": 1207
     },
     {
@@ -2409,7 +2409,7 @@
       "primary": "Asia/Omsk",
       "identifier_offset": 14712,
       "primary_offset": 14712,
-      "offset": 285652,
+      "offset": 285624,
       "length": 1193
     },
     {
@@ -2417,7 +2417,7 @@
       "primary": "Asia/Oral",
       "identifier_offset": 14722,
       "primary_offset": 14722,
-      "offset": 286845,
+      "offset": 286817,
       "length": 991
     },
     {
@@ -2425,7 +2425,7 @@
       "primary": "Asia/Phnom_Penh",
       "identifier_offset": 14732,
       "primary_offset": 14732,
-      "offset": 287836,
+      "offset": 287808,
       "length": 273
     },
     {
@@ -2433,7 +2433,7 @@
       "primary": "Asia/Pontianak",
       "identifier_offset": 14748,
       "primary_offset": 14748,
-      "offset": 288109,
+      "offset": 288081,
       "length": 353
     },
     {
@@ -2441,7 +2441,7 @@
       "primary": "Asia/Pyongyang",
       "identifier_offset": 14763,
       "primary_offset": 14763,
-      "offset": 288462,
+      "offset": 288434,
       "length": 237
     },
     {
@@ -2449,7 +2449,7 @@
       "primary": "Asia/Qatar",
       "identifier_offset": 14778,
       "primary_offset": 14778,
-      "offset": 288699,
+      "offset": 288671,
       "length": 185
     },
     {
@@ -2457,7 +2457,7 @@
       "primary": "Asia/Qostanay",
       "identifier_offset": 14789,
       "primary_offset": 14789,
-      "offset": 288884,
+      "offset": 288856,
       "length": 1025
     },
     {
@@ -2465,7 +2465,7 @@
       "primary": "Asia/Qyzylorda",
       "identifier_offset": 14803,
       "primary_offset": 14803,
-      "offset": 289909,
+      "offset": 289881,
       "length": 1011
     },
     {
@@ -2473,7 +2473,7 @@
       "primary": "Asia/Yangon",
       "identifier_offset": 14818,
       "primary_offset": 15178,
-      "offset": 290920,
+      "offset": 290892,
       "length": 254
     },
     {
@@ -2481,7 +2481,7 @@
       "primary": "Asia/Riyadh",
       "identifier_offset": 14831,
       "primary_offset": 14831,
-      "offset": 291174,
+      "offset": 291146,
       "length": 151
     },
     {
@@ -2489,7 +2489,7 @@
       "primary": "Asia/Ho_Chi_Minh",
       "identifier_offset": 14843,
       "primary_offset": 14312,
-      "offset": 263892,
+      "offset": 263864,
       "length": 329
     },
     {
@@ -2497,7 +2497,7 @@
       "primary": "Asia/Sakhalin",
       "identifier_offset": 14855,
       "primary_offset": 14855,
-      "offset": 291325,
+      "offset": 291297,
       "length": 1188
     },
     {
@@ -2505,7 +2505,7 @@
       "primary": "Asia/Samarkand",
       "identifier_offset": 14869,
       "primary_offset": 14869,
-      "offset": 292513,
+      "offset": 292485,
       "length": 563
     },
     {
@@ -2513,7 +2513,7 @@
       "primary": "Asia/Seoul",
       "identifier_offset": 14884,
       "primary_offset": 14884,
-      "offset": 293076,
+      "offset": 293048,
       "length": 617
     },
     {
@@ -2521,7 +2521,7 @@
       "primary": "Asia/Shanghai",
       "identifier_offset": 14895,
       "primary_offset": 14895,
-      "offset": 250048,
+      "offset": 250020,
       "length": 561
     },
     {
@@ -2529,7 +2529,7 @@
       "primary": "Asia/Singapore",
       "identifier_offset": 14909,
       "primary_offset": 14909,
-      "offset": 293693,
+      "offset": 293665,
       "length": 401
     },
     {
@@ -2537,7 +2537,7 @@
       "primary": "Asia/Srednekolymsk",
       "identifier_offset": 14924,
       "primary_offset": 14924,
-      "offset": 294094,
+      "offset": 294066,
       "length": 1194
     },
     {
@@ -2545,7 +2545,7 @@
       "primary": "Asia/Taipei",
       "identifier_offset": 14943,
       "primary_offset": 14943,
-      "offset": 295288,
+      "offset": 295260,
       "length": 761
     },
     {
@@ -2553,7 +2553,7 @@
       "primary": "Asia/Tashkent",
       "identifier_offset": 14955,
       "primary_offset": 14955,
-      "offset": 296049,
+      "offset": 296021,
       "length": 577
     },
     {
@@ -2561,7 +2561,7 @@
       "primary": "Asia/Tbilisi",
       "identifier_offset": 14969,
       "primary_offset": 14969,
-      "offset": 296626,
+      "offset": 296598,
       "length": 1007
     },
     {
@@ -2569,7 +2569,7 @@
       "primary": "Asia/Tehran",
       "identifier_offset": 14982,
       "primary_offset": 14982,
-      "offset": 297633,
+      "offset": 297605,
       "length": 1248
     },
     {
@@ -2577,7 +2577,7 @@
       "primary": "Asia/Jerusalem",
       "identifier_offset": 14994,
       "primary_offset": 14408,
-      "offset": 270097,
+      "offset": 270069,
       "length": 2388
     },
     {
@@ -2585,7 +2585,7 @@
       "primary": "Asia/Thimphu",
       "identifier_offset": 15008,
       "primary_offset": 15020,
-      "offset": 298881,
+      "offset": 298853,
       "length": 189
     },
     {
@@ -2593,7 +2593,7 @@
       "primary": "Asia/Thimphu",
       "identifier_offset": 15020,
       "primary_offset": 15020,
-      "offset": 298881,
+      "offset": 298853,
       "length": 189
     },
     {
@@ -2601,7 +2601,7 @@
       "primary": "Asia/Tokyo",
       "identifier_offset": 15033,
       "primary_offset": 15033,
-      "offset": 299070,
+      "offset": 299042,
       "length": 309
     },
     {
@@ -2609,7 +2609,7 @@
       "primary": "Asia/Tomsk",
       "identifier_offset": 15044,
       "primary_offset": 15044,
-      "offset": 299379,
+      "offset": 299351,
       "length": 1207
     },
     {
@@ -2617,7 +2617,7 @@
       "primary": "Asia/Makassar",
       "identifier_offset": 15055,
       "primary_offset": 14626,
-      "offset": 280465,
+      "offset": 280437,
       "length": 254
     },
     {
@@ -2625,7 +2625,7 @@
       "primary": "Asia/Ulaanbaatar",
       "identifier_offset": 15074,
       "primary_offset": 15074,
-      "offset": 249171,
+      "offset": 249143,
       "length": 877
     },
     {
@@ -2633,7 +2633,7 @@
       "primary": "Asia/Ulaanbaatar",
       "identifier_offset": 15091,
       "primary_offset": 15074,
-      "offset": 249171,
+      "offset": 249143,
       "length": 877
     },
     {
@@ -2641,7 +2641,7 @@
       "primary": "Asia/Urumqi",
       "identifier_offset": 15107,
       "primary_offset": 15107,
-      "offset": 274210,
+      "offset": 274182,
       "length": 151
     },
     {
@@ -2649,7 +2649,7 @@
       "primary": "Asia/Ust-Nera",
       "identifier_offset": 15119,
       "primary_offset": 15119,
-      "offset": 300586,
+      "offset": 300558,
       "length": 1238
     },
     {
@@ -2657,7 +2657,7 @@
       "primary": "Asia/Vientiane",
       "identifier_offset": 15133,
       "primary_offset": 15133,
-      "offset": 301824,
+      "offset": 301796,
       "length": 301
     },
     {
@@ -2665,7 +2665,7 @@
       "primary": "Asia/Vladivostok",
       "identifier_offset": 15148,
       "primary_offset": 15148,
-      "offset": 302125,
+      "offset": 302097,
       "length": 1194
     },
     {
@@ -2673,7 +2673,7 @@
       "primary": "Asia/Yakutsk",
       "identifier_offset": 15165,
       "primary_offset": 15165,
-      "offset": 303319,
+      "offset": 303291,
       "length": 1193
     },
     {
@@ -2681,7 +2681,7 @@
       "primary": "Asia/Yangon",
       "identifier_offset": 15178,
       "primary_offset": 15178,
-      "offset": 290920,
+      "offset": 290892,
       "length": 254
     },
     {
@@ -2689,7 +2689,7 @@
       "primary": "Asia/Yekaterinburg",
       "identifier_offset": 15190,
       "primary_offset": 15190,
-      "offset": 304512,
+      "offset": 304484,
       "length": 1229
     },
     {
@@ -2697,7 +2697,7 @@
       "primary": "Asia/Yerevan",
       "identifier_offset": 15209,
       "primary_offset": 15209,
-      "offset": 305741,
+      "offset": 305713,
       "length": 1137
     },
     {
@@ -2705,7 +2705,7 @@
       "primary": "Atlantic/Azores",
       "identifier_offset": 15222,
       "primary_offset": 15222,
-      "offset": 306878,
+      "offset": 306850,
       "length": 3442
     },
     {
@@ -2713,7 +2713,7 @@
       "primary": "Atlantic/Bermuda",
       "identifier_offset": 15238,
       "primary_offset": 15238,
-      "offset": 310320,
+      "offset": 310292,
       "length": 2396
     },
     {
@@ -2721,7 +2721,7 @@
       "primary": "Atlantic/Canary",
       "identifier_offset": 15255,
       "primary_offset": 15255,
-      "offset": 312716,
+      "offset": 312688,
       "length": 1897
     },
     {
@@ -2729,7 +2729,7 @@
       "primary": "Atlantic/Cape_Verde",
       "identifier_offset": 15271,
       "primary_offset": 15271,
-      "offset": 314613,
+      "offset": 314585,
       "length": 256
     },
     {
@@ -2737,7 +2737,7 @@
       "primary": "Atlantic/Faroe",
       "identifier_offset": 15291,
       "primary_offset": 15307,
-      "offset": 314869,
+      "offset": 314841,
       "length": 1815
     },
     {
@@ -2745,7 +2745,7 @@
       "primary": "Atlantic/Faroe",
       "identifier_offset": 15307,
       "primary_offset": 15307,
-      "offset": 314869,
+      "offset": 314841,
       "length": 1815
     },
     {
@@ -2753,7 +2753,7 @@
       "primary": "Arctic/Longyearbyen",
       "identifier_offset": 15322,
       "primary_offset": 13880,
-      "offset": 230983,
+      "offset": 230955,
       "length": 2298
     },
     {
@@ -2761,7 +2761,7 @@
       "primary": "Atlantic/Madeira",
       "identifier_offset": 15341,
       "primary_offset": 15341,
-      "offset": 316684,
+      "offset": 316656,
       "length": 3377
     },
     {
@@ -2769,7 +2769,7 @@
       "primary": "Atlantic/Reykjavik",
       "identifier_offset": 15358,
       "primary_offset": 15358,
-      "offset": 320061,
+      "offset": 320033,
       "length": 1162
     },
     {
@@ -2777,7 +2777,7 @@
       "primary": "Atlantic/South_Georgia",
       "identifier_offset": 15377,
       "primary_offset": 15377,
-      "offset": 321223,
+      "offset": 321195,
       "length": 150
     },
     {
@@ -2785,7 +2785,7 @@
       "primary": "Atlantic/St_Helena",
       "identifier_offset": 15400,
       "primary_offset": 15400,
-      "offset": 321373,
+      "offset": 321345,
       "length": 182
     },
     {
@@ -2793,7 +2793,7 @@
       "primary": "Atlantic/Stanley",
       "identifier_offset": 15419,
       "primary_offset": 15419,
-      "offset": 321555,
+      "offset": 321527,
       "length": 1200
     },
     {
@@ -2801,7 +2801,7 @@
       "primary": "Australia/Sydney",
       "identifier_offset": 15436,
       "primary_offset": 15752,
-      "offset": 322755,
+      "offset": 322727,
       "length": 2190
     },
     {
@@ -2809,7 +2809,7 @@
       "primary": "Australia/Adelaide",
       "identifier_offset": 15450,
       "primary_offset": 15450,
-      "offset": 324945,
+      "offset": 324917,
       "length": 2208
     },
     {
@@ -2817,7 +2817,7 @@
       "primary": "Australia/Brisbane",
       "identifier_offset": 15469,
       "primary_offset": 15469,
-      "offset": 327153,
+      "offset": 327125,
       "length": 419
     },
     {
@@ -2825,7 +2825,7 @@
       "primary": "Australia/Broken_Hill",
       "identifier_offset": 15488,
       "primary_offset": 15488,
-      "offset": 327572,
+      "offset": 327544,
       "length": 2229
     },
     {
@@ -2833,7 +2833,7 @@
       "primary": "Australia/Sydney",
       "identifier_offset": 15510,
       "primary_offset": 15752,
-      "offset": 322755,
+      "offset": 322727,
       "length": 2190
     },
     {
@@ -2841,7 +2841,7 @@
       "primary": "Australia/Hobart",
       "identifier_offset": 15529,
       "primary_offset": 15579,
-      "offset": 329801,
+      "offset": 329773,
       "length": 2358
     },
     {
@@ -2849,7 +2849,7 @@
       "primary": "Australia/Darwin",
       "identifier_offset": 15546,
       "primary_offset": 15546,
-      "offset": 332159,
+      "offset": 332131,
       "length": 325
     },
     {
@@ -2857,7 +2857,7 @@
       "primary": "Australia/Eucla",
       "identifier_offset": 15563,
       "primary_offset": 15563,
-      "offset": 332484,
+      "offset": 332456,
       "length": 456
     },
     {
@@ -2865,7 +2865,7 @@
       "primary": "Australia/Hobart",
       "identifier_offset": 15579,
       "primary_offset": 15579,
-      "offset": 329801,
+      "offset": 329773,
       "length": 2358
     },
     {
@@ -2873,7 +2873,7 @@
       "primary": "Australia/Lord_Howe",
       "identifier_offset": 15596,
       "primary_offset": 15629,
-      "offset": 332940,
+      "offset": 332912,
       "length": 1846
     },
     {
@@ -2881,7 +2881,7 @@
       "primary": "Australia/Lindeman",
       "identifier_offset": 15610,
       "primary_offset": 15610,
-      "offset": 334786,
+      "offset": 334758,
       "length": 475
     },
     {
@@ -2889,7 +2889,7 @@
       "primary": "Australia/Lord_Howe",
       "identifier_offset": 15629,
       "primary_offset": 15629,
-      "offset": 332940,
+      "offset": 332912,
       "length": 1846
     },
     {
@@ -2897,7 +2897,7 @@
       "primary": "Australia/Melbourne",
       "identifier_offset": 15649,
       "primary_offset": 15649,
-      "offset": 335261,
+      "offset": 335233,
       "length": 2190
     },
     {
@@ -2905,7 +2905,7 @@
       "primary": "Australia/Sydney",
       "identifier_offset": 15669,
       "primary_offset": 15752,
-      "offset": 322755,
+      "offset": 322727,
       "length": 2190
     },
     {
@@ -2913,7 +2913,7 @@
       "primary": "Australia/Darwin",
       "identifier_offset": 15683,
       "primary_offset": 15546,
-      "offset": 332159,
+      "offset": 332131,
       "length": 325
     },
     {
@@ -2921,7 +2921,7 @@
       "primary": "Australia/Perth",
       "identifier_offset": 15699,
       "primary_offset": 15699,
-      "offset": 337451,
+      "offset": 337423,
       "length": 446
     },
     {
@@ -2929,7 +2929,7 @@
       "primary": "Australia/Brisbane",
       "identifier_offset": 15715,
       "primary_offset": 15469,
-      "offset": 327153,
+      "offset": 327125,
       "length": 419
     },
     {
@@ -2937,7 +2937,7 @@
       "primary": "Australia/Adelaide",
       "identifier_offset": 15736,
       "primary_offset": 15450,
-      "offset": 324945,
+      "offset": 324917,
       "length": 2208
     },
     {
@@ -2945,7 +2945,7 @@
       "primary": "Australia/Sydney",
       "identifier_offset": 15752,
       "primary_offset": 15752,
-      "offset": 322755,
+      "offset": 322727,
       "length": 2190
     },
     {
@@ -2953,7 +2953,7 @@
       "primary": "Australia/Hobart",
       "identifier_offset": 15769,
       "primary_offset": 15579,
-      "offset": 329801,
+      "offset": 329773,
       "length": 2358
     },
     {
@@ -2961,7 +2961,7 @@
       "primary": "Australia/Melbourne",
       "identifier_offset": 15788,
       "primary_offset": 15649,
-      "offset": 335261,
+      "offset": 335233,
       "length": 2190
     },
     {
@@ -2969,7 +2969,7 @@
       "primary": "Australia/Perth",
       "identifier_offset": 15807,
       "primary_offset": 15699,
-      "offset": 337451,
+      "offset": 337423,
       "length": 446
     },
     {
@@ -2977,7 +2977,7 @@
       "primary": "Australia/Broken_Hill",
       "identifier_offset": 15822,
       "primary_offset": 15488,
-      "offset": 327572,
+      "offset": 327544,
       "length": 2229
     },
     {
@@ -2985,7 +2985,7 @@
       "primary": "America/Rio_Branco",
       "identifier_offset": 15843,
       "primary_offset": 13130,
-      "offset": 188594,
+      "offset": 188566,
       "length": 614
     },
     {
@@ -2993,7 +2993,7 @@
       "primary": "America/Noronha",
       "identifier_offset": 15855,
       "primary_offset": 12715,
-      "offset": 176808,
+      "offset": 176780,
       "length": 702
     },
     {
@@ -3001,7 +3001,7 @@
       "primary": "America/Sao_Paulo",
       "identifier_offset": 15872,
       "primary_offset": 13242,
-      "offset": 203613,
+      "offset": 203585,
       "length": 1430
     },
     {
@@ -3009,7 +3009,7 @@
       "primary": "America/Manaus",
       "identifier_offset": 15884,
       "primary_offset": 12375,
-      "offset": 148220,
+      "offset": 148192,
       "length": 590
     },
     {
@@ -3017,7 +3017,7 @@
       "primary": "Europe/Brussels",
       "identifier_offset": 15896,
       "primary_offset": 16591,
-      "offset": 337897,
+      "offset": 337869,
       "length": 2933
     },
     {
@@ -3025,7 +3025,7 @@
       "primary": "CST6CDT",
       "identifier_offset": 15900,
       "primary_offset": 15900,
-      "offset": 340830,
+      "offset": 340802,
       "length": 2248
     },
     {
@@ -3041,7 +3041,7 @@
       "primary": "America/Winnipeg",
       "identifier_offset": 15924,
       "primary_offset": 13598,
-      "offset": 191672,
+      "offset": 191644,
       "length": 2566
     },
     {
@@ -3049,7 +3049,7 @@
       "primary": "America/Toronto",
       "identifier_offset": 15939,
       "primary_offset": 13514,
-      "offset": 164859,
+      "offset": 164831,
       "length": 3494
     },
     {
@@ -3065,7 +3065,7 @@
       "primary": "America/St_Johns",
       "identifier_offset": 15970,
       "primary_offset": 13334,
-      "offset": 209307,
+      "offset": 209279,
       "length": 3655
     },
     {
@@ -3073,7 +3073,7 @@
       "primary": "America/Vancouver",
       "identifier_offset": 15990,
       "primary_offset": 13546,
-      "offset": 216084,
+      "offset": 216056,
       "length": 2590
     },
     {
@@ -3081,7 +3081,7 @@
       "primary": "America/Regina",
       "identifier_offset": 16005,
       "primary_offset": 13098,
-      "offset": 197006,
+      "offset": 196978,
       "length": 980
     },
     {
@@ -3089,7 +3089,7 @@
       "primary": "America/Whitehorse",
       "identifier_offset": 16025,
       "primary_offset": 13579,
-      "offset": 218674,
+      "offset": 218646,
       "length": 1614
     },
     {
@@ -3097,7 +3097,7 @@
       "primary": "America/Santiago",
       "identifier_offset": 16038,
       "primary_offset": 13203,
-      "offset": 200640,
+      "offset": 200612,
       "length": 2515
     },
     {
@@ -3105,7 +3105,7 @@
       "primary": "Pacific/Easter",
       "identifier_offset": 16056,
       "primary_offset": 17895,
-      "offset": 343078,
+      "offset": 343050,
       "length": 2219
     },
     {
@@ -3114,14 +3114,14 @@
       "identifier_offset": 16075,
       "primary_offset": 11834,
       "offset": 115851,
-      "length": 2416
+      "length": 2388
     },
     {
       "identifier": "EET",
       "primary": "Europe/Athens",
       "identifier_offset": 16080,
       "primary_offset": 16514,
-      "offset": 345297,
+      "offset": 345269,
       "length": 2262
     },
     {
@@ -3129,7 +3129,7 @@
       "primary": "America/Panama",
       "identifier_offset": 16084,
       "primary_offset": 12847,
-      "offset": 186222,
+      "offset": 186194,
       "length": 182
     },
     {
@@ -3137,7 +3137,7 @@
       "primary": "EST5EDT",
       "identifier_offset": 16088,
       "primary_offset": 16088,
-      "offset": 347559,
+      "offset": 347531,
       "length": 2248
     },
     {
@@ -3153,7 +3153,7 @@
       "primary": "Europe/Dublin",
       "identifier_offset": 16102,
       "primary_offset": 16690,
-      "offset": 349807,
+      "offset": 349779,
       "length": 3492
     },
     {
@@ -3161,7 +3161,7 @@
       "primary": "UTC",
       "identifier_offset": 16107,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3169,7 +3169,7 @@
       "primary": "UTC",
       "identifier_offset": 16115,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3177,7 +3177,7 @@
       "primary": "Etc/GMT+1",
       "identifier_offset": 16125,
       "primary_offset": 16125,
-      "offset": 353413,
+      "offset": 353385,
       "length": 116
     },
     {
@@ -3185,7 +3185,7 @@
       "primary": "Etc/GMT+10",
       "identifier_offset": 16135,
       "primary_offset": 16135,
-      "offset": 353529,
+      "offset": 353501,
       "length": 117
     },
     {
@@ -3193,7 +3193,7 @@
       "primary": "Etc/GMT+11",
       "identifier_offset": 16146,
       "primary_offset": 16146,
-      "offset": 353646,
+      "offset": 353618,
       "length": 117
     },
     {
@@ -3201,7 +3201,7 @@
       "primary": "Etc/GMT+12",
       "identifier_offset": 16157,
       "primary_offset": 16157,
-      "offset": 353763,
+      "offset": 353735,
       "length": 117
     },
     {
@@ -3209,7 +3209,7 @@
       "primary": "Etc/GMT+2",
       "identifier_offset": 16168,
       "primary_offset": 16168,
-      "offset": 353880,
+      "offset": 353852,
       "length": 116
     },
     {
@@ -3217,7 +3217,7 @@
       "primary": "Etc/GMT+3",
       "identifier_offset": 16178,
       "primary_offset": 16178,
-      "offset": 353996,
+      "offset": 353968,
       "length": 116
     },
     {
@@ -3225,7 +3225,7 @@
       "primary": "Etc/GMT+4",
       "identifier_offset": 16188,
       "primary_offset": 16188,
-      "offset": 354112,
+      "offset": 354084,
       "length": 116
     },
     {
@@ -3233,7 +3233,7 @@
       "primary": "Etc/GMT+5",
       "identifier_offset": 16198,
       "primary_offset": 16198,
-      "offset": 354228,
+      "offset": 354200,
       "length": 116
     },
     {
@@ -3241,7 +3241,7 @@
       "primary": "Etc/GMT+6",
       "identifier_offset": 16208,
       "primary_offset": 16208,
-      "offset": 354344,
+      "offset": 354316,
       "length": 116
     },
     {
@@ -3249,7 +3249,7 @@
       "primary": "Etc/GMT+7",
       "identifier_offset": 16218,
       "primary_offset": 16218,
-      "offset": 354460,
+      "offset": 354432,
       "length": 116
     },
     {
@@ -3257,7 +3257,7 @@
       "primary": "Etc/GMT+8",
       "identifier_offset": 16228,
       "primary_offset": 16228,
-      "offset": 354576,
+      "offset": 354548,
       "length": 116
     },
     {
@@ -3265,7 +3265,7 @@
       "primary": "Etc/GMT+9",
       "identifier_offset": 16238,
       "primary_offset": 16238,
-      "offset": 354692,
+      "offset": 354664,
       "length": 116
     },
     {
@@ -3273,7 +3273,7 @@
       "primary": "UTC",
       "identifier_offset": 16248,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3281,7 +3281,7 @@
       "primary": "Etc/GMT-1",
       "identifier_offset": 16258,
       "primary_offset": 16258,
-      "offset": 354808,
+      "offset": 354780,
       "length": 117
     },
     {
@@ -3289,7 +3289,7 @@
       "primary": "Etc/GMT-10",
       "identifier_offset": 16268,
       "primary_offset": 16268,
-      "offset": 354925,
+      "offset": 354897,
       "length": 118
     },
     {
@@ -3297,7 +3297,7 @@
       "primary": "Etc/GMT-11",
       "identifier_offset": 16279,
       "primary_offset": 16279,
-      "offset": 355043,
+      "offset": 355015,
       "length": 118
     },
     {
@@ -3305,7 +3305,7 @@
       "primary": "Etc/GMT-12",
       "identifier_offset": 16290,
       "primary_offset": 16290,
-      "offset": 355161,
+      "offset": 355133,
       "length": 118
     },
     {
@@ -3313,7 +3313,7 @@
       "primary": "Etc/GMT-13",
       "identifier_offset": 16301,
       "primary_offset": 16301,
-      "offset": 355279,
+      "offset": 355251,
       "length": 118
     },
     {
@@ -3321,7 +3321,7 @@
       "primary": "Etc/GMT-14",
       "identifier_offset": 16312,
       "primary_offset": 16312,
-      "offset": 355397,
+      "offset": 355369,
       "length": 118
     },
     {
@@ -3329,7 +3329,7 @@
       "primary": "Etc/GMT-2",
       "identifier_offset": 16323,
       "primary_offset": 16323,
-      "offset": 355515,
+      "offset": 355487,
       "length": 117
     },
     {
@@ -3337,7 +3337,7 @@
       "primary": "Etc/GMT-3",
       "identifier_offset": 16333,
       "primary_offset": 16333,
-      "offset": 355632,
+      "offset": 355604,
       "length": 117
     },
     {
@@ -3345,7 +3345,7 @@
       "primary": "Etc/GMT-4",
       "identifier_offset": 16343,
       "primary_offset": 16343,
-      "offset": 355749,
+      "offset": 355721,
       "length": 117
     },
     {
@@ -3353,7 +3353,7 @@
       "primary": "Etc/GMT-5",
       "identifier_offset": 16353,
       "primary_offset": 16353,
-      "offset": 355866,
+      "offset": 355838,
       "length": 117
     },
     {
@@ -3361,7 +3361,7 @@
       "primary": "Etc/GMT-6",
       "identifier_offset": 16363,
       "primary_offset": 16363,
-      "offset": 355983,
+      "offset": 355955,
       "length": 117
     },
     {
@@ -3369,7 +3369,7 @@
       "primary": "Etc/GMT-7",
       "identifier_offset": 16373,
       "primary_offset": 16373,
-      "offset": 356100,
+      "offset": 356072,
       "length": 117
     },
     {
@@ -3377,7 +3377,7 @@
       "primary": "Etc/GMT-8",
       "identifier_offset": 16383,
       "primary_offset": 16383,
-      "offset": 356217,
+      "offset": 356189,
       "length": 117
     },
     {
@@ -3385,7 +3385,7 @@
       "primary": "Etc/GMT-9",
       "identifier_offset": 16393,
       "primary_offset": 16393,
-      "offset": 356334,
+      "offset": 356306,
       "length": 117
     },
     {
@@ -3393,7 +3393,7 @@
       "primary": "UTC",
       "identifier_offset": 16403,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3401,7 +3401,7 @@
       "primary": "UTC",
       "identifier_offset": 16412,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3409,7 +3409,7 @@
       "primary": "UTC",
       "identifier_offset": 16426,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3417,7 +3417,7 @@
       "primary": "UTC",
       "identifier_offset": 16434,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3425,7 +3425,7 @@
       "primary": "UTC",
       "identifier_offset": 16442,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3433,7 +3433,7 @@
       "primary": "UTC",
       "identifier_offset": 16456,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3441,7 +3441,7 @@
       "primary": "Europe/Amsterdam",
       "identifier_offset": 16465,
       "primary_offset": 16465,
-      "offset": 356451,
+      "offset": 356423,
       "length": 2910
     },
     {
@@ -3449,7 +3449,7 @@
       "primary": "Europe/Andorra",
       "identifier_offset": 16482,
       "primary_offset": 16482,
-      "offset": 359361,
+      "offset": 359333,
       "length": 1742
     },
     {
@@ -3457,7 +3457,7 @@
       "primary": "Europe/Astrakhan",
       "identifier_offset": 16497,
       "primary_offset": 16497,
-      "offset": 361103,
+      "offset": 361075,
       "length": 1151
     },
     {
@@ -3465,7 +3465,7 @@
       "primary": "Europe/Athens",
       "identifier_offset": 16514,
       "primary_offset": 16514,
-      "offset": 345297,
+      "offset": 345269,
       "length": 2262
     },
     {
@@ -3473,7 +3473,7 @@
       "primary": "Europe/London",
       "identifier_offset": 16528,
       "primary_offset": 16889,
-      "offset": 362254,
+      "offset": 362226,
       "length": 3664
     },
     {
@@ -3481,7 +3481,7 @@
       "primary": "Europe/Belgrade",
       "identifier_offset": 16543,
       "primary_offset": 16543,
-      "offset": 365918,
+      "offset": 365890,
       "length": 1920
     },
     {
@@ -3489,7 +3489,7 @@
       "primary": "Europe/Berlin",
       "identifier_offset": 16559,
       "primary_offset": 16559,
-      "offset": 230983,
+      "offset": 230955,
       "length": 2298
     },
     {
@@ -3497,7 +3497,7 @@
       "primary": "Europe/Bratislava",
       "identifier_offset": 16573,
       "primary_offset": 16573,
-      "offset": 367838,
+      "offset": 367810,
       "length": 2301
     },
     {
@@ -3505,7 +3505,7 @@
       "primary": "Europe/Brussels",
       "identifier_offset": 16591,
       "primary_offset": 16591,
-      "offset": 337897,
+      "offset": 337869,
       "length": 2933
     },
     {
@@ -3513,7 +3513,7 @@
       "primary": "Europe/Bucharest",
       "identifier_offset": 16607,
       "primary_offset": 16607,
-      "offset": 370139,
+      "offset": 370111,
       "length": 2184
     },
     {
@@ -3521,7 +3521,7 @@
       "primary": "Europe/Budapest",
       "identifier_offset": 16624,
       "primary_offset": 16624,
-      "offset": 372323,
+      "offset": 372295,
       "length": 2368
     },
     {
@@ -3529,7 +3529,7 @@
       "primary": "Europe/Busingen",
       "identifier_offset": 16640,
       "primary_offset": 16640,
-      "offset": 374691,
+      "offset": 374663,
       "length": 1909
     },
     {
@@ -3537,7 +3537,7 @@
       "primary": "Europe/Chisinau",
       "identifier_offset": 16656,
       "primary_offset": 16656,
-      "offset": 376600,
+      "offset": 376572,
       "length": 2424
     },
     {
@@ -3545,7 +3545,7 @@
       "primary": "Europe/Copenhagen",
       "identifier_offset": 16672,
       "primary_offset": 16672,
-      "offset": 379024,
+      "offset": 378996,
       "length": 2137
     },
     {
@@ -3553,7 +3553,7 @@
       "primary": "Europe/Dublin",
       "identifier_offset": 16690,
       "primary_offset": 16690,
-      "offset": 349807,
+      "offset": 349779,
       "length": 3492
     },
     {
@@ -3561,7 +3561,7 @@
       "primary": "Europe/Gibraltar",
       "identifier_offset": 16704,
       "primary_offset": 16704,
-      "offset": 381161,
+      "offset": 381133,
       "length": 3068
     },
     {
@@ -3569,7 +3569,7 @@
       "primary": "Europe/Guernsey",
       "identifier_offset": 16721,
       "primary_offset": 16721,
-      "offset": 384229,
+      "offset": 384201,
       "length": 3732
     },
     {
@@ -3577,7 +3577,7 @@
       "primary": "Europe/Helsinki",
       "identifier_offset": 16737,
       "primary_offset": 16737,
-      "offset": 387961,
+      "offset": 387933,
       "length": 1900
     },
     {
@@ -3585,7 +3585,7 @@
       "primary": "Europe/Isle_of_Man",
       "identifier_offset": 16753,
       "primary_offset": 16753,
-      "offset": 389861,
+      "offset": 389833,
       "length": 3648
     },
     {
@@ -3593,7 +3593,7 @@
       "primary": "Europe/Istanbul",
       "identifier_offset": 16772,
       "primary_offset": 16772,
-      "offset": 267560,
+      "offset": 267532,
       "length": 1933
     },
     {
@@ -3601,7 +3601,7 @@
       "primary": "Europe/Jersey",
       "identifier_offset": 16788,
       "primary_offset": 16788,
-      "offset": 393509,
+      "offset": 393481,
       "length": 3732
     },
     {
@@ -3609,7 +3609,7 @@
       "primary": "Europe/Kaliningrad",
       "identifier_offset": 16802,
       "primary_offset": 16802,
-      "offset": 397241,
+      "offset": 397213,
       "length": 1493
     },
     {
@@ -3617,7 +3617,7 @@
       "primary": "Europe/Kyiv",
       "identifier_offset": 16821,
       "primary_offset": 16846,
-      "offset": 398734,
+      "offset": 398706,
       "length": 2120
     },
     {
@@ -3625,7 +3625,7 @@
       "primary": "Europe/Kirov",
       "identifier_offset": 16833,
       "primary_offset": 16833,
-      "offset": 400854,
+      "offset": 400826,
       "length": 1185
     },
     {
@@ -3633,7 +3633,7 @@
       "primary": "Europe/Kyiv",
       "identifier_offset": 16846,
       "primary_offset": 16846,
-      "offset": 398734,
+      "offset": 398706,
       "length": 2120
     },
     {
@@ -3641,7 +3641,7 @@
       "primary": "Europe/Lisbon",
       "identifier_offset": 16858,
       "primary_offset": 16858,
-      "offset": 402039,
+      "offset": 402011,
       "length": 3527
     },
     {
@@ -3649,7 +3649,7 @@
       "primary": "Europe/Ljubljana",
       "identifier_offset": 16872,
       "primary_offset": 16872,
-      "offset": 405566,
+      "offset": 405538,
       "length": 1920
     },
     {
@@ -3657,7 +3657,7 @@
       "primary": "Europe/London",
       "identifier_offset": 16889,
       "primary_offset": 16889,
-      "offset": 362254,
+      "offset": 362226,
       "length": 3664
     },
     {
@@ -3665,7 +3665,7 @@
       "primary": "Europe/Luxembourg",
       "identifier_offset": 16903,
       "primary_offset": 16903,
-      "offset": 407486,
+      "offset": 407458,
       "length": 2946
     },
     {
@@ -3673,7 +3673,7 @@
       "primary": "Europe/Madrid",
       "identifier_offset": 16921,
       "primary_offset": 16921,
-      "offset": 410432,
+      "offset": 410404,
       "length": 2614
     },
     {
@@ -3681,7 +3681,7 @@
       "primary": "Europe/Malta",
       "identifier_offset": 16935,
       "primary_offset": 16935,
-      "offset": 413046,
+      "offset": 413018,
       "length": 2620
     },
     {
@@ -3689,7 +3689,7 @@
       "primary": "Europe/Mariehamn",
       "identifier_offset": 16948,
       "primary_offset": 16948,
-      "offset": 387961,
+      "offset": 387933,
       "length": 1900
     },
     {
@@ -3697,7 +3697,7 @@
       "primary": "Europe/Minsk",
       "identifier_offset": 16965,
       "primary_offset": 16965,
-      "offset": 415666,
+      "offset": 415638,
       "length": 1307
     },
     {
@@ -3705,7 +3705,7 @@
       "primary": "Europe/Monaco",
       "identifier_offset": 16978,
       "primary_offset": 16978,
-      "offset": 416973,
+      "offset": 416945,
       "length": 2944
     },
     {
@@ -3713,7 +3713,7 @@
       "primary": "Europe/Moscow",
       "identifier_offset": 16992,
       "primary_offset": 16992,
-      "offset": 419917,
+      "offset": 419889,
       "length": 1535
     },
     {
@@ -3721,7 +3721,7 @@
       "primary": "Asia/Nicosia",
       "identifier_offset": 17006,
       "primary_offset": 14664,
-      "offset": 281292,
+      "offset": 281264,
       "length": 2002
     },
     {
@@ -3729,7 +3729,7 @@
       "primary": "Europe/Oslo",
       "identifier_offset": 17021,
       "primary_offset": 17021,
-      "offset": 421452,
+      "offset": 421424,
       "length": 2228
     },
     {
@@ -3737,7 +3737,7 @@
       "primary": "Europe/Paris",
       "identifier_offset": 17033,
       "primary_offset": 17033,
-      "offset": 423680,
+      "offset": 423652,
       "length": 2962
     },
     {
@@ -3745,7 +3745,7 @@
       "primary": "Europe/Podgorica",
       "identifier_offset": 17046,
       "primary_offset": 17046,
-      "offset": 365918,
+      "offset": 365890,
       "length": 1920
     },
     {
@@ -3753,7 +3753,7 @@
       "primary": "Europe/Prague",
       "identifier_offset": 17063,
       "primary_offset": 17063,
-      "offset": 367838,
+      "offset": 367810,
       "length": 2301
     },
     {
@@ -3761,7 +3761,7 @@
       "primary": "Europe/Riga",
       "identifier_offset": 17077,
       "primary_offset": 17077,
-      "offset": 426642,
+      "offset": 426614,
       "length": 2198
     },
     {
@@ -3769,7 +3769,7 @@
       "primary": "Europe/Rome",
       "identifier_offset": 17089,
       "primary_offset": 17089,
-      "offset": 428840,
+      "offset": 428812,
       "length": 2641
     },
     {
@@ -3777,7 +3777,7 @@
       "primary": "Europe/Samara",
       "identifier_offset": 17101,
       "primary_offset": 17101,
-      "offset": 431481,
+      "offset": 431453,
       "length": 1201
     },
     {
@@ -3785,7 +3785,7 @@
       "primary": "Europe/San_Marino",
       "identifier_offset": 17115,
       "primary_offset": 17115,
-      "offset": 428840,
+      "offset": 428812,
       "length": 2641
     },
     {
@@ -3793,7 +3793,7 @@
       "primary": "Europe/Sarajevo",
       "identifier_offset": 17133,
       "primary_offset": 17133,
-      "offset": 432682,
+      "offset": 432654,
       "length": 1920
     },
     {
@@ -3801,7 +3801,7 @@
       "primary": "Europe/Saratov",
       "identifier_offset": 17149,
       "primary_offset": 17149,
-      "offset": 434602,
+      "offset": 434574,
       "length": 1169
     },
     {
@@ -3809,7 +3809,7 @@
       "primary": "Europe/Simferopol",
       "identifier_offset": 17164,
       "primary_offset": 17164,
-      "offset": 435771,
+      "offset": 435743,
       "length": 1469
     },
     {
@@ -3817,7 +3817,7 @@
       "primary": "Europe/Skopje",
       "identifier_offset": 17182,
       "primary_offset": 17182,
-      "offset": 437240,
+      "offset": 437212,
       "length": 1920
     },
     {
@@ -3825,7 +3825,7 @@
       "primary": "Europe/Sofia",
       "identifier_offset": 17196,
       "primary_offset": 17196,
-      "offset": 439160,
+      "offset": 439132,
       "length": 2077
     },
     {
@@ -3833,7 +3833,7 @@
       "primary": "Europe/Stockholm",
       "identifier_offset": 17209,
       "primary_offset": 17209,
-      "offset": 441237,
+      "offset": 441209,
       "length": 1909
     },
     {
@@ -3841,7 +3841,7 @@
       "primary": "Europe/Tallinn",
       "identifier_offset": 17226,
       "primary_offset": 17226,
-      "offset": 443146,
+      "offset": 443118,
       "length": 2148
     },
     {
@@ -3849,7 +3849,7 @@
       "primary": "Europe/Tirane",
       "identifier_offset": 17241,
       "primary_offset": 17241,
-      "offset": 445294,
+      "offset": 445266,
       "length": 2084
     },
     {
@@ -3857,7 +3857,7 @@
       "primary": "Europe/Chisinau",
       "identifier_offset": 17255,
       "primary_offset": 16656,
-      "offset": 376600,
+      "offset": 376572,
       "length": 2424
     },
     {
@@ -3865,7 +3865,7 @@
       "primary": "Europe/Ulyanovsk",
       "identifier_offset": 17271,
       "primary_offset": 17271,
-      "offset": 447378,
+      "offset": 447350,
       "length": 1253
     },
     {
@@ -3873,7 +3873,7 @@
       "primary": "Europe/Kyiv",
       "identifier_offset": 17288,
       "primary_offset": 16846,
-      "offset": 398734,
+      "offset": 398706,
       "length": 2120
     },
     {
@@ -3881,7 +3881,7 @@
       "primary": "Europe/Vaduz",
       "identifier_offset": 17304,
       "primary_offset": 17304,
-      "offset": 448631,
+      "offset": 448603,
       "length": 1888
     },
     {
@@ -3889,7 +3889,7 @@
       "primary": "Europe/Vatican",
       "identifier_offset": 17317,
       "primary_offset": 17317,
-      "offset": 428840,
+      "offset": 428812,
       "length": 2641
     },
     {
@@ -3897,7 +3897,7 @@
       "primary": "Europe/Vienna",
       "identifier_offset": 17332,
       "primary_offset": 17332,
-      "offset": 450519,
+      "offset": 450491,
       "length": 2200
     },
     {
@@ -3905,7 +3905,7 @@
       "primary": "Europe/Vilnius",
       "identifier_offset": 17346,
       "primary_offset": 17346,
-      "offset": 452719,
+      "offset": 452691,
       "length": 2162
     },
     {
@@ -3913,7 +3913,7 @@
       "primary": "Europe/Volgograd",
       "identifier_offset": 17361,
       "primary_offset": 17361,
-      "offset": 454881,
+      "offset": 454853,
       "length": 1193
     },
     {
@@ -3921,7 +3921,7 @@
       "primary": "Europe/Warsaw",
       "identifier_offset": 17378,
       "primary_offset": 17378,
-      "offset": 456074,
+      "offset": 456046,
       "length": 2654
     },
     {
@@ -3929,7 +3929,7 @@
       "primary": "Europe/Zagreb",
       "identifier_offset": 17392,
       "primary_offset": 17392,
-      "offset": 458728,
+      "offset": 458700,
       "length": 1920
     },
     {
@@ -3937,7 +3937,7 @@
       "primary": "Europe/Kyiv",
       "identifier_offset": 17406,
       "primary_offset": 16846,
-      "offset": 398734,
+      "offset": 398706,
       "length": 2120
     },
     {
@@ -3945,7 +3945,7 @@
       "primary": "Europe/Zurich",
       "identifier_offset": 17424,
       "primary_offset": 17424,
-      "offset": 374691,
+      "offset": 374663,
       "length": 1909
     },
     {
@@ -3953,7 +3953,7 @@
       "primary": "Factory",
       "identifier_offset": 17438,
       "primary_offset": 17438,
-      "offset": 460648,
+      "offset": 460620,
       "length": 116
     },
     {
@@ -3961,7 +3961,7 @@
       "primary": "Europe/London",
       "identifier_offset": 17446,
       "primary_offset": 16889,
-      "offset": 362254,
+      "offset": 362226,
       "length": 3664
     },
     {
@@ -3969,7 +3969,7 @@
       "primary": "Europe/London",
       "identifier_offset": 17449,
       "primary_offset": 16889,
-      "offset": 362254,
+      "offset": 362226,
       "length": 3664
     },
     {
@@ -3977,7 +3977,7 @@
       "primary": "UTC",
       "identifier_offset": 17457,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3985,7 +3985,7 @@
       "primary": "UTC",
       "identifier_offset": 17461,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -3993,7 +3993,7 @@
       "primary": "UTC",
       "identifier_offset": 17467,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4001,7 +4001,7 @@
       "primary": "UTC",
       "identifier_offset": 17473,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4009,7 +4009,7 @@
       "primary": "UTC",
       "identifier_offset": 17478,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4017,7 +4017,7 @@
       "primary": "Pacific/Honolulu",
       "identifier_offset": 17488,
       "primary_offset": 18055,
-      "offset": 460764,
+      "offset": 460736,
       "length": 329
     },
     {
@@ -4025,7 +4025,7 @@
       "primary": "Asia/Hong_Kong",
       "identifier_offset": 17492,
       "primary_offset": 14329,
-      "offset": 264221,
+      "offset": 264193,
       "length": 1233
     },
     {
@@ -4033,7 +4033,7 @@
       "primary": "Atlantic/Reykjavik",
       "identifier_offset": 17501,
       "primary_offset": 15358,
-      "offset": 320061,
+      "offset": 320033,
       "length": 1162
     },
     {
@@ -4041,7 +4041,7 @@
       "primary": "Indian/Antananarivo",
       "identifier_offset": 17509,
       "primary_offset": 17509,
-      "offset": 461093,
+      "offset": 461065,
       "length": 219
     },
     {
@@ -4049,7 +4049,7 @@
       "primary": "Indian/Chagos",
       "identifier_offset": 17529,
       "primary_offset": 17529,
-      "offset": 461312,
+      "offset": 461284,
       "length": 185
     },
     {
@@ -4057,7 +4057,7 @@
       "primary": "Indian/Christmas",
       "identifier_offset": 17543,
       "primary_offset": 17543,
-      "offset": 461497,
+      "offset": 461469,
       "length": 151
     },
     {
@@ -4065,7 +4065,7 @@
       "primary": "Indian/Cocos",
       "identifier_offset": 17560,
       "primary_offset": 17560,
-      "offset": 461648,
+      "offset": 461620,
       "length": 160
     },
     {
@@ -4073,7 +4073,7 @@
       "primary": "Indian/Comoro",
       "identifier_offset": 17573,
       "primary_offset": 17573,
-      "offset": 461808,
+      "offset": 461780,
       "length": 149
     },
     {
@@ -4081,7 +4081,7 @@
       "primary": "Indian/Kerguelen",
       "identifier_offset": 17587,
       "primary_offset": 17587,
-      "offset": 461957,
+      "offset": 461929,
       "length": 151
     },
     {
@@ -4089,7 +4089,7 @@
       "primary": "Indian/Mahe",
       "identifier_offset": 17604,
       "primary_offset": 17604,
-      "offset": 462108,
+      "offset": 462080,
       "length": 151
     },
     {
@@ -4097,7 +4097,7 @@
       "primary": "Indian/Maldives",
       "identifier_offset": 17616,
       "primary_offset": 17616,
-      "offset": 462259,
+      "offset": 462231,
       "length": 185
     },
     {
@@ -4105,7 +4105,7 @@
       "primary": "Indian/Mauritius",
       "identifier_offset": 17632,
       "primary_offset": 17632,
-      "offset": 462444,
+      "offset": 462416,
       "length": 227
     },
     {
@@ -4113,7 +4113,7 @@
       "primary": "Indian/Mayotte",
       "identifier_offset": 17649,
       "primary_offset": 17649,
-      "offset": 462671,
+      "offset": 462643,
       "length": 149
     },
     {
@@ -4121,7 +4121,7 @@
       "primary": "Indian/Reunion",
       "identifier_offset": 17664,
       "primary_offset": 17664,
-      "offset": 462820,
+      "offset": 462792,
       "length": 151
     },
     {
@@ -4129,7 +4129,7 @@
       "primary": "Asia/Tehran",
       "identifier_offset": 17679,
       "primary_offset": 14982,
-      "offset": 297633,
+      "offset": 297605,
       "length": 1248
     },
     {
@@ -4137,7 +4137,7 @@
       "primary": "Asia/Jerusalem",
       "identifier_offset": 17684,
       "primary_offset": 14408,
-      "offset": 270097,
+      "offset": 270069,
       "length": 2388
     },
     {
@@ -4145,7 +4145,7 @@
       "primary": "America/Jamaica",
       "identifier_offset": 17691,
       "primary_offset": 12119,
-      "offset": 135361,
+      "offset": 135333,
       "length": 482
     },
     {
@@ -4153,7 +4153,7 @@
       "primary": "Asia/Tokyo",
       "identifier_offset": 17699,
       "primary_offset": 15033,
-      "offset": 299070,
+      "offset": 299042,
       "length": 309
     },
     {
@@ -4161,7 +4161,7 @@
       "primary": "Pacific/Kwajalein",
       "identifier_offset": 17705,
       "primary_offset": 18138,
-      "offset": 462971,
+      "offset": 462943,
       "length": 302
     },
     {
@@ -4177,7 +4177,7 @@
       "primary": "Europe/Brussels",
       "identifier_offset": 17721,
       "primary_offset": 16591,
-      "offset": 337897,
+      "offset": 337869,
       "length": 2933
     },
     {
@@ -4185,7 +4185,7 @@
       "primary": "America/Phoenix",
       "identifier_offset": 17725,
       "primary_offset": 12901,
-      "offset": 186652,
+      "offset": 186624,
       "length": 360
     },
     {
@@ -4193,7 +4193,7 @@
       "primary": "MST7MDT",
       "identifier_offset": 17729,
       "primary_offset": 17729,
-      "offset": 463273,
+      "offset": 463245,
       "length": 2248
     },
     {
@@ -4209,7 +4209,7 @@
       "primary": "America/Mazatlan",
       "identifier_offset": 17754,
       "primary_offset": 12443,
-      "offset": 150460,
+      "offset": 150432,
       "length": 1060
     },
     {
@@ -4217,7 +4217,7 @@
       "primary": "America/Mexico_City",
       "identifier_offset": 17769,
       "primary_offset": 12528,
-      "offset": 156221,
+      "offset": 156193,
       "length": 1222
     },
     {
@@ -4225,7 +4225,7 @@
       "primary": "Pacific/Auckland",
       "identifier_offset": 17784,
       "primary_offset": 17827,
-      "offset": 465521,
+      "offset": 465493,
       "length": 2437
     },
     {
@@ -4233,7 +4233,7 @@
       "primary": "Pacific/Chatham",
       "identifier_offset": 17787,
       "primary_offset": 17865,
-      "offset": 467958,
+      "offset": 467930,
       "length": 2054
     },
     {
@@ -4249,7 +4249,7 @@
       "primary": "Asia/Shanghai",
       "identifier_offset": 17802,
       "primary_offset": 14895,
-      "offset": 250048,
+      "offset": 250020,
       "length": 561
     },
     {
@@ -4257,7 +4257,7 @@
       "primary": "PST8PDT",
       "identifier_offset": 17806,
       "primary_offset": 17806,
-      "offset": 470012,
+      "offset": 469984,
       "length": 2248
     },
     {
@@ -4265,7 +4265,7 @@
       "primary": "Pacific/Apia",
       "identifier_offset": 17814,
       "primary_offset": 17814,
-      "offset": 472260,
+      "offset": 472232,
       "length": 598
     },
     {
@@ -4273,7 +4273,7 @@
       "primary": "Pacific/Auckland",
       "identifier_offset": 17827,
       "primary_offset": 17827,
-      "offset": 465521,
+      "offset": 465493,
       "length": 2437
     },
     {
@@ -4281,7 +4281,7 @@
       "primary": "Pacific/Bougainville",
       "identifier_offset": 17844,
       "primary_offset": 17844,
-      "offset": 472858,
+      "offset": 472830,
       "length": 254
     },
     {
@@ -4289,7 +4289,7 @@
       "primary": "Pacific/Chatham",
       "identifier_offset": 17865,
       "primary_offset": 17865,
-      "offset": 467958,
+      "offset": 467930,
       "length": 2054
     },
     {
@@ -4297,7 +4297,7 @@
       "primary": "Pacific/Chuuk",
       "identifier_offset": 17881,
       "primary_offset": 17881,
-      "offset": 473112,
+      "offset": 473084,
       "length": 255
     },
     {
@@ -4305,7 +4305,7 @@
       "primary": "Pacific/Easter",
       "identifier_offset": 17895,
       "primary_offset": 17895,
-      "offset": 343078,
+      "offset": 343050,
       "length": 2219
     },
     {
@@ -4313,7 +4313,7 @@
       "primary": "Pacific/Efate",
       "identifier_offset": 17910,
       "primary_offset": 17910,
-      "offset": 473367,
+      "offset": 473339,
       "length": 524
     },
     {
@@ -4321,7 +4321,7 @@
       "primary": "Pacific/Kanton",
       "identifier_offset": 17924,
       "primary_offset": 18089,
-      "offset": 473891,
+      "offset": 473863,
       "length": 220
     },
     {
@@ -4329,7 +4329,7 @@
       "primary": "Pacific/Fakaofo",
       "identifier_offset": 17942,
       "primary_offset": 17942,
-      "offset": 474111,
+      "offset": 474083,
       "length": 186
     },
     {
@@ -4337,7 +4337,7 @@
       "primary": "Pacific/Fiji",
       "identifier_offset": 17958,
       "primary_offset": 17958,
-      "offset": 474297,
+      "offset": 474269,
       "length": 564
     },
     {
@@ -4345,7 +4345,7 @@
       "primary": "Pacific/Funafuti",
       "identifier_offset": 17971,
       "primary_offset": 17971,
-      "offset": 474861,
+      "offset": 474833,
       "length": 152
     },
     {
@@ -4353,7 +4353,7 @@
       "primary": "Pacific/Galapagos",
       "identifier_offset": 17988,
       "primary_offset": 17988,
-      "offset": 475013,
+      "offset": 474985,
       "length": 224
     },
     {
@@ -4361,7 +4361,7 @@
       "primary": "Pacific/Gambier",
       "identifier_offset": 18006,
       "primary_offset": 18006,
-      "offset": 475237,
+      "offset": 475209,
       "length": 150
     },
     {
@@ -4369,7 +4369,7 @@
       "primary": "Pacific/Guadalcanal",
       "identifier_offset": 18022,
       "primary_offset": 18022,
-      "offset": 475387,
+      "offset": 475359,
       "length": 152
     },
     {
@@ -4377,7 +4377,7 @@
       "primary": "Pacific/Guam",
       "identifier_offset": 18042,
       "primary_offset": 18042,
-      "offset": 475539,
+      "offset": 475511,
       "length": 494
     },
     {
@@ -4385,7 +4385,7 @@
       "primary": "Pacific/Honolulu",
       "identifier_offset": 18055,
       "primary_offset": 18055,
-      "offset": 460764,
+      "offset": 460736,
       "length": 329
     },
     {
@@ -4393,7 +4393,7 @@
       "primary": "Pacific/Honolulu",
       "identifier_offset": 18072,
       "primary_offset": 18055,
-      "offset": 460764,
+      "offset": 460736,
       "length": 329
     },
     {
@@ -4401,7 +4401,7 @@
       "primary": "Pacific/Kanton",
       "identifier_offset": 18089,
       "primary_offset": 18089,
-      "offset": 473891,
+      "offset": 473863,
       "length": 220
     },
     {
@@ -4409,7 +4409,7 @@
       "primary": "Pacific/Kiritimati",
       "identifier_offset": 18104,
       "primary_offset": 18104,
-      "offset": 476033,
+      "offset": 476005,
       "length": 224
     },
     {
@@ -4417,7 +4417,7 @@
       "primary": "Pacific/Kosrae",
       "identifier_offset": 18123,
       "primary_offset": 18123,
-      "offset": 476257,
+      "offset": 476229,
       "length": 337
     },
     {
@@ -4425,7 +4425,7 @@
       "primary": "Pacific/Kwajalein",
       "identifier_offset": 18138,
       "primary_offset": 18138,
-      "offset": 462971,
+      "offset": 462943,
       "length": 302
     },
     {
@@ -4433,7 +4433,7 @@
       "primary": "Pacific/Majuro",
       "identifier_offset": 18156,
       "primary_offset": 18156,
-      "offset": 476594,
+      "offset": 476566,
       "length": 296
     },
     {
@@ -4441,7 +4441,7 @@
       "primary": "Pacific/Marquesas",
       "identifier_offset": 18171,
       "primary_offset": 18171,
-      "offset": 476890,
+      "offset": 476862,
       "length": 159
     },
     {
@@ -4449,7 +4449,7 @@
       "primary": "Pacific/Midway",
       "identifier_offset": 18189,
       "primary_offset": 18189,
-      "offset": 477049,
+      "offset": 477021,
       "length": 217
     },
     {
@@ -4457,7 +4457,7 @@
       "primary": "Pacific/Nauru",
       "identifier_offset": 18204,
       "primary_offset": 18204,
-      "offset": 477266,
+      "offset": 477238,
       "length": 238
     },
     {
@@ -4465,7 +4465,7 @@
       "primary": "Pacific/Niue",
       "identifier_offset": 18218,
       "primary_offset": 18218,
-      "offset": 477504,
+      "offset": 477476,
       "length": 189
     },
     {
@@ -4473,7 +4473,7 @@
       "primary": "Pacific/Norfolk",
       "identifier_offset": 18231,
       "primary_offset": 18231,
-      "offset": 477693,
+      "offset": 477665,
       "length": 866
     },
     {
@@ -4481,7 +4481,7 @@
       "primary": "Pacific/Noumea",
       "identifier_offset": 18247,
       "primary_offset": 18247,
-      "offset": 478559,
+      "offset": 478531,
       "length": 290
     },
     {
@@ -4489,7 +4489,7 @@
       "primary": "Pacific/Pago_Pago",
       "identifier_offset": 18262,
       "primary_offset": 18262,
-      "offset": 478849,
+      "offset": 478821,
       "length": 175
     },
     {
@@ -4497,7 +4497,7 @@
       "primary": "Pacific/Palau",
       "identifier_offset": 18280,
       "primary_offset": 18280,
-      "offset": 479024,
+      "offset": 478996,
       "length": 166
     },
     {
@@ -4505,7 +4505,7 @@
       "primary": "Pacific/Pitcairn",
       "identifier_offset": 18294,
       "primary_offset": 18294,
-      "offset": 479190,
+      "offset": 479162,
       "length": 188
     },
     {
@@ -4513,7 +4513,7 @@
       "primary": "Pacific/Pohnpei",
       "identifier_offset": 18311,
       "primary_offset": 18311,
-      "offset": 479378,
+      "offset": 479350,
       "length": 289
     },
     {
@@ -4521,7 +4521,7 @@
       "primary": "Pacific/Pohnpei",
       "identifier_offset": 18327,
       "primary_offset": 18311,
-      "offset": 479378,
+      "offset": 479350,
       "length": 289
     },
     {
@@ -4529,7 +4529,7 @@
       "primary": "Pacific/Port_Moresby",
       "identifier_offset": 18342,
       "primary_offset": 18342,
-      "offset": 479667,
+      "offset": 479639,
       "length": 172
     },
     {
@@ -4537,7 +4537,7 @@
       "primary": "Pacific/Rarotonga",
       "identifier_offset": 18363,
       "primary_offset": 18363,
-      "offset": 479839,
+      "offset": 479811,
       "length": 589
     },
     {
@@ -4545,7 +4545,7 @@
       "primary": "Pacific/Saipan",
       "identifier_offset": 18381,
       "primary_offset": 18381,
-      "offset": 480428,
+      "offset": 480400,
       "length": 480
     },
     {
@@ -4553,7 +4553,7 @@
       "primary": "Pacific/Pago_Pago",
       "identifier_offset": 18396,
       "primary_offset": 18262,
-      "offset": 478849,
+      "offset": 478821,
       "length": 175
     },
     {
@@ -4561,7 +4561,7 @@
       "primary": "Pacific/Tahiti",
       "identifier_offset": 18410,
       "primary_offset": 18410,
-      "offset": 480908,
+      "offset": 480880,
       "length": 151
     },
     {
@@ -4569,7 +4569,7 @@
       "primary": "Pacific/Tarawa",
       "identifier_offset": 18425,
       "primary_offset": 18425,
-      "offset": 481059,
+      "offset": 481031,
       "length": 152
     },
     {
@@ -4577,7 +4577,7 @@
       "primary": "Pacific/Tongatapu",
       "identifier_offset": 18440,
       "primary_offset": 18440,
-      "offset": 481211,
+      "offset": 481183,
       "length": 358
     },
     {
@@ -4585,7 +4585,7 @@
       "primary": "Pacific/Chuuk",
       "identifier_offset": 18458,
       "primary_offset": 17881,
-      "offset": 473112,
+      "offset": 473084,
       "length": 255
     },
     {
@@ -4593,7 +4593,7 @@
       "primary": "Pacific/Wake",
       "identifier_offset": 18471,
       "primary_offset": 18471,
-      "offset": 481569,
+      "offset": 481541,
       "length": 152
     },
     {
@@ -4601,7 +4601,7 @@
       "primary": "Pacific/Wallis",
       "identifier_offset": 18484,
       "primary_offset": 18484,
-      "offset": 481721,
+      "offset": 481693,
       "length": 152
     },
     {
@@ -4609,7 +4609,7 @@
       "primary": "Pacific/Chuuk",
       "identifier_offset": 18499,
       "primary_offset": 17881,
-      "offset": 473112,
+      "offset": 473084,
       "length": 255
     },
     {
@@ -4617,7 +4617,7 @@
       "primary": "Europe/Warsaw",
       "identifier_offset": 18511,
       "primary_offset": 17378,
-      "offset": 456074,
+      "offset": 456046,
       "length": 2654
     },
     {
@@ -4625,7 +4625,7 @@
       "primary": "Europe/Lisbon",
       "identifier_offset": 18518,
       "primary_offset": 16858,
-      "offset": 402039,
+      "offset": 402011,
       "length": 3527
     },
     {
@@ -4633,7 +4633,7 @@
       "primary": "Asia/Taipei",
       "identifier_offset": 18527,
       "primary_offset": 14943,
-      "offset": 295288,
+      "offset": 295260,
       "length": 761
     },
     {
@@ -4641,7 +4641,7 @@
       "primary": "Asia/Seoul",
       "identifier_offset": 18531,
       "primary_offset": 14884,
-      "offset": 293076,
+      "offset": 293048,
       "length": 617
     },
     {
@@ -4649,7 +4649,7 @@
       "primary": "Asia/Singapore",
       "identifier_offset": 18535,
       "primary_offset": 14909,
-      "offset": 293693,
+      "offset": 293665,
       "length": 401
     },
     {
@@ -4657,7 +4657,7 @@
       "primary": "Europe/Istanbul",
       "identifier_offset": 18545,
       "primary_offset": 16772,
-      "offset": 267560,
+      "offset": 267532,
       "length": 1933
     },
     {
@@ -4665,7 +4665,7 @@
       "primary": "UTC",
       "identifier_offset": 18552,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4689,7 +4689,7 @@
       "primary": "America/Phoenix",
       "identifier_offset": 18578,
       "primary_offset": 12901,
-      "offset": 186652,
+      "offset": 186624,
       "length": 360
     },
     {
@@ -4713,7 +4713,7 @@
       "primary": "America/New_York",
       "identifier_offset": 18616,
       "primary_offset": 12669,
-      "offset": 170889,
+      "offset": 170861,
       "length": 3552
     },
     {
@@ -4721,7 +4721,7 @@
       "primary": "Pacific/Honolulu",
       "identifier_offset": 18627,
       "primary_offset": 18055,
-      "offset": 460764,
+      "offset": 460736,
       "length": 329
     },
     {
@@ -4729,7 +4729,7 @@
       "primary": "America/Indiana/Knox",
       "identifier_offset": 18637,
       "primary_offset": 11897,
-      "offset": 118655,
+      "offset": 118627,
       "length": 2444
     },
     {
@@ -4753,7 +4753,7 @@
       "primary": "America/Los_Angeles",
       "identifier_offset": 18679,
       "primary_offset": 12283,
-      "offset": 144208,
+      "offset": 144180,
       "length": 2852
     },
     {
@@ -4761,7 +4761,7 @@
       "primary": "Pacific/Pago_Pago",
       "identifier_offset": 18690,
       "primary_offset": 18262,
-      "offset": 478849,
+      "offset": 478821,
       "length": 175
     },
     {
@@ -4769,7 +4769,7 @@
       "primary": "UTC",
       "identifier_offset": 18699,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4777,7 +4777,7 @@
       "primary": "UTC",
       "identifier_offset": 18703,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     },
     {
@@ -4785,7 +4785,7 @@
       "primary": "Europe/Moscow",
       "identifier_offset": 18713,
       "primary_offset": 16992,
-      "offset": 419917,
+      "offset": 419889,
       "length": 1535
     },
     {
@@ -4793,7 +4793,7 @@
       "primary": "Europe/Lisbon",
       "identifier_offset": 18718,
       "primary_offset": 16858,
-      "offset": 402039,
+      "offset": 402011,
       "length": 3527
     },
     {
@@ -4801,7 +4801,7 @@
       "primary": "UTC",
       "identifier_offset": 18722,
       "primary_offset": 18699,
-      "offset": 353299,
+      "offset": 353271,
       "length": 114
     }
   ]
