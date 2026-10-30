@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 # Native timezone data
 
-`timezone-data.bin` is the single QJTZ pack generated from IANA tzdata **2026e**
+`timezone-data.bin` is the single QJTZ pack generated from IANA tzdata **2026f**
 and CLDR common release **49**. Its manifest records exact source revisions,
 generation settings, identifier/primary relationships and payload hashes.
 See [the generator guide](../../tools/timezone/README.md) for acquisition,
