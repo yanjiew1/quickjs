@@ -162,6 +162,7 @@ static void test_real_rules(void)
     const QJSTimeZone *dublin = lookup("Europe/Dublin");
     const QJSTimeZone *apia = lookup("Pacific/Apia");
     const QJSTimeZone *fixed = lookup("Etc/GMT+5");
+    const QJSTimeZone *havana = lookup("America/Havana");
     const int64_t spring = 1710054000, autumn = 1730613600;
     const int cycles[] = {1, 100, 500};
     Candidates candidates = {{0}, 0};
@@ -170,6 +171,11 @@ static void test_real_rules(void)
     int found;
     size_t count, i;
 
+    /* tzdata 2026f cancels Cuba's 2026 fallback; DST ends in November 2027. */
+    check_offset(havana, 1793509199, -14400);
+    check_offset(havana, 1793509200, -14400);
+    check_offset(havana, 1825563599, -14400);
+    check_offset(havana, 1825563600, -18000);
     check_offset(ny, 1704067200, -18000);
     check_offset(ny, 1719792000, -14400);
     check_offset(ny, INT64_C(-2717650801), -17762);
