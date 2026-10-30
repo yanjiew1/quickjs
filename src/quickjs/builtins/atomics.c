@@ -602,20 +602,17 @@ static JSValue js_atomics_wait(JSContext *ctx,
         }
         previous = ts;
         interval = min_int64(timeout, 86400000);
-        seconds = interval / 1000;
-        if (ts.tv_sec > INT64_MAX - seconds - 1 ||
-            (sizeof(time_t) == 4 && ts.tv_sec > INT32_MAX - seconds - 1)) {
+        ts.tv_nsec += (interval % 1000) * 1000000;
+        seconds = interval / 1000 + ts.tv_nsec / 1000000000;
+        ts.tv_nsec %= 1000000000;
+        if (ts.tv_sec > INT64_MAX - seconds ||
+            (sizeof(time_t) == 4 && ts.tv_sec > INT32_MAX - seconds)) {
             js_native_wait_finish_sync_locked(queue, &waiter->native, TRUE);
             js_native_wait_queue_unlock(queue);
             pthread_cond_destroy(&waiter->cond);
             return JS_ThrowInternalError(ctx, "native wait deadline out of range");
         }
         ts.tv_sec += seconds;
-        ts.tv_nsec += (interval % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
-            ts.tv_nsec -= 1000000000;
-            ts.tv_sec++;
-        }
     }
     ret = 0;
     do {
