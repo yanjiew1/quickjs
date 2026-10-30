@@ -516,7 +516,8 @@ static JSValue js_atomics_wait(JSContext *ctx,
     uint64_t idx;
     void *ptr;
     int64_t timeout, interval, seconds;
-    struct timespec ts;
+    struct timespec ts, previous = {0};
+    long double elapsed_ms;
     JSAtomicsWaiter waiter_s, *waiter;
     JSNativeWaitQueue *queue;
     JSNativeWaitResult result;
@@ -582,7 +583,6 @@ static JSValue js_atomics_wait(JSContext *ctx,
     if (timeout != INT64_MAX) {
         /* Bound each absolute wait so a large finite duration does not wrap
            a 32-bit time_t. Spurious wakes reuse this interval's deadline. */
-        interval = min_int64(timeout, 86400000);
         /* XXX: use clock monotonic */
         if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
             js_native_wait_finish_sync_locked(queue, &waiter->native, TRUE);
@@ -590,6 +590,18 @@ static JSValue js_atomics_wait(JSContext *ctx,
             pthread_cond_destroy(&waiter->cond);
             return JS_ThrowInternalError(ctx, "native wait clock failed");
         }
+        if (interval) {
+            /* A resumed thread may have missed more than one interval.
+               Subtract elapsed time, not just the scheduled chunk length. */
+            elapsed_ms = ((long double)ts.tv_sec - previous.tv_sec) * 1000 +
+                         ((long double)ts.tv_nsec - previous.tv_nsec) / 1000000;
+            if (elapsed_ms >= timeout)
+                timeout = 0;
+            else if (elapsed_ms > 0)
+                timeout -= (int64_t)elapsed_ms;
+        }
+        previous = ts;
+        interval = min_int64(timeout, 86400000);
         seconds = interval / 1000;
         if (ts.tv_sec > INT64_MAX - seconds - 1 ||
             (sizeof(time_t) == 4 && ts.tv_sec > INT32_MAX - seconds - 1)) {
@@ -614,7 +626,6 @@ static JSValue js_atomics_wait(JSContext *ctx,
         if (ret == ETIMEDOUT && timeout > interval && timeout != INT64_MAX) {
             result = js_native_wait_finish_sync_locked(queue, &waiter->native, FALSE);
             if (result == JS_NATIVE_WAIT_NO_EVENT) {
-                timeout -= interval;
                 goto restart_timeout;
             }
             break;

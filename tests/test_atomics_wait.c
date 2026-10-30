@@ -119,6 +119,7 @@ typedef enum {
     TEST_WAIT_FRACTIONAL_TIMEOUT,
     TEST_WAIT_LARGE_TIMEOUT,
     TEST_WAIT_LARGE_TIMEOUT_EXPIRES,
+    TEST_WAIT_DELAYED_RESUME,
     TEST_WAIT_CLOCK_ERROR,
     TEST_WAIT_COND_ERROR,
 } TestWaitMode;
@@ -135,6 +136,12 @@ static int test_clock_gettime(clockid_t id, struct timespec *time)
         test_wait_calls++;
         time->tv_sec = time->tv_nsec = 0;
         return -1;
+    }
+    if (test_wait_mode == TEST_WAIT_DELAYED_RESUME) {
+        assert(id == CLOCK_REALTIME);
+        time->tv_sec = 1234 + test_wait_calls * 172800;
+        time->tv_nsec = 0;
+        return 0;
     }
     if (test_wait_mode == TEST_WAIT_LARGE_TIMEOUT ||
         test_wait_mode == TEST_WAIT_LARGE_TIMEOUT_EXPIRES) {
@@ -180,6 +187,12 @@ static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                               const struct timespec *deadline)
 {
+    if (test_wait_mode == TEST_WAIT_DELAYED_RESUME) {
+        assert(++test_wait_calls <= 2);
+        assert(deadline->tv_sec == 1234 + (test_wait_calls == 1 ? 86400 : 172800));
+        assert(deadline->tv_nsec == 0);
+        return ETIMEDOUT;
+    }
     if (test_wait_mode == TEST_WAIT_LARGE_TIMEOUT_EXPIRES) {
         assert(++test_wait_calls <= 2);
         assert(deadline->tv_sec == 1234 + 86400);
@@ -339,6 +352,8 @@ int main(void)
         "Atomics.wait(testWords, 0, 0, 2147483648000)", "ok", 2);
     test_wait_result(ctx, TEST_WAIT_LARGE_TIMEOUT_EXPIRES,
         "Atomics.wait(testWords, 0, 0, 86400001)", "timed-out", 2);
+    test_wait_result(ctx, TEST_WAIT_DELAYED_RESUME,
+        "Atomics.wait(testWords, 0, 0, 172800000)", "timed-out", 2);
     test_wait_host_error(ctx, TEST_WAIT_CLOCK_ERROR);
     test_wait_host_error(ctx, TEST_WAIT_COND_ERROR);
     JS_FreeContext(ctx);
