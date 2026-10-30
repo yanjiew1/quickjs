@@ -1,13 +1,13 @@
 {
   "format": 1,
   "tz": {
-    "release": "2026e",
-    "tag": "2026e",
-    "commit": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
-    "released": "2026-09-29",
+    "release": "2026f",
+    "tag": "2026f",
+    "commit": "a6cb1a1cebcc96269a02b25323c1a9424e3349a8",
+    "released": "2026-10-27",
     "archive": {
-      "url": "https://codeload.github.com/eggert/tz/tar.gz/refs/tags/2026e",
-      "sha256": "5b62258a9a868813f00b070983b9b3e7279634575571a0fcc732be6a1f7047c1"
+      "url": "https://codeload.github.com/eggert/tz/tar.gz/refs/tags/2026f",
+      "sha256": "2fe4b4f27f75beea17970dfdd242ffb7f099fad9447950a39d0fe8eae522d8e2"
     }
   },
   "cldr": {
@@ -34,5 +34,5 @@
       }
     }
   },
-  "reviewed": "2026-10-23"
+  "reviewed": "2026-10-30"
 }
