@@ -115,3 +115,259 @@ diff --git a/test/annexB/language/function-code/block-decl-func-skip-arguments.j
 +  { function arguments() {} }
 +  assert.sameValue(arguments, 42);
 +}(42));
+
+# Current living-draft DataView getter assertions, reviewed 2026-10-30.
+# Test262 0b4e0812022b18236b5276d2804948fdd9f71603 anticipates this
+# unmerged normative change (head 127ed0fe8241b953a8b7fd4e08c49de96edd59cf):
+# https://redirect.github.com/tc39/ecma262/pull/3972
+# ECMA-262 0d4945de6a11bef38e6b2c47c29c1ecb373c09d7 still requires TypeError:
+# https://tc39.es/ecma262/multipage/structured-data.html#sec-get-dataview.prototype.bytelength
+# https://tc39.es/ecma262/multipage/structured-data.html#sec-get-dataview.prototype.byteoffset
+# Keep in-bounds/recovery checks and optional resize failure handling intact.
+# Remove this overlay when the normative change merges and the engine follows it.
+diff --git a/test/built-ins/DataView/prototype/byteLength/detached-buffer.js b/test/built-ins/DataView/prototype/byteLength/detached-buffer.js
+index 405a8f411..171292e22 100644
+--- a/test/built-ins/DataView/prototype/byteLength/detached-buffer.js
++++ b/test/built-ins/DataView/prototype/byteLength/detached-buffer.js
+@@ -3,11 +3,11 @@
+ 
+ /*---
+ esid: sec-get-dataview.prototype.bytelength
+-description: Returns 0 if the instance has a detached buffer
++description: Throws a TypeError if the instance has a detached buffer
+ info: |
+   get DataView.prototype.byteLength
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -21,4 +21,4 @@ let dv = new DataView(buffer, 0);
+ 
+ $DETACHBUFFER(buffer);
+ 
+-assert.sameValue(dv.byteLength, 0);
++assert.throws(TypeError, function() { return dv.byteLength; });
+diff --git a/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-auto.js b/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-auto.js
+index 46d1672ef..0ef848aa2 100644
+--- a/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-auto.js
++++ b/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-auto.js
+@@ -3,12 +3,12 @@
+ /*---
+ esid: sec-get-dataview.prototype.bytelength
+ description: |
+-  Returns 0 when the instance is length-tracking and the underlying ArrayBuffer
++  Throws a TypeError when the instance is length-tracking and the underlying ArrayBuffer
+   shrinks beneath its start offset
+ info: |
+   get DataView.prototype.byteLength
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -55,16 +55,27 @@ try {
+ 
+ assert.sameValue(dataView.byteLength, expected, "following shrink (on boundary)");
+ 
++var outOfBounds = false;
+ try {
+   ab.resize(0);
++  outOfBounds = true;
+   expected = 0;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteLength, expected, "following shrink (out of bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteLength; });
++} else {
++  assert.sameValue(dataView.byteLength, expected, "following shrink (out of bounds)");
++}
+ 
+ try {
+   ab.resize(2);
++  outOfBounds = false;
+   expected = 1;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteLength, expected, "following grow (back into bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteLength; });
++} else {
++  assert.sameValue(dataView.byteLength, expected, "following grow (back into bounds)");
++}
+diff --git a/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-fixed.js b/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-fixed.js
+index ffaf23f1f..66459c757 100644
+--- a/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-fixed.js
++++ b/test/built-ins/DataView/prototype/byteLength/resizable-array-buffer-fixed.js
+@@ -3,11 +3,11 @@
+ /*---
+ esid: sec-get-dataview.prototype.bytelength
+ description: |
+-  Returns 0 when the underlying ArrayBuffer shrinks beneath its end offset
++  Throws a TypeError when the underlying ArrayBuffer shrinks beneath its end offset
+ info: |
+   get DataView.prototype.byteLength
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -46,18 +46,29 @@ try {
+ assert.sameValue(dataView.byteLength, 2, "following shrink (within bounds)");
+ 
+ var expected;
++var outOfBounds = false;
+ try {
+   ab.resize(2);
++  outOfBounds = true;
+   expected = 0;
+ } catch (_) {
+   expected = 2;
+ }
+ 
+-assert.sameValue(dataView.byteLength, expected, "following shrink (out of bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteLength; });
++} else {
++  assert.sameValue(dataView.byteLength, expected, "following shrink (out of bounds)");
++}
+ 
+ try {
+   ab.resize(3);
++  outOfBounds = false;
+   expected = 2;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteLength, expected, "following grow (back into bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteLength; });
++} else {
++  assert.sameValue(dataView.byteLength, expected, "following grow (back into bounds)");
++}
+diff --git a/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js b/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js
+index ae6b23f2f..1afbc0b4d 100644
+--- a/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js
++++ b/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js
+@@ -3,11 +3,11 @@
+ 
+ /*---
+ esid: sec-get-dataview.prototype.byteoffset
+-description: Returns 0 if the instance has a detached buffer
++description: Throws a TypeError if the instance has a detached buffer
+ info: |
+   get DataView.prototype.byteOffset
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -21,4 +21,4 @@ var sample = new DataView(buffer, 8, 1);
+ 
+ $DETACHBUFFER(buffer);
+ 
+-assert.sameValue(sample.byteOffset, 0);
++assert.throws(TypeError, function() { return sample.byteOffset; });
+diff --git a/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-auto.js b/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-auto.js
+index 0feed2aab..40b9073c5 100644
+--- a/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-auto.js
++++ b/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-auto.js
+@@ -3,12 +3,12 @@
+ /*---
+ esid: sec-get-dataview.prototype.byteoffset
+ description: |
+-  Returns 0 when the instance is length-tracking and the underlying ArrayBuffer
++  Throws a TypeError when the instance is length-tracking and the underlying ArrayBuffer
+   shrinks beneath its start offset
+ info: |
+   get DataView.prototype.byteOffset
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -52,16 +52,27 @@ try {
+ assert.sameValue(dataView.byteOffset, 1, "following shrink (on boundary)");
+ 
+ var expected = 1;
++var outOfBounds = false;
+ try {
+   ab.resize(0);
++  outOfBounds = true;
+   expected = 0;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteOffset, expected, "following shrink (out of bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteOffset; });
++} else {
++  assert.sameValue(dataView.byteOffset, expected, "following shrink (out of bounds)");
++}
+ 
+ try {
+   ab.resize(1);
++  outOfBounds = false;
+   expected = 1;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteOffset, expected, "following grow (back into bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteOffset; });
++} else {
++  assert.sameValue(dataView.byteOffset, expected, "following grow (back into bounds)");
++}
+diff --git a/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-fixed.js b/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-fixed.js
+index 610d65d01..59e44e4f9 100644
+--- a/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-fixed.js
++++ b/test/built-ins/DataView/prototype/byteOffset/resizable-array-buffer-fixed.js
+@@ -3,11 +3,11 @@
+ /*---
+ esid: sec-get-dataview.prototype.byteoffset
+ description: |
+-  Returns 0 when the underlying ArrayBuffer shrinks beneath its end offset
++  Throws a TypeError when the underlying ArrayBuffer shrinks beneath its end offset
+ info: |
+   get DataView.prototype.byteOffset
+ 
+-  5. If IsViewOutOfBounds(viewRecord) is true, return +0𝔽.
++  5. If IsViewOutOfBounds(viewRecord) is true, throw a TypeError exception.
+ 
+   IsViewOutOfBounds ( viewRecord )
+ 
+@@ -46,18 +46,29 @@ try {
+ assert.sameValue(dataView.byteOffset, 1, "following shrink (within bounds)");
+ 
+ var expected;
++var outOfBounds = false;
+ try {
+   ab.resize(2);
++  outOfBounds = true;
+   expected = 0;
+ } catch (_) {
+   expected = 1;
+ }
+ 
+-assert.sameValue(dataView.byteOffset, expected, "following shrink (out of bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteOffset; });
++} else {
++  assert.sameValue(dataView.byteOffset, expected, "following shrink (out of bounds)");
++}
+ 
+ try {
+   ab.resize(3);
++  outOfBounds = false;
+   expected = 1;
+ } catch (_) {}
+ 
+-assert.sameValue(dataView.byteOffset, expected, "following grow (back into bounds)");
++if (outOfBounds) {
++  assert.throws(TypeError, function() { return dataView.byteOffset; });
++} else {
++  assert.sameValue(dataView.byteOffset, expected, "following grow (back into bounds)");
++}

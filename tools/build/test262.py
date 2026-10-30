@@ -27,7 +27,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-PIN = 'd53ebc8b1931d9f1541e43d59650776e4b766248'
+PIN = '91c70759363c46557b694792bf34a2551a7af5ba'
 
 
 def main():
@@ -51,6 +51,8 @@ def main():
                                    'https://github.com/tc39/test262.git', str(checkout)])
         subprocess.check_call(['git', 'fetch', 'origin'], cwd=str(checkout))
         subprocess.check_call(['git', 'reset', '--hard', PIN], cwd=str(checkout))
+        # Remove files added by a previous overlay before applying it again.
+        subprocess.check_call(['git', 'clean', '-fd'], cwd=str(checkout))
         for name in ['test262.patch', 'test262-unicode18.patch']:
             subprocess.check_call(['git', 'apply', str(source / 'tests' / name)],
                                   cwd=str(checkout))
