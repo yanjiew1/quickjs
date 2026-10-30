@@ -1,7 +1,7 @@
 # Unicode 18.0.0 Test262 data fixture overlay.
 # Source: https://github.com/mathiasbynens/unicode-property-escapes-tests
 # Source revision: ce3f614ae7976518fd14195071513286b64b0747
-# Test262 base: d53ebc8b1931d9f1541e43d59650776e4b766248
+# Test262 base: 91c70759363c46557b694792bf34a2551a7af5ba
 # The BMP string-case oracle is independently regenerated from the
 # Unicode 18 UnicodeData.txt and unconditional SpecialCasing.txt mappings.
 # UCD source: https://www.unicode.org/Public/18.0.0/ucd/
