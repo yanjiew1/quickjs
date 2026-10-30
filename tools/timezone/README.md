@@ -24,9 +24,9 @@ THE SOFTWARE.
 # Native timezone source inputs
 
 [`data/timezone/pin.json`](../../data/timezone/pin.json) selects released
-**IANA tzdata 2026e** and **CLDR 49 common release XML**.
+**IANA tzdata 2026f** and **CLDR 49 common release XML**.
 The pin records IANA release commit
-`039ef27cc5f062a2055cb67435d6d71adbefd27d` as provenance. Acquisition verifies the release archive
+`a6cb1a1cebcc96269a02b25323c1a9424e3349a8` as provenance. Acquisition verifies the release archive
 SHA-256 before placing it in the cache.
 CLDR is pinned to `96e54b273d2da4ec6fbad350ba19ff23fa24a588`.
 The vendored BCP47 aliases and Windows mappings are exact members of the
@@ -47,12 +47,12 @@ size, and uses finite request timeouts and retries. It replaces the archive
 atomically. Existing verified inputs need no network. Updating a release
 requires an explicit pin review.
 
-Only `tz-2026e.tar.gz` is needed in the cache. Generation reads supplied archive
+Only `tz-2026f.tar.gz` is needed in the cache. Generation reads supplied archive
 bytes and materializes required regular files into a fresh private directory;
 it does not check them against pin hashes.
 It validates the complete set before writing any source, rejects duplicate or
 linked required members, and never uses archive paths as output paths. Old
-extracted `tz-2026e/` cache directories are ignored, so modifying a cached
+extracted `tz-2026f/` cache directories are ignored, so modifying a cached
 `zic.c` cannot change the compiler used by generation. Per-member IANA hashes
 are unnecessary: acquisition authenticates the archive as one source.
 
@@ -67,9 +67,9 @@ Normal builds do not download data, read installed timezone files, or run
 this acquisition script. Pinned zic sources are available only for build-host
 data generation; target runtime code does not link tzcode.
 
-Sources reviewed on 2026-10-23:
+Sources reviewed on 2026-10-30:
 
-- [IANA release archive](https://www.iana.org/time-zones/releases/2026e)
+- [IANA release archive](https://www.iana.org/time-zones/releases/2026f)
 - [CLDR 49 release notes](https://cldr.unicode.org/downloads/cldr-49)
 - [Official CLDR common archive](https://unicode.org/Public/cldr/49/cldr-common-49.zip)
 
@@ -137,7 +137,7 @@ GetAvailableNamedTimeZoneIdentifier contracts. Names retain canonical spelling,
 lookup ignores ASCII case, and all mappings/rules remain stable for the process
 lifetime. The IANA release review must check new Zone renames and their
 recommended waiting period before changing primary identities. No active
-rename waiting override is needed for the pinned 2026e snapshot.
+rename waiting override is needed for the pinned 2026f snapshot.
 
 Common consumers can filter `qjs_timezone_at()` with `qjs_timezone_is_primary()`
 to obtain AvailablePrimaryTimeZoneIdentifiers, preserving sorted order.
