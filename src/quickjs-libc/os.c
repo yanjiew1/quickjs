@@ -585,10 +585,17 @@ static JSValue js_os_stat(JSContext *ctx, JSValueConst this_val,
 }
 
 #if !defined(_WIN32)
-static void ms_to_timeval(struct timeval *tv, uint64_t v)
+static void ms_to_timeval(struct timeval *tv, int64_t v)
 {
-    tv->tv_sec = v / 1000;
-    tv->tv_usec = (v % 1000) * 1000;
+    int64_t seconds = v / 1000;
+    int64_t remainder = v % 1000;
+
+    if (remainder < 0) {
+        seconds--;
+        remainder += 1000;
+    }
+    tv->tv_sec = seconds;
+    tv->tv_usec = remainder * 1000;
 }
 #endif
 

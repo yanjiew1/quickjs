@@ -746,6 +746,17 @@ static void test_format_stops_after_oom(int mode)
     assert(!allocator.live);
 }
 
+#ifndef _WIN32
+static void test_negative_utimes_conversion(void)
+{
+    struct timeval value;
+
+    ms_to_timeval(&value, -1000);
+    assert(value.tv_sec == -1 && value.tv_usec == 0);
+    ms_to_timeval(&value, -1001);
+    assert(value.tv_sec == -2 && value.tv_usec == 999000);
+}
+#endif
 
 /* Results own their payloads; pipe descriptors transfer only on success. */
 static void test_os_result_oom(int mode)
@@ -937,6 +948,9 @@ int main(void)
     test_format_stops_after_oom(0);
     test_format_stops_after_oom(1);
     test_format_stops_after_oom(2);
+#ifndef _WIN32
+    test_negative_utimes_conversion();
+#endif
     test_point_export_failure();
     test_host_module_export_failures(0);
     test_host_module_export_failures(1);
