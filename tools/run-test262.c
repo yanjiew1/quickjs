@@ -76,6 +76,13 @@ typedef struct PathRequirement {
 
 static PathRequirement *path_requirements;
 
+typedef enum {
+    TEST_PHASE_ANY,
+    TEST_PHASE_PARSE,
+    TEST_PHASE_RESOLUTION,
+    TEST_PHASE_RUNTIME,
+} TestPhase;
+
 /* per execution thread context */
 typedef struct {
     pthread_mutex_t agent_mutex;
@@ -88,6 +95,7 @@ typedef struct {
     struct list_head report_list;
 
     int async_done;
+    TestPhase phase;
 } ThreadLocalStorage;
 
 typedef struct Test262SharedBufferRoot {
@@ -1345,6 +1353,12 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
     uint8_t *buf;
     JSModuleDef *m;
     char *filename, *slash, path[1024];
+    ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+
+    /* Root parsing has finished before its dependencies are requested.
+       Syntax errors in imported source belong to resolution of this test. */
+    if (tls->phase == TEST_PHASE_PARSE)
+        tls->phase = TEST_PHASE_RESOLUTION;
 
     // interpret import("bar.js") from path/to/foo.js as
     // import("path/to/bar.js") but leave import("./bar.js") untouched
@@ -1962,7 +1976,7 @@ static __attribute__((__format__(__printf__, 1, 2))) void print_error(const char
 static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                     const char *filename, int is_test, int is_negative,
                     const char *error_type, FILE *outfile, int eval_flags,
-                    int is_async)
+                    int is_async, TestPhase negative_phase)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     JSValue res_val, exception_val;
@@ -1980,7 +1994,29 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
     ret_promise = ((eval_flags & JS_EVAL_TYPE_MODULE) != 0);
     tls->async_done = 0; /* counter of "Test262:AsyncTestComplete" messages */
 
-    res_val = JS_Eval(ctx, buf, buf_len, filename, eval_flags);
+    tls->phase = TEST_PHASE_PARSE;
+    if (negative_phase == TEST_PHASE_ANY) {
+        res_val = JS_Eval(ctx, buf, buf_len, filename, eval_flags);
+    } else {
+        res_val = JS_Eval(ctx, buf, buf_len, filename,
+                          eval_flags | JS_EVAL_FLAG_COMPILE_ONLY);
+        if (!JS_IsException(res_val)) {
+            if (negative_phase == TEST_PHASE_PARSE) {
+                /* A parse-negative test must not execute its body. */
+                JS_FreeValue(ctx, res_val);
+                res_val = JS_UNDEFINED;
+                ret_promise = FALSE;
+                is_async = FALSE;
+            } else {
+                /* Modules link synchronously; evaluation errors are carried
+                   by the returned promise. Scripts start executing here. */
+                tls->phase = ret_promise ? TEST_PHASE_RESOLUTION : TEST_PHASE_RUNTIME;
+                res_val = JS_EvalFunction(ctx, res_val);
+                if (ret_promise && !JS_IsException(res_val))
+                    tls->phase = TEST_PHASE_RUNTIME;
+            }
+        }
+    }
 
     if ((is_async || ret_promise) && !JS_IsException(res_val)) {
         JSValue promise = JS_UNDEFINED;
@@ -2081,6 +2117,8 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                     ret = -1;
                 }
             }
+            if (negative_phase != TEST_PHASE_ANY && tls->phase != negative_phase)
+                ret = -1;
         } else {
             ret = -1;
         }
@@ -2178,7 +2216,7 @@ static int eval_file(JSContext *ctx, const char *base, const char *p,
         goto fail;
     }
     if (eval_buf(ctx, buf, buf_len, filename, FALSE, FALSE, NULL, stderr,
-                 eval_flags, FALSE)) {
+                 eval_flags, FALSE, TEST_PHASE_ANY)) {
         warning("error evaluating %s", filename);
         goto fail;
     }
@@ -2328,7 +2366,7 @@ int run_test_buf(ThreadLocalStorage *tls,
                  const char *filename, const char *harness, namelist_t *ip,
                  char *buf, size_t buf_len, const char* error_type,
                  int eval_flags, BOOL is_negative, BOOL is_async,
-                 BOOL can_block)
+                 BOOL can_block, TestPhase negative_phase)
 {
     JSRuntime *rt;
     JSContext *ctx;
@@ -2361,7 +2399,7 @@ int run_test_buf(ThreadLocalStorage *tls,
     }
 
     ret = eval_buf(ctx, buf, buf_len, filename, TRUE, is_negative,
-                   error_type, outfile, eval_flags, is_async);
+                   error_type, outfile, eval_flags, is_async, negative_phase);
     ret = (ret != 0);
 
     if (dump_memory) {
@@ -2385,6 +2423,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
     int ret, eval_flags, use_strict, use_nostrict;
     BOOL is_negative, is_nostrict, is_onlystrict, is_async, is_module, skip;
     BOOL can_block, is_raw = FALSE;
+    TestPhase negative_phase = TEST_PHASE_ANY;
     namelist_t include_list = { 0 }, *ip = &include_list;
 
     is_nostrict = is_onlystrict = is_negative = is_async = is_module = skip = FALSE;
@@ -2455,8 +2494,23 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
             }
             p = find_tag(desc, "negative:", &state);
             if (p) {
-                /* XXX: should extract the phase */
-                char *q = find_tag(p, "type:", &state);
+                char *q = find_tag(p, "phase:", &state);
+                if (q) {
+                    char *phase;
+                    while (isspace((unsigned char)*q))
+                        q++;
+                    phase = strdup_len(q, strcspn(q, " \n"));
+                    if (str_equal(phase, "parse"))
+                        negative_phase = TEST_PHASE_PARSE;
+                    else if (str_equal(phase, "resolution"))
+                        negative_phase = TEST_PHASE_RESOLUTION;
+                    else if (str_equal(phase, "runtime"))
+                        negative_phase = TEST_PHASE_RUNTIME;
+                    else
+                        fatal(1, "unknown negative phase %s in %s", phase, filename);
+                    free(phase);
+                }
+                q = find_tag(p, "type:", &state);
                 if (q) {
                     while (isspace((unsigned char)*q))
                         q++;
@@ -2605,7 +2659,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
             start = timing_log ? get_clock_ns() : 0;
             ret = run_test_buf(tls, filename, harness, ip, buf, buf_len,
                                error_type, eval_flags, is_negative, is_async,
-                               can_block);
+                               can_block, negative_phase);
             write_test_timing(filename, thread_index, index,
                               is_module ? "module" : "non-strict",
                               ret ? "fail" : "pass", start);
@@ -2617,7 +2671,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
             start = timing_log ? get_clock_ns() : 0;
             ret |= run_test_buf(tls, filename, harness, ip, buf, buf_len,
                                 error_type, eval_flags | JS_EVAL_FLAG_STRICT,
-                                is_negative, is_async, can_block);
+                                is_negative, is_async, can_block, negative_phase);
             write_test_timing(filename, thread_index, index, "strict",
                               ret ? "fail" : "pass", start);
         }
