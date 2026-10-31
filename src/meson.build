@@ -103,6 +103,7 @@ support_library_sources = files(
 )
 support_sources = support_library_sources + files(
   'quickjs-libc/event-loop.c',
+  'quickjs-libc/environment.c',
   'quickjs-libc/host.c',
   'quickjs-libc/module-loader.c',
   'quickjs-libc/os.c',

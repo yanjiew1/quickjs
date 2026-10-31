@@ -437,6 +437,25 @@ function test_invalid_environment_names()
     }
 }
 
+function test_environment_snapshot()
+{
+    const name = "QJS_HOST_ENV_SNAPSHOT_TEST";
+    const old = std.getenv(name);
+
+    try {
+        std.setenv(name, "snapshot");
+        assert(std.getenv(name), "snapshot");
+        assert(std.getenviron()[name], "snapshot");
+        std.unsetenv(name);
+        assert(std.getenv(name), undefined);
+    } finally {
+        if (old === undefined)
+            std.unsetenv(name);
+        else
+            std.setenv(name, old);
+    }
+}
+
 function test_os_exec_overlapping_fds()
 {
     const first = os.pipe();
@@ -529,6 +548,7 @@ test_os();
 test_os_exec();
 test_os_exec_empty_path_entry();
 test_invalid_environment_names();
+test_environment_snapshot();
 test_os_exec_overlapping_fds();
 test_timer();
 test_ext_json();

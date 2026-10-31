@@ -68,6 +68,7 @@ extern char **environ;
 #include "thread.h"
 #include "os.h"
 #include "std.h"
+#include "environment.h"
 
 static void *js_std_dbuf_realloc(void *opaque, void *ptr, size_t size)
 {
@@ -451,16 +452,21 @@ static JSValue js_std_exit(JSContext *ctx, JSValueConst this_val,
 static JSValue js_std_getenv(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
-    const char *name, *str;
+    const char *name;
+    char *str;
+    JSValue ret;
+    int err;
     name = JS_ToCString(ctx, argv[0]);
     if (!name)
         return JS_EXCEPTION;
-    str = getenv(name);
+    str = js_host_getenv_copy(name);
+    err = errno;
     JS_FreeCString(ctx, name);
     if (!str)
-        return JS_UNDEFINED;
-    else
-        return JS_NewString(ctx, str);
+        return err == ENOMEM ? JS_ThrowOutOfMemory(ctx) : JS_UNDEFINED;
+    ret = JS_NewString(ctx, str);
+    free(str);
+    return ret;
 }
 
 #if defined(_WIN32)
@@ -513,8 +519,10 @@ static JSValue js_std_setenv(JSContext *ctx, JSValueConst this_val,
         JS_FreeCString(ctx, value);
         return JS_ThrowTypeError(ctx, "invalid environment variable name");
     }
+    js_host_environment_lock();
     ret = setenv(name, value, TRUE);
     err = errno;
+    js_host_environment_unlock();
     JS_FreeCString(ctx, name);
     JS_FreeCString(ctx, value);
     if (ret < 0) {
@@ -538,8 +546,10 @@ static JSValue js_std_unsetenv(JSContext *ctx, JSValueConst this_val,
         JS_FreeCString(ctx, name);
         return JS_ThrowTypeError(ctx, "invalid environment variable name");
     }
+    js_host_environment_lock();
     ret = unsetenv(name);
     err = errno;
+    js_host_environment_unlock();
     JS_FreeCString(ctx, name);
     if (ret < 0) {
         if (err == ENOMEM)
@@ -563,10 +573,12 @@ static JSValue js_std_getenviron(JSContext *ctx, JSValueConst this_val,
     JSAtom atom;
     int ret;
 
+    envp = js_host_environ_copy();
+    if (!envp)
+        return JS_ThrowOutOfMemory(ctx);
     obj = JS_NewObject(ctx);
     if (JS_IsException(obj))
-        return JS_EXCEPTION;
-    envp = environ;
+        goto fail;
     for(idx = 0; envp[idx] != NULL; idx++) {
         name = envp[idx];
         p = strchr(name, '=');
@@ -587,8 +599,10 @@ static JSValue js_std_getenviron(JSContext *ctx, JSValueConst this_val,
         if (ret < 0)
             goto fail;
     }
+    js_host_environ_free(envp);
     return obj;
  fail:
+    js_host_environ_free(envp);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
 }
