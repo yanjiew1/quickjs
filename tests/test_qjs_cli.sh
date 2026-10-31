@@ -100,6 +100,13 @@ for invalid_size in inf -1 G 1Gjunk 18446744073709551616; do
     done
 done
 
+invoke_qjs -s -e 'function stripped() { throw Error("strip-order") } stripped()'
+[ "$qjs_status" -eq 1 ]
+cp err expected
+invoke_qjs -s --strip-source -e 'function stripped() { throw Error("strip-order") } stripped()'
+[ "$qjs_status" -eq 1 ]
+diff -u expected err
+
 # Module execution errors still use the normal failing CLI cleanup path.
 invoke_qjs --std -m -e 'throw Error("qjs-cli-abrupt");'
 if [ "$qjs_status" -ne 1 ] || [ -s out ] ||
