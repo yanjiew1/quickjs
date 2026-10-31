@@ -213,7 +213,7 @@ layout is the `eggert/tz` Git release archive:
 
 ```sh
 python3 tools/data/update_pin.py \
-  --pin data/timezone/pin.json --release 2026e --resolve-tag --download \
+  --pin data/timezone/pin.json --release 2026f --resolve-tag --download \
   --output /path/to/work/timezone-pin.json
 ```
 
