@@ -87,6 +87,9 @@ typedef struct BCReaderState {
     JSObject **objects;
     int objects_count;
     int objects_size;
+    JSModuleDef **modules; /* modules created by this read */
+    size_t module_count;
+    size_t module_size;
 
 #ifdef DUMP_READ_OBJECT
     const uint8_t *ptr_last;
@@ -667,10 +670,26 @@ static JSValue JS_ReadModule(BCReaderState *s)
     JSContext *ctx = s->ctx;
     JSValue obj;
     JSModuleDef *m = NULL;
+    JSModuleDef **new_modules;
     JSAtom module_name;
     int i, count;
     uint8_t v8;
+    size_t new_size;
 
+    if (s->module_count == s->module_size) {
+        new_size = s->module_size + s->module_size / 2 + 4;
+        if (new_size <= s->module_size ||
+            new_size > SIZE_MAX / sizeof(*new_modules)) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
+        new_modules = js_realloc(ctx, s->modules,
+                                 new_size * sizeof(*new_modules));
+        if (!new_modules)
+            goto fail;
+        s->modules = new_modules;
+        s->module_size = new_size;
+    }
     if (bc_get_atom(s, &module_name))
         goto fail;
 #ifdef DUMP_READ_OBJECT
@@ -679,6 +698,8 @@ static JSValue JS_ReadModule(BCReaderState *s)
     m = js_new_module_def(ctx, module_name);
     if (!m)
         goto fail;
+    s->modules[s->module_count++] = m;
+    JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m)); /* reader-owned reference */
     obj = JS_NewModuleValue(m);
     /* GC may inspect a registered module during any allocation. Publish table
        counts only after their zero-initialized storage is available. */
@@ -1210,6 +1231,7 @@ static void bc_reader_free(BCReaderState *s)
         js_free(s->ctx, s->idx_to_atom);
     }
     js_free(s->ctx, s->objects);
+    js_free(s->ctx, s->modules);
 }
 
 JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
@@ -1217,6 +1239,7 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
 {
     BCReaderState ss, *s = &ss;
     JSValue obj;
+    size_t i;
 
     ctx->binary_object_count += 1;
     ctx->binary_object_size += buf_len;
@@ -1240,6 +1263,16 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
         obj = JS_EXCEPTION;
     } else {
         obj = JS_ReadObjectRec(s);
+    }
+    for (i = 0; i < s->module_count; i++) {
+        JSModuleDef *m = s->modules[i];
+        if (JS_IsException(obj) && m->link.prev) {
+            /* Remove only modules created by this read, not host callbacks. */
+            list_del(&m->link);
+            m->link.prev = m->link.next = NULL;
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m)); /* list owner */
+        }
+        JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m)); /* reader owner */
     }
     bc_reader_free(s);
     return obj;

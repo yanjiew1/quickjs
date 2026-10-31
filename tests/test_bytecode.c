@@ -30,6 +30,7 @@
 #include "pool-padding.h"
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
+#include "../src/quickjs/internal/module.h"
 #include "../src/quickjs/internal/string.h"
 
 static void rope_print_write(void *opaque, const char *buf, size_t len)
@@ -723,20 +724,113 @@ static void test_module_read_oom(void)
             assert(allocator.failures == 1);
         }
         if (JS_IsException(module)) {
+            JSValue retry;
+
             assert(step);
             oom_test_check_exception(ctx);
+            retry = JS_ReadObject(ctx, copy, size, JS_READ_OBJ_BYTECODE);
+            assert(!JS_IsException(retry));
+            assert(JS_ResolveModule(ctx, retry) == 0);
+            assert(JS_LinkModule(ctx, retry) == 0);
+            JS_FreeValue(ctx, retry);
         } else {
             assert(!JS_HasException(ctx));
         }
         JS_FreeValue(ctx, module);
         test_pool_padding_free(rt, padding);
-        /* Failed readers leave registered modules for GC to visit and free. */
         JS_RunGC(rt);
         JS_FreeContext(ctx);
         JS_FreeRuntime(rt);
         assert(!allocator.live);
     }
     free(copy);
+}
+
+typedef struct ReaderSABState {
+    JSContext *ctx;
+    JSValue unrelated_module;
+    void *data;
+    int refs, armed, called;
+} ReaderSABState;
+
+static void *reader_sab_alloc(void *opaque, size_t size)
+{
+    ReaderSABState *state = opaque;
+    state->data = calloc(1, size);
+    assert(state->data);
+    state->refs = 1;
+    return state->data;
+}
+
+static void reader_sab_free(void *opaque, void *ptr)
+{
+    ReaderSABState *state = opaque;
+    assert(ptr == state->data && state->refs > 0);
+    if (--state->refs == 0) {
+        free(state->data);
+        state->data = NULL;
+    }
+}
+
+static void reader_sab_dup(void *opaque, void *ptr)
+{
+    static const char source[] = "export const independent = 1";
+    ReaderSABState *state = opaque;
+
+    assert(ptr == state->data && state->refs > 0);
+    state->refs++;
+    if (state->armed && !state->called) {
+        state->called = 1;
+        state->unrelated_module = JS_Eval(state->ctx, source, sizeof(source) - 1,
+                                          "independent-read-module",
+                                          JS_EVAL_TYPE_MODULE |
+                                          JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(state->unrelated_module));
+    }
+}
+
+static void test_failed_read_preserves_host_module(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    ReaderSABState state = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        reader_sab_alloc, reader_sab_free, reader_sab_dup, &state,
+    };
+    JSValue array, shared, result, error;
+    uint8_t *encoded, **pointers;
+    size_t len, pointer_count;
+    JSModuleDef *module;
+
+    assert(rt);
+    JS_SetSharedArrayBufferFunctions(rt, &functions);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    state.ctx = ctx;
+    state.unrelated_module = JS_UNDEFINED;
+    array = JS_NewArray(ctx);
+    shared = JS_Eval(ctx, "new SharedArrayBuffer(4)", 24,
+                     "<read-callback>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(array) && !JS_IsException(shared));
+    assert(JS_SetPropertyUint32(ctx, array, 0, shared) == 1);
+    assert(JS_SetPropertyUint32(ctx, array, 1, JS_NewInt32(ctx, 1)) == 1);
+    encoded = JS_WriteObject2(ctx, &len, array, JS_WRITE_OBJ_SAB,
+                              &pointers, &pointer_count);
+    assert(encoded && pointer_count == 1 && len > 1);
+    state.armed = 1;
+    result = JS_ReadObject(ctx, encoded, len - 1, JS_READ_OBJ_SAB);
+    assert(JS_IsException(result) && state.called);
+    error = JS_GetException(ctx);
+    JS_FreeValue(ctx, error);
+    module = JS_VALUE_GET_PTR(state.unrelated_module);
+    assert(module->link.prev && module->link.next);
+    JS_FreeValue(ctx, state.unrelated_module);
+    JS_FreeValue(ctx, array);
+    js_free(ctx, pointers);
+    js_free(ctx, encoded);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(state.refs == 0);
 }
 
 static void test_reference_read_oom(int is_array)
@@ -837,6 +931,7 @@ int main(void)
     test_invalid_object_tag();
     test_rom_bytecode_endianness();
     test_module_read_oom();
+    test_failed_read_preserves_host_module();
     test_reference_read_oom(0);
     test_reference_read_oom(1);
     test_truncated_function_atoms();
