@@ -695,6 +695,58 @@ static void test_import_meta_failures(void)
     }
 }
 
+static JSValue format_later_to_string(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv)
+{
+    int *calls = JS_GetContextOpaque(ctx);
+
+    (*calls)++;
+    return JS_NewString(ctx, "later");
+}
+
+static void test_format_stops_after_oom(int mode)
+{
+    static const char *const formats[] = { "prefix %s", "%%%s", "%c%s" };
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue args[3], later, result;
+    void *padding;
+    int calls = 0, argc;
+
+    assert(ctx);
+    JS_SetContextOpaque(ctx, &calls);
+    later = JS_NewObject(ctx);
+    assert(!JS_IsException(later));
+    assert(JS_SetPropertyStr(ctx, later, "toString",
+           JS_NewCFunction(ctx, format_later_to_string, "toString", 0)) >= 0);
+    args[0] = JS_NewString(ctx, formats[mode]);
+    argc = mode == 2 ? 3 : 2;
+    if (mode == 2) {
+        args[1] = JS_NewInt32(ctx, 'A');
+        args[2] = later;
+    } else {
+        args[1] = later;
+    }
+    assert(!JS_IsException(args[0]));
+
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    result = js_printf_internal(ctx, argc, (JSValueConst *)args, NULL);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(calls == 0);
+    oom_test_check_exception(ctx);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, args[0]);
+    JS_FreeValue(ctx, later);
+    test_pool_padding_free(rt, padding);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
+
 /* Results own their payloads; pipe descriptors transfer only on success. */
 static void test_os_result_oom(int mode)
 {
@@ -882,6 +934,9 @@ int main(void)
     test_os_result_oom(2);
     test_os_result_oom(4);
     test_import_meta_failures();
+    test_format_stops_after_oom(0);
+    test_format_stops_after_oom(1);
+    test_format_stops_after_oom(2);
     test_point_export_failure();
     test_host_module_export_failures(0);
     test_host_module_export_failures(1);

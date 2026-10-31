@@ -118,7 +118,8 @@ static JSValue js_printf_internal(JSContext *ctx,
         while (fmt < fmt_end) {
             for (p = fmt; fmt < fmt_end && *fmt != '%'; fmt++)
                 continue;
-            dbuf_put(&dbuf, p, fmt - p);
+            if (dbuf_put(&dbuf, p, fmt - p))
+                goto format_error;
             if (fmt >= fmt_end)
                 break;
             q = fmtbuf;
@@ -226,7 +227,8 @@ static JSValue js_printf_internal(JSContext *ctx,
                     int32_arg = 0xFFFD;
                 /* ignore conversion flags, width and precision */
                 len = unicode_to_utf8(cbuf, int32_arg);
-                dbuf_put(&dbuf, cbuf, len);
+                if (dbuf_put(&dbuf, cbuf, len))
+                    goto format_error;
                 break;
 
             case 'd':
@@ -304,7 +306,8 @@ static JSValue js_printf_internal(JSContext *ctx,
                 break;
 
             case '%':
-                dbuf_putc(&dbuf, '%');
+                if (dbuf_putc(&dbuf, '%'))
+                    goto format_error;
                 break;
 
             default:
