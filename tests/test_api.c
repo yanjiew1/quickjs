@@ -4721,6 +4721,45 @@ static void test_module_preparation_retry(void)
     assert(failures > 0 && successes > 0);
 }
 
+static void test_fast_array_growth_oom(void)
+{
+    int n, failures = 0;
+
+    for (n = 1; n <= 12; n++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue array = JS_NewArray(ctx), length;
+        int32_t observed;
+        int ret = 0, index;
+
+        assert(!JS_IsException(array));
+        oom_test_begin(&allocator, n);
+        for (index = 0; index < 100; index++) {
+            ret = JS_SetPropertyUint32(ctx, array, index, JS_NewInt32(ctx, index));
+            if (ret < 0)
+                break;
+        }
+        oom_test_end(&allocator);
+        length = JS_GetPropertyStr(ctx, array, "length");
+        assert(JS_ToInt32(ctx, &observed, length) == 0);
+        if (allocator.failures) {
+            failures++;
+            assert(ret < 0 && JS_HasException(ctx));
+            assert(observed == index);
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        } else {
+            assert(ret > 0 && observed == 100);
+        }
+        JS_FreeValue(ctx, length);
+        JS_FreeValue(ctx, array);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(failures > 0);
+}
+
 static void test_array_length_atom_failure(void)
 {
     int n, failures = 0;
@@ -4918,6 +4957,7 @@ int main(int argc, char **argv)
         { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
+        { "fast-array-growth-oom", test_fast_array_growth_oom },
         { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
         { "eval-compile-oom", test_eval_compile_oom },
