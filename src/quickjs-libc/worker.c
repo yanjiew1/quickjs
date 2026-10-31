@@ -147,7 +147,7 @@ int handle_posted_message(JSRuntime *rt, JSContext *ctx,
         /* remove the message from the queue */
         list_del(&msg->link);
 
-        if (list_empty(&ps->msg_queue))
+        if (list_empty(&ps->msg_queue) && !ps->closed)
             js_waker_clear(&ps->waker);
 
         pthread_mutex_unlock(&ps->mutex);
@@ -182,6 +182,13 @@ int handle_posted_message(JSRuntime *rt, JSContext *ctx,
         } else {
             JS_FreeValue(ctx, retval);
         }
+        ret = 1;
+    } else if (ps->closed) {
+        /* The last message was delivered; this port can no longer wake us. */
+        js_waker_clear(&ps->waker);
+        pthread_mutex_unlock(&ps->mutex);
+        if (port->link.prev)
+            list_del(&port->link);
         ret = 1;
     } else {
         pthread_mutex_unlock(&ps->mutex);
@@ -277,6 +284,7 @@ static JSWorkerMessagePipe *js_new_message_pipe(void)
     }
     ps->ref_count = 1;
     init_list_head(&ps->msg_queue);
+    ps->closed = 0;
     if (pthread_mutex_init(&ps->mutex, NULL)) {
         js_waker_close(&ps->waker);
         free(ps);
@@ -289,6 +297,17 @@ static JSWorkerMessagePipe *js_dup_message_pipe(JSWorkerMessagePipe *ps)
 {
     atomic_add_int(&ps->ref_count, 1);
     return ps;
+}
+
+static void js_close_message_pipe(JSWorkerMessagePipe *ps)
+{
+    pthread_mutex_lock(&ps->mutex);
+    if (!ps->closed) {
+        ps->closed = 1;
+        if (list_empty(&ps->msg_queue))
+            js_waker_signal(&ps->waker);
+    }
+    pthread_mutex_unlock(&ps->mutex);
 }
 
 static void js_free_message(JSWorkerMessage *msg)
@@ -397,6 +416,8 @@ static void *worker_func(void *opaque)
         free(args->filename);
         free(args->basename);
         free(args);
+        js_close_message_pipe(ts->recv_pipe);
+        js_close_message_pipe(ts->send_pipe);
         /* The handlers own the transferred pipe references. */
         js_std_free_handlers(rt);
         JS_FreeRuntime(rt);
@@ -418,12 +439,16 @@ static void *worker_func(void *opaque)
 
     js_std_loop(ctx);
 
+    js_close_message_pipe(ts->recv_pipe);
+    js_close_message_pipe(ts->send_pipe);
     JS_FreeContext(ctx);
     js_std_free_handlers(rt);
     JS_FreeRuntime(rt);
     return NULL;
 
  fail_args:
+    js_close_message_pipe(args->recv_pipe);
+    js_close_message_pipe(args->send_pipe);
     free(args->filename);
     free(args->basename);
     js_free_message_pipe(args->recv_pipe);
@@ -606,6 +631,11 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
 
     ps = worker->send_pipe;
     pthread_mutex_lock(&ps->mutex);
+    if (ps->closed) {
+        pthread_mutex_unlock(&ps->mutex);
+        js_free_message(msg);
+        return JS_ThrowTypeError(ctx, "worker is terminated");
+    }
     /* indicate that data is present */
     if (list_empty(&ps->msg_queue))
         js_waker_signal(&ps->waker);

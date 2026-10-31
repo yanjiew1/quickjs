@@ -114,6 +114,7 @@ int main(void)
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx, *temporary;
     JSValue value, promise, funcs[2];
+    char missing_worker_source[256];
     double start;
     int ret;
     assert(rt);
@@ -261,6 +262,23 @@ int main(void)
         }
     }
     assert(js_std_loop_once(ctx) == 0);
+    snprintf(missing_worker_source, sizeof(missing_worker_source),
+             "import { Worker } from 'os';"
+             "globalThis.failedWorker = new Worker('./__missing_worker_%ld__.js');"
+             "failedWorker.onmessage = () => {};", (long)getpid());
+    value = eval(ctx, missing_worker_source, JS_EVAL_TYPE_MODULE);
+    JS_FreeValue(ctx, value);
+    assert(number(ctx, "typeof failedWorker === 'object'") == 1);
+    start = now_ms();
+    while (js_std_loop_once(ctx) != 0) {
+        assert(now_ms() - start < 2000);
+        assert(js_std_poll_io(ctx, 20) >= 0);
+    }
+    run(ctx, "let closedSend = false;"
+             "try { failedWorker.postMessage(1) }"
+             "catch (e) { closedSend = e instanceof TypeError }"
+             "if (!closedSend) throw Error('terminated worker accepted a message')");
+    run(ctx, "failedWorker.onmessage = null; failedWorker = undefined");
     js_std_set_worker_new_context_func(NULL);
     {
         int embedder_state = 42;
