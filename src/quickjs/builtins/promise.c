@@ -52,8 +52,7 @@
 
 typedef struct JSPromiseData {
     JSPromiseStateEnum promise_state;
-    /* 0=fulfill, 1=reject, list of JSPromiseReactionData.link */
-    struct list_head promise_reactions[2];
+    struct list_head promise_reactions; /* prepared JSJobEntry.link */
     BOOL is_handled; /* Note: only useful to debug */
     JSValue promise_result;
 } JSPromiseData;
@@ -67,12 +66,6 @@ typedef struct JSPromiseFunctionData {
     JSValue promise;
     JSPromiseFunctionDataResolved *presolved;
 } JSPromiseFunctionData;
-
-typedef struct JSPromiseReactionData {
-    struct list_head link; /* not used in promise_reaction_job */
-    JSValue resolving_funcs[2];
-    JSValue handler;
-} JSPromiseReactionData;
 
 JSPromiseStateEnum JS_PromiseState(JSContext *ctx, JSValue promise)
 {
@@ -93,13 +86,32 @@ JSValue JS_PromiseResult(JSContext *ctx, JSValue promise)
 static int js_create_resolving_functions(JSContext *ctx, JSValue *args,
                                          JSValueConst promise);
 
-static void promise_reaction_data_free(JSRuntime *rt,
-                                       JSPromiseReactionData *rd)
+static void free_pending_reaction(JSRuntime *rt, JSJobEntry *entry)
 {
-    JS_FreeValueRT(rt, rd->resolving_funcs[0]);
-    JS_FreeValueRT(rt, rd->resolving_funcs[1]);
-    JS_FreeValueRT(rt, rd->handler);
-    js_free_rt(rt, rd);
+    int i;
+
+    for (i = 0; i < entry->argc; i++)
+        JS_FreeValueRT(rt, entry->argv[i]);
+    js_free_rt(rt, entry);
+}
+
+static void enqueue_promise_reaction(JSContext *ctx, JSJobEntry *entry,
+                                     JSValueConst value, BOOL is_reject)
+{
+    JSValue unused;
+
+    /* The pending entry owns both handlers. Keep only the selected one when
+       it becomes an ordinary five-argument reaction job. */
+    if (is_reject) {
+        unused = entry->argv[2];
+        entry->argv[2] = entry->argv[3];
+    } else {
+        unused = entry->argv[3];
+    }
+    entry->argv[3] = JS_NewBool(ctx, is_reject);
+    entry->argv[4] = JS_DupValue(ctx, value);
+    js_enqueue_prepared_job(ctx, entry);
+    JS_FreeValue(ctx, unused);
 }
 
 static JSValue promise_reaction_job(JSContext *ctx, int argc,
@@ -155,16 +167,13 @@ void JS_SetHostPromiseRejectionTracker(JSRuntime *rt,
 static int fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
                                      JSValueConst value, BOOL is_reject)
 {
-    JSRuntime *rt;
+    JSRuntime *rt = ctx->rt;
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
-    JSPromiseReactionData *rd;
-    JSValueConst args[5];
-    int ret = 0;
+    JSJobEntry *entry;
 
     if (!s || s->promise_state != JS_PROMISE_PENDING)
         return 0; /* should never happen */
-    rt = ctx->rt;
     set_value(rt, &s->promise_result, JS_DupValue(ctx, value));
     s->promise_state = JS_PROMISE_FULFILLED + is_reject;
 #ifdef DUMP_PROMISE
@@ -178,25 +187,12 @@ static int fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         }
     }
 
-    list_for_each_safe(el, el1, &s->promise_reactions[is_reject]) {
-        rd = list_entry(el, JSPromiseReactionData, link);
-        args[0] = rd->resolving_funcs[0];
-        args[1] = rd->resolving_funcs[1];
-        args[2] = rd->handler;
-        args[3] = JS_NewBool(ctx, is_reject);
-        args[4] = value;
-        if (JS_EnqueueJob(ctx, promise_reaction_job, 5, args) < 0)
-            ret = -1;
-        list_del(&rd->link);
-        promise_reaction_data_free(rt, rd);
+    list_for_each_safe(el, el1, &s->promise_reactions) {
+        entry = list_entry(el, JSJobEntry, link);
+        list_del(&entry->link);
+        enqueue_promise_reaction(ctx, entry, value, is_reject);
     }
-
-    list_for_each_safe(el, el1, &s->promise_reactions[1 - is_reject]) {
-        rd = list_entry(el, JSPromiseReactionData, link);
-        list_del(&rd->link);
-        promise_reaction_data_free(rt, rd);
-    }
-    return ret;
+    return 0;
 }
 
 static JSValue js_promise_resolve_thenable_job(JSContext *ctx,
@@ -370,16 +366,11 @@ static void js_promise_finalizer(JSRuntime *rt, JSValue val)
 {
     JSPromiseData *s = JS_GetOpaque(val, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
-    int i;
-
     if (!s)
         return;
-    for(i = 0; i < 2; i++) {
-        list_for_each_safe(el, el1, &s->promise_reactions[i]) {
-            JSPromiseReactionData *rd =
-                list_entry(el, JSPromiseReactionData, link);
-            promise_reaction_data_free(rt, rd);
-        }
+    list_for_each_safe(el, el1, &s->promise_reactions) {
+        JSJobEntry *entry = list_entry(el, JSJobEntry, link);
+        free_pending_reaction(rt, entry);
     }
     JS_FreeValueRT(rt, s->promise_result);
     js_free_rt(rt, s);
@@ -394,14 +385,11 @@ static void js_promise_mark(JSRuntime *rt, JSValueConst val,
 
     if (!s)
         return;
-    for(i = 0; i < 2; i++) {
-        list_for_each(el, &s->promise_reactions[i]) {
-            JSPromiseReactionData *rd =
-                list_entry(el, JSPromiseReactionData, link);
-            JS_MarkValue(rt, rd->resolving_funcs[0], mark_func);
-            JS_MarkValue(rt, rd->resolving_funcs[1], mark_func);
-            JS_MarkValue(rt, rd->handler, mark_func);
-        }
+    list_for_each(el, &s->promise_reactions) {
+        JSJobEntry *entry = list_entry(el, JSJobEntry, link);
+
+        for (i = 0; i < 4; i++)
+            JS_MarkValue(rt, entry->argv[i], mark_func);
     }
     JS_MarkValue(rt, s->promise_result, mark_func);
 }
@@ -413,7 +401,6 @@ static JSValue js_new_promise(JSContext *ctx, JSValueConst new_target,
 {
     JSValue obj;
     JSPromiseData *s;
-    int i;
 
     obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_PROMISE);
     if (JS_IsException(obj))
@@ -423,8 +410,7 @@ static JSValue js_new_promise(JSContext *ctx, JSValueConst new_target,
         goto fail;
     s->promise_state = JS_PROMISE_PENDING;
     s->is_handled = FALSE;
-    for(i = 0; i < 2; i++)
-        init_list_head(&s->promise_reactions[i]);
+    init_list_head(&s->promise_reactions);
     s->promise_result = JS_UNDEFINED;
     JS_SetOpaque(obj, s);
     if (js_create_resolving_functions(ctx, resolving_funcs, obj))
@@ -979,48 +965,31 @@ __exception int perform_promise_then(JSContext *ctx,
                                      JSValueConst *resolve_reject,
                                      JSValueConst *cap_resolving_funcs)
 {
-    JSRuntime *rt = ctx->rt;
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
-    JSPromiseReactionData *rd_array[2], *rd;
-    int i, j, ret = 0;
+    JSJobEntry *entry;
+    int i;
 
-    rd_array[0] = NULL;
-    rd_array[1] = NULL;
-    for(i = 0; i < 2; i++) {
-        JSValueConst handler;
-        rd = js_mallocz(ctx, sizeof(*rd));
-        if (!rd) {
-            if (i == 1)
-                promise_reaction_data_free(rt, rd_array[0]);
-            return -1;
-        }
-        for(j = 0; j < 2; j++)
-            rd->resolving_funcs[j] = JS_DupValue(ctx, cap_resolving_funcs[j]);
-        handler = resolve_reject[i];
+    /* Reserve the reaction's job while attachment can still report OOM. */
+    entry = js_alloc_prepared_job(ctx, promise_reaction_job, 5);
+    if (!entry)
+        return -1;
+    for (i = 0; i < 2; i++) {
+        JSValueConst handler = resolve_reject[i];
+
+        entry->argv[i] = JS_DupValue(ctx, cap_resolving_funcs[i]);
         if (!JS_IsFunction(ctx, handler))
             handler = JS_UNDEFINED;
-        rd->handler = JS_DupValue(ctx, handler);
-        rd_array[i] = rd;
+        entry->argv[i + 2] = JS_DupValue(ctx, handler);
     }
 
     js_promise_mark_as_handled(ctx, promise, s);
     if (s->promise_state == JS_PROMISE_PENDING) {
-        for(i = 0; i < 2; i++)
-            list_add_tail(&rd_array[i]->link, &s->promise_reactions[i]);
+        list_add_tail(&entry->link, &s->promise_reactions);
     } else {
-        JSValueConst args[5];
-        i = s->promise_state - JS_PROMISE_FULFILLED;
-        rd = rd_array[i];
-        args[0] = rd->resolving_funcs[0];
-        args[1] = rd->resolving_funcs[1];
-        args[2] = rd->handler;
-        args[3] = JS_NewBool(ctx, i);
-        args[4] = s->promise_result;
-        ret = JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
-        for(i = 0; i < 2; i++)
-            promise_reaction_data_free(rt, rd_array[i]);
+        enqueue_promise_reaction(ctx, entry, s->promise_result,
+                                 s->promise_state == JS_PROMISE_REJECTED);
     }
-    return ret;
+    return 0;
 }
 
 JSValue JS_PromiseThen(JSContext *ctx, JSValueConst promise,

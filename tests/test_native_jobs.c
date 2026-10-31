@@ -158,6 +158,35 @@ static void test_job_fifo_and_public_poll_contract(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_pending_promise_before_native_activation(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue funcs[2], promise, child, result;
+    JSValueConst value = JS_NewInt32(ctx, 42);
+
+    assert(rt && ctx);
+    promise = JS_NewPromiseCapability(ctx, funcs);
+    assert(!JS_IsException(promise));
+    child = JS_PromiseThen(ctx, promise, JS_UNDEFINED, JS_UNDEFINED);
+    assert(!JS_IsException(child) && !JS_IsJobPending(rt));
+    assert(js_native_jobs_get_owner(ctx));
+    result = JS_Call(ctx, funcs[0], JS_UNDEFINED, 1, &value);
+    assert(JS_IsUndefined(result) && JS_IsJobPending(rt));
+    JS_FreeValue(ctx, result);
+    drain(rt);
+    assert(JS_PromiseState(ctx, child) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(ctx, child);
+    assert(JS_StrictEq(ctx, result, value));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, child);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, funcs[0]);
+    JS_FreeValue(ctx, funcs[1]);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_public_poll_timeout_and_cancel(void)
 {
     TestLog log = { { 0 }, 0 };
@@ -223,6 +252,7 @@ int main(void)
 #ifdef CONFIG_ATOMICS
     test_finite_huge_timeout_identity();
     test_job_fifo_and_public_poll_contract();
+    test_pending_promise_before_native_activation();
     test_public_poll_timeout_and_cancel();
 #endif
     return 0;

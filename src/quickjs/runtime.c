@@ -61,14 +61,6 @@ typedef struct JSRuntimeFinalizerState {
    enough to call the interrupt callback often. */
 #define JS_INTERRUPT_COUNTER_INIT 10000
 
-typedef struct JSJobEntry {
-    struct list_head link;
-    JSContext *realm;
-    JSJobFunc *job_func;
-    int argc;
-    JSValue argv[0];
-} JSJobEntry;
-
 static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL },                             /* JS_CLASS_OBJECT */
     { JS_ATOM_Array, js_array_finalizer, js_array_mark },       /* JS_CLASS_ARRAY */
@@ -359,6 +351,53 @@ int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
     if (!no_exception)
         JS_ThrowRangeError(ctx, "invalid job argument count");
     return -1;
+}
+
+/* Reserve the native wake ticket even when native jobs are not active yet:
+   they may be enabled before this pending reaction is scheduled. */
+JSJobEntry *js_alloc_prepared_job(JSContext *ctx, JSJobFunc *job_func,
+                                  int argc)
+{
+    JSJobEntry *e;
+    size_t size = sizeof(*e);
+    int i;
+
+    if (argc < 0 || (size_t)argc > (SIZE_MAX - size) / sizeof(JSValue)) {
+        JS_ThrowRangeError(ctx, "invalid job argument count");
+        return NULL;
+    }
+    size += (size_t)argc * sizeof(JSValue);
+#ifdef CONFIG_ATOMICS
+    if (size > SIZE_MAX - sizeof(JSNativeWaitEvent)) {
+        JS_ThrowRangeError(ctx, "invalid job argument count");
+        return NULL;
+    }
+    size += sizeof(JSNativeWaitEvent);
+#endif
+    e = js_malloc(ctx, size);
+    if (!e)
+        return NULL;
+    e->realm = NULL;
+    e->job_func = job_func;
+    e->argc = argc;
+    for (i = 0; i < argc; i++)
+        e->argv[i] = JS_UNDEFINED;
+    return e;
+}
+
+void js_enqueue_prepared_job(JSContext *ctx, JSJobEntry *e)
+{
+    JSRuntime *rt = ctx->rt;
+
+    assert(!e->realm);
+    e->realm = JS_DupContext(ctx);
+    list_add_tail(&e->link, &rt->job_list);
+#ifdef CONFIG_ATOMICS
+    if (rt->native_jobs) {
+        JSNativeWaitEvent *ticket = (void *)&e->argv[e->argc];
+        js_native_wait_enqueue_generic(&rt->native_jobs->native, ticket, e, 0);
+    }
+#endif
 }
 
 /* return 0 if OK, < 0 if exception */
