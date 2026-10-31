@@ -90,6 +90,16 @@ if (typeof std.sprintf !== "function" || typeof os.getcwd !== "function" ||
     throw Error("virtual command-line module metadata failed");
 print("qjs-cli-virtual-meta-ok");'
 
+for invalid_size in inf -1 G 1Gjunk 18446744073709551616; do
+    for option in --memory-limit --stack-size; do
+        invoke_qjs "$option" "$invalid_size" -q
+        if [ "$qjs_status" -ne 1 ] || ! grep -q 'invalid size' err; then
+            echo "qjs accepted invalid $option: $invalid_size" >&2
+            exit 1
+        fi
+    done
+done
+
 # Module execution errors still use the normal failing CLI cleanup path.
 invoke_qjs --std -m -e 'throw Error("qjs-cli-abrupt");'
 if [ "$qjs_status" -ne 1 ] || [ -s out ] ||
