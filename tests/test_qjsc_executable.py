@@ -23,6 +23,7 @@
 """Exercise qjsc's default executable output and its selected target and sanitizer flags."""
 from pathlib import Path
 import json
+import os
 import shlex
 import struct
 import subprocess
@@ -94,6 +95,19 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
 
     # Supply argv[0] separately so this also covers hosts with short path limits.
     source.write_text('print(42);\n')
+    compiler = arguments[0]
+    if '/' not in compiler:
+        fake_compiler = scratch / compiler
+        fake_compiler.write_text('#!/bin/sh\nkill -TERM "$$"\n')
+        fake_compiler.chmod(0o755)
+        env = os.environ.copy()
+        env['PATH'] = str(scratch) + os.pathsep + env.get('PATH', '')
+        signaled = subprocess.run([qjsc, '-o', str(executable), str(source)],
+                                  env=env, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=5)
+        assert signaled.returncode != 0, signaled.stdout
+        assert b'compiler terminated by signal' in signaled.stderr, signaled.stderr
+
     for name in ['x' * 1100, '/' + 'x' * 1015 + '/qjsc']:
         rejected = subprocess.run([name, '-o', str(executable), str(source)],
                                   executable=qjsc, stdout=subprocess.PIPE,

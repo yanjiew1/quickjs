@@ -541,20 +541,34 @@ void help(void)
 
 int exec_cmd(char **argv)
 {
-    int pid, status, ret;
+    pid_t pid, ret;
+    int status;
 
     pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return 1;
+    }
     if (pid == 0) {
         execvp(argv[0], argv);
-        exit(1);
+        perror(argv[0]);
+        _exit(127);
     }
 
     for(;;) {
         ret = waitpid(pid, &status, 0);
-        if (ret == pid && WIFEXITED(status))
+        if (ret == pid)
             break;
+        if (ret < 0 && errno == EINTR)
+            continue;
+        perror("waitpid");
+        return 1;
     }
-    return WEXITSTATUS(status);
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+    if (WIFSIGNALED(status))
+        fprintf(stderr, "compiler terminated by signal %d\n", WTERMSIG(status));
+    return 1;
 }
 
 static int output_executable(const char *out_filename, const char *cfilename,
