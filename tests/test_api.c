@@ -4761,12 +4761,134 @@ static void test_array_length_atom_failure(void)
     assert(failures > 0);
 }
 
+static int resolution_retry_calls;
+
+static JSModuleDef *resolution_retry_loader(JSContext *ctx, const char *name,
+                                            void *opaque)
+{
+    (void)opaque;
+    if (!strcmp(name, "cycle")) {
+        const char *source = "import 'entry'; export const cycle = 1;";
+        JSValue value = JS_Eval(ctx, source, strlen(source), name,
+                                JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        JSModuleDef *m;
+        if (JS_IsException(value))
+            return NULL;
+        m = JS_VALUE_GET_PTR(value);
+        JS_FreeValue(ctx, value);
+        return m;
+    }
+    if (++resolution_retry_calls < 3) {
+        JS_ThrowInternalError(ctx, "temporary loader failure");
+        return NULL;
+    }
+    return JS_NewCModule(ctx, name, retry_native_init);
+}
+
+static JSValue nested_resolved_module;
+
+static JSModuleDef *resolution_nested_loader(JSContext *ctx, const char *name,
+                                             void *opaque)
+{
+    JSValue compiled, result;
+    JSModuleDef *m;
+    const char *source = "export * from 'c';";
+
+    (void)opaque;
+    if (!strcmp(name, "c"))
+        return JS_NewCModule(ctx, name, retry_native_init);
+    if (!strcmp(name, "b")) {
+        JS_ThrowInternalError(ctx, "missing b");
+        return NULL;
+    }
+    assert(!strcmp(name, "a"));
+    compiled = JS_Eval(ctx, source, strlen(source), name,
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(compiled))
+        return NULL;
+    m = JS_VALUE_GET_PTR(compiled);
+    nested_resolved_module = JS_DupValue(ctx, compiled);
+    result = JS_EvalFunction(ctx, compiled);
+    if (JS_IsException(result))
+        return NULL;
+    JS_FreeValue(ctx, result);
+    return m;
+}
+
+static void test_nested_module_resolution_failure(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    const char *source = "import 'a'; import 'b';";
+    JSValue value;
+
+    nested_resolved_module = JS_UNDEFINED;
+    JS_SetModuleLoaderFunc(rt, NULL, resolution_nested_loader, NULL);
+    value = JS_Eval(ctx, source, strlen(source), "root",
+                    JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(JS_IsException(value));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    value = JS_GetModuleNamespace(ctx, JS_VALUE_GET_PTR(nested_resolved_module));
+    assert(!JS_IsException(value));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, nested_resolved_module);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_module_resolution_retry(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    const char *source = "import 'cycle'; import 'dep'; export const x = 1;";
+    JSValue value;
+    uint8_t *data, *copy;
+    size_t length;
+
+    assert(JS_NewCModule(ctx, "cycle", retry_native_init));
+    assert(JS_NewCModule(ctx, "dep", retry_native_init));
+    value = JS_Eval(ctx, source, strlen(source), "entry",
+                    JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(value));
+    data = JS_WriteObject(ctx, &length, value, JS_WRITE_OBJ_BYTECODE);
+    assert(data);
+    copy = malloc(length);
+    assert(copy);
+    memcpy(copy, data, length);
+    js_free(ctx, data);
+    JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    rt = JS_NewRuntime();
+    ctx = JS_NewContext(rt);
+    JS_SetModuleLoaderFunc(rt, NULL, resolution_retry_loader, NULL);
+    value = JS_ReadObject(ctx, copy, length, JS_READ_OBJ_BYTECODE);
+    free(copy);
+    assert(!JS_IsException(value));
+    resolution_retry_calls = 0;
+    assert(JS_ResolveModule(ctx, value) < 0);
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(JS_ResolveModule(ctx, value) < 0);
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(JS_ResolveModule(ctx, value) == 0);
+    assert(resolution_retry_calls == 3);
+    value = JS_EvalFunction(ctx, value);
+    assert(!JS_IsException(value));
+    assert(JS_PromiseState(ctx, value) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "nested-module-resolution-failure", test_nested_module_resolution_failure },
+        { "module-resolution-retry", test_module_resolution_retry },
         { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
         { "eval-compile-oom", test_eval_compile_oom },
