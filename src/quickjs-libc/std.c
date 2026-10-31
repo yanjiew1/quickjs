@@ -1202,8 +1202,8 @@ static int http_get_header_line(FILE *f, char *buf, size_t buf_size,
             return -1;
         if ((p - buf) < buf_size - 1)
             *p++ = c;
-        if (dbuf)
-            dbuf_putc(dbuf, c);
+        if (dbuf && dbuf_putc(dbuf, c))
+            return -1;
         if (c == '\n')
             break;
     }
@@ -1329,7 +1329,8 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
         len = fread(buf, 1, URL_GET_BUF_SIZE, f);
         if (len == 0)
             break;
-        dbuf_put(data_buf, (uint8_t *)buf, len);
+        if (dbuf_put(data_buf, (uint8_t *)buf, len))
+            goto oom;
     }
     if (dbuf_error(data_buf))
         goto oom;
