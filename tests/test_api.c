@@ -4721,12 +4721,53 @@ static void test_module_preparation_retry(void)
     assert(failures > 0 && successes > 0);
 }
 
+static void test_array_length_atom_failure(void)
+{
+    int n, failures = 0;
+
+    for (n = 1; n <= 12; n++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        const char *source = "globalThis.a=[]; a.length=2147483651;"
+                             "Object.defineProperty(a,'0',{value:5,configurable:true});";
+        JSValue value = JS_Eval(ctx, source, strlen(source), "length-oom", 0);
+        JSValue global, array;
+        void *padding;
+        int ret;
+
+        assert(!JS_IsException(value));
+        JS_FreeValue(ctx, value);
+        global = JS_GetGlobalObject(ctx);
+        array = JS_GetPropertyStr(ctx, global, "a");
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, n);
+        ret = JS_SetPropertyStr(ctx, array, "length", JS_NewUint32(ctx, 2147483650U));
+        oom_test_end(&allocator);
+        if (allocator.failures) {
+            failures++;
+            assert(ret < 0 && JS_HasException(ctx));
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        } else {
+            assert(ret > 0 && !JS_HasException(ctx));
+        }
+        JS_FreeValue(ctx, array);
+        JS_FreeValue(ctx, global);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(failures > 0);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
         { "eval-compile-oom", test_eval_compile_oom },
         { "module-namespace-oom", test_module_namespace_oom },
