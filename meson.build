@@ -580,6 +580,7 @@ if get_option('check_jsvalue')
   check_sources = engine_sources + vm_sources + compiler_sources + files(
     'src/quickjs-libc/event-loop.c',
     'src/quickjs-libc/host.c',
+    'src/quickjs-libc/environment.c',
     'src/quickjs-libc/module-loader.c',
     'src/quickjs-libc/os.c',
     'src/quickjs-libc/std.c',
