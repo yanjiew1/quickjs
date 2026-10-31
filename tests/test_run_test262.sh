@@ -724,3 +724,39 @@ if (typeof injectedHarness !== "undefined")
 JS
 invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/raw.js"
 test "$test262_status" -eq 0
+
+# The same error type in a different phase must not satisfy a negative test.
+mkdir "$test262_tmp/phases"
+cat > "$test262_tmp/phases/dep.js" <<'JS'
+export const present = 1;
+JS
+cat > "$test262_tmp/phases/broken.js" <<'JS'
+export const = 1;
+JS
+for test262_actual_phase in parse runtime resolution imported-parse module-runtime; do
+    for test262_expected_phase in parse runtime resolution; do
+        test262_flags=noStrict
+        case "$test262_actual_phase" in
+            parse) test262_source='function {'; test262_phase=parse ;;
+            runtime) test262_source='throw new SyntaxError("runtime");'; test262_phase=runtime ;;
+            resolution) test262_source='import { missing } from "./dep.js";'; test262_flags=module; test262_phase=resolution ;;
+            imported-parse) test262_source='import "./broken.js";'; test262_flags=module; test262_phase=resolution ;;
+            module-runtime) test262_source='throw new SyntaxError("runtime");'; test262_flags=module; test262_phase=runtime ;;
+        esac
+        cat > "$test262_tmp/phases/case.js" <<JS
+/*---
+flags: [$test262_flags]
+negative:
+  phase: $test262_expected_phase
+  type: SyntaxError
+---*/
+$test262_source
+JS
+        invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/case.js"
+        if [ "$test262_phase" = "$test262_expected_phase" ]; then
+            test "$test262_status" -eq 0
+        else
+            test "$test262_status" -eq 1
+        fi
+    done
+done
