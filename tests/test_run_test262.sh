@@ -760,3 +760,32 @@ JS
         fi
     done
 done
+
+# Harness failures must not pass as a test's expected TypeError.
+for test262_flags in async module; do
+    if [ "$test262_flags" = async ]; then
+        test262_source='void 0;'
+    else
+        test262_source='await new Promise(() => {});'
+    fi
+    cat > "$test262_tmp/phases/incomplete.js" <<JS
+/*---
+flags: [$test262_flags]
+negative:
+  phase: runtime
+  type: TypeError
+---*/
+$test262_source
+JS
+    invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/incomplete.js"
+    test "$test262_status" -eq 1
+done
+cat > "$test262_tmp/phases/async-module.js" <<'JS'
+/*---
+flags: [module, async]
+---*/
+$DONE();
+throw new Error("module evaluation must also succeed");
+JS
+invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/async-module.js"
+test "$test262_status" -eq 1
