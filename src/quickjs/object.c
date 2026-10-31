@@ -3526,6 +3526,7 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
     JSRuntime *rt = ctx->rt;
     JSProperty *pr;
     int ret, prop_flags;
+    uint32_t new_array_length = 0;
     JSVarRef *var_ref;
     JSObject *delete_obj;
     
@@ -3568,10 +3569,7 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
                     pslen = get_shape_prop(p->shape);
                     if (unlikely(!(pslen->flags & JS_PROP_WRITABLE)))
                         return JS_ThrowTypeErrorReadOnly(ctx, flags, JS_ATOM_length);
-                    /* XXX: should update the length after defining
-                       the property */
-                    len = idx + 1;
-                    set_value(rt, &plen->u.value, JS_NewUint32(ctx, len));
+                    new_array_length = idx + 1;
                 }
             }
         } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
@@ -3661,6 +3659,10 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
             pr->u.value = JS_UNDEFINED;
         }
     }
+    /* Property creation can fail or reallocate p->prop. Commit length only
+       after success, using the current property storage. */
+    if (new_array_length)
+        set_value(rt, &p->prop[0].u.value, JS_NewUint32(ctx, new_array_length));
     return TRUE;
 }
 
