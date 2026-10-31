@@ -135,7 +135,11 @@ void free_sh(JSRuntime *rt, JSOSSignalHandler *sh, JS_BOOL restore_handler)
     if (restore_handler) {
         pthread_mutex_lock(&signal_owner_mutex);
         if (signal_owner[sh->sig_num] == JS_GetRuntimeOpaque(rt)) {
+#ifndef _WIN32
+            sigaction(sh->sig_num, &sh->previous_action, NULL);
+#else
             signal(sh->sig_num, sh->previous_handler);
+#endif
             signal_owner[sh->sig_num] = NULL;
             os_pending_signals[sh->sig_num] = 0;
         }
@@ -166,6 +170,9 @@ JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
     JSValueConst func;
     sighandler_t handler;
     BOOL new_handler;
+#ifndef _WIN32
+    struct sigaction action, previous_action;
+#endif
 
     if (!is_main_thread(rt))
         return JS_ThrowTypeError(ctx, "signal handler can only be set in the main thread");
@@ -186,7 +193,14 @@ JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
             pthread_mutex_unlock(&signal_owner_mutex);
             return JS_ThrowTypeError(ctx, "signal is owned by another runtime");
         }
+#ifndef _WIN32
+        memset(&action, 0, sizeof(action));
+        action.sa_handler = handler;
+        sigemptyset(&action.sa_mask);
+        if (sigaction(sig_num, &action, NULL) < 0) {
+#else
         if (signal(sig_num, handler) == SIG_ERR) {
+#endif
             pthread_mutex_unlock(&signal_owner_mutex);
             return JS_ThrowTypeError(ctx, "could not set signal handler");
         }
@@ -215,8 +229,18 @@ JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
                 js_free(ctx, sh);
             return JS_ThrowTypeError(ctx, "signal is owned by another runtime");
         }
+#ifndef _WIN32
+        memset(&action, 0, sizeof(action));
+        action.sa_handler = os_signal_handler;
+        sigemptyset(&action.sa_mask);
+#ifdef SA_RESTART
+        action.sa_flags = SA_RESTART;
+#endif
+        if (sigaction(sig_num, &action, &previous_action) < 0) {
+#else
         handler = signal(sig_num, os_signal_handler);
         if (handler == SIG_ERR) {
+#endif
             pthread_mutex_unlock(&signal_owner_mutex);
             if (new_handler)
                 js_free(ctx, sh);
@@ -224,7 +248,11 @@ JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
         }
         if (new_handler) {
             sh->sig_num = sig_num;
+#ifndef _WIN32
+            sh->previous_action = previous_action;
+#else
             sh->previous_handler = handler;
+#endif
             signal_owner[sig_num] = ts;
         }
         pthread_mutex_unlock(&signal_owner_mutex);

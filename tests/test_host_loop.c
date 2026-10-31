@@ -28,9 +28,12 @@
 #ifndef _WIN32
 #include <signal.h>
 
+static volatile sig_atomic_t embedder_signal_count;
+
 static void embedder_signal_handler(int signal_number)
 {
     (void)signal_number;
+    embedder_signal_count++;
 }
 #endif
 
@@ -270,15 +273,15 @@ int main(void)
     }
 #ifndef _WIN32
     {
-        struct sigaction after;
         void (*previous)(int);
 
         previous = signal(SIGUSR1, embedder_signal_handler);
         assert(previous != SIG_ERR);
         run(ctx, "os.signal(os.SIGUSR1, () => {})");
         js_std_free_handlers(rt);
-        assert(sigaction(SIGUSR1, NULL, &after) == 0);
-        assert(after.sa_handler == embedder_signal_handler);
+        /* Sanitizers may wrap signal handlers, so test the restored behavior. */
+        assert(raise(SIGUSR1) == 0);
+        assert(embedder_signal_count == 1);
         assert(signal(SIGUSR1, previous) != SIG_ERR);
     }
 #else
