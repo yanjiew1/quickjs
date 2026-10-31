@@ -99,6 +99,50 @@ if [ "$qjs_status" -ne 1 ] || [ -s out ] ||
     exit 1
 fi
 
+invoke_qjs --std -e 'os.ttySetRaw(-1)'
+if [ "$qjs_status" -ne 1 ] ||
+   ! grep -q 'could not set raw terminal mode' err; then
+    cat stderr >&2
+    echo 'ttySetRaw accepted an invalid terminal descriptor' >&2
+    exit 1
+fi
+
+# A PTY lets us check restoration of a nonzero descriptor without a real TTY.
+if [ -z "$qjs_runner" ]; then
+    python3 - "$qjs_binary" <<'PY'
+import os
+import subprocess
+import sys
+try:
+    import termios
+except ImportError:
+    sys.exit(0)
+
+master, slave = os.openpty()
+original = termios.tcgetattr(slave)
+try:
+    script = ('os.ttySetRaw(%d); let rejected = false; '
+              'try { os.ttySetRaw(%d); } catch (e) { rejected = true; } '
+              'if (!rejected) throw Error("duplicate raw mode accepted");') % (slave, slave)
+    result = subprocess.run(
+        [sys.argv[1], '--std', '-e', script],
+        pass_fds=(slave,), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        timeout=10)
+    assert result.returncode == 0, result.stderr
+    restored = termios.tcgetattr(slave)
+    # macOS may set PENDIN when canonical input is restored; it is state.
+    pending = getattr(termios, 'PENDIN', 0)
+    restored[3] &= ~pending
+    expected = original[:]
+    expected[3] &= ~pending
+    assert restored == expected
+finally:
+    termios.tcsetattr(slave, termios.TCSANOW, original)
+    os.close(master)
+    os.close(slave)
+PY
+fi
+
 invoke_qjs -T -e 'print("qjs-cli-trace-ok")'
 if [ "$qjs_status" -ne 0 ] || [ -s err ] ||
    ! grep -q '^qjs-cli-trace-ok$' out ||
