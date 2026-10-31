@@ -682,6 +682,8 @@ BOOL JS_ConcatStringInPlace(JSRuntime *rt, JSString *p1, JSValueConst op2) {
             return TRUE;
         if (js_rc(p1)->ref_count != 1)
             return FALSE;
+        if (p2->len > JS_STRING_LEN_MAX - p1->len)
+            return FALSE;
         size1 = js_malloc_usable_size_rt(rt, p1);
         if (p1->is_wide_char) {
             if (size1 >= sizeof(*p1) + ((p1->len + p2->len) << 1)) {
