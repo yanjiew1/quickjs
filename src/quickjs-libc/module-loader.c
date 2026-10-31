@@ -107,7 +107,8 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     char buf[PATH_MAX + 16];
     JSValue meta_obj, url;
     JSAtom module_name_atom;
-    const char *module_name;
+    const char *module_name, *url_text;
+    char *allocated_url = NULL;
 
     assert(JS_VALUE_GET_TAG(func_val) == JS_TAG_MODULE);
     m = JS_VALUE_GET_PTR(func_val);
@@ -117,6 +118,7 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     JS_FreeAtom(ctx, module_name_atom);
     if (!module_name)
         return -1;
+    url_text = module_name;
     if (!strchr(module_name, ':')) {
         strcpy(buf, "file://");
 #if !defined(_WIN32)
@@ -133,17 +135,37 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
         } else
 #endif
         {
-            pstrcat(buf, sizeof(buf), module_name);
+            size_t name_len = strlen(module_name);
+
+            if (name_len >= sizeof(buf) - 7) {
+                allocated_url = js_malloc(ctx, name_len + 8);
+                if (!allocated_url) {
+                    JS_FreeCString(ctx, module_name);
+                    return -1;
+                }
+                memcpy(allocated_url, "file://", 7);
+                memcpy(allocated_url + 7, module_name, name_len + 1);
+                url_text = allocated_url;
+            } else {
+                memcpy(buf + 7, module_name, name_len + 1);
+                url_text = buf;
+            }
         }
-    } else {
-        pstrcpy(buf, sizeof(buf), module_name);
+#if !defined(_WIN32)
+        if (use_realpath)
+            url_text = buf;
+#endif
     }
-    JS_FreeCString(ctx, module_name);
 
     meta_obj = JS_GetImportMeta(ctx, m);
-    if (JS_IsException(meta_obj))
+    if (JS_IsException(meta_obj)) {
+        js_free(ctx, allocated_url);
+        JS_FreeCString(ctx, module_name);
         return -1;
-    url = JS_NewString(ctx, buf);
+    }
+    url = JS_NewString(ctx, url_text);
+    js_free(ctx, allocated_url);
+    JS_FreeCString(ctx, module_name);
     if (JS_IsException(url) ||
         JS_DefinePropertyValueStr(ctx, meta_obj, "url", url, JS_PROP_C_W_E) < 0 ||
         JS_DefinePropertyValueStr(ctx, meta_obj, "main",
