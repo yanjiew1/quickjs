@@ -116,8 +116,10 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt)
     if (!ctx)
         return NULL;
     /* system modules */
-    js_init_module_std(ctx, "std");
-    js_init_module_os(ctx, "os");
+    if (!js_init_module_std(ctx, "std") || !js_init_module_os(ctx, "os")) {
+        JS_FreeContext(ctx);
+        return NULL;
+    }
     return ctx;
 }
 
