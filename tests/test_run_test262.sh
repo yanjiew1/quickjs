@@ -218,7 +218,7 @@ negative:
   phase: runtime
   type: TypeError
 ---*/
-throw "TypeError: ordinary throw sentinel";
+throw {constructor: TypeError, toString() { return "TypeError: ordinary throw sentinel"; }};
 JS
 cat > "$test262_tmp/suite/ordinary.js" <<'JS'
 /*---
@@ -789,3 +789,18 @@ throw new Error("module evaluation must also succeed");
 JS
 invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/async-module.js"
 test "$test262_status" -eq 1
+
+# The expected type is the thrown value's constructor, not its text/name.
+for test262_source in 'throw "TypeError: spoofed";' \
+    'throw Object.assign(new Error("wrong constructor"), {name:"TypeError"});'; do
+    cat > "$test262_tmp/phases/wrong-constructor.js" <<JS
+/*---
+negative:
+  phase: runtime
+  type: TypeError
+---*/
+$test262_source
+JS
+    invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/wrong-constructor.js"
+    test "$test262_status" -eq 1
+done
