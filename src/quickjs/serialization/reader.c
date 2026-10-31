@@ -41,6 +41,7 @@
 #include "../builtins/typed-array.h"
 
 #include "format.h"
+#include <limits.h>
 
 /*******************************************************************/
 /* binary object reader */
@@ -1155,6 +1156,7 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
 static int JS_ReadObjectAtoms(BCReaderState *s)
 {
     uint8_t v8;
+    uint32_t count;
     JSString *p;
     int i;
     JSAtom atom;
@@ -1166,9 +1168,15 @@ static int JS_ReadObjectAtoms(BCReaderState *s)
                             v8, BC_VERSION);
         return -1;
     }
-    if (bc_get_leb128(s, &s->idx_to_atom_count))
+    if (bc_get_leb128(s, &count))
         return -1;
 
+    /* Each atom needs at least a length byte. Reject impossible tables
+       before allocation, including sizes that wrap on 32-bit hosts. */
+    if (count > INT_MAX || count > s->buf_end - s->ptr ||
+        (uint64_t)count * sizeof(s->idx_to_atom[0]) > SIZE_MAX)
+        return bc_read_error_end(s);
+    s->idx_to_atom_count = count;
     bc_read_trace(s, "%d atom indexes {\n", s->idx_to_atom_count);
 
     if (s->idx_to_atom_count != 0) {

@@ -342,3 +342,18 @@ function bjson_test_pending_typed_array_reference()
 }
 
 bjson_test_pending_typed_array_reference();
+
+function bjson_test_invalid_atom_count()
+{
+    const version = new Uint8Array(bjson.write(null))[0];
+    // Counts that wrap a 32-bit allocation, plus a small truncated table.
+    for (const count of [[0x80, 0x80, 0x80, 0x80, 4], [1]]) {
+        const data = new Uint8Array([version, ...count]);
+        let error;
+        try { bjson.read(data.buffer, 0, data.length); }
+        catch (caught) { error = caught; }
+        assert(error instanceof SyntaxError);
+    }
+}
+
+bjson_test_invalid_atom_count();
