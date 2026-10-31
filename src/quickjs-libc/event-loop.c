@@ -38,6 +38,7 @@
 #include <io.h>
 #else
 #include <poll.h>
+#include <fcntl.h>
 #if defined(__APPLE__) || defined(__FreeBSD__)
 typedef sig_t sighandler_t;
 #endif
@@ -51,6 +52,46 @@ typedef sig_t sighandler_t;
 volatile sig_atomic_t os_pending_signals[64];
 static JSThreadState *signal_owner[64];
 static pthread_mutex_t signal_owner_mutex = PTHREAD_MUTEX_INITIALIZER;
+#ifndef _WIN32
+/* Keep a wake pipe for each installed signal for the process lifetime. A
+   handler can still be running while its owner unregisters the signal. */
+static int signal_wake_read_fd[64];
+static volatile sig_atomic_t signal_wake_write_plus_one[64];
+
+static int init_signal_wake(unsigned sig_num)
+{
+    int fds[2], i, flags;
+
+    if (signal_wake_write_plus_one[sig_num])
+        return 0;
+    if (pipe(fds) < 0)
+        return -1;
+    for (i = 0; i < 2; i++) {
+        flags = fcntl(fds[i], F_GETFL);
+        if (flags < 0 || fcntl(fds[i], F_SETFL, flags | O_NONBLOCK) < 0)
+            goto fail;
+        flags = fcntl(fds[i], F_GETFD);
+        if (flags < 0 || fcntl(fds[i], F_SETFD, flags | FD_CLOEXEC) < 0)
+            goto fail;
+    }
+    signal_wake_read_fd[sig_num] = fds[0];
+    signal_wake_write_plus_one[sig_num] = fds[1] + 1;
+    return 0;
+
+fail:
+    close(fds[0]);
+    close(fds[1]);
+    return -1;
+}
+
+static void drain_signal_wake(unsigned sig_num)
+{
+    char buf[64];
+
+    while (read(signal_wake_read_fd[sig_num], buf, sizeof(buf)) > 0)
+        ;
+}
+#endif
 _Atomic(JSOSPollFunc *) os_poll_func;
 
 int js_os_eval_sigint_pending(JSThreadState *ts)
@@ -171,8 +212,20 @@ void free_sh(JSRuntime *rt, JSOSSignalHandler *sh, JS_BOOL restore_handler)
 
 static void os_signal_handler(int sig_num)
 {
-    if ((unsigned)sig_num < 64)
+    if ((unsigned)sig_num < 64) {
         os_pending_signals[sig_num] = 1;
+#ifndef _WIN32
+        if (signal_wake_write_plus_one[sig_num]) {
+            int saved_errno = errno;
+            char byte = 0;
+            ssize_t written = write(signal_wake_write_plus_one[sig_num] - 1,
+                                    &byte, 1);
+            /* A full nonblocking pipe is already readable by the owner. */
+            (void)written;
+            errno = saved_errno;
+        }
+#endif
+    }
 }
 
 #if defined(_WIN32)
@@ -249,6 +302,12 @@ JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
             return JS_ThrowTypeError(ctx, "signal is owned by another runtime");
         }
 #ifndef _WIN32
+        if (init_signal_wake(sig_num) < 0) {
+            pthread_mutex_unlock(&signal_owner_mutex);
+            if (new_handler)
+                js_free(ctx, sh);
+            return JS_ThrowInternalError(ctx, "could not create signal wake pipe");
+        }
         memset(&action, 0, sizeof(action));
         action.sa_handler = os_signal_handler;
         sigemptyset(&action.sa_mask);
@@ -714,6 +773,17 @@ int js_os_poll(JSContext *ctx, int timeout_ms)
         if (js_poll_add_poll_fd(ts, &nfds, (int)native_wake, POLLIN))
             goto oom;
     }
+    if (!ts->recv_pipe) {
+        JSOSSignalHandler *sh;
+
+        list_for_each(el, &ts->os_signal_handlers) {
+            sh = list_entry(el, JSOSSignalHandler, link);
+            sh->poll_fd_index = nfds;
+            if (js_poll_add_poll_fd(ts, &nfds,
+                                    signal_wake_read_fd[sh->sig_num], POLLIN))
+                goto oom;
+        }
+    }
     list_for_each(el, &ts->os_rw_handlers) {
         int events;
 
@@ -757,6 +827,20 @@ int js_os_poll(JSContext *ctx, int timeout_ms)
     if (native_index >= 0 && ts->poll_fds[native_index].revents != 0)
         return 0;
     if (nfds > 0) {
+        if (!ts->recv_pipe) {
+            JSOSSignalHandler *sh;
+
+            list_for_each(el, &ts->os_signal_handlers) {
+                sh = list_entry(el, JSOSSignalHandler, link);
+                if (ts->poll_fds[sh->poll_fd_index].revents) {
+                    drain_signal_wake(sh->sig_num);
+                    if (os_pending_signals[sh->sig_num]) {
+                        os_pending_signals[sh->sig_num] = 0;
+                        return call_handler(ctx, sh->func);
+                    }
+                }
+            }
+        }
         list_for_each(el, &ts->os_rw_handlers) {
             rh = list_entry(el, JSOSRWHandler, link);
             if (ts->poll_fds[rh->poll_fd_index].revents & POLLNVAL) {
