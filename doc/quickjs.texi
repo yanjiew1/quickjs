@@ -631,7 +631,9 @@ Return @code{true} is @code{fd} is a TTY (terminal) handle.
 Return the TTY size as @code{[width, height]} or @code{null} if not available.
 
 @item ttySetRaw(fd)
-Set the TTY in raw mode.
+Set the TTY in raw mode. Throws if the terminal cannot be configured.
+On POSIX systems, only one raw terminal can be active through this API;
+its previous mode is restored when the process exits.
 
 @item remove(filename)
 Remove a file. Return 0 if OK or @code{-errno}.

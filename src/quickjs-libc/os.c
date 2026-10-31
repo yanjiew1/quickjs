@@ -233,16 +233,33 @@ static JSValue js_os_ttySetRaw(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
     int fd;
-    HANDLE handle;
+    HANDLE handle, output;
+    DWORD input_mode, output_mode;
+    int file_mode;
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
     handle = (HANDLE)_get_osfhandle(fd);
-    SetConsoleMode(handle, ENABLE_WINDOW_INPUT | __ENABLE_VIRTUAL_TERMINAL_INPUT);
-    _setmode(fd, _O_BINARY);
+    if (handle == INVALID_HANDLE_VALUE || !GetConsoleMode(handle, &input_mode))
+        return JS_ThrowInternalError(ctx, "could not set raw terminal mode");
+    file_mode = _setmode(fd, _O_BINARY);
+    if (file_mode < 0)
+        return JS_ThrowInternalError(ctx, "could not set raw terminal mode");
+    if (!SetConsoleMode(handle, ENABLE_WINDOW_INPUT | __ENABLE_VIRTUAL_TERMINAL_INPUT)) {
+        _setmode(fd, file_mode);
+        return JS_ThrowInternalError(ctx, "could not set raw terminal mode");
+    }
     if (fd == 0) {
-        handle = (HANDLE)_get_osfhandle(1); /* corresponding output */
-        SetConsoleMode(handle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | __ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        output = (HANDLE)_get_osfhandle(1); /* corresponding output */
+        if (output != INVALID_HANDLE_VALUE &&
+            GetConsoleMode(output, &output_mode) &&
+            !SetConsoleMode(output, ENABLE_PROCESSED_OUTPUT |
+                                     ENABLE_WRAP_AT_EOL_OUTPUT |
+                                     __ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            SetConsoleMode(handle, input_mode);
+            _setmode(fd, file_mode);
+            return JS_ThrowInternalError(ctx, "could not set raw terminal mode");
+        }
     }
     return JS_UNDEFINED;
 }
@@ -264,25 +281,50 @@ static JSValue js_os_ttyGetWinSize(JSContext *ctx, JSValueConst this_val,
 }
 
 static struct termios oldtty;
+static int raw_tty_fd = -1;
+static BOOL term_exit_registered;
+static pthread_mutex_t raw_tty_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void term_exit(void)
 {
-    tcsetattr(0, TCSANOW, &oldtty);
+    pthread_mutex_lock(&raw_tty_mutex);
+    if (raw_tty_fd >= 0) {
+        tcsetattr(raw_tty_fd, TCSANOW, &oldtty);
+        close(raw_tty_fd);
+        raw_tty_fd = -1;
+    }
+    pthread_mutex_unlock(&raw_tty_mutex);
 }
 
 /* XXX: should add a way to go back to normal mode */
 static JSValue js_os_ttySetRaw(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
-    struct termios tty;
-    int fd;
+    struct termios tty, saved;
+    int fd, saved_fd = -1, err;
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
-
-    memset(&tty, 0, sizeof(tty));
-    tcgetattr(fd, &tty);
-    oldtty = tty;
+    pthread_mutex_lock(&raw_tty_mutex);
+    if (raw_tty_fd >= 0) {
+        errno = EBUSY;
+        goto fail;
+    }
+    if (tcgetattr(fd, &saved) < 0)
+        goto fail;
+    saved_fd = dup(fd);
+    if (saved_fd < 0)
+        goto fail;
+    if (fcntl(saved_fd, F_SETFD, FD_CLOEXEC) < 0)
+        goto fail;
+    if (!term_exit_registered) {
+        if (atexit(term_exit) != 0) {
+            errno = ENOMEM;
+            goto fail;
+        }
+        term_exit_registered = TRUE;
+    }
+    tty = saved;
 
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
                           |INLCR|IGNCR|ICRNL|IXON);
@@ -293,10 +335,19 @@ static JSValue js_os_ttySetRaw(JSContext *ctx, JSValueConst this_val,
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
 
-    tcsetattr(fd, TCSANOW, &tty);
-
-    atexit(term_exit);
+    if (tcsetattr(fd, TCSANOW, &tty) < 0)
+        goto fail;
+    oldtty = saved;
+    raw_tty_fd = saved_fd;
+    pthread_mutex_unlock(&raw_tty_mutex);
     return JS_UNDEFINED;
+ fail:
+    err = errno;
+    if (saved_fd >= 0)
+        close(saved_fd);
+    pthread_mutex_unlock(&raw_tty_mutex);
+    return JS_ThrowInternalError(ctx, "could not set raw terminal mode: %s",
+                                 strerror(err));
 }
 
 #endif /* !_WIN32 */
