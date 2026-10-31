@@ -1278,11 +1278,12 @@ int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
             /* Note: for Proxy objects, proto is NULL */
             p1 = p1->shape->proto;
         } while (p1 != NULL);
-        JS_DupValue(ctx, proto_val);
     }
 
     if (js_shape_prepare_update(ctx, p, NULL))
         return -1;
+    if (proto)
+        JS_DupValue(ctx, proto_val);
     sh = p->shape;
     if (sh->proto)
         JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));

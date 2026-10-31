@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "../src/quickjs/internal/object.h"
+#include "pool-padding.h"
 
 /* Inspect real chains rather than timing the lookup implementation. */
 static void check_property_chains(JSValueConst obj, unsigned expected)
@@ -162,6 +163,33 @@ static void test_integrity_proxy_cleanup(JSContext *ctx)
     assert(after.malloc_count <= before.malloc_count + 4);
 }
 
+static void test_set_prototype_oom(JSContext *ctx)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue obj = JS_NewObject(ctx), peer = JS_NewObject(ctx);
+    JSValue proto = JS_NewObject(ctx), error;
+    JSMemoryUsage usage;
+    void *padding;
+    int ref_count;
+
+    assert(!JS_IsException(obj) && !JS_IsException(peer) &&
+           !JS_IsException(proto));
+    assert(JS_VALUE_GET_OBJ(obj)->shape == JS_VALUE_GET_OBJ(peer)->shape);
+    ref_count = js_rc(JS_VALUE_GET_OBJ(proto))->ref_count;
+    padding = test_pool_padding(rt);
+    JS_ComputeMemoryUsage(rt, &usage);
+    JS_SetMemoryLimit(rt, usage.malloc_size);
+    assert(JS_SetPrototype(ctx, obj, proto) == -1);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    error = JS_GetException(ctx);
+    JS_FreeValue(ctx, error);
+    assert(js_rc(JS_VALUE_GET_OBJ(proto))->ref_count == ref_count);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, peer);
+    JS_FreeValue(ctx, obj);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -174,6 +202,7 @@ int main(void)
     test_property_hash(ctx, 128, 24);
     test_property_hash(ctx, 1024, 16);
     test_integrity_proxy_cleanup(ctx);
+    test_set_prototype_oom(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;
