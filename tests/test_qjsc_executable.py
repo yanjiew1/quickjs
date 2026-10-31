@@ -113,6 +113,13 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                               stderr=subprocess.PIPE, timeout=30)
     assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
 
+    if Path('/dev/full').exists():
+        source.write_text('print(42);\n')
+        failed = subprocess.run([qjsc, '-c', '-o', '/dev/full', str(source)],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                timeout=30)
+        assert failed.returncode != 0, failed.stderr
+
     if struct.calcsize('P') >= 8 and '-m32' not in expected_flags:
         source.write_text('print(42);\n')
         generated = scratch / 'stack-size.c'
