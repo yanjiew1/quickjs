@@ -4597,6 +4597,7 @@ static void test_eval_compile_oom(void)
         "(function named(a = eval('1')) { return () => eval('arguments'); });",
         "class Base {} class Derived extends Base {"
         "constructor(a = 1) { eval(''); super(); } } Derived;",
+        "function tag(strings) { return strings; } tag`x`; tag`y`; tag;",
     };
     size_t i;
 

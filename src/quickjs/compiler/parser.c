@@ -1020,6 +1020,8 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
                syntax error if it contains invalid sequences
              */
             if (js_parse_string(s, '`', FALSE, p, &cooked, &p)) {
+                if (JS_HasException(ctx))
+                    return -1;
                 cooked.u.str.str = JS_UNDEFINED;
             }
             if (JS_DefinePropertyValueUint32(ctx, template_object, depth,
@@ -1081,8 +1083,9 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
  done:
     if (call) {
         /* Seal the objects */
-        seal_template_obj(ctx, raw_array);
-        seal_template_obj(ctx, template_object);
+        if (seal_template_obj(ctx, raw_array) ||
+            seal_template_obj(ctx, template_object))
+            return -1;
         *argc = depth + 1;
     }
  done1:
