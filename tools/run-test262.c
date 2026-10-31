@@ -1981,7 +1981,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     JSValue res_val, exception_val;
     int ret, error_line, pos, pos_line;
-    BOOL is_error, has_error_line, ret_promise;
+    BOOL is_error, has_error_line, ret_promise, harness_failure = FALSE;
     const char *error_name;
 
     pos = skip_comments(buf, 1, &pos_line);
@@ -2031,8 +2031,8 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 res_val = JS_EXCEPTION;
                 break;
             } else if (ret == 0) {
-                BOOL needs_progress = is_async ? tls->async_done == 0 :
-                    JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING;
+                BOOL needs_progress = (is_async && tls->async_done == 0) ||
+                    (ret_promise && JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
                 JS_ClearKeptObjects(JS_GetRuntime(ctx));
                 if (needs_progress && JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
                     if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
@@ -2041,22 +2041,22 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                     }
                     continue;
                 }
-                if (is_async) {
-                    /* test if the test called $DONE() once */
-                    if (tls->async_done != 1) {
-                        res_val = JS_ThrowTypeError(ctx, "$DONE() not called");
-                    } else {
-                        res_val = JS_UNDEFINED;
-                    }
-                } else {
-                    /* check that the returned promise is fulfilled */
+                res_val = JS_UNDEFINED;
+                if (ret_promise) {
+                    /* Async modules must satisfy both the promise and $DONE. */
                     JSPromiseStateEnum state = JS_PromiseState(ctx, promise);
                     if (state == JS_PROMISE_FULFILLED)
                         res_val = JS_UNDEFINED;
                     else if (state == JS_PROMISE_REJECTED)
                         res_val = JS_Throw(ctx, JS_PromiseResult(ctx, promise));
-                    else
+                    else {
+                        harness_failure = TRUE;
                         res_val = JS_ThrowTypeError(ctx, "promise is pending");
+                    }
+                }
+                if (!JS_IsException(res_val) && is_async && tls->async_done != 1) {
+                    harness_failure = TRUE;
+                    res_val = JS_ThrowTypeError(ctx, "$DONE() not called");
                 }
                 break;
             }
@@ -2129,6 +2129,9 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
             ret = 0;
     }
 
+    /* Incomplete harness execution cannot satisfy a negative expectation. */
+    if (harness_failure)
+        ret = -1;
     if (verbose && is_test) {
         const char *msg = NULL;
         const char *error_text = NULL;
