@@ -197,8 +197,21 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
     exec_list->size = 0;
 
     if (gather_available_ancestors(ctx, module, exec_list) < 0) {
+        JSValue error = JS_GetException(ctx);
+
+        /* The fulfilled child's reaction promise is discarded. Reject its
+           parents directly so an allocation failure cannot strand them. */
+        for (i = 0; i < module->async_parent_modules_count; i++) {
+            JSValue parent_obj = JS_NewModuleValue(module->async_parent_modules[i]);
+
+            js_async_module_execution_rejected(ctx, JS_UNDEFINED, 1,
+                                               (JSValueConst *)&error, 0,
+                                               &parent_obj);
+            JS_FreeValue(ctx, parent_obj);
+        }
+        JS_FreeValue(ctx, error);
         js_free(ctx, exec_list->tab);
-        return JS_EXCEPTION;
+        return JS_UNDEFINED;
     }
 
     /* sort by increasing async_evaluation timestamp */

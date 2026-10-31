@@ -4721,6 +4721,76 @@ static void test_module_preparation_retry(void)
     assert(failures > 0 && successes > 0);
 }
 
+static JSModuleDef *async_ancestor_oom_loader(JSContext *ctx,
+                                              const char *name, void *opaque)
+{
+    static const char source[] = "export const value = await Promise.resolve(1);";
+    JSValue compiled;
+    JSModuleDef *module;
+
+    (void)opaque;
+    assert(!strcmp(name, "child"));
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, name,
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(compiled))
+        return NULL;
+    module = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return module;
+}
+
+static void test_async_module_ancestor_oom(void)
+{
+    static const char source[] =
+        "import { value } from 'child'; export const result = value;";
+    size_t step, calls = 0;
+    int failures = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue compiled, promise;
+        void *padding;
+        int jobs = 0;
+
+        assert(ctx);
+        JS_SetModuleLoaderFunc(rt, NULL, async_ancestor_oom_loader, NULL);
+        compiled = JS_Eval(ctx, source, sizeof(source) - 1, "parent",
+                           JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(compiled));
+        promise = JS_EvalFunction(ctx, compiled);
+        assert(!JS_IsException(promise));
+        /* Fault the fulfilled child's ancestor notification, not its await. */
+        assert(JS_IsJobPending(rt));
+        assert(JS_ExecutePendingJob(rt, NULL) == 1);
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        while (JS_IsJobPending(rt)) {
+            int status = JS_ExecutePendingJob(rt, NULL);
+
+            assert(++jobs < 16);
+            if (status < 0)
+                JS_FreeValue(ctx, JS_GetException(ctx));
+        }
+        oom_test_end(&allocator);
+        if (step == 0) {
+            calls = allocator.calls;
+            assert(calls && calls < 64);
+        } else if (allocator.failures) {
+            failures++;
+            assert(JS_PromiseState(ctx, promise) != JS_PROMISE_PENDING);
+        }
+        JS_FreeValue(ctx, promise);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    assert(failures > 0);
+}
+
 static void test_fast_array_growth_oom(void)
 {
     int n, failures = 0;
@@ -4960,6 +5030,7 @@ int main(int argc, char **argv)
         { "fast-array-growth-oom", test_fast_array_growth_oom },
         { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
+        { "async-module-ancestor-oom", test_async_module_ancestor_oom },
         { "eval-compile-oom", test_eval_compile_oom },
         { "module-namespace-oom", test_module_namespace_oom },
         { "collection-growth-oom", test_collection_growth_oom },
