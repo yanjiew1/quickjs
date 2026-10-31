@@ -2908,6 +2908,7 @@ static inline int add_fast_array_element(JSContext *ctx, JSObject *p,
                                          JSValue val, int flags)
 {
     uint32_t new_len, array_len;
+    BOOL update_length = FALSE;
     /* extend the array by one */
     /* XXX: convert to slow array if new_len > 2^31-1 elements */
     new_len = p->u.array.count + 1;
@@ -2920,7 +2921,7 @@ static inline int add_fast_array_element(JSContext *ctx, JSObject *p,
                 JS_FreeValue(ctx, val);
                 return JS_ThrowTypeErrorReadOnly(ctx, flags, JS_ATOM_length);
             }
-            p->prop[0].u.value = JS_NewInt32(ctx, new_len);
+            update_length = TRUE;
         }
     }
     if (unlikely(new_len > p->u.array.u1.size)) {
@@ -2929,6 +2930,8 @@ static inline int add_fast_array_element(JSContext *ctx, JSObject *p,
             return -1;
         }
     }
+    if (update_length)
+        p->prop[0].u.value = JS_NewInt32(ctx, new_len);
     p->u.array.u.values[new_len - 1] = val;
     p->u.array.count = new_len;
     return TRUE;
