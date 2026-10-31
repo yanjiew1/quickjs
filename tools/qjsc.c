@@ -703,7 +703,8 @@ int main(int argc, char **argv)
 {
     int i, verbose, strip_flags;
     const char *out_filename, *cname;
-    char cfilename[1024];
+    char temporary_cfilename[1024];
+    const char *cfilename;
     FILE *fo;
     JSRuntime *rt;
     JSContext *ctx;
@@ -863,12 +864,13 @@ int main(int argc, char **argv)
     if (output_type == OUTPUT_EXECUTABLE) {
 #if defined(_WIN32) || defined(__ANDROID__)
         /* XXX: find a /tmp directory ? */
-        snprintf(cfilename, sizeof(cfilename), "out%d.c", getpid());
+        snprintf(temporary_cfilename, sizeof(temporary_cfilename), "out%d.c", getpid());
 #else
-        snprintf(cfilename, sizeof(cfilename), "/tmp/out%d.c", getpid());
+        snprintf(temporary_cfilename, sizeof(temporary_cfilename), "/tmp/out%d.c", getpid());
 #endif
+        cfilename = temporary_cfilename;
     } else {
-        pstrcpy(cfilename, sizeof(cfilename), out_filename);
+        cfilename = out_filename;
     }
 
     fo = fopen(cfilename, "w");
