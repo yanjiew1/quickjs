@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
 #if !defined(_WIN32)
 #include <sys/wait.h>
 #endif
@@ -68,6 +69,8 @@ static namelist_t cmodule_list;
 static namelist_t init_module_list;
 static uint64_t feature_bitmap;
 static FILE *outfile;
+static const char *target_output_filename;
+static const char *temporary_output_filename;
 static BOOL byte_swap;
 static BOOL dynamic_export;
 static const char *c_ident_prefix = "qjsc_";
@@ -181,6 +184,53 @@ static void get_c_name(char *buf, size_t buf_size, const char *file)
     *q = '\0';
 }
 
+static BOOL same_file(const char *left, const char *right)
+{
+    struct stat left_stat, right_stat;
+
+    return stat(left, &left_stat) == 0 && stat(right, &right_stat) == 0 &&
+           left_stat.st_dev == right_stat.st_dev &&
+           left_stat.st_ino == right_stat.st_ino;
+}
+
+static BOOL output_is_input(const char *output, int argc, char **argv,
+                            int first_input)
+{
+    int i;
+
+    for (i = first_input; i < argc; i++)
+        if (same_file(output, argv[i]))
+            return TRUE;
+    return FALSE;
+}
+
+static int write_staged_output(FILE *source, const char *filename)
+{
+    FILE *target;
+    char buf[8192];
+    size_t count;
+    int error = 0;
+
+    if (fflush(source) || fseek(source, 0, SEEK_SET))
+        return -1;
+    target = fopen(filename, "w");
+    if (!target)
+        return -1;
+    while ((count = fread(buf, 1, sizeof(buf), source)) != 0) {
+        if (fwrite(buf, 1, count, target) != count) {
+            error = errno ? errno : EIO;
+            break;
+        }
+    }
+    if (ferror(source) && !error)
+        error = errno ? errno : EIO;
+    if (fclose(target) && !error)
+        error = errno ? errno : EIO;
+    if (error)
+        errno = error;
+    return error ? -1 : 0;
+}
+
 static void dump_hex(FILE *f, const uint8_t *buf, size_t len)
 {
     size_t i, col;
@@ -241,8 +291,6 @@ static void output_object_code(JSContext *ctx,
         exit(1);
     }
 
-    namelist_add(&cname_list, c_name, NULL, c_name_type);
-
     fprintf(fo, "const uint32_t %s_size = %u;\n\n",
             c_name, (unsigned int)out_buf_len);
     fprintf(fo, "const uint8_t %s[%u] = {\n",
@@ -253,24 +301,38 @@ static void output_object_code(JSContext *ctx,
     js_free(ctx, out_buf);
 }
 
-static const char * const json_attribute_suffixes[] = {
-    "_attributes", "_attributes_size",
+static const char * const json_sidecar_suffixes[] = {
+    "_size", "_module_name", "_attributes", "_attributes_size",
 };
 
-static BOOL json_cname_used(const char *c_name)
+static BOOL cname_used(const char *c_name, BOOL json)
 {
     char symbol[1024 + sizeof("_attributes_size")];
     int i;
 
     if (namelist_find(&cname_list, c_name))
         return TRUE;
-    for (i = 0; i < countof(json_attribute_suffixes); i++) {
+    for (i = 0; i < (json ? countof(json_sidecar_suffixes) : 1); i++) {
         snprintf(symbol, sizeof(symbol), "%s%s", c_name,
-                 json_attribute_suffixes[i]);
+                 json_sidecar_suffixes[i]);
         if (namelist_find(&cname_list, symbol))
             return TRUE;
     }
     return FALSE;
+}
+
+static void reserve_cname(const char *c_name, CNameTypeEnum type)
+{
+    char symbol[1024 + sizeof("_attributes_size")];
+    int i, count = type == CNAME_TYPE_JSON_MODULE ?
+                   countof(json_sidecar_suffixes) : 1;
+
+    namelist_add(&cname_list, c_name, NULL, type);
+    for (i = 0; i < count; i++) {
+        snprintf(symbol, sizeof(symbol), "%s%s", c_name,
+                 json_sidecar_suffixes[i]);
+        namelist_add(&cname_list, symbol, NULL, CNAME_TYPE_RESERVED);
+    }
 }
 
 static void output_json_attributes(JSContext *ctx, FILE *fo,
@@ -280,18 +342,11 @@ static void output_json_attributes(JSContext *ctx, FILE *fo,
     uint8_t *buf;
     size_t len;
     int flags = byte_swap ? JS_WRITE_OBJ_BSWAP : 0;
-    char symbol[1024 + sizeof("_attributes_size")];
-    int i;
 
     buf = JS_WriteObject(ctx, &len, attributes, flags);
     if (!buf) {
         js_std_dump_error(ctx);
         exit(1);
-    }
-    for (i = 0; i < countof(json_attribute_suffixes); i++) {
-        snprintf(symbol, sizeof(symbol), "%s%s", c_name,
-                 json_attribute_suffixes[i]);
-        namelist_add(&cname_list, symbol, NULL, CNAME_TYPE_RESERVED);
     }
     fprintf(fo, "static const uint32_t %s_attributes_size = %u;\n\n",
             c_name, (unsigned int)len);
@@ -314,8 +369,7 @@ static void find_unique_cname(char *cname, size_t cname_size, BOOL json)
     int suffix_num;
     size_t len, max_len;
     assert(cname_size >= 32);
-    /* Add a numeric suffix until the identifier is free. JSON names
-       also require both attribute sidecar identifiers to be free. */
+    /* Add a numeric suffix until the base and its sidecars are free. */
     len = strlen(cname);
     max_len = cname_size - 16;
     if (len > max_len)
@@ -323,8 +377,7 @@ static void find_unique_cname(char *cname, size_t cname_size, BOOL json)
     suffix_num = 1;
     for(;;) {
         snprintf(cname1, sizeof(cname1), "%s_%d", cname, suffix_num);
-        if (json ? !json_cname_used(cname1) :
-            !namelist_find(&cname_list, cname1))
+        if (!cname_used(cname1, json))
             break;
         suffix_num++;
     }
@@ -362,6 +415,15 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
         size_t buf_len;
         uint8_t *buf;
         char cname[1024];
+
+        if ((target_output_filename &&
+             same_file(target_output_filename, module_name)) ||
+            (temporary_output_filename &&
+             same_file(temporary_output_filename, module_name))) {
+            JS_ThrowTypeError(ctx, "output file is also an imported source: %s",
+                              module_name);
+            return NULL;
+        }
         
         buf = js_load_file(ctx, &buf_len, module_name);
         if (!buf) {
@@ -392,9 +454,11 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             }
 
             get_c_name(cname, sizeof(cname), module_name);
-            if (json_cname_used(cname)) {
+            if (cname_used(cname, TRUE)) {
                 find_unique_cname(cname, sizeof(cname), TRUE);
             }
+
+            reserve_cname(cname, CNAME_TYPE_JSON_MODULE);
 
             /* output the module name */
             fprintf(outfile, "static const uint8_t %s_module_name[] = {\n",
@@ -415,9 +479,10 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             if (JS_IsException(func_val))
                 return NULL;
             get_c_name(cname, sizeof(cname), module_name);
-            if (namelist_find(&cname_list, cname)) {
+            if (cname_used(cname, FALSE)) {
                 find_unique_cname(cname, sizeof(cname), FALSE);
             }
+            reserve_cname(cname, CNAME_TYPE_MODULE);
             output_object_code(ctx, outfile, func_val, cname, CNAME_TYPE_MODULE);
             
             /* the module is already referenced, so we must free it */
@@ -464,20 +529,21 @@ static void compile_file(JSContext *ctx, FILE *fo,
 
         pstrcpy(c_name, sizeof(c_name), c_name1);
         entry = namelist_find(&cname_list, c_name);
-        if (entry) {
-            if (entry->flags == CNAME_TYPE_RESERVED)
-                fprintf(stderr, "C name '%s' is a reserved JSON attribute identifier\n",
+        if (cname_used(c_name, FALSE)) {
+            if (entry && entry->flags == CNAME_TYPE_RESERVED)
+                fprintf(stderr, "C name '%s' is a reserved generated identifier\n",
                         c_name);
             else
-                fprintf(stderr, "C name '%s' is already used\n", c_name);
+                fprintf(stderr, "C name '%s' or its size identifier is already used\n", c_name);
             exit(1);
         }
     } else {
         get_c_name(c_name, sizeof(c_name), filename);
-        if (namelist_find(&cname_list, c_name)) {
+        if (cname_used(c_name, FALSE)) {
             find_unique_cname(c_name, sizeof(c_name), FALSE);
         }
     }
+    reserve_cname(c_name, CNAME_TYPE_SCRIPT);
     output_object_code(ctx, fo, obj, c_name, CNAME_TYPE_SCRIPT);
     JS_FreeValue(ctx, obj);
 }
@@ -914,7 +980,18 @@ int main(int argc, char **argv)
         cfilename = out_filename;
     }
 
-    fo = fopen(cfilename, "w");
+    if (output_is_input(out_filename, argc, argv, optind) ||
+        (output_type == OUTPUT_EXECUTABLE &&
+         output_is_input(cfilename, argc, argv, optind))) {
+        fprintf(stderr, "qjsc: output file is also an input file: %s\n",
+                out_filename);
+        return 1;
+    }
+    target_output_filename = out_filename;
+    temporary_output_filename = output_type == OUTPUT_EXECUTABLE ? cfilename : NULL;
+    /* Modules are discovered while compiling. Stage C output so a late
+       import can be checked before either output path is overwritten. */
+    fo = tmpfile();
     if (!fo) {
         perror(cfilename);
         exit(1);
@@ -1049,6 +1126,8 @@ int main(int argc, char **argv)
     JS_FreeRuntime(rt);
 
     write_error = ferror(fo);
+    if (!write_error)
+        write_error = write_staged_output(fo, cfilename) < 0;
     write_errno = errno;
     close_error = fclose(fo);
     if (write_error || close_error) {
