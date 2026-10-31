@@ -993,8 +993,7 @@ int main(int argc, char **argv)
         fputs(main_c_template1, fo);
 
         if (stack_size != 0) {
-            fprintf(fo, "  JS_SetMaxStackSize(rt, %u);\n",
-                    (unsigned int)stack_size);
+            fprintf(fo, "  JS_SetMaxStackSize(rt, %zu);\n", stack_size);
         }
 
         /* add the module loader if necessary */
