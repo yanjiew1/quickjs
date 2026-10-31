@@ -1090,7 +1090,7 @@ JSValue JS_GetModuleNamespace(JSContext *ctx, JSModuleDef *m)
 }
 
 /* Load all the required modules for module 'm' */
-int js_resolve_module(JSContext *ctx, JSModuleDef *m)
+static int js_resolve_module1(JSContext *ctx, JSModuleDef *m)
 {
     int i;
     JSModuleDef *m1;
@@ -1104,6 +1104,9 @@ int js_resolve_module(JSContext *ctx, JSModuleDef *m)
     }
 #endif
     m->resolved = TRUE;
+    JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+    m->resolution_next = ctx->resolving_modules;
+    ctx->resolving_modules = m;
     /* resolve each requested module */
     for(i = 0; i < m->req_module_entries_count; i++) {
         JSReqModuleEntry *rme = &m->req_module_entries[i];
@@ -1119,6 +1122,31 @@ int js_resolve_module(JSContext *ctx, JSModuleDef *m)
             return -1;
     }
     return 0;
+}
+
+/* Keep new nodes alive across loader callbacks. Nested calls have a
+   savepoint so a loader can catch a failure and recover independently. */
+int js_resolve_module(JSContext *ctx, JSModuleDef *m)
+{
+    JSModuleDef *savepoint = ctx->resolving_modules, *node;
+    int i, ret = js_resolve_module1(ctx, m);
+
+    if (ret < 0 || !savepoint) {
+        while (ctx->resolving_modules != savepoint) {
+            node = ctx->resolving_modules;
+            ctx->resolving_modules = node->resolution_next;
+            node->resolution_next = NULL;
+            /* A reentrant loader may already have linked a nested module.
+               Linking also links its dependencies, so keep that graph. */
+            if (ret < 0 && node->status == JS_MODULE_STATUS_UNLINKED) {
+                node->resolved = FALSE;
+                for (i = 0; i < node->req_module_entries_count; i++)
+                    node->req_module_entries[i].module = NULL;
+            }
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, node));
+        }
+    }
+    return ret;
 }
 
 /* Create the <eval> function associated with the module */
@@ -1786,6 +1814,12 @@ int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
         JSModuleDef *m = JS_VALUE_GET_PTR(obj);
+        /* A previous failed attempt may have removed this caller-owned
+           module from the context list. Cycles must find it on retry. */
+        if (!m->link.next) {
+            JS_DupValue(ctx, obj);
+            list_add_tail(&m->link, &ctx->loaded_modules);
+        }
         if (js_resolve_module(ctx, m) < 0) {
             js_free_modules(ctx, JS_FREE_MODULE_NOT_RESOLVED);
             return -1;

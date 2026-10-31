@@ -87,6 +87,7 @@ typedef enum {
 struct JSModuleDef {
     JSGCObjectHeader header; /* must come first */
     JSAtom module_name;
+    JSModuleDef *resolution_next; /* temporary owned transaction chain */
     struct list_head link;
 
     JSReqModuleEntry *req_module_entries;

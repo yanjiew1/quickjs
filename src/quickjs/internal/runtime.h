@@ -226,6 +226,7 @@ struct JSContext {
     /* when the counter reaches zero, JSRutime.interrupt_handler is called */
     int interrupt_counter;
 
+    JSModuleDef *resolving_modules; /* scoped resolution transaction, owning refs */
     struct list_head loaded_modules; /* list of JSModuleDef.link */
     struct JSModuleLoadRequest *module_load_request; /* active loader frames */
 
