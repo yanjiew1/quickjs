@@ -466,6 +466,7 @@ js_tests = {
 }
 if host_machine.system() == 'windows'
   js_tests += {
+    'std-large-file': ['tests/test_std_large_file.js'],
     'wait-worker-overflow': ['-m', 'tests/test_wait_async_worker_overflow.js'],
   }
 else

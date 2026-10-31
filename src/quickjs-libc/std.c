@@ -1035,7 +1035,9 @@ static JSValue js_std_file_tell(JSContext *ctx, JSValueConst this_val,
     int64_t pos;
     if (!f)
         return JS_EXCEPTION;
-#if defined(__linux__) || defined(__GLIBC__)
+#if defined(_WIN32)
+    pos = _ftelli64(f);
+#elif defined(__linux__) || defined(__GLIBC__)
     pos = ftello(f);
 #else
     pos = ftell(f);
@@ -1058,12 +1060,14 @@ static JSValue js_std_file_seek(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (JS_ToInt32(ctx, &whence, argv[1]))
         return JS_EXCEPTION;
-#if defined(__linux__) || defined(__GLIBC__)
+#if defined(_WIN32)
+    ret = _fseeki64(f, pos, whence);
+#elif defined(__linux__) || defined(__GLIBC__)
     ret = fseeko(f, pos, whence);
 #else
     ret = fseek(f, pos, whence);
 #endif
-    if (ret < 0)
+    if (ret != 0)
         ret = -errno;
     return JS_NewInt32(ctx, ret);
 }
