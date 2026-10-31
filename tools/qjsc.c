@@ -195,6 +195,23 @@ static void dump_hex(FILE *f, const uint8_t *buf, size_t len)
         fprintf(f, "\n");
 }
 
+static void output_c_string(FILE *f, const char *str)
+{
+    const unsigned char *p = (const unsigned char *)str;
+    int c;
+
+    fputc('"', f);
+    while ((c = *p++) != 0) {
+        if (c == '"' || c == '\\')
+            fputc('\\', f);
+        if (c >= 0x20 && c <= 0x7e)
+            fputc(c, f);
+        else
+            fprintf(f, "\\%03o", c);
+    }
+    fputc('"', f);
+}
+
 typedef enum {
     CNAME_TYPE_SCRIPT,
     CNAME_TYPE_MODULE,
@@ -983,9 +1000,10 @@ int main(int argc, char **argv)
             fprintf(fo,
                     "  {\n"
                     "    extern JSModuleDef *js_init_module_%s(JSContext *ctx, const char *name);\n"
-                    "    js_init_module_%s(ctx, \"%s\");\n"
-                    "  }\n",
-                    e->short_name, e->short_name, e->name);
+                    "    js_init_module_%s(ctx, ",
+                    e->short_name, e->short_name);
+            output_c_string(fo, e->name);
+            fprintf(fo, ");\n  }\n");
         }
         for(i = 0; i < cname_list.count; i++) {
             namelist_entry_t *e = &cname_list.array[i];
