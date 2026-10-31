@@ -1117,14 +1117,17 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
         else
             c = -1;
     }
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        goto fail;
 
     for(i = 0; i < n; i++) {
         if (i > 0) {
             if (c >= 0) {
-                string_buffer_putc8(b, c);
+                if (string_buffer_putc8(b, c))
+                    goto fail;
             } else {
-                string_buffer_concat(b, p, 0, p->len);
+                if (string_buffer_concat(b, p, 0, p->len))
+                    goto fail;
             }
         }
         el = JS_GetPropertyUint32(ctx, obj, i);

@@ -26,6 +26,7 @@
 #include "../src/quickjs/builtins/string.h"
 #include "../src/quickjs/internal/string-buffer.h"
 #include "oom-allocator.h"
+#include "pool-padding.h"
 
 typedef struct StringOOMState {
     OOMTestAllocator *allocator;
@@ -51,6 +52,26 @@ static JSValue later_value(JSContext *ctx, JSValueConst this_val,
 
     state->later_calls++;
     return JS_UNDEFINED;
+}
+
+static JSValue join_length_fail(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    StringOOMState *state = JS_GetContextOpaque(ctx);
+
+    state->first_calls++;
+    oom_test_begin(state->allocator, 1);
+    return JS_NewInt32(ctx, 2);
+}
+
+static JSValue join_first_fail(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
+{
+    StringOOMState *state = JS_GetContextOpaque(ctx);
+
+    state->first_calls++;
+    oom_test_begin(state->allocator, 1);
+    return JS_NULL;
 }
 
 static void define_getter(JSContext *ctx, JSValueConst object,
@@ -123,6 +144,63 @@ static void test_public_string_builder_oom(int replace_all)
     JS_FreeValue(ctx, ctor);
     JS_FreeValue(ctx, global);
     JS_FreeValue(ctx, state.long_string);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
+static void test_array_join_oom(int fail_at_separator)
+{
+    OOMTestAllocator allocator;
+    StringOOMState state = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, ctor, proto, method, object, separator, result;
+    void *padding;
+    char text[10001];
+
+    assert(ctx);
+    state.allocator = &allocator;
+    state.long_string = JS_UNDEFINED;
+    JS_SetContextOpaque(ctx, &state);
+    global = JS_GetGlobalObject(ctx);
+    ctor = JS_GetPropertyStr(ctx, global, "Array");
+    proto = JS_GetPropertyStr(ctx, ctor, "prototype");
+    method = JS_GetPropertyStr(ctx, proto, "join");
+    object = JS_NewObject(ctx);
+    assert(!JS_IsException(global) && !JS_IsException(ctor) &&
+           !JS_IsException(proto) && !JS_IsException(method) &&
+           !JS_IsException(object));
+
+    if (fail_at_separator) {
+        assert(JS_SetPropertyStr(ctx, object, "length", JS_NewInt32(ctx, 2)) >= 0);
+        define_getter(ctx, object, "0", join_first_fail);
+        memset(text, 'x', sizeof(text) - 1);
+        separator = JS_NewStringLen(ctx, text, sizeof(text) - 1);
+    } else {
+        define_getter(ctx, object, "length", join_length_fail);
+        define_getter(ctx, object, "0", later_value);
+        separator = JS_UNDEFINED;
+    }
+    define_getter(ctx, object, "1", later_value);
+    assert(!JS_IsException(separator));
+
+    padding = test_pool_padding(rt);
+    result = JS_Call(ctx, method, object, fail_at_separator,
+                     (JSValueConst *)&separator);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(state.first_calls == 1 && state.later_calls == 0);
+    oom_test_check_exception(ctx);
+
+    JS_FreeValue(ctx, result);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, separator);
+    JS_FreeValue(ctx, object);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, global);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     assert(!allocator.live);
@@ -252,6 +330,8 @@ int main(void)
     test_empty_write_after_failed_init();
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);
+    test_array_join_oom(0);
+    test_array_join_oom(1);
     test_substitution_oom();
     test_regexp_replace_oom();
     return 0;
