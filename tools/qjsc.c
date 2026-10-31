@@ -729,6 +729,7 @@ int main(int argc, char **argv)
     OutputTypeEnum output_type;
     size_t stack_size;
     namelist_t dynamic_module_list;
+    int write_error, write_errno, close_error;
 
     out_filename = NULL;
     output_type = OUTPUT_EXECUTABLE;
@@ -1036,7 +1037,17 @@ int main(int argc, char **argv)
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 
-    fclose(fo);
+    write_error = ferror(fo);
+    write_errno = errno;
+    close_error = fclose(fo);
+    if (write_error || close_error) {
+        if (!close_error)
+            errno = write_errno ? write_errno : EIO;
+        perror(cfilename);
+        if (output_type == OUTPUT_EXECUTABLE)
+            unlink(cfilename);
+        return 1;
+    }
 
     if (output_type == OUTPUT_EXECUTABLE) {
         return output_executable(out_filename, cfilename, verbose,
