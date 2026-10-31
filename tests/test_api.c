@@ -178,6 +178,72 @@ static void free_external(JSRuntime *rt, void *opaque, void *ptr)
     data->free_count++;
 }
 
+typedef struct ReentrantBufferData {
+    JSContext *ctx;
+    JSValueConst buffer;
+    int free_count;
+    int saw_detached;
+} ReentrantBufferData;
+
+static void reentrant_buffer_free(JSRuntime *rt, void *opaque, void *ptr)
+{
+    ReentrantBufferData *state = opaque;
+    size_t size = SIZE_MAX;
+    uint8_t *data;
+
+    (void)rt;
+    (void)ptr;
+    state->free_count++;
+    if (state->free_count != 1)
+        return;
+    data = JS_GetArrayBuffer(state->ctx, &size, state->buffer);
+    state->saw_detached = data == NULL && size == 0 &&
+                          JS_HasException(state->ctx);
+    if (JS_HasException(state->ctx))
+        JS_FreeValue(state->ctx, JS_GetException(state->ctx));
+    JS_DetachArrayBuffer(state->ctx, state->buffer);
+}
+
+static void test_reentrant_buffer_free(void)
+{
+    int transfer;
+
+    for (transfer = 0; transfer < 2; transfer++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx;
+        JSValue buffer, global, result;
+        uint8_t byte = 42;
+        ReentrantBufferData state = { 0 };
+
+        assert(rt);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        state.ctx = ctx;
+        buffer = JS_NewArrayBuffer(ctx, &byte, 1, reentrant_buffer_free,
+                                   &state, FALSE);
+        assert(!JS_IsException(buffer));
+        state.buffer = buffer;
+        if (transfer) {
+            global = JS_GetGlobalObject(ctx);
+            assert(JS_SetPropertyStr(ctx, global, "external",
+                                     JS_DupValue(ctx, buffer)) >= 0);
+            result = JS_Eval(ctx, "external.transfer(2)",
+                             sizeof("external.transfer(2)") - 1,
+                             "buffer-reentrant-free", JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(result));
+            JS_FreeValue(ctx, result);
+            assert(JS_SetPropertyStr(ctx, global, "external", JS_UNDEFINED) >= 0);
+            JS_FreeValue(ctx, global);
+        } else {
+            JS_DetachArrayBuffer(ctx, buffer);
+        }
+        assert(state.free_count == 1 && state.saw_detached);
+        JS_FreeValue(ctx, buffer);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 static void check_empty_buffer(JSContext *ctx, JSValueConst buffer)
 {
     size_t size = 1;
@@ -5093,6 +5159,7 @@ int main(int argc, char **argv)
         { "atom", test_empty_atom },
         { "array-native-interrupt", test_array_native_interrupt },
         { "buffer-callback-lifetime", test_external_buffer_callback_lifetime },
+        { "buffer-reentrant-free", test_reentrant_buffer_free },
         { "buffer-transfer", test_empty_buffer_transfer },
         { "buffer-transfer-no-free", test_buffer_transfer_without_free_callback },
     };
