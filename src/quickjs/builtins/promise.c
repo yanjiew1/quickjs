@@ -85,6 +85,8 @@ JSValue JS_PromiseResult(JSContext *ctx, JSValue promise)
 
 static int js_create_resolving_functions(JSContext *ctx, JSValue *args,
                                          JSValueConst promise);
+static int fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
+                                     JSValueConst value, BOOL is_reject);
 
 static void free_pending_reaction(JSRuntime *rt, JSJobEntry *entry)
 {
@@ -139,8 +141,21 @@ static JSValue promise_reaction_job(JSContext *ctx, int argc,
         res = JS_Call(ctx, handler, JS_UNDEFINED, 1, &arg);
     }
     is_reject = JS_IsException(res);
-    if (is_reject)
+    if (is_reject) {
         res = JS_GetException(ctx);
+        /* An interrupt can fail before the handler runs. Only a catchable
+           failure of a native resolver can be its assimilation enqueue OOM. */
+        if (!ctx->rt->current_exception_is_uncatchable &&
+            JS_VALUE_GET_TAG(handler) == JS_TAG_OBJECT &&
+            JS_VALUE_GET_OBJ(handler)->class_id == JS_CLASS_PROMISE_RESOLVE_FUNCTION) {
+            JSPromiseFunctionData *s =
+                JS_VALUE_GET_OBJ(handler)->u.promise_function_data;
+            if (s && !s->presolved->already_resolved) {
+                s->presolved->already_resolved = TRUE;
+                fulfill_or_reject_promise(ctx, s->promise, res, TRUE);
+            }
+        }
+    }
     func = argv[is_reject];
     /* as an extension, we support undefined as value to avoid
        creating a dummy promise in the 'await' implementation of async
