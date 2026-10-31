@@ -388,7 +388,9 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
             ret2 = JS_Call(ctx, s->resolving_funcs[0], JS_UNDEFINED,
                            1, (JSValueConst *)&func_ret);
             JS_FreeValue(ctx, func_ret);
-            JS_FreeValue(ctx, ret2); /* XXX: what to do if exception ? */
+            if (JS_IsException(ret2))
+                goto fail;
+            JS_FreeValue(ctx, ret2);
         }
     } else {
         JSValue value, promise, resolving_funcs[2], resolving_funcs1[2];

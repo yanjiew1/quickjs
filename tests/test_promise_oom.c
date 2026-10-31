@@ -26,6 +26,8 @@
 #include "oom-allocator.h"
 
 static void *nested_padding;
+static void *assimilation_padding;
+static int assimilation_armed;
 static JSValue nested_error;
 static void *import_padding;
 static JSValue import_attributes;
@@ -700,6 +702,50 @@ static void test_thenable_job_resolver_oom(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue arm_assimilation_oom(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+
+    assimilation_armed = 1;
+    assimilation_padding = test_pool_padding(rt);
+    JS_SetMemoryLimit(rt, 0);
+    return JS_UNDEFINED;
+}
+
+static void test_async_function_return_oom(void)
+{
+    static const char source[] =
+        "var cachedThen = function(resolve) { resolve(1); };"
+        "var thenable = { get then() { armAssimilationOOM(); return cachedThen; } };"
+        "(async function() { return thenable; })()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, promise, reason;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "armAssimilationOOM",
+               JS_NewCFunction(ctx, arm_assimilation_oom, "armAssimilationOOM", 0)) > 0);
+    assimilation_padding = NULL;
+    assimilation_armed = 0;
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<async-return-oom>", JS_EVAL_TYPE_GLOBAL);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(assimilation_armed);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, assimilation_padding);
+    assimilation_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -727,6 +773,7 @@ int main(void)
     test_reaction_scheduling_no_allocation(1);
     test_reaction_scheduling_no_allocation(2);
     test_thenable_job_resolver_oom();
+    test_async_function_return_oom();
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
