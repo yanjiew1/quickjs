@@ -77,6 +77,17 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
         assert rejected.returncode == 1, (invalid_size, rejected.stderr)
         assert b'invalid size' in rejected.stderr, rejected.stderr
 
+    imported = scratch / 'a.js'
+    entry = scratch / 'b.js'
+    imported.write_text('export const x = 1;\n')
+    entry.write_text("import { x } from './a.js'; print(x);\n")
+    duplicate = subprocess.run([qjsc, '-c', '-m', '-N', 'qjsc_a',
+                                '-o', str(scratch / 'duplicate.c'), str(entry)],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               timeout=30)
+    assert duplicate.returncode == 1, duplicate.stderr
+    assert b'already used' in duplicate.stderr, duplicate.stderr
+
     source.write_text('function readMeta() { return import.meta; }\n'
                       'if (typeof import.meta !== "object" || '
                       'readMeta() !== import.meta) '
