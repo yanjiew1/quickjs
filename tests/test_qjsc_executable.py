@@ -23,6 +23,7 @@
 """Exercise qjsc's default executable output and its selected target and sanitizer flags."""
 from pathlib import Path
 import shlex
+import struct
 import subprocess
 import sys
 import tempfile
@@ -102,3 +103,11 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                                   timeout=30)
         assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
         assert generated.is_file(), 'qjsc truncated the requested output path'
+
+    if struct.calcsize('P') >= 8 and '-m32' not in expected_flags:
+        generated = scratch / 'stack-size.c'
+        compiled = subprocess.run([qjsc, '-e', '-S', '5G', '-o', str(generated),
+                                   str(source)], stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=30)
+        assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+        assert 'JS_SetMaxStackSize(rt, 5368709120);' in generated.read_text()
