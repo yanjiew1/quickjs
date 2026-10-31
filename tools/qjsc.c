@@ -812,20 +812,33 @@ int main(int argc, char **argv)
                 continue;
             }
             if (opt == 'M') {
-                char *p;
-                char path[1024];
+                const char *comma;
+                char *path;
                 char cname[1024];
+                size_t path_len;
 
                 optarg = get_short_optarg(&optind, opt, arg, argc, argv);
-                pstrcpy(path, sizeof(path), optarg);
-                p = strchr(path, ',');
-                if (p) {
-                    *p = '\0';
-                    pstrcpy(cname, sizeof(cname), p + 1);
+                comma = strchr(optarg, ',');
+                path_len = comma ? (size_t)(comma - optarg) : strlen(optarg);
+                path = malloc(path_len + 1);
+                if (!path) {
+                    fprintf(stderr, "qjsc: out of memory\n");
+                    return 1;
+                }
+                memcpy(path, optarg, path_len);
+                path[path_len] = '\0';
+                if (comma) {
+                    if (strlen(comma + 1) >= sizeof(cname)) {
+                        fprintf(stderr, "qjsc: module C name is too long\n");
+                        free(path);
+                        return 1;
+                    }
+                    pstrcpy(cname, sizeof(cname), comma + 1);
                 } else {
                     get_c_name(cname, sizeof(cname), path);
                 }
                 namelist_add(&cmodule_list, path, cname, 0);
+                free(path);
                 break;
             }
             if (opt == 'D') {

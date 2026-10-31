@@ -104,7 +104,17 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
         assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
         assert generated.is_file(), 'qjsc truncated the requested output path'
 
+    module_name = 'mod' + 'x' * 1100
+    source.write_text(f"import '{module_name}';\n")
+    generated = scratch / 'long-module.c'
+    compiled = subprocess.run([qjsc, '-c', '-m', '-M',
+                               f'{module_name},longmod', '-o', str(generated),
+                               str(source)], stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=30)
+    assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+
     if struct.calcsize('P') >= 8 and '-m32' not in expected_flags:
+        source.write_text('print(42);\n')
         generated = scratch / 'stack-size.c'
         compiled = subprocess.run([qjsc, '-e', '-S', '5G', '-o', str(generated),
                                    str(source)], stdout=subprocess.PIPE,
