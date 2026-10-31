@@ -1136,7 +1136,6 @@ static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
     }
     switch (hint) {
     case JS_ATOM_number:
-    case JS_ATOM_integer:
         hint_num = HINT_NUMBER;
         break;
     case JS_ATOM_string:
