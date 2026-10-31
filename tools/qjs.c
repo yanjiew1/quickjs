@@ -416,11 +416,11 @@ int main(int argc, char **argv)
                 continue;
             }
             if (opt == 's') {
-                strip_flags = JS_STRIP_DEBUG;
+                strip_flags |= JS_STRIP_DEBUG;
                 continue;
             }
             if (!strcmp(longopt, "strip-source")) {
-                strip_flags = JS_STRIP_SOURCE;
+                strip_flags |= JS_STRIP_SOURCE;
                 continue;
             }
             if (opt) {
