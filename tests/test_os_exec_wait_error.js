@@ -29,3 +29,27 @@ try {
 } finally {
     os.signal(os.SIGCHLD, null);
 }
+
+if (os.platform === "linux") {
+    const source = os.open("/dev/null", os.O_RDONLY);
+    if (source < 0)
+        throw Error("cannot open descriptor fixture");
+    try {
+        const high = os.dup2(source, 2048);
+        if (high === 2048) {
+            try {
+                const status = os.exec(["/bin/sh", "-c",
+                                        "test ! -e /proc/self/fd/2048"],
+                                       { usePath: false });
+                if (status !== 0)
+                    throw Error("os.exec leaked descriptor 2048: " + status);
+            } finally {
+                os.close(2048);
+            }
+        } else if (high !== -9 && high !== -24) {
+            throw Error("cannot create high descriptor fixture: " + high);
+        }
+    } finally {
+        os.close(source);
+    }
+}
