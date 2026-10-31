@@ -462,16 +462,15 @@ static void promise_failure_tracker(JSContext *ctx, JSValueConst promise,
     failure->handled++;
     if (!failure->arm_failure)
         return;
-    /* Both reactions already own their handlers and both capability functions. */
+    /* One prepared reaction owns both handlers and both capability functions. */
     for (i = 0; i < failure->function_count; i++)
-        assert(js_rc(JS_VALUE_GET_PTR(failure->functions[i]))->ref_count ==
-               (i < 2 ? 2 : 3));
+        assert(js_rc(JS_VALUE_GET_PTR(failure->functions[i]))->ref_count == 2);
     exhaust_pooled_free_blocks(rt, failure);
     failure->arm_failure = FALSE;
     failure->fail_next = TRUE;
 }
 
-static void test_settled_promise_enqueue_failure(BOOL with_capability)
+static void test_settled_promise_prepared_reaction(BOOL with_capability)
 {
     static const JSClassDef owner_class = {
         .class_name = "PromiseReactionOwner",
@@ -481,10 +480,9 @@ static void test_settled_promise_enqueue_failure(BOOL with_capability)
     JSMallocFunctions mf = def_malloc_funcs;
     JSRuntime *rt;
     JSContext *ctx;
-    JSValue promise, resolving_funcs[2], owner, result, error, message;
+    JSValue promise, resolving_funcs[2], owner, result;
     JSValueConst reason;
     JSValueConst empty[2] = { JS_UNDEFINED, JS_UNDEFINED };
-    const char *text;
     void *ptr;
     int i, ret;
 
@@ -526,20 +524,11 @@ static void test_settled_promise_enqueue_failure(BOOL with_capability)
     ret = perform_promise_then(ctx, promise,
                                 (JSValueConst *)failure.functions,
                                 (JSValueConst *)(failure.functions + 2));
-    assert(ret == -1);
-    assert(failure.failures == 1 && !failure.fail_next);
-    assert(JS_HasException(ctx));
-    error = JS_GetException(ctx);
-    assert(JS_IsError(ctx, error));
-    message = JS_GetPropertyStr(ctx, error, "message");
-    assert(!JS_IsException(message));
-    text = JS_ToCString(ctx, message);
-    assert(text && strcmp(text, "out of memory") == 0);
-    JS_FreeCString(ctx, text);
-    JS_FreeValue(ctx, message);
-    JS_FreeValue(ctx, error);
+    assert(ret == 0);
+    assert(failure.failures == 0 && failure.fail_next);
+    failure.fail_next = FALSE;
     assert(!JS_HasException(ctx));
-    assert(!JS_IsJobPending(rt));
+    assert(JS_IsJobPending(rt));
     assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
     result = JS_PromiseResult(ctx, promise);
     assert(JS_VALUE_GET_INT(result) == 42);
@@ -548,6 +537,15 @@ static void test_settled_promise_enqueue_failure(BOOL with_capability)
     for (i = 0; i < failure.function_count; i++) {
         assert(failure.owners[i].calls == 0);
         assert(failure.owners[i].finalized == 0);
+        assert(js_rc(JS_VALUE_GET_PTR(failure.functions[i]))->ref_count ==
+               (i == 0 ? 1 : 2));
+    }
+    assert(JS_ExecutePendingJob(rt, NULL) == 1);
+    assert(JS_ExecutePendingJob(rt, NULL) == 0);
+    assert(failure.owners[1].calls == 1);
+    if (with_capability)
+        assert(failure.owners[2].calls == 1);
+    for (i = 0; i < failure.function_count; i++) {
         assert(js_rc(JS_VALUE_GET_PTR(failure.functions[i]))->ref_count == 1);
         JS_FreeValue(ctx, failure.functions[i]);
         assert(failure.owners[i].finalized == 1);
@@ -556,8 +554,7 @@ static void test_settled_promise_enqueue_failure(BOOL with_capability)
         memcpy(&failure.padding, ptr, sizeof(failure.padding));
         js_free_rt(rt, ptr);
     }
-    /* The handled transition remains committed on enqueue OOM, matching the
-       notification already delivered to the host; retry must not notify twice. */
+    /* Attaching another reaction must not repeat the handled notification. */
     assert(perform_promise_then(ctx, promise, empty, empty) == 0);
     assert(failure.unhandled == 1 && failure.handled == 1);
     assert(JS_IsJobPending(rt));
@@ -2253,8 +2250,8 @@ int main(void)
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
     test_gc_accounting_overflow();
-    test_settled_promise_enqueue_failure(FALSE);
-    test_settled_promise_enqueue_failure(TRUE);
+    test_settled_promise_prepared_reaction(FALSE);
+    test_settled_promise_prepared_reaction(TRUE);
     test_lvalue_label_oom();
     return 0;
 }

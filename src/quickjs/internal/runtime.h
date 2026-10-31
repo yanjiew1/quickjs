@@ -44,6 +44,14 @@ _Static_assert(sizeof(JSModuleNormalizeFunctions) == sizeof(JSModuleNormalizeFun
 _Static_assert(_Alignof(JSModuleNormalizeFunctions) == _Alignof(JSModuleNormalizeFunc *),
                "module normalizer callback slot alignment");
 
+typedef struct JSJobEntry {
+    struct list_head link;
+    JSContext *realm;
+    JSJobFunc *job_func;
+    int argc;
+    JSValue argv[0];
+} JSJobEntry;
+
 struct JSRuntime {
     JSMallocContext malloc_ctx;
     const char *rt_info;
@@ -244,6 +252,9 @@ struct JSContext {
 
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                    int argc, JSValueConst *argv, BOOL no_exception);
+JSJobEntry *js_alloc_prepared_job(JSContext *ctx, JSJobFunc *job_func,
+                                  int argc);
+void js_enqueue_prepared_job(JSContext *ctx, JSJobEntry *entry);
 
 #if !defined(CONFIG_STACK_CHECK)
 /* no stack limitation */

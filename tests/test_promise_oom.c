@@ -251,7 +251,7 @@ static void test_nested(JSContext *ctx)
     nested_padding = NULL;
 }
 
-static void test_reaction_enqueue_failure(int mode)
+static void test_reaction_scheduling_no_allocation(int mode)
 {
     static const char source[] = "({ get then() { throw 42; } })";
     JSRuntime *rt = JS_NewRuntime();
@@ -275,16 +275,20 @@ static void test_reaction_enqueue_failure(int mode)
     JS_SetMemoryLimit(rt, 0);
     result = JS_Call(ctx, funcs[mode == 1], JS_UNDEFINED, 1, (JSValueConst *)&resolution);
     JS_SetMemoryLimit(rt, (size_t)-1);
-    assert(JS_IsException(result) && JS_HasException(ctx));
-    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(JS_IsUndefined(result) && !JS_HasException(ctx));
     assert(JS_PromiseState(ctx, promise) ==
            (mode ? JS_PROMISE_REJECTED : JS_PROMISE_FULFILLED));
-    assert(!JS_IsJobPending(rt));
+    assert(JS_IsJobPending(rt));
     /* Settlement is already published; retrying must not settle it again. */
     result = JS_Call(ctx, funcs[0], JS_UNDEFINED, 0, NULL);
     assert(JS_IsUndefined(result) && !JS_HasException(ctx));
+    for (i = 0; JS_IsJobPending(rt); i++) {
+        assert(i < 8 && JS_ExecutePendingJob(rt, NULL) == 1);
+    }
+    assert(i == 2);
     for (i = 0; i < 2; i++) {
-        assert(JS_PromiseState(ctx, children[i]) == JS_PROMISE_PENDING);
+        assert(JS_PromiseState(ctx, children[i]) ==
+               (mode ? JS_PROMISE_REJECTED : JS_PROMISE_FULFILLED));
         JS_FreeValue(ctx, children[i]);
     }
     JS_FreeValue(ctx, resolution);
@@ -691,9 +695,9 @@ int main(void)
     test_dynamic_import_oom(0);
     test_dynamic_import_oom(1);
     test_dynamic_import_reject_job_oom();
-    test_reaction_enqueue_failure(0);
-    test_reaction_enqueue_failure(1);
-    test_reaction_enqueue_failure(2);
+    test_reaction_scheduling_no_allocation(0);
+    test_reaction_scheduling_no_allocation(1);
+    test_reaction_scheduling_no_allocation(2);
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
