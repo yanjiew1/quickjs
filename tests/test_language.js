@@ -4165,3 +4165,13 @@ function test_scope_limit()
 }
 
 test_scope_limit();
+
+// Negated Unicode sets use the static MayContainStrings property.
+for (const pattern of ["[^\\q{ab}--\\q{ab}]", "[^\\q{}--\\q{}]",
+                       "[^\\q{ab}&&\\q{cd}]"]) {
+    let error;
+    try { new RegExp(pattern, "v"); } catch (caught) { error = caught; }
+    assert(error instanceof SyntaxError);
+}
+assert(new RegExp("[^\\q{ab}&&a]", "v").test("b"));
+assert(new RegExp("[^a--\\q{ab}]", "v").test("b"));
