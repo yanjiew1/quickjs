@@ -249,11 +249,12 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
         if (ret) {
             if (js_get_length64(ctx, &len, val))
                 goto exception;
-            string_buffer_putc8(jsc->b, '[');
+            if (string_buffer_putc8(jsc->b, '['))
+                goto exception;
             for(i = 0; i < len; i++) {
-                if (i > 0)
-                    string_buffer_putc8(jsc->b, ',');
-                string_buffer_concat_value(jsc->b, sep);
+                if ((i > 0 && string_buffer_putc8(jsc->b, ',')) ||
+                    string_buffer_concat_value(jsc->b, sep))
+                    goto exception;
                 v = JS_GetPropertyInt64(ctx, val, i);
                 if (JS_IsException(v))
                     goto exception;
@@ -274,10 +275,12 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                     goto exception;
             }
             if (len > 0 && !JS_IsEmptyString(jsc->gap)) {
-                string_buffer_putc8(jsc->b, '\n');
-                string_buffer_concat_value(jsc->b, indent);
+                if (string_buffer_putc8(jsc->b, '\n') ||
+                    string_buffer_concat_value(jsc->b, indent))
+                    goto exception;
             }
-            string_buffer_putc8(jsc->b, ']');
+            if (string_buffer_putc8(jsc->b, ']'))
+                goto exception;
         } else {
             if (!JS_IsUndefined(jsc->property_list))
                 tab = JS_DupValue(ctx, jsc->property_list);
@@ -287,7 +290,8 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 goto exception;
             if (js_get_length64(ctx, &len, tab))
                 goto exception;
-            string_buffer_putc8(jsc->b, '{');
+            if (string_buffer_putc8(jsc->b, '{'))
+                goto exception;
             has_content = FALSE;
             for(i = 0; i < len; i++) {
                 JS_FreeValue(ctx, prop);
@@ -301,25 +305,32 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 if (JS_IsException(v))
                     goto exception;
                 if (!JS_IsUndefined(v)) {
-                    if (has_content)
-                        string_buffer_putc8(jsc->b, ',');
-                    string_buffer_concat_value(jsc->b, sep);
+                    if ((has_content && string_buffer_putc8(jsc->b, ',')) ||
+                        string_buffer_concat_value(jsc->b, sep)) {
+                        JS_FreeValue(ctx, v);
+                        goto exception;
+                    }
                     if (JS_ToQuotedString(ctx, jsc->b, prop)) {
                         JS_FreeValue(ctx, v);
                         goto exception;
                     }
-                    string_buffer_putc8(jsc->b, ':');
-                    string_buffer_concat_value(jsc->b, sep1);
+                    if (string_buffer_putc8(jsc->b, ':') ||
+                        string_buffer_concat_value(jsc->b, sep1)) {
+                        JS_FreeValue(ctx, v);
+                        goto exception;
+                    }
                     if (js_json_to_str(ctx, jsc, val, v, indent1))
                         goto exception;
                     has_content = TRUE;
                 }
             }
             if (has_content && !JS_IsEmptyString(jsc->gap)) {
-                string_buffer_putc8(jsc->b, '\n');
-                string_buffer_concat_value(jsc->b, indent);
+                if (string_buffer_putc8(jsc->b, '\n') ||
+                    string_buffer_concat_value(jsc->b, indent))
+                    goto exception;
             }
-            string_buffer_putc8(jsc->b, '}');
+            if (string_buffer_putc8(jsc->b, '}'))
+                goto exception;
         }
         if (check_exception_free(rt, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
             goto exception;
@@ -384,7 +395,8 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     ret = JS_UNDEFINED;
     wrapper = JS_UNDEFINED;
 
-    string_buffer_init(ctx, jsc->b, 0);
+    if (string_buffer_init(ctx, jsc->b, 0))
+        goto exception;
     jsc->stack = JS_NewArray(ctx);
     if (JS_IsException(jsc->stack))
         goto exception;

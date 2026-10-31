@@ -31,7 +31,50 @@ static JSValue failing_index_string(JSContext *ctx, JSValue value);
 #undef JS_ToStringFree
 
 static int fail_index, armed, failures, finalized;
+static int observed_getters;
 static JSClassID element_class;
+
+static JSValue counted_element(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
+{
+    observed_getters++;
+    return JS_NewInt32(ctx, 1);
+}
+
+static void test_initial_builder_oom(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue array, getter, result;
+    JSAtom index;
+    void *padding;
+
+    assert(ctx);
+    array = JS_NewArray(ctx);
+    getter = JS_NewCFunction(ctx, counted_element, "element", 0);
+    index = JS_NewAtom(ctx, "0");
+    assert(!JS_IsException(array) && !JS_IsException(getter) &&
+           index != JS_ATOM_NULL);
+    assert(JS_DefinePropertyGetSet(ctx, array, index, getter, JS_UNDEFINED,
+                                   JS_PROP_CONFIGURABLE) >= 0);
+    JS_FreeAtom(ctx, index);
+    assert(JS_SetPropertyStr(ctx, array, "length", JS_NewInt32(ctx, 1)) >= 0);
+    observed_getters = 0;
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    result = JS_JSONStringify(ctx, array, JS_UNDEFINED, JS_UNDEFINED);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(observed_getters == 0);
+    oom_test_check_exception(ctx);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, array);
+    test_pool_padding_free(rt, padding);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
 
 static JSValue failing_index_string(JSContext *ctx, JSValue value)
 {
@@ -113,6 +156,7 @@ static void test_replacer_list_oom(void)
 
 int main(void)
 {
+    test_initial_builder_oom();
     test_replacer_list_oom();
     static const JSClassDef element_def = {
         "StringifyElement", .finalizer = element_finalizer,
