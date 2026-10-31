@@ -55,8 +55,30 @@ with tempfile.TemporaryDirectory(prefix="qjsc-json-collision-") as directory:
                                       cwd=str(scratch), stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE)
             assert rejected.returncode != 0, symbol
-            assert b"reserved JSON attribute identifier" in rejected.stderr, (
+            assert b"reserved generated identifier" in rejected.stderr, (
                 symbol, rejected.stderr)
+
+    # Every emitted array also owns a _size symbol; JSON owns _module_name.
+    (scratch / "a_size.js").write_text("export default 75;\n")
+    (scratch / "a_module_name.js").write_text("export default 76;\n")
+    for name, sources in (
+        ("array-size", ["a_attributes.js", "a_attributes_size.js"]),
+        ("json-module-name", ["main-module-name.js"]),
+    ):
+        if name == "json-module-name":
+            (scratch / sources[0]).write_text(
+                'import payload from "./a.json" with { type: "json" };\n'
+                'import peer from "./a_module_name.js";\n'
+                'if (payload.value !== 73 || peer !== 76) throw Error();\n')
+        probe = subprocess.run(qjsc + ["-c", "-m", "-o",
+                                     str(scratch / (name + ".c"))] + sources,
+                               cwd=str(scratch), stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+        assert probe.returncode == 0, (name, probe.stderr)
+        text = (scratch / (name + ".c")).read_text()
+        symbols = re.findall(r"^(?:static )?const uint(?:8|32)_t ([A-Za-z_]\w*)",
+                             text, re.MULTILINE)
+        assert symbols and len(symbols) == len(set(symbols)), (name, symbols)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(emitted)
 # Every source disappears here. Meson separately compiles the C with its

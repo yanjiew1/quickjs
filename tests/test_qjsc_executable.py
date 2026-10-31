@@ -88,6 +88,44 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert duplicate.returncode == 1, duplicate.stderr
     assert b'already used' in duplicate.stderr, duplicate.stderr
 
+    # An output alias must not truncate a source before qjsc reads it.
+    source.write_text('print(42);\n')
+    for output in (source, scratch / 'source-link.js',
+                   scratch / 'source-hardlink.js'):
+        if output.name == 'source-link.js' and os.name == 'nt':
+            continue
+        if output != source:
+            if output.name == 'source-link.js':
+                output.symlink_to(source)
+            else:
+                os.link(source, output)
+        before = source.read_bytes()
+        rejected = subprocess.run([qjsc, '-c', '-o', str(output), str(source)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  timeout=30)
+        assert rejected.returncode != 0, output
+        assert source.read_bytes() == before, output
+        assert b'also an input file' in rejected.stderr, rejected.stderr
+
+    executable_alias = subprocess.run([qjsc, '-o', str(source), str(source)],
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, timeout=30)
+    assert executable_alias.returncode != 0, executable_alias.stderr
+    assert source.read_bytes() == before
+
+    dependency = scratch / 'dependency.js'
+    dependency.write_text('export const answer = 42;\n')
+    entry.write_text("import { answer } from './dependency.js';\n"
+                     "print(answer);\n")
+    before_dependency = dependency.read_bytes()
+    imported_alias = subprocess.run([qjsc, '-c', '-m', '-o', str(dependency),
+                                     str(entry)], cwd=str(scratch),
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=30)
+    assert imported_alias.returncode != 0, imported_alias.stderr
+    assert dependency.read_bytes() == before_dependency
+    assert b'also an imported source' in imported_alias.stderr, imported_alias.stderr
+
     source.write_text('function readMeta() { return import.meta; }\n'
                       'if (typeof import.meta !== "object" || '
                       'readMeta() !== import.meta) '
