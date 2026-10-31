@@ -672,6 +672,34 @@ static void test_capability_failure_outputs(void)
     assert(failures > 0);
 }
 
+static void test_thenable_job_resolver_oom(void)
+{
+    static const char source[] = "Promise.resolve({ then(resolve) { resolve(1); } })";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, reason;
+    void *padding;
+
+    assert(rt && ctx);
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<thenable-job-oom>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+    assert(JS_IsJobPending(rt));
+    padding = test_pool_padding(rt);
+    JS_SetMemoryLimit(rt, 0);
+    assert(JS_ExecutePendingJob(rt, NULL) == 1);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    test_pool_padding_free(rt, padding);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -698,6 +726,7 @@ int main(void)
     test_reaction_scheduling_no_allocation(0);
     test_reaction_scheduling_no_allocation(1);
     test_reaction_scheduling_no_allocation(2);
+    test_thenable_job_resolver_oom();
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
