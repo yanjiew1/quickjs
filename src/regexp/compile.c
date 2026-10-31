@@ -122,6 +122,7 @@ typedef struct {
        in hash_table[]. The strings in hash_table[] have a length !=
        1. */
     CharRange cr;
+    BOOL may_contain_strings; /* grammar property, independent of set contents */
     uint32_t n_strings;
     uint32_t hash_size;
     int hash_bits;
@@ -141,6 +142,7 @@ static uint32_t re_string_hash(int len, const uint32_t *buf)
 static void re_string_list_init(REParseState *s1, REStringList *s)
 {
     cr_init(&s->cr, s1->opaque, lre_realloc);
+    s->may_contain_strings = FALSE;
     s->n_strings = 0;
     s->hash_size = 0;
     s->hash_bits = 0;
@@ -335,6 +337,11 @@ static int re_string_list_op(REStringList *a, REStringList *b, int op)
     default:
         abort();
     }
+    if (op == CR_OP_UNION)
+        a->may_contain_strings |= b->may_contain_strings;
+    else if (op == CR_OP_INTER)
+        a->may_contain_strings &= b->may_contain_strings;
+    /* Subtraction inherits the left operand's static property. */
     return 0;
 }
 
@@ -934,6 +941,8 @@ static int parse_unicode_property(REParseState *s, REStringList *cr,
             CharRange cr_tmp;
             cr_init(&cr_tmp, s->opaque, lre_realloc);
             ret = unicode_sequence_prop(name, seq_prop_cb, cr, &cr_tmp);
+            if (ret == 0)
+                cr->may_contain_strings = TRUE;
             cr_free(&cr_tmp);
             if (ret == -1) {
                 re_string_list_free(cr);
@@ -1005,6 +1014,8 @@ static int parse_class_string_disjunction(REParseState *s, REStringList *cr,
                 goto fail;
             }
         }
+        if (str.size != 4)
+            cr->may_contain_strings = TRUE;
         if (re_string_add(cr, str.size / 4, (uint32_t *)str.buf)) {
             re_parse_out_of_memory(s);
             goto fail;
@@ -1517,10 +1528,9 @@ static int re_parse_nested_class(REParseState *s, REStringList *cr, const uint8_
     p++;    /* skip ']' */
     *pp = p;
     if (invert) {
-        /* XXX: add may_contain_string syntax check to be fully
-           compliant. The test here accepts more input than the
-           spec. */
-        if (cr->n_strings != 0) {
+        /* Early errors depend on the grammar even if set operations
+           have removed every multi-code-point string. */
+        if (cr->may_contain_strings) {
             re_parse_error(s, "negated character class with strings in regular expression debugger eval code");
             goto fail;
         }
