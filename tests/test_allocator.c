@@ -1318,6 +1318,51 @@ static void test_inherited_autoinit_set_failure(void)
     assert(failure.live_allocations == 0);
 }
 
+static void test_string_wrapper_length_failure(void)
+{
+    size_t fail_at;
+    int saw_late_failure = FALSE;
+
+    for (fail_at = 1; fail_at <= 16; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue proto, peer, str, wrapper;
+        void *padding;
+
+        assert(ctx);
+        JS_SetGCThreshold(rt, SIZE_MAX);
+        proto = JS_GetClassProto(ctx, JS_CLASS_STRING);
+        peer = JS_NewObjectProto(ctx, proto);
+        str = JS_NewString(ctx, "wrapper");
+        assert(!JS_IsException(proto) && !JS_IsException(peer) &&
+               !JS_IsException(str));
+
+        /* The peer makes the new wrapper share a hashed empty shape. */
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, fail_at);
+        wrapper = JS_ToObject(ctx, str);
+        oom_test_end(&allocator);
+        if (allocator.failures) {
+            if (fail_at > 1)
+                saw_late_failure = TRUE;
+            assert(JS_IsException(wrapper));
+            oom_test_check_exception(ctx);
+        } else {
+            assert(JS_IsObject(wrapper) && !JS_HasException(ctx));
+        }
+        JS_FreeValue(ctx, wrapper);
+        JS_FreeValue(ctx, str);
+        JS_FreeValue(ctx, peer);
+        JS_FreeValue(ctx, proto);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(saw_late_failure);
+}
+
 static void test_atom_table_allocation_failure(void)
 {
     AllocationFailure failure = { 0 };
@@ -2299,6 +2344,7 @@ int main(void)
         test_autoinit_allocation_failure(kind, TRUE);
     }
     test_inherited_autoinit_set_failure();
+    test_string_wrapper_length_failure();
     test_backtrace_allocation_failure();
     test_pending_backtrace_allocation_failure();
     test_raw_context_allocation_failure();

@@ -148,8 +148,13 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
                 return JS_EXCEPTION;
             obj = JS_NewObjectClass(ctx, JS_CLASS_STRING);
             if (!JS_IsException(obj)) {
-                JS_DefinePropertyValue(ctx, obj, JS_ATOM_length,
-                                       JS_NewInt32(ctx, JS_VALUE_GET_STRING(str)->len), 0);
+                if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_length,
+                                           JS_NewInt32(ctx, JS_VALUE_GET_STRING(str)->len),
+                                           0) < 0) {
+                    JS_FreeValue(ctx, obj);
+                    JS_FreeValue(ctx, str);
+                    return JS_EXCEPTION;
+                }
                 JS_SetObjectData(ctx, obj, JS_DupValue(ctx, str));
             }
             JS_FreeValue(ctx, str);
