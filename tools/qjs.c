@@ -128,14 +128,8 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt)
 #endif
 
 struct trace_malloc_data {
-    uint8_t *base;
+    uintptr_t base;
 };
-
-static inline unsigned long long js_trace_malloc_ptr_offset(uint8_t *ptr,
-                                                struct trace_malloc_data *dp)
-{
-    return ptr - dp->base;
-}
 
 /* default memory allocation functions with memory limitation */
 static size_t js_trace_malloc_usable_size(const void *ptr)
@@ -175,9 +169,12 @@ __attribute__((format(printf, 2, 3)))
                 if (ptr == NULL) {
                     printf("NULL");
                 } else {
-                    printf("H%+06lld.%zd",
-                           js_trace_malloc_ptr_offset(ptr, s->opaque),
-                           js_trace_malloc_usable_size(ptr));
+                    uintptr_t address = (uintptr_t)ptr;
+                    uintptr_t base = ((struct trace_malloc_data *)s->opaque)->base;
+                    uintptr_t distance = address >= base ? address - base : base - address;
+
+                    printf("H%c%05" PRIuPTR ".%zd", address >= base ? '+' : '-',
+                           distance, js_trace_malloc_usable_size(ptr));
                 }
                 fmt++;
                 continue;
@@ -196,7 +193,10 @@ __attribute__((format(printf, 2, 3)))
 
 static void js_trace_malloc_init(struct trace_malloc_data *s)
 {
-    free(s->base = malloc(8));
+    void *base = malloc(8);
+
+    s->base = (uintptr_t)base;
+    free(base);
 }
 
 static void *js_trace_malloc(JSMallocState *s, size_t size)
@@ -320,7 +320,7 @@ int main(int argc, char **argv)
 {
     JSRuntime *rt;
     JSContext *ctx;
-    struct trace_malloc_data trace_data = { NULL };
+    struct trace_malloc_data trace_data = { 0 };
     int optind;
     char *expr = NULL;
     int interactive = 0;

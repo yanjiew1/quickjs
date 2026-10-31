@@ -98,3 +98,12 @@ if [ "$qjs_status" -ne 1 ] || [ -s out ] ||
     echo 'qjs CLI failed to propagate an abrupt module completion' >&2
     exit 1
 fi
+
+invoke_qjs -T -e 'print("qjs-cli-trace-ok")'
+if [ "$qjs_status" -ne 0 ] || [ -s err ] ||
+   ! grep -q '^qjs-cli-trace-ok$' out ||
+   ! grep -Eq '^A [0-9]+ -> H[+-][0-9]+\.[0-9]+' out; then
+    cat stdout stderr >&2
+    echo 'qjs CLI allocation trace was malformed' >&2
+    exit 1
+fi
