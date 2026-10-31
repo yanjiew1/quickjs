@@ -418,6 +418,25 @@ function test_os_exec_empty_path_entry()
     }
 }
 
+function test_invalid_environment_names()
+{
+    for (const name of ["", "QJS_INVALID=NAME"]) {
+        let set_failed = false;
+        let unset_failed = false;
+        try {
+            std.setenv(name, "value");
+        } catch (e) {
+            set_failed = e instanceof TypeError;
+        }
+        try {
+            std.unsetenv(name);
+        } catch (e) {
+            unset_failed = e instanceof TypeError;
+        }
+        assert(set_failed && unset_failed);
+    }
+}
+
 function test_os_exec_overlapping_fds()
 {
     const first = os.pipe();
@@ -509,6 +528,7 @@ test_popen();
 test_os();
 test_os_exec();
 test_os_exec_empty_path_entry();
+test_invalid_environment_names();
 test_os_exec_overlapping_fds();
 test_timer();
 test_ext_json();
