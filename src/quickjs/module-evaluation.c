@@ -446,8 +446,10 @@ JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
     if (!JS_IsUndefined(m->promise))
         return JS_DupValue(ctx, m->promise);
     m->promise = JS_NewPromiseCapability(ctx, m->resolving_funcs);
-    if (JS_IsException(m->promise))
+    if (JS_IsException(m->promise)) {
+        m->promise = JS_UNDEFINED; /* Capability creation has not started evaluation. */
         return JS_EXCEPTION;
+    }
 
     stack_top = NULL;
     if (js_inner_module_evaluation(ctx, m, 0, &stack_top, &result) < 0) {
