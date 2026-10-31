@@ -227,6 +227,7 @@ context_c = custom_target(
     generator_qjsc,
     '@OUTPUT@',
     '-e',
+    '-M', 'probe-module,probe',
     'tests/fixture_qjsc_context.js',
   ],
 )

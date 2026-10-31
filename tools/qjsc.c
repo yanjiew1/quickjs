@@ -1001,10 +1001,10 @@ int main(int argc, char **argv)
             fprintf(fo,
                     "  {\n"
                     "    extern JSModuleDef *js_init_module_%s(JSContext *ctx, const char *name);\n"
-                    "    js_init_module_%s(ctx, ",
+                    "    if (!js_init_module_%s(ctx, ",
                     e->short_name, e->short_name);
             output_c_string(fo, e->name);
-            fprintf(fo, ");\n  }\n");
+            fprintf(fo, "))\n      goto fail;\n  }\n");
         }
         for(i = 0; i < cname_list.count; i++) {
             namelist_entry_t *e = &cname_list.array[i];

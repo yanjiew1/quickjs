@@ -32,6 +32,7 @@ enum FailureSite {
 #ifdef CONFIG_INTL
     FAIL_INTL,
 #endif
+    FAIL_MODULE_INIT,
     FAIL_SITE_COUNT
 };
 
@@ -166,6 +167,22 @@ static void fault_loop(JSContext *ctx)
     js_std_loop(ctx);
 }
 
+static int probe_module_init(JSContext *ctx, JSModuleDef *module)
+{
+    (void)ctx;
+    (void)module;
+    return 0;
+}
+
+JSModuleDef *js_init_module_probe(JSContext *ctx, const char *name)
+{
+    if (selected_failure == FAIL_MODULE_INIT) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    return JS_NewCModule(ctx, name, probe_module_init);
+}
+
 /* Headers were included before these macros. Only the generated call sites
    are redirected; each wrapper calls the real engine/libc implementation. */
 #define main qjsc_generated_main
@@ -260,7 +277,8 @@ int main(void)
             assert(helpers_called == 1 && scripts_called == 1);
             assert(loops_called == 1);
         } else {
-            assert(result == 1 && allocation.failed);
+            assert(result == 1);
+            assert((site == FAIL_MODULE_INIT) ? !allocation.failed : allocation.failed);
             assert(helpers_called == 0 && scripts_called == 0);
             assert(loops_called == 0);
             assert(runtimes_freed == (site != FAIL_RUNTIME));

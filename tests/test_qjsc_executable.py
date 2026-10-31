@@ -126,7 +126,7 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                                    str(source)], stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE, timeout=30)
         assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
-        expected = f'js_init_module_specialmod(ctx, {literal});'
+        expected = f'if (!js_init_module_specialmod(ctx, {literal}))'
         assert expected in generated.read_text(), generated.read_text()
 
     if Path('/dev/full').exists():
