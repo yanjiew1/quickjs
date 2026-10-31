@@ -1151,7 +1151,7 @@ static int __exception js_parse_property_name(JSParseState *s,
                 goto fail1;
             if (s->token.val == ':' || s->token.val == ',' ||
                 s->token.val == '}' || s->token.val == '(' ||
-                s->token.val == '=') {
+                s->token.val == '=' || (allow_private && s->token.val == ';')) {
                 is_non_reserved_ident = TRUE;
                 goto ident_found;
             }
@@ -2044,7 +2044,8 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             /* class field */
 
             /* XXX: spec: not consistent with method name checks */
-            if (name == JS_ATOM_constructor || name == JS_ATOM_prototype) {
+            if (name == JS_ATOM_constructor ||
+                (is_static && name == JS_ATOM_prototype)) {
                 js_parse_error(s, "invalid field name");
                 goto fail;
             }

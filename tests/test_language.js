@@ -4239,3 +4239,21 @@ for (const slow of [false, true]) {
     assert(error instanceof TypeError);
     assert(a.length, length);
 }
+
+// Instance prototype fields and async-named fields are ordinary data fields.
+{
+    class A { prototype = 1; async; static async; }
+    assert(new A().prototype, 1);
+    assert(Object.hasOwn(new A(), "async"));
+    assert(Object.hasOwn(A, "async"));
+    class B { "prototype"; async method() { return 1; } }
+    assert(Object.hasOwn(new B(), "prototype"));
+    class C { async
+        value = 2; }
+    assert(Object.hasOwn(new C(), "async"));
+    assert(new C().value, 2);
+    let error;
+    try { eval("class A { static prototype; }"); }
+    catch (caught) { error = caught; }
+    assert(error instanceof SyntaxError);
+}
