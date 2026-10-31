@@ -621,12 +621,18 @@ static void js_async_generator_resolve_or_reject(JSContext *ctx,
                                                  int is_reject)
 {
     JSAsyncGeneratorRequest *next;
-    JSValue ret;
+    JSValue ret, error;
 
     next = list_entry(s->queue.next, JSAsyncGeneratorRequest, link);
     list_del(&next->link);
     ret = JS_Call(ctx, next->resolving_funcs[is_reject], JS_UNDEFINED, 1,
                   &result);
+    if (!is_reject && JS_IsException(ret)) {
+        error = JS_GetException(ctx);
+        ret = JS_Call(ctx, next->resolving_funcs[1], JS_UNDEFINED, 1,
+                      (JSValueConst *)&error);
+        JS_FreeValue(ctx, error);
+    }
     JS_FreeValue(ctx, ret);
     JS_FreeValue(ctx, next->result);
     JS_FreeValue(ctx, next->promise);
