@@ -467,6 +467,12 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
                     JS_FreeValue(ctx, obj);
                     break;
                 }
+                if (err == -1 && JS_PromiseState(ctx, obj) == JS_PROMISE_PENDING) {
+                    ret = JS_ThrowInternalError(ctx,
+                                                "promise is pending with no event sources");
+                    JS_FreeValue(ctx, obj);
+                    break;
+                }
             }
         } else {
             /* not a promise */
