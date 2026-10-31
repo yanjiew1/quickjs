@@ -4222,3 +4222,20 @@ function test_multiple_loop_labels()
 }
 
 test_multiple_loop_labels();
+
+// Failed index creation must not grow an array, through either API or assignment.
+for (const slow of [false, true]) {
+    const a = [];
+    if (slow) Object.defineProperty(a, "0", { value: 1, configurable: true });
+    const length = a.length;
+    Object.preventExtensions(a);
+    assert(Reflect.defineProperty(a, "9", { value: 7 }), false);
+    assert(a.length, length);
+    Function("a", "a[9] = 7")(a);
+    assert(a.length, length);
+    let error;
+    try { Object.defineProperty(a, "9", { value: 7 }); }
+    catch (caught) { error = caught; }
+    assert(error instanceof TypeError);
+    assert(a.length, length);
+}
