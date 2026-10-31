@@ -710,3 +710,17 @@ CONFIG
 invoke_runner no -q -c "$test262_tmp/requirements-config" -d "$test262_tmp/requirements"
 test "$test262_status" -eq 2
 grep -Fq 'unknown required feature missing-capability' "$test262_tmp/err"
+
+# A raw script must execute once without even the default harness files.
+cat > "$test262_tmp/harness/assert.js" <<'JS'
+var injectedHarness = true;
+JS
+cat > "$test262_tmp/raw.js" <<'JS'
+/*---
+flags: [raw]
+---*/
+if (typeof injectedHarness !== "undefined")
+    throw new Error("raw script received harness globals");
+JS
+invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/raw.js"
+test "$test262_status" -eq 0
