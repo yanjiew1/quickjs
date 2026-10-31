@@ -43,9 +43,15 @@
 
 /* JS parser */
 
+typedef struct JSStatementLabel {
+    const struct JSStatementLabel *prev;
+    JSAtom name;
+} JSStatementLabel;
+
 struct BlockEnv {
     struct BlockEnv *prev;
     JSAtom label_name; /* JS_ATOM_NULL if none */
+    const JSStatementLabel *labels; /* contiguous labels attached to a loop */
     int label_break; /* -1 if none */
     int label_cont; /* -1 if none */
     int drop_count; /* number of stack elements to drop */
@@ -4938,6 +4944,7 @@ static void push_break_entry(JSFunctionDef *fd, BlockEnv *be,
     be->prev = fd->top_break;
     fd->top_break = be;
     be->label_name = label_name;
+    be->labels = NULL;
     be->label_break = label_break;
     be->label_cont = label_cont;
     be->drop_count = drop_count;
@@ -5279,6 +5286,19 @@ static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
     emit_label(s, scope->label_end);
 }
 
+static BOOL has_loop_label(const BlockEnv *be, JSAtom name)
+{
+    const JSStatementLabel *label;
+
+    if (name == JS_ATOM_NULL || be->label_name == name)
+        return TRUE;
+    for (label = be->labels; label; label = label->prev) {
+        if (label->name == name)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
 {
     BlockEnv *top;
@@ -5291,7 +5311,7 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
         scope_level = top->scope_level;
         if (is_cont &&
             top->label_cont != -1 &&
-            (name == JS_ATOM_NULL || top->label_name == name)) {
+            has_loop_label(top, name)) {
             /* The next for-let iteration gets a fresh environment before
                its update expression, even when continue skips fallthrough. */
             if (top->has_lexical_iteration) {
@@ -5423,8 +5443,13 @@ static void emit_return(JSParseState *s, BOOL hasval)
 #define DECL_MASK_OTHER (1 << 2) /* all other declarations */
 #define DECL_MASK_ALL   (DECL_MASK_FUNC | DECL_MASK_FUNC_WITH_LABEL | DECL_MASK_OTHER)
 
-static __exception int js_parse_statement_or_decl(JSParseState *s,
-                                                  int decl_mask);
+static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mask,
+                                                    const JSStatementLabel *labels);
+
+static __exception int js_parse_statement_or_decl(JSParseState *s, int decl_mask)
+{
+    return js_parse_labelled_statement(s, decl_mask, NULL);
+}
 
 static __exception int js_parse_if_clause(JSParseState *s, int decl_mask)
 {
@@ -5684,7 +5709,8 @@ static int resource_declaration_operation(JSParseState *s, BOOL for_in_of)
 /* A resource frame belongs inside the iterator frame. The binding
    chunk runs only after a value is produced, before the body. */
 static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
-                                          BOOL is_async)
+                                          BOOL is_async,
+                                          const JSStatementLabel *labels)
 {
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
@@ -5717,6 +5743,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
        can be closed in statement. */
     push_break_entry(s->cur_func, &break_entry,
                      label_name, label_break, label_cont, 1);
+    break_entry.labels = labels;
     break_entry.scope_level = block_scope_level;
     if (is_async && init_async_iterator_scope(s, &break_entry, &async_scope) < 0)
         return -1;
@@ -6029,18 +6056,18 @@ static void set_eval_ret_undefined(JSParseState *s)
     }
 }
 
-static __exception int js_parse_statement_or_decl(JSParseState *s,
-                                                  int decl_mask)
+static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mask,
+                                                    const JSStatementLabel *labels)
 {
     JSContext *ctx = s->ctx;
     JSAtom label_name;
     int tok;
 
     /* specific label handling */
-    /* XXX: support multiple labels on loop statements */
     label_name = JS_ATOM_NULL;
     if (is_label(s)) {
         BlockEnv *be;
+        JSStatementLabel label;
 
         label_name = JS_DupAtom(ctx, s->token.u.ident.atom);
 
@@ -6072,7 +6099,9 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             } else {
                 mask = 0;
             }
-            if (js_parse_statement_or_decl(s, mask))
+            label.name = label_name;
+            label.prev = labels;
+            if (js_parse_labelled_statement(s, mask, &label))
                 goto fail;
             emit_label(s, label_break);
             pop_break_entry(s->cur_func);
@@ -6187,6 +6216,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
 
             push_break_entry(s->cur_func, &break_entry,
                              label_name, label_break, label_cont, 0);
+            break_entry.labels = labels;
 
             if (next_token(s))
                 goto fail;
@@ -6218,6 +6248,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
 
             push_break_entry(s->cur_func, &break_entry,
                              label_name, label_break, label_cont, 0);
+            break_entry.labels = labels;
 
             if (next_token(s))
                 goto fail;
@@ -6279,7 +6310,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
 
             if (!(bits & SKIP_HAS_SEMI)) {
                 /* parse for/in or for/of */
-                if (js_parse_for_in_of(s, label_name, is_async))
+                if (js_parse_for_in_of(s, label_name, is_async, labels))
                     goto fail;
                 break;
             }
@@ -6345,6 +6376,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
 
             push_break_entry(s->cur_func, &break_entry,
                              label_name, label_break, label_cont, 0);
+            break_entry.labels = labels;
 
             break_entry.has_lexical_iteration = tok == TOK_LET && !is_using;
 
