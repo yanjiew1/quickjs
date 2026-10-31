@@ -40,6 +40,9 @@ typedef struct {
     struct list_head link;
     int sig_num;
 #ifndef _WIN32
+    int poll_fd_index;
+#endif
+#ifndef _WIN32
     struct sigaction previous_action;
 #else
     void (*previous_handler)(int);
