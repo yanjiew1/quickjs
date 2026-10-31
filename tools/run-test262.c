@@ -2007,6 +2007,14 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 res_val = JS_UNDEFINED;
                 ret_promise = FALSE;
                 is_async = FALSE;
+            } else if (negative_phase == TEST_PHASE_RESOLUTION && ret_promise) {
+                int link_ret;
+                tls->phase = TEST_PHASE_RESOLUTION;
+                link_ret = JS_LinkModule(ctx, res_val);
+                JS_FreeValue(ctx, res_val);
+                res_val = link_ret < 0 ? JS_EXCEPTION : JS_UNDEFINED;
+                ret_promise = FALSE; /* Never execute a resolution-negative body. */
+                is_async = FALSE;
             } else {
                 /* Modules link synchronously; evaluation errors are carried
                    by the returned promise. Scripts start executing here. */
