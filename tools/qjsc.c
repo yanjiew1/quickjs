@@ -36,6 +36,7 @@
 
 #include "cutils.h"
 #include "quickjs-libc.h"
+#include "size-option.h"
 
 #ifdef QJSC_CONFIG_FILE
 #include QJSC_CONFIG_FILE
@@ -515,7 +516,7 @@ void help(void)
            "-M module_name[,cname] add initialization code for an external C module\n"
            "-x          accepted for compatibility (no effect)\n"
            "-p prefix   set the prefix of the generated C names\n"
-           "-S n        set the maximum stack size to 'n' bytes (default=%d)\n"
+           "-S n        set the maximum stack size to 'n' bytes (K/M/G use powers of two; default=%d)\n"
            "-s            strip all the debug info\n"
            "--keep-source keep the source code\n",
            JS_DEFAULT_STACK_SIZE);
@@ -687,32 +688,6 @@ static int output_executable(const char *out_filename, const char *cfilename,
 }
 #endif
 
-static size_t get_suffixed_size(const char *str)
-{
-    char *p;
-    size_t v;
-    v = (size_t)strtod(str, &p);
-    switch(*p) {
-    case 'G':
-        v <<= 30;
-        break;
-    case 'M':
-        v <<= 20;
-        break;
-    case 'k':
-    case 'K':
-        v <<= 10;
-        break;
-    default:
-        if (*p != '\0') {
-            fprintf(stderr, "qjs: invalid suffix: %s\n", p);
-            exit(1);
-        }
-        break;
-    }
-    return v;
-}
-
 typedef enum {
     OUTPUT_C,
     OUTPUT_C_MAIN,
@@ -879,7 +854,7 @@ int main(int argc, char **argv)
             }
             if (opt == 'S') {
                 optarg = get_short_optarg(&optind, opt, arg, argc, argv);
-                stack_size = get_suffixed_size(optarg);
+                stack_size = js_parse_size_option(optarg, "qjsc");
                 break;
             }
             if (opt == 's') {

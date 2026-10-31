@@ -68,6 +68,14 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
 
+    for invalid_size in ['inf', '-1', 'G', '1Gjunk', '18446744073709551616']:
+        rejected = subprocess.run([qjsc, '-S', invalid_size, '-c',
+                                   '-o', str(scratch / 'invalid-size.c'), str(source)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  timeout=30)
+        assert rejected.returncode == 1, (invalid_size, rejected.stderr)
+        assert b'invalid size' in rejected.stderr, rejected.stderr
+
     source.write_text('function readMeta() { return import.meta; }\n'
                       'if (typeof import.meta !== "object" || '
                       'readMeta() !== import.meta) '
