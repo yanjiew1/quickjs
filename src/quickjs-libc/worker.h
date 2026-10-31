@@ -57,6 +57,7 @@ struct JSWorkerMessagePipe {
     pthread_mutex_t mutex;
 #endif
     struct list_head msg_queue; /* list of JSWorkerMessage.link */
+    int closed; /* protected by mutex */
     JSWaker waker;
 };
 

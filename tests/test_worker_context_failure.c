@@ -44,6 +44,8 @@ static uintptr_t test_basename_address, test_recv_address, test_send_address;
 static JSWorkerMessagePipe *test_recv_pipe, *test_send_pipe;
 static int test_args_freed, test_filename_freed, test_basename_freed;
 static int test_recv_freed, test_send_freed;
+static uintptr_t test_queued_message_address;
+static int test_queued_message_freed;
 static pthread_t test_thread;
 static int test_thread_created, test_completed;
 static pthread_mutex_t test_completion_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -249,6 +251,26 @@ static void test_message_allocation_failure(void)
     }
 }
 
+static void test_close_discards_inbound_messages(void)
+{
+    JSWorkerMessagePipe *pipe = js_new_message_pipe();
+    JSWorkerMessage *message = malloc(sizeof(*message));
+
+    assert(pipe && message);
+    memset(message, 0, sizeof(*message));
+    message->data = malloc(1);
+    assert(message->data);
+    test_queued_message_address = (uintptr_t)message;
+    test_queued_message_freed = 0;
+    list_add_tail(&message->link, &pipe->msg_queue);
+    js_waker_signal(&pipe->waker);
+
+    js_close_message_pipe(pipe, TRUE);
+    assert(list_empty(&pipe->msg_queue) && test_queued_message_freed == 1);
+    js_free_message_pipe(pipe);
+    test_queued_message_address = 0;
+}
+
 static void *test_malloc(JSMallocState *state, size_t size)
 {
     void *ptr = def_malloc_funcs.js_malloc(state, size);
@@ -352,7 +374,9 @@ static void test_free(void *ptr)
     uintptr_t address = (uintptr_t)ptr;
     /* Retain addresses for comparison after free, rather than freed pointers. */
     if (ptr) {
-        if (address == test_args_address)
+        if (address == test_queued_message_address)
+            test_queued_message_freed++;
+        else if (address == test_args_address)
             test_args_freed++;
         else if (address == test_filename_address)
             test_filename_freed++;
@@ -523,6 +547,7 @@ int main(void)
     test_interrupted_wakeup();
 #endif
     test_message_allocation_failure();
+    test_close_discards_inbound_messages();
     test_pthread_setup_failures();
     test_failure(0);
     test_failure(1);
