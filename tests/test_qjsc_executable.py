@@ -22,6 +22,7 @@
 
 """Exercise qjsc's default executable output and its selected target and sanitizer flags."""
 from pathlib import Path
+import json
 import shlex
 import struct
 import subprocess
@@ -112,6 +113,21 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                                str(source)], stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE, timeout=30)
     assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+
+    # A module specifier is data, not part of the generated C syntax.
+    for module_name, literal in [
+        ('quote"and\\backslash', '"quote\\"and\\\\backslash"'),
+        ('trigraph??/name', '"trigraph\\?\\?/name"'),
+    ]:
+        source.write_text('import ' + json.dumps(module_name) + ';\n')
+        generated = scratch / 'escaped-module.c'
+        compiled = subprocess.run([qjsc, '-e', '-M',
+                                   f'{module_name},specialmod', '-o', str(generated),
+                                   str(source)], stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=30)
+        assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+        expected = f'js_init_module_specialmod(ctx, {literal});'
+        assert expected in generated.read_text(), generated.read_text()
 
     if Path('/dev/full').exists():
         source.write_text('print(42);\n')
