@@ -1134,18 +1134,19 @@ static int js_create_module_bytecode_function(JSContext *ctx, JSModuleDef *m)
     if (JS_IsException(func_obj))
         return -1;
     m->func_obj = func_obj;
+    JS_DupValue(ctx, bfunc); /* Keep the original bytecode for an OOM retry. */
     b = JS_VALUE_GET_PTR(bfunc);
     func_obj = js_closure2(ctx, func_obj, b, NULL, NULL, TRUE, m);
     if (JS_IsException(func_obj)) {
-        m->func_obj = JS_UNDEFINED; /* XXX: keep it ? */
-        JS_FreeValue(ctx, func_obj);
+        m->func_obj = bfunc;
         return -1;
     }
+    JS_FreeValue(ctx, bfunc);
     return 0;
 }
 
 /* must be done before js_link_module() because of cyclic references */
-int js_create_module_function(JSContext *ctx, JSModuleDef *m)
+static int js_create_module_function1(JSContext *ctx, JSModuleDef *m)
 {
     BOOL is_c_module;
     int i;
@@ -1160,14 +1161,14 @@ int js_create_module_function(JSContext *ctx, JSModuleDef *m)
         /* initialize the exported variables */
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
-            if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
+            if (me->export_type == JS_EXPORT_TYPE_LOCAL && !me->u.local.var_ref) {
                 var_ref = js_create_var_ref(ctx, FALSE);
                 if (!var_ref)
                     return -1;
                 me->u.local.var_ref = var_ref;
             }
         }
-    } else {
+    } else if (!JS_IsObject(m->func_obj)) {
         if (js_create_module_bytecode_function(ctx, m))
             return -1;
     }
@@ -1177,13 +1178,35 @@ int js_create_module_function(JSContext *ctx, JSModuleDef *m)
 
     for(i = 0; i < m->req_module_entries_count; i++) {
         JSReqModuleEntry *rme = &m->req_module_entries[i];
-        if (js_create_module_function(ctx, rme->module) < 0)
+        if (js_create_module_function1(ctx, rme->module) < 0)
             return -1;
     }
 
     return 0;
 }
 
+
+/* Reset traversal marks, retaining successfully allocated local state.
+   Clear before descending so cyclic import graphs terminate. */
+static void js_reset_module_function(JSModuleDef *m)
+{
+    int i;
+
+    if (!m->func_created)
+        return;
+    m->func_created = FALSE;
+    for (i = 0; i < m->req_module_entries_count; i++)
+        js_reset_module_function(m->req_module_entries[i].module);
+}
+
+int js_create_module_function(JSContext *ctx, JSModuleDef *m)
+{
+    if (js_create_module_function1(ctx, m) < 0) {
+        js_reset_module_function(m);
+        return -1;
+    }
+    return 0;
+}
 
 /* Prepare a module to be executed by resolving all the imported
    variables. */
@@ -1326,6 +1349,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                         goto fail;
                     }
                     set_value(rt, &var_ref->value, val);
+                    if (var_refs[mi->var_idx])
+                        free_var_ref(rt, var_refs[mi->var_idx]);
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("namespace from\n");
@@ -1337,6 +1362,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                         var_ref = p1->u.func.var_refs[res_me->u.local.var_idx];
                     }
                     js_rc(var_ref)->ref_count++;
+                    if (var_refs[mi->var_idx])
+                        free_var_ref(rt, var_refs[mi->var_idx]);
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("local export (var_ref=%p)\n", var_ref);
@@ -1353,6 +1380,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
                 var_ref = var_refs[me->u.local.var_idx];
                 js_rc(var_ref)->ref_count++;
+                if (me->u.local.var_ref)
+                    free_var_ref(rt, me->u.local.var_ref);
                 me->u.local.var_ref = var_ref;
             }
         }
