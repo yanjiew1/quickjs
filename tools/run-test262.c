@@ -2384,7 +2384,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
     char *error_type;
     int ret, eval_flags, use_strict, use_nostrict;
     BOOL is_negative, is_nostrict, is_onlystrict, is_async, is_module, skip;
-    BOOL can_block;
+    BOOL can_block, is_raw = FALSE;
     namelist_t include_list = { 0 }, *ip = &include_list;
 
     is_nostrict = is_onlystrict = is_negative = is_async = is_module = skip = FALSE;
@@ -2431,6 +2431,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
                 while ((option = get_option(&p, &state)) != NULL) {
                     if (str_equal(option, "noStrict") ||
                         str_equal(option, "raw")) {
+                        is_raw |= str_equal(option, "raw");
                         is_nostrict = TRUE;
                         skip |= (test_mode == TEST_STRICT);
                     }
@@ -2484,8 +2485,12 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
             }
             free(desc);
         }
-        if (is_async)
+        if (is_raw) {
+            /* Test262 raw scripts must see no harness declarations. */
+            namelist_free(ip);
+        } else if (is_async) {
             namelist_add(ip, NULL, "doneprintHandle.js");
+        }
     } else {
         char *ifile;
 
