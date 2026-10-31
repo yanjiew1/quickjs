@@ -39,6 +39,7 @@ typedef struct {
 typedef struct {
     struct list_head link;
     int sig_num;
+    void (*previous_handler)(int);
     JSValue func;
 } JSOSSignalHandler;
 
@@ -57,7 +58,7 @@ extern _Atomic(JSOSPollFunc *) os_poll_func;
 JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
                   int argc, JSValueConst *argv);
 void free_rw_handler(JSRuntime *rt, JSOSRWHandler *rh);
-void free_sh(JSRuntime *rt, JSOSSignalHandler *sh);
+void free_sh(JSRuntime *rt, JSOSSignalHandler *sh, JS_BOOL restore_handler);
 void free_timer(JSRuntime *rt, JSOSTimer *th);
 
 JSValue js_os_setReadHandler(JSContext *ctx, JSValueConst this_val,

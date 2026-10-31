@@ -27,6 +27,11 @@
 #include "quickjs-libc.h"
 #ifndef _WIN32
 #include <signal.h>
+
+static void embedder_signal_handler(int signal_number)
+{
+    (void)signal_number;
+}
 #endif
 
 static JSValue eval(JSContext *ctx, const char *source, int flags)
@@ -263,7 +268,22 @@ int main(void)
         JS_FreeContext(bare);
         JS_FreeRuntime(bare_rt);
     }
+#ifndef _WIN32
+    {
+        struct sigaction after;
+        void (*previous)(int);
+
+        previous = signal(SIGUSR1, embedder_signal_handler);
+        assert(previous != SIG_ERR);
+        run(ctx, "os.signal(os.SIGUSR1, () => {})");
+        js_std_free_handlers(rt);
+        assert(sigaction(SIGUSR1, NULL, &after) == 0);
+        assert(after.sa_handler == embedder_signal_handler);
+        assert(signal(SIGUSR1, previous) != SIG_ERR);
+    }
+#else
     js_std_free_handlers(rt);
+#endif
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;

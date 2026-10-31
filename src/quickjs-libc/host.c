@@ -236,7 +236,7 @@ void js_std_free_handlers(JSRuntime *rt)
 
     list_for_each_safe(el, el1, &ts->os_signal_handlers) {
         JSOSSignalHandler *sh = list_entry(el, JSOSSignalHandler, link);
-        free_sh(rt, sh);
+        free_sh(rt, sh, TRUE);
     }
 
     list_for_each_safe(el, el1, &ts->os_timers) {
