@@ -48,6 +48,10 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <poll.h>
+#include <sys/resource.h>
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
 
 #if defined(__FreeBSD__)
 extern char **environ;
@@ -69,6 +73,7 @@ extern char **environ;
 #include "quickjs-libc.h"
 #include "os.h"
 #include "std.h"
+#include "environment.h"
 
 
 
@@ -864,9 +869,10 @@ static char **build_envp(JSContext *ctx, JSValueConst obj)
 }
 
 /* execvpe is not available on non GNU systems */
-static int my_execvpe(const char *filename, char **argv, char **envp)
+static int my_execvpe(const char *filename, char **argv, char **envp,
+                      const char *path)
 {
-    char *path, *p, *p_next, *p1;
+    const char *p, *p_next, *p1;
     char buf[PATH_MAX];
     size_t filename_len, path_len;
     BOOL eacces_error;
@@ -879,9 +885,8 @@ static int my_execvpe(const char *filename, char **argv, char **envp)
     if (strchr(filename, '/'))
         return execve(filename, argv, envp);
 
-    path = getenv("PATH");
     if (!path)
-        path = (char *)"/bin:/usr/bin";
+        path = "/bin:/usr/bin";
     eacces_error = FALSE;
     p = path;
     for(p = path; p != NULL; p = p_next) {
@@ -930,13 +935,19 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     JSValueConst options, args = argv[0];
     JSValue val, ret_val;
     const char **exec_argv, *file = NULL, *str, *cwd = NULL;
-    char **envp = environ;
+    char **envp = NULL;
+    char *path_copy = NULL;
     uint32_t exec_argc, i;
     int ret, pid, status;
     BOOL block_flag = TRUE, use_path = TRUE;
+    BOOL custom_envp = FALSE;
     static const char *std_name[3] = { "stdin", "stdout", "stderr" };
     int std_fds[3];
     uint32_t uid = -1, gid = -1;
+#if !defined(HAVE_CLOSEFROM)
+    long fd_limit;
+    struct rlimit nofile_limit;
+#endif
 
     val = JS_GetPropertyStr(ctx, args, "length");
     if (JS_IsException(val))
@@ -1019,6 +1030,7 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
             JS_FreeValue(ctx, val);
             if (!envp)
                 goto exception;
+            custom_envp = TRUE;
         }
 
         val = JS_GetPropertyStr(ctx, options, "uid");
@@ -1042,6 +1054,32 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         }
     }
 
+    if (!custom_envp) {
+        envp = js_host_environ_copy();
+        if (!envp) {
+            JS_ThrowOutOfMemory(ctx);
+            goto exception;
+        }
+    }
+    if (use_path) {
+        path_copy = js_host_getenv_copy("PATH");
+        if (!path_copy && errno == ENOMEM) {
+            JS_ThrowOutOfMemory(ctx);
+            goto exception;
+        }
+    }
+
+#if !defined(HAVE_CLOSEFROM)
+    fd_limit = sysconf(_SC_OPEN_MAX);
+    if (fd_limit < 0) {
+        if (getrlimit(RLIMIT_NOFILE, &nofile_limit) < 0) {
+            JS_ThrowInternalError(ctx, "cannot read descriptor limit");
+            goto exception;
+        }
+        fd_limit = nofile_limit.rlim_cur < INT_MAX ?
+                   (long)nofile_limit.rlim_cur : INT_MAX;
+    }
+#endif
     pid = fork();
     if (pid < 0) {
         JS_ThrowTypeError(ctx, "fork error");
@@ -1088,17 +1126,19 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         closefrom(3);
 #else
         {
-            /* Close the file handles manually, limit to 1024 to avoid
-               costly loop on linux Alpine where sysconf(_SC_OPEN_MAX)
-               returns a huge value 1048576.
-               Patch inspired by nicolas-duteil-nova. See also:
-               https://stackoverflow.com/questions/73229353/
-               https://stackoverflow.com/questions/899038/#918469
-             */
-            int fd_max = min_int(sysconf(_SC_OPEN_MAX), 1024);
-            for(i = 3; i < fd_max; i++)
-                close(i);
+            /* Linux closes the entire range in one syscall. Older kernels
+               and other hosts must cover the full descriptor limit. */
+#if defined(__linux__) && defined(SYS_close_range)
+            if (syscall(SYS_close_range, 3U, UINT_MAX, 0) == 0)
+                goto descriptors_closed;
+#endif
+            long fd;
+            for (fd = 3; fd < fd_limit; fd++)
+                close((int)fd);
         }
+#if defined(__linux__) && defined(SYS_close_range)
+descriptors_closed:
+#endif
 #endif
         if (cwd) {
             if (chdir(cwd) < 0)
@@ -1116,7 +1156,7 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         if (!file)
             file = exec_argv[0];
         if (use_path)
-            ret = my_execvpe(file, (char **)exec_argv, envp);
+            ret = my_execvpe(file, (char **)exec_argv, envp, path_copy);
         else
             ret = execve(file, (char **)exec_argv, envp);
         _exit(127);
@@ -1151,7 +1191,8 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     for(i = 0; i < exec_argc; i++)
         JS_FreeCString(ctx, exec_argv[i]);
     js_free(ctx, exec_argv);
-    if (envp && envp != environ) {
+    free(path_copy);
+    if (custom_envp) {
         char **p;
         p = envp;
         while (*p != NULL) {
@@ -1159,6 +1200,8 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
             p++;
         }
         js_free(ctx, envp);
+    } else {
+        js_host_environ_free(envp);
     }
     return ret_val;
  exception:
