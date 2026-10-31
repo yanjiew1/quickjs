@@ -113,7 +113,7 @@ int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx, *temporary;
-    JSValue value;
+    JSValue value, promise, funcs[2];
     double start;
     int ret;
     assert(rt);
@@ -147,6 +147,13 @@ int main(void)
     assert(js_std_loop_once(ctx) == 0);
 
     js_std_init_handlers(rt);
+    promise = JS_NewPromiseCapability(ctx, funcs);
+    assert(!JS_IsException(promise));
+    value = js_std_await(ctx, promise); /* Consumes the unsettled promise. */
+    assert(JS_IsException(value));
+    clear_exception(ctx);
+    JS_FreeValue(ctx, funcs[0]);
+    JS_FreeValue(ctx, funcs[1]);
     /* Retain targets when a job error leaves microtasks for a later step. */
     assert(JS_EnqueueJob(ctx, checkpoint_error_job, 0, NULL) == 0);
     js_std_loop(ctx);
