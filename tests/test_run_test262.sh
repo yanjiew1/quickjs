@@ -804,3 +804,13 @@ JS
     invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/wrong-constructor.js"
     test "$test262_status" -eq 1
 done
+
+# Quiet output still needs a failing process status and baseline accounting.
+cat > "$test262_tmp/phases/quiet-failure.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+throw new Error("quiet failure");
+JS
+invoke_runner no -q -c "$test262_tmp/config" -f "$test262_tmp/phases/quiet-failure.js"
+test "$test262_status" -eq 1
