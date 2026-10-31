@@ -464,9 +464,12 @@ static void compile_file(JSContext *ctx, FILE *fo,
 
         pstrcpy(c_name, sizeof(c_name), c_name1);
         entry = namelist_find(&cname_list, c_name);
-        if (entry && entry->flags == CNAME_TYPE_RESERVED) {
-            fprintf(stderr, "C name '%s' is a reserved JSON attribute identifier\n",
-                    c_name);
+        if (entry) {
+            if (entry->flags == CNAME_TYPE_RESERVED)
+                fprintf(stderr, "C name '%s' is a reserved JSON attribute identifier\n",
+                        c_name);
+            else
+                fprintf(stderr, "C name '%s' is already used\n", c_name);
             exit(1);
         }
     } else {
