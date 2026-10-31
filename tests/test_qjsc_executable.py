@@ -90,3 +90,15 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                                   stderr=subprocess.PIPE, timeout=30)
         assert rejected.returncode == 1, (rejected.returncode, rejected.stderr)
         assert b'Compiler include or library path is too long' in rejected.stderr, rejected.stderr
+
+    if sys.platform.startswith('linux'):
+        output_dir = scratch
+        for _ in range(5):
+            output_dir /= 'd' * 210
+            output_dir.mkdir()
+        generated = output_dir / 'generated.c'
+        compiled = subprocess.run([qjsc, '-c', '-o', str(generated), str(source)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  timeout=30)
+        assert compiled.returncode == 0, (compiled.returncode, compiled.stderr)
+        assert generated.is_file(), 'qjsc truncated the requested output path'
