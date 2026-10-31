@@ -47,7 +47,8 @@ typedef sig_t sighandler_t;
 #include "event-loop.h"
 #include "worker.h"
 
-uint64_t os_pending_signals;
+/* A signal handler may write sig_atomic_t, but must not update a shared mask. */
+volatile sig_atomic_t os_pending_signals[64];
 _Atomic(JSOSPollFunc *) os_poll_func;
 
 static JSOSRWHandler *find_rh(JSThreadState *ts, int fd)
@@ -136,7 +137,8 @@ void free_sh(JSRuntime *rt, JSOSSignalHandler *sh)
 
 static void os_signal_handler(int sig_num)
 {
-    os_pending_signals |= ((uint64_t)1 << sig_num);
+    if ((unsigned)sig_num < 64)
+        os_pending_signals[sig_num] = 1;
 }
 
 #if defined(_WIN32)
@@ -559,16 +561,13 @@ int js_os_poll(JSContext *ctx, int timeout_ms)
     struct list_head *el;
 
     /* only check signals in the main thread */
-    if (!ts->recv_pipe &&
-        unlikely(os_pending_signals != 0)) {
+    if (!ts->recv_pipe) {
         JSOSSignalHandler *sh;
-        uint64_t mask;
 
         list_for_each(el, &ts->os_signal_handlers) {
             sh = list_entry(el, JSOSSignalHandler, link);
-            mask = (uint64_t)1 << sh->sig_num;
-            if (os_pending_signals & mask) {
-                os_pending_signals &= ~mask;
+            if (os_pending_signals[sh->sig_num]) {
+                os_pending_signals[sh->sig_num] = 0;
                 return call_handler(ctx, sh->func);
             }
         }

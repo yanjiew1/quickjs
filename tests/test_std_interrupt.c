@@ -33,7 +33,7 @@ static int host_interrupt(JSRuntime *rt, void *opaque)
     state->calls++;
     if (state->sigint) {
         state->sigint = 0;
-        os_pending_signals |= (uint64_t)1 << SIGINT;
+        os_pending_signals[SIGINT] = 1;
     }
     return state->cancel;
 }
@@ -104,7 +104,7 @@ int main(void)
     value = JS_GetPropertyStr(ctx, global, "caught");
     assert(JS_IsBool(value) && JS_ToBool(ctx, value));
     JS_FreeValue(ctx, value);
-    assert(!(os_pending_signals & ((uint64_t)1 << SIGINT)));
+    assert(!os_pending_signals[SIGINT]);
     check_restored(rt, &state);
 
     JS_SetInterruptHandler(rt, NULL, &state);
