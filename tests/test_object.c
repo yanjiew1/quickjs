@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "../src/quickjs/internal/object.h"
+#include "../src/quickjs/internal/function.h"
 #include "pool-padding.h"
 
 /* Inspect real chains rather than timing the lookup implementation. */
@@ -190,6 +191,47 @@ static void test_set_prototype_oom(JSContext *ctx)
     JS_FreeValue(ctx, obj);
 }
 
+static void test_delete_global_varref_oom(JSContext *ctx)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue global = JS_GetGlobalObject(ctx), error;
+    JSObject *p = JS_VALUE_GET_OBJ(global);
+    JSObject *p1 = JS_VALUE_GET_OBJ(p->u.global_object.uninitialized_vars);
+    JSAtom atom = JS_NewAtom(ctx, "oomGlobal");
+    JSShapeProperty *prs;
+    JSProperty *pr;
+    JSVarRef *var_ref;
+    JSMemoryUsage usage;
+    void *padding;
+    uint32_t i = 0;
+
+    assert(atom != JS_ATOM_NULL);
+    assert(JS_DefinePropertyValue(ctx, global, atom, JS_NewInt32(ctx, 1),
+                                  JS_PROP_C_W_E) == 1);
+    prs = find_own_property(&pr, p, atom);
+    assert(prs && (prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF);
+    var_ref = pr->u.var_ref;
+    js_rc(var_ref)->ref_count++; /* Model a reference retained by a closure. */
+    assert(js_rc(p->shape)->ref_count == 1);
+    while (p1->shape->prop_count < p1->shape->prop_size) {
+        assert(JS_SetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p1), i,
+                                    JS_NewInt32(ctx, i)) == 1);
+        i++;
+    }
+    padding = test_pool_padding(rt);
+    JS_ComputeMemoryUsage(rt, &usage);
+    JS_SetMemoryLimit(rt, usage.malloc_size);
+    assert(JS_DeleteProperty(ctx, global, atom, 0) == -1);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    error = JS_GetException(ctx);
+    JS_FreeValue(ctx, error);
+    assert(JS_HasProperty(ctx, global, atom) == 1);
+    test_pool_padding_free(rt, padding);
+    free_var_ref(rt, var_ref);
+    JS_FreeAtom(ctx, atom);
+    JS_FreeValue(ctx, global);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -203,6 +245,7 @@ int main(void)
     test_property_hash(ctx, 1024, 16);
     test_integrity_proxy_cleanup(ctx);
     test_set_prototype_oom(ctx);
+    test_delete_global_varref_oom(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;
