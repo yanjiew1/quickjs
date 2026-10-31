@@ -1827,3 +1827,19 @@ int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
     }
     return 0;
 }
+
+int JS_LinkModule(JSContext *ctx, JSValueConst obj)
+{
+    JSModuleDef *m;
+
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_MODULE) {
+        JS_ThrowTypeError(ctx, "module expected");
+        return -1;
+    }
+    if (JS_ResolveModule(ctx, obj) < 0)
+        return -1;
+    m = JS_VALUE_GET_PTR(obj);
+    if (js_create_module_function(ctx, m) < 0)
+        return -1;
+    return js_link_module(ctx, m);
+}

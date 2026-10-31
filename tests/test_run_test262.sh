@@ -814,3 +814,17 @@ throw new Error("quiet failure");
 JS
 invoke_runner no -q -c "$test262_tmp/config" -f "$test262_tmp/phases/quiet-failure.js"
 test "$test262_status" -eq 1
+
+# A resolution-negative test may link, but must never run its module body.
+cat > "$test262_tmp/phases/no-evaluation.js" <<'JS'
+/*---
+flags: [module]
+negative:
+  phase: resolution
+  type: SyntaxError
+---*/
+print("RESOLUTION BODY RAN");
+JS
+invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/no-evaluation.js"
+test "$test262_status" -eq 1
+! grep -Fq 'RESOLUTION BODY RAN' "$test262_tmp/out"
