@@ -2374,6 +2374,23 @@ function test_regexp_replace_buffer()
     assert(replacements, 256);
 }
 
+function test_regexp_source_line_terminators()
+{
+    for (const [character, escaped] of [
+        ["\n", "\\n"], ["\r", "\\r"],
+        ["\u2028", "\\u2028"], ["\u2029", "\\u2029"],
+    ]) {
+        for (const prefix of ["", "\\"]) {
+            const direct = new RegExp(prefix + character);
+            const inClass = new RegExp("[" + prefix + character + "]");
+            assert(direct.source, escaped);
+            assert(inClass.source, "[" + escaped + "]");
+            assert(eval("/" + direct.source + "/").test(character));
+            assert(eval("/" + inClass.source + "/").test(character));
+        }
+    }
+}
+
 function test_regexp()
 {
     var a, str;
@@ -6068,6 +6085,7 @@ test_json_parse_source_duplicates();
 test_date();
 test_date_setyear_coercion();
 test_regexp();
+test_regexp_source_line_terminators();
 test_regexp_escape_ordinary_characters();
 test_regexp_replace_flag_getters();
 test_regexp_replace_buffer();
