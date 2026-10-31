@@ -634,6 +634,40 @@ static void test_async_module_late_setup_failure(int graph_mode)
     JS_FreeRuntime(rt);
 }
 
+static void test_capability_failure_outputs(void)
+{
+    int fail_at, failures = 0;
+
+    for (fail_at = 1; fail_at <= 16; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue funcs[2] = { JS_UNDEFINED, JS_UNDEFINED }, promise;
+        void *padding;
+
+        assert(ctx);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, fail_at);
+        promise = JS_NewPromiseCapability(ctx, funcs);
+        oom_test_end(&allocator);
+        if (JS_IsException(promise)) {
+            failures++;
+            /* A caller may embed these slots in a marked object. A failed
+               capability must not publish partially constructed resolvers. */
+            assert(JS_IsUndefined(funcs[0]) && JS_IsUndefined(funcs[1]));
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        }
+        JS_FreeValue(ctx, funcs[0]);
+        JS_FreeValue(ctx, funcs[1]);
+        JS_FreeValue(ctx, promise);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(failures > 0);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -642,6 +676,7 @@ int main(void)
     JSValue promise, funcs[2], thenable, result, error;
     void *padding;
 
+    test_capability_failure_outputs();
     test_combinator_oom("(function() { return Promise.all([1]); })");
     test_combinator_oom("(function() { return Promise.allSettled([1]); })");
     test_combinator_oom("(function() { return Promise.any([1]); })");

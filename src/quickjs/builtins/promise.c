@@ -238,7 +238,7 @@ static int js_create_resolving_functions(JSContext *ctx,
                                          JSValueConst promise)
 
 {
-    JSValue obj;
+    JSValue obj, funcs[2];
     JSPromiseFunctionData *s;
     JSPromiseFunctionDataResolved *sr;
     int i, ret;
@@ -260,7 +260,7 @@ static int js_create_resolving_functions(JSContext *ctx,
         fail:
 
             if (i != 0)
-                JS_FreeValue(ctx, resolving_funcs[0]);
+                JS_FreeValue(ctx, funcs[0]);
             ret = -1;
             break;
         }
@@ -272,7 +272,13 @@ static int js_create_resolving_functions(JSContext *ctx,
             JS_FreeValue(ctx, obj);
             goto fail;
         }
-        resolving_funcs[i] = obj;
+        funcs[i] = obj;
+    }
+    /* Outputs can live in GC-managed state. Publish only a complete pair;
+       a partially constructed pair must never leave a dangling root. */
+    if (ret == 0) {
+        resolving_funcs[0] = funcs[0];
+        resolving_funcs[1] = funcs[1];
     }
     js_promise_resolve_function_free_resolved(ctx->rt, sr);
     return ret;
