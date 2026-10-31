@@ -378,7 +378,8 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
     empty_regex:
         return js_new_string8(ctx, "(?:)");
     }
-    string_buffer_init2(ctx, b, p->len, p->is_wide_char);
+    if (string_buffer_init2(ctx, b, p->len, p->is_wide_char))
+        return JS_EXCEPTION;
 
     /* Escape '/' and newline sequences as needed */
     bra = 0;
@@ -386,8 +387,14 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
         c2 = -1;
         switch (c = string_get(p, i++)) {
         case '\\':
-            if (i < n)
+            if (i < n) {
                 c2 = string_get(p, i++);
+                if (c2 == '\n' || c2 == '\r' ||
+                    c2 == 0x2028 || c2 == 0x2029) {
+                    c = c2;
+                    c2 = -1;
+                }
+            }
             break;
         case ']':
             bra = 0;
@@ -399,14 +406,6 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
                 bra = 1;
             }
             break;
-        case '\n':
-            c = '\\';
-            c2 = 'n';
-            break;
-        case '\r':
-            c = '\\';
-            c2 = 'r';
-            break;
         case '/':
             if (!bra) {
                 c = '\\';
@@ -414,11 +413,24 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
             }
             break;
         }
-        string_buffer_putc16(b, c);
-        if (c2 >= 0)
-            string_buffer_putc16(b, c2);
+        if (c == '\n') {
+            if (string_buffer_puts8(b, "\\n"))
+                goto fail;
+        } else if (c == '\r') {
+            if (string_buffer_puts8(b, "\\r"))
+                goto fail;
+        } else if (c == 0x2028 || c == 0x2029) {
+            if (string_buffer_puts8(b, c == 0x2028 ? "\\u2028" : "\\u2029"))
+                goto fail;
+        } else if (string_buffer_putc16(b, c) ||
+                   (c2 >= 0 && string_buffer_putc16(b, c2))) {
+            goto fail;
+        }
     }
     return string_buffer_end(b);
+fail:
+    string_buffer_free(b);
+    return JS_EXCEPTION;
 }
 
 static JSValue js_regexp_get_flag(JSContext *ctx, JSValueConst this_val, int mask)
