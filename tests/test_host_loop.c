@@ -213,6 +213,15 @@ int main(void)
         assert(raise(SIGUSR1) == 0);
         assert(js_std_loop_once(ctx) == 1 && number(ctx, "ticks") == 5);
         assert(js_std_loop_once(ctx) == 0);
+        snprintf(source, sizeof(source),
+                 "os.signal(%d, () => { ticks++; os.signal(%d, null) });"
+                 "os.signal(%d, () => { ticks++; os.signal(%d, null) })",
+                 SIGUSR1, SIGUSR1, SIGUSR2, SIGUSR2);
+        run(ctx, source);
+        assert(raise(SIGUSR1) == 0 && raise(SIGUSR2) == 0);
+        assert(js_std_loop_once(ctx) == 1 && number(ctx, "ticks") == 6);
+        assert(js_std_loop_once(ctx) == 1 && number(ctx, "ticks") == 7);
+        assert(js_std_loop_once(ctx) == 0);
     }
 #endif
     run(ctx, "done = false; Atomics.waitAsync(shared, 0, 0, 1).value.then(() => done = true)");

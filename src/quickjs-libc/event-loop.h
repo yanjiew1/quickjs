@@ -26,6 +26,7 @@
 #define QUICKJS_LIBC_EVENT_LOOP_H
 
 #include "thread.h"
+#include <signal.h>
 #include <stdatomic.h>
 
 typedef struct {
@@ -48,7 +49,7 @@ typedef struct {
     JSValue func;
 } JSOSTimer;
 
-extern uint64_t os_pending_signals;
+extern volatile sig_atomic_t os_pending_signals[64];
 /* -3: callback exception, -2: poll error, -1: idle, 0: alive, 1: progress. */
 typedef int JSOSPollFunc(JSContext *ctx, int timeout_ms);
 extern _Atomic(JSOSPollFunc *) os_poll_func;
