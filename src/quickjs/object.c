@@ -2830,8 +2830,12 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
                 /* faster to iterate */
                 while (cur_len > len) {
                     atom = JS_NewAtomUInt32(ctx, cur_len - 1);
+                    if (atom == JS_ATOM_NULL)
+                        return -1;
                     ret = delete_property(ctx, p, atom);
                     JS_FreeAtom(ctx, atom);
+                    if (ret < 0)
+                        return -1;
                     if (unlikely(!ret)) {
                         /* unlikely case: property is not
                            configurable */
@@ -2861,7 +2865,8 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
                         JS_AtomIsArrayIndex(rt, &idx, pr->atom)) {
                         if (idx >= cur_len) {
                             /* remove the property */
-                            delete_property(ctx, p, pr->atom);
+                            if (delete_property(ctx, p, pr->atom) < 0)
+                                return -1;
                             /* WARNING: the shape may have been modified */
                             sh = p->shape;
                             pr = get_shape_prop(sh) + i;
