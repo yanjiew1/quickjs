@@ -2105,17 +2105,21 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
         if (is_negative) {
             ret = 0;
             if (error_type) {
-                const char *msg;
+                JSValue ctor = JS_GetPropertyStr(ctx, exception_val, "constructor");
+                JSValue name = JS_UNDEFINED;
+                const char *actual = NULL;
 
-                msg = test262_exception_to_cstring(ctx, NULL, exception_val);
-                if (msg) {
-                    size_t len = strcspn(msg, ":");
-                    if (strlen(error_type) != len || memcmp(msg, error_type, len))
-                        ret = -1;
-                    JS_FreeCString(ctx, msg);
-                } else {
+                if (!JS_IsException(ctor))
+                    name = JS_GetPropertyStr(ctx, ctor, "name");
+                if (JS_IsString(name))
+                    actual = test262_exception_to_cstring(ctx, NULL, name);
+                if (!actual || strcmp(actual, error_type))
                     ret = -1;
-                }
+                JS_FreeCString(ctx, actual);
+                if (JS_IsException(ctor) || JS_IsException(name))
+                    JS_FreeValue(ctx, JS_GetException(ctx));
+                JS_FreeValue(ctx, name);
+                JS_FreeValue(ctx, ctor);
             }
             if (negative_phase != TEST_PHASE_ANY && tls->phase != negative_phase)
                 ret = -1;
