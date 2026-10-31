@@ -2692,6 +2692,12 @@ int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
             if (js_shape_prepare_update(ctx, p, &pr))
                 return -1;
             sh = p->shape;
+            pr1 = &p->prop[h - 1];
+            if (unlikely(p->class_id == JS_CLASS_GLOBAL_OBJECT &&
+                         (pr->flags & JS_PROP_TMASK) == JS_PROP_VARREF)) {
+                if (remove_global_object_property(ctx, p, pr, pr1))
+                    return -1;
+            }
             /* remove property */
             if (lpr) {
                 lpr = get_shape_prop(sh) + lpr_idx;
@@ -2701,12 +2707,6 @@ int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
             }
             sh->deleted_prop_count++;
             /* free the entry */
-            pr1 = &p->prop[h - 1];
-            if (unlikely(p->class_id == JS_CLASS_GLOBAL_OBJECT)) {
-                if ((pr->flags & JS_PROP_TMASK) == JS_PROP_VARREF)
-                    if (remove_global_object_property(ctx, p, pr, pr1))
-                        return -1;
-            }
             free_property(rt, pr1, pr->flags);
             JS_FreeAtom(ctx, pr->atom);
             /* put default values */
