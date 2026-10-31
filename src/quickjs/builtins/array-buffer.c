@@ -502,20 +502,25 @@ static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
 void JS_DetachArrayBuffer(JSContext *ctx, JSValueConst obj)
 {
     JSArrayBuffer *abuf = JS_GetOpaque(obj, JS_CLASS_ARRAY_BUFFER);
+    JSFreeArrayBufferDataFunc *free_func;
+    void *opaque;
+    uint8_t *data;
 
     if (!abuf || abuf->detached)
         return;
-    if (abuf->free_func) {
-        abuf->free_func(ctx->rt, abuf->opaque, abuf->data);
-        /* The callback can release opaque state as well as backing storage. */
-        abuf->free_func = NULL;
-        abuf->opaque = NULL;
-    }
+    free_func = abuf->free_func;
+    opaque = abuf->opaque;
+    data = abuf->data;
+    abuf->free_func = NULL;
+    abuf->opaque = NULL;
     abuf->data = NULL;
     abuf->atomic_unaligned = FALSE;
     abuf->byte_length = 0;
     abuf->detached = TRUE;
     js_array_buffer_update_typed_arrays(abuf);
+    /* A callback can reenter detachment or release the last object reference. */
+    if (free_func)
+        free_func(ctx->rt, opaque, data);
 }
 
 /* get an ArrayBuffer or SharedArrayBuffer */
@@ -616,8 +621,8 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
                     return res;
                 new_abuf = JS_GetOpaque2(ctx, res, JS_CLASS_ARRAY_BUFFER);
                 memcpy(new_abuf->data, abuf->data, min_int(old_len, new_len));
-                if (abuf->free_func)
-                    abuf->free_func(ctx->rt, abuf->opaque, abuf->data);
+                JS_DetachArrayBuffer(ctx, this_val);
+                return res;
             } else {
                 JSArrayBuffer *new_abuf;
                 uint8_t *new_bs;
