@@ -2131,6 +2131,11 @@ function test_json_parse_source_duplicates()
 
 function test_date()
 {
+    const toPrimitive = Date.prototype[Symbol.toPrimitive];
+    const epoch = new Date(0);
+    assert(toPrimitive.call(epoch, "number"), 0);
+    assert_throws(TypeError, () => toPrimitive.call(epoch, "integer"));
+
     // Date Time String format is YYYY-MM-DDTHH:mm:ss.sssZ
     // accepted date formats are: YYYY, YYYY-MM and YYYY-MM-DD
     // accepted time formats are: THH:mm, THH:mm:ss, THH:mm:ss.sss
