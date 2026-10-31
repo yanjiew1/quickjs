@@ -208,8 +208,12 @@ static JSValue js_promise_resolve_thenable_job(JSContext *ctx,
     promise = argv[0];
     thenable = argv[1];
     then = argv[2];
-    if (js_create_resolving_functions(ctx, args, promise) < 0)
-        return JS_EXCEPTION;
+    if (js_create_resolving_functions(ctx, args, promise) < 0) {
+        JSValue error = JS_GetException(ctx);
+        fulfill_or_reject_promise(ctx, promise, error, TRUE);
+        JS_FreeValue(ctx, error);
+        return JS_UNDEFINED;
+    }
     res = JS_Call(ctx, then, thenable, 2, (JSValueConst *)args);
     if (JS_IsException(res)) {
         JSValue error = JS_GetException(ctx);
