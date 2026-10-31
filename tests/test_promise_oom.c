@@ -746,6 +746,46 @@ static void test_async_function_return_oom(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_async_generator_result_oom(void)
+{
+    static const char source[] =
+        "var cachedThen = function(resolve) { resolve(1); };"
+        "Object.defineProperty(Object.prototype, 'then', { configurable: true,"
+        "  get() { if (Object.hasOwn(this, 'value') && Object.hasOwn(this, 'done')) {"
+        "    armAssimilationOOM(); return cachedThen; } } });"
+        "(async function*() { yield 1; })().next()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, promise, reason;
+    int ret, i;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "armAssimilationOOM",
+               JS_NewCFunction(ctx, arm_assimilation_oom, "armAssimilationOOM", 0)) > 0);
+    assimilation_padding = NULL;
+    assimilation_armed = 0;
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<async-generator-result-oom>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise));
+    for (i = 0; i < 8 && !assimilation_armed && JS_IsJobPending(rt); i++) {
+        ret = JS_ExecutePendingJob(rt, NULL);
+        assert(ret == 1);
+    }
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(assimilation_armed);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, assimilation_padding);
+    assimilation_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     const char *source = "({ then(resolve) { resolve(1); } })";
@@ -774,6 +814,7 @@ int main(void)
     test_reaction_scheduling_no_allocation(2);
     test_thenable_job_resolver_oom();
     test_async_function_return_oom();
+    test_async_generator_result_oom();
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
