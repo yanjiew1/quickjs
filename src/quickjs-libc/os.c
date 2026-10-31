@@ -464,7 +464,21 @@ static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
 #if !defined(_WIN32)
 static int64_t timespec_to_ms(const struct timespec *tv)
 {
-    return (int64_t)tv->tv_sec * 1000 + (tv->tv_nsec / 1000000);
+    int64_t seconds = tv->tv_sec;
+    int64_t milliseconds = tv->tv_nsec / 1000000;
+
+    if (seconds > INT64_MAX / 1000 ||
+        (seconds == INT64_MAX / 1000 && milliseconds > INT64_MAX % 1000))
+        return INT64_MAX;
+    /* Division truncates toward zero: part of the preceding negative second
+       can still fit when its positive millisecond remainder is added. */
+    if (seconds < INT64_MIN / 1000 - 1 ||
+        (seconds == INT64_MIN / 1000 - 1 &&
+         milliseconds < 1000 + INT64_MIN % 1000))
+        return INT64_MIN;
+    if (seconds == INT64_MIN / 1000 - 1)
+        return INT64_MIN + (milliseconds - (1000 + INT64_MIN % 1000));
+    return seconds * 1000 + milliseconds;
 }
 #endif
 

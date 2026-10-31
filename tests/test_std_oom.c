@@ -756,6 +756,29 @@ static void test_negative_utimes_conversion(void)
     ms_to_timeval(&value, -1001);
     assert(value.tv_sec == -2 && value.tv_usec == 999000);
 }
+
+static void test_stat_timestamp_range(void)
+{
+    struct timespec value = { -2, 999000000 };
+
+    assert(timespec_to_ms(&value) == -1001);
+    if (sizeof(value.tv_sec) >= sizeof(int64_t)) {
+        value.tv_sec = (time_t)(INT64_MAX / 1000 + 1);
+        value.tv_nsec = 0;
+        assert(timespec_to_ms(&value) == INT64_MAX);
+        value.tv_sec = (time_t)(INT64_MIN / 1000 - 1);
+        assert(timespec_to_ms(&value) == INT64_MIN);
+        value.tv_nsec = 192000000;
+        assert(timespec_to_ms(&value) == INT64_MIN);
+        value.tv_nsec = 193000000;
+        assert(timespec_to_ms(&value) == INT64_MIN + 1);
+        value.tv_sec = (time_t)(INT64_MAX / 1000);
+        value.tv_nsec = 807000000;
+        assert(timespec_to_ms(&value) == INT64_MAX);
+        value.tv_nsec = 999000000;
+        assert(timespec_to_ms(&value) == INT64_MAX);
+    }
+}
 #endif
 
 /* Results own their payloads; pipe descriptors transfer only on success. */
@@ -950,6 +973,7 @@ int main(void)
     test_format_stops_after_oom(2);
 #ifndef _WIN32
     test_negative_utimes_conversion();
+    test_stat_timestamp_range();
 #endif
     test_point_export_failure();
     test_host_module_export_failures(0);
