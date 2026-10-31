@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <inttypes.h>
@@ -93,19 +94,35 @@ void namelist_add(namelist_t *lp, const char *name, const char *short_name,
     namelist_entry_t *e;
     if (lp->count == lp->size) {
         size_t newsize = lp->size + (lp->size >> 1) + 4;
-        namelist_entry_t *a =
-            realloc(lp->array, sizeof(lp->array[0]) * newsize);
-        /* XXX: check for realloc failure */
+        namelist_entry_t *a;
+
+        if (newsize > INT_MAX || newsize > SIZE_MAX / sizeof(*a))
+            goto oom;
+        a = realloc(lp->array, sizeof(*a) * newsize);
+        if (!a)
+            goto oom;
         lp->array = a;
         lp->size = newsize;
     }
-    e =  &lp->array[lp->count++];
+    e = &lp->array[lp->count];
     e->name = strdup(name);
+    if (!e->name)
+        goto oom;
     if (short_name)
         e->short_name = strdup(short_name);
     else
         e->short_name = NULL;
+    if (short_name && !e->short_name) {
+        free(e->name);
+        goto oom;
+    }
     e->flags = flags;
+    lp->count++;
+    return;
+
+oom:
+    fprintf(stderr, "qjsc: out of memory\n");
+    exit(1);
 }
 
 void namelist_free(namelist_t *lp)
@@ -881,7 +898,14 @@ int main(int argc, char **argv)
     outfile = fo;
 
     rt = JS_NewRuntime();
-    ctx = JS_NewContext(rt);
+    if (!rt || !(ctx = JS_NewContext(rt))) {
+        if (rt)
+            JS_FreeRuntime(rt);
+        fclose(fo);
+        unlink(cfilename);
+        fprintf(stderr, "qjsc: out of memory\n");
+        return 1;
+    }
 
     JS_SetStripInfo(rt, strip_flags);
 
