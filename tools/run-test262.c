@@ -2136,7 +2136,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
     /* Incomplete harness execution cannot satisfy a negative expectation. */
     if (harness_failure)
         ret = -1;
-    if (verbose && is_test) {
+    if (is_test) {
         const char *msg = NULL;
         const char *error_text = NULL;
         int s_line;
