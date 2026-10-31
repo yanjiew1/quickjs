@@ -38,6 +38,15 @@ static int host_interrupt(JSRuntime *rt, void *opaque)
     return state->cancel;
 }
 
+static int foreign_sigint_calls;
+
+static JSValue foreign_sigint_handler(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv)
+{
+    foreign_sigint_calls++;
+    return JS_UNDEFINED;
+}
+
 static JSValue evaluate(JSContext *ctx, const char *source)
 {
     ctx->interrupt_counter = 100;
@@ -52,6 +61,61 @@ static void check_restored(JSRuntime *rt, InterruptState *state)
     assert(JS_GetInterruptHandler(rt, &opaque) == host_interrupt);
     assert(opaque == state);
     assert(ts->eval_script_recurse == 0);
+}
+
+static void test_foreign_sigint_owner(void)
+{
+    JSRuntime *eval_rt = JS_NewRuntime();
+    JSRuntime *signal_rt = JS_NewRuntime();
+    JSContext *eval_ctx, *signal_ctx;
+    JSValue global, func, value, args[2];
+    InterruptState state = { 0 };
+
+    assert(eval_rt && signal_rt);
+    eval_ctx = JS_NewContext(eval_rt);
+    signal_ctx = JS_NewContext(signal_rt);
+    assert(eval_ctx && signal_ctx);
+    js_std_init_handlers(eval_rt);
+    js_std_init_handlers(signal_rt);
+    global = JS_GetGlobalObject(eval_ctx);
+    func = JS_NewCFunction(eval_ctx, js_evalScript, "evalScript", 1);
+    assert(JS_SetPropertyStr(eval_ctx, global, "evalScript", func) >= 0);
+    JS_FreeValue(eval_ctx, global);
+
+    args[0] = JS_NewInt32(signal_ctx, SIGINT);
+    args[1] = JS_NewCFunction(signal_ctx, foreign_sigint_handler,
+                              "foreignSigint", 0);
+    value = js_os_signal(signal_ctx, JS_UNDEFINED, 2, args);
+    assert(!JS_IsException(value));
+    JS_FreeValue(signal_ctx, value);
+    JS_FreeValue(signal_ctx, args[1]);
+
+    JS_SetInterruptHandler(eval_rt, host_interrupt, &state);
+    state.sigint = 1;
+    foreign_sigint_calls = 0;
+    value = evaluate(eval_ctx, "evalScript('for (let i = 0; i < 100000; i++); 42')");
+    assert(JS_IsNumber(value) && JS_VALUE_GET_INT(value) == 42);
+    JS_FreeValue(eval_ctx, value);
+    assert(os_pending_signals[SIGINT]);
+#ifndef _WIN32
+    assert(js_os_poll(signal_ctx, 0) >= 0);
+    assert(foreign_sigint_calls == 1 && !os_pending_signals[SIGINT]);
+#else
+    /* Windows polling does not dispatch os.signal callbacks. */
+    assert(foreign_sigint_calls == 0);
+#endif
+
+    args[1] = JS_NULL;
+    value = js_os_signal(signal_ctx, JS_UNDEFINED, 2, args);
+    assert(!JS_IsException(value));
+    JS_FreeValue(signal_ctx, value);
+    JS_SetInterruptHandler(eval_rt, NULL, NULL);
+    js_std_free_handlers(signal_rt);
+    js_std_free_handlers(eval_rt);
+    JS_FreeContext(signal_ctx);
+    JS_FreeContext(eval_ctx);
+    JS_FreeRuntime(signal_rt);
+    JS_FreeRuntime(eval_rt);
 }
 
 int main(void)
@@ -116,5 +180,6 @@ int main(void)
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+    test_foreign_sigint_owner();
     return 0;
 }
