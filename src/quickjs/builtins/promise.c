@@ -644,6 +644,23 @@ static __exception int remainingElementsCount_add(JSContext *ctx,
 #define PROMISE_MAGIC_allSettled 1
 #define PROMISE_MAGIC_any        2
 
+static JSValue js_promise_all_reject_error(JSContext *ctx,
+                                           JSValueConst resolve_element_env)
+{
+    JSValue error = JS_GetException(ctx);
+    JSValue reject = JS_GetPropertyUint32(ctx, resolve_element_env, 1);
+    JSValue ret;
+
+    if (JS_IsException(reject)) {
+        JS_FreeValue(ctx, error);
+        return JS_EXCEPTION;
+    }
+    ret = JS_Call(ctx, reject, JS_UNDEFINED, 1, (JSValueConst *)&error);
+    JS_FreeValue(ctx, reject);
+    JS_FreeValue(ctx, error);
+    return ret;
+}
+
 static JSValue js_promise_all_resolve_element(JSContext *ctx,
                                               JSValueConst this_val,
                                               int argc, JSValueConst *argv,
@@ -660,7 +677,7 @@ static JSValue js_promise_all_resolve_element(JSContext *ctx,
     int is_zero, index;
 
     if (JS_ToInt32(ctx, &index, func_data[1]))
-        return JS_EXCEPTION;
+        goto reject_error;
     if (alreadyCalled)
         return JS_UNDEFINED;
     func_data[0] = JS_NewBool(ctx, TRUE);
@@ -670,7 +687,7 @@ static JSValue js_promise_all_resolve_element(JSContext *ctx,
 
         obj = JS_NewObject(ctx);
         if (JS_IsException(obj))
-            return JS_EXCEPTION;
+            goto reject_error;
         str = js_new_string8(ctx, is_reject ? "rejected" : "fulfilled");
         if (JS_IsException(str))
             goto fail1;
@@ -684,34 +701,43 @@ static JSValue js_promise_all_resolve_element(JSContext *ctx,
                                    JS_PROP_C_W_E) < 0) {
         fail1:
             JS_FreeValue(ctx, obj);
-            return JS_EXCEPTION;
+            goto reject_error;
         }
     } else {
         obj = JS_DupValue(ctx, argv[0]);
     }
     if (JS_DefinePropertyValueUint32(ctx, values, index,
                                      obj, JS_PROP_C_W_E) < 0)
-        return JS_EXCEPTION;
+        goto reject_error;
 
     is_zero = remainingElementsCount_add(ctx, resolve_element_env, -1);
     if (is_zero < 0)
-        return JS_EXCEPTION;
+        goto reject_error;
     if (is_zero) {
         if (resolve_type == PROMISE_MAGIC_any) {
             JSValue error;
             error = js_aggregate_error_constructor(ctx, values);
             if (JS_IsException(error))
-                return JS_EXCEPTION;
+                goto reject_error;
             ret = JS_Call(ctx, resolve, JS_UNDEFINED, 1, (JSValueConst *)&error);
             JS_FreeValue(ctx, error);
         } else {
             ret = JS_Call(ctx, resolve, JS_UNDEFINED, 1, (JSValueConst *)&values);
         }
-        if (JS_IsException(ret))
+        if (JS_IsException(ret)) {
+            /* A custom capability's resolve throw belongs to the ignored
+               child reaction; only native assimilation OOM rejects here. */
+            if (resolve_type != PROMISE_MAGIC_any &&
+                JS_VALUE_GET_TAG(resolve) == JS_TAG_OBJECT &&
+                JS_VALUE_GET_OBJ(resolve)->class_id == JS_CLASS_PROMISE_RESOLVE_FUNCTION)
+                goto reject_error;
             return ret;
+        }
         JS_FreeValue(ctx, ret);
     }
     return JS_UNDEFINED;
+ reject_error:
+    return js_promise_all_reject_error(ctx, resolve_element_env);
 }
 
 static JSValue js_promise_all_settled_reject_element(JSContext *ctx,
@@ -773,6 +799,11 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
         if (JS_DefinePropertyValueUint32(ctx, resolve_element_env, 0,
                                          JS_NewInt32(ctx, 1),
                                          JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE | JS_PROP_WRITABLE) < 0)
+            goto fail_reject;
+        /* Each element can reject the aggregate if its own bookkeeping fails. */
+        if (JS_DefinePropertyValueUint32(ctx, resolve_element_env, 1,
+                                         JS_DupValue(ctx, resolving_funcs[1]),
+                                         JS_PROP_C_W_E) < 0)
             goto fail_reject;
 
         index = 0;

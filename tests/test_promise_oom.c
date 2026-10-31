@@ -702,6 +702,43 @@ static void test_thenable_job_resolver_oom(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_combinator_reaction_oom(void)
+{
+    static const char *const sources[] = {
+        "Promise.all([Promise.resolve(1)])",
+        "Promise.allSettled([Promise.resolve(1)])",
+        "Promise.any([Promise.reject(1)])",
+    };
+    size_t i;
+
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue promise, reason;
+        void *padding;
+        int ret;
+
+        assert(rt && ctx);
+        promise = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                          "<combinator-reaction-oom>", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(promise));
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+        padding = test_pool_padding(rt);
+        JS_SetMemoryLimit(rt, 0);
+        ret = JS_ExecutePendingJob(rt, NULL);
+        JS_SetMemoryLimit(rt, (size_t)-1);
+        assert(ret == 1);
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+        reason = JS_PromiseResult(ctx, promise);
+        assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+        JS_FreeValue(ctx, reason);
+        JS_FreeValue(ctx, promise);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 static JSValue arm_assimilation_oom(JSContext *ctx, JSValueConst this_val,
                                     int argc, JSValueConst *argv)
 {
@@ -711,6 +748,74 @@ static JSValue arm_assimilation_oom(JSContext *ctx, JSValueConst this_val,
     assimilation_padding = test_pool_padding(rt);
     JS_SetMemoryLimit(rt, 0);
     return JS_UNDEFINED;
+}
+
+static void test_combinator_final_resolve_oom(void)
+{
+    static const char source[] =
+        "var cachedThen = function(resolve) { resolve(1); };"
+        "Object.defineProperty(Object.prototype, 'then', { configurable: true,"
+        "  get() { if (Array.isArray(this)) {"
+        "    armAssimilationOOM(); return cachedThen; } } });"
+        "Promise.all([Promise.resolve(1)])";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, promise, reason;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "armAssimilationOOM",
+               JS_NewCFunction(ctx, arm_assimilation_oom, "armAssimilationOOM", 0)) > 0);
+    assimilation_padding = NULL;
+    assimilation_armed = 0;
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<combinator-resolve-oom>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise) && JS_IsJobPending(rt));
+    assert(JS_ExecutePendingJob(rt, NULL) == 1);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(assimilation_armed);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, assimilation_padding);
+    assimilation_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_custom_combinator_resolve_throw(void)
+{
+    static const char source[] =
+        "globalThis.rejectCalls = 0;"
+        "class P extends Promise {"
+        "  constructor(executor) {"
+        "    super((resolve, reject) => executor("
+        "      () => { throw 42; },"
+        "      reason => { rejectCalls++; reject(reason); }));"
+        "  }"
+        "  static resolve(value) { return Promise.resolve(value); }"
+        "}"
+        "P.all([1])";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, count;
+
+    assert(rt && ctx);
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<custom-combinator>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise) && JS_IsJobPending(rt));
+    assert(JS_ExecutePendingJob(rt, NULL) == 1);
+    count = JS_Eval(ctx, "rejectCalls", 11, "<custom-combinator>",
+                    JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(count) && JS_VALUE_GET_INT(count) == 0);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+    JS_FreeValue(ctx, count);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
 }
 
 static void test_async_function_return_oom(void)
@@ -813,6 +918,9 @@ int main(void)
     test_reaction_scheduling_no_allocation(1);
     test_reaction_scheduling_no_allocation(2);
     test_thenable_job_resolver_oom();
+    test_combinator_reaction_oom();
+    test_combinator_final_resolve_oom();
+    test_custom_combinator_resolve_throw();
     test_async_function_return_oom();
     test_async_generator_result_oom();
     assert(rt);
