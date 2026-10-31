@@ -40,6 +40,73 @@ static int host_interrupt(JSRuntime *rt, void *opaque)
 
 static int foreign_sigint_calls;
 
+#ifndef _WIN32
+static int cross_thread_signal_calls;
+
+static JSValue cross_thread_signal_handler(JSContext *ctx, JSValueConst this_val,
+                                           int argc, JSValueConst *argv)
+{
+    cross_thread_signal_calls++;
+    return JS_UNDEFINED;
+}
+
+static JSValue signal_wake_timeout_handler(JSContext *ctx, JSValueConst this_val,
+                                           int argc, JSValueConst *argv)
+{
+    return JS_UNDEFINED;
+}
+
+static void *send_signal_from_worker(void *opaque)
+{
+    struct timespec delay = { 0, 20000000 };
+
+    nanosleep(&delay, NULL);
+    pthread_kill(pthread_self(), SIGUSR1);
+    return NULL;
+}
+
+static void test_cross_thread_signal_wake(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue args[2], value, timer_args[2], timer_id;
+    pthread_t worker;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    js_std_init_handlers(rt);
+    args[0] = JS_NewInt32(ctx, SIGUSR1);
+    args[1] = JS_NewCFunction(ctx, cross_thread_signal_handler,
+                              "crossThreadSignal", 0);
+    value = js_os_signal(ctx, JS_UNDEFINED, 2, args);
+    assert(!JS_IsException(value));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, args[1]);
+    timer_args[0] = JS_NewCFunction(ctx, signal_wake_timeout_handler,
+                                    "signalWakeTimeout", 0);
+    timer_args[1] = JS_NewInt32(ctx, 200);
+    timer_id = js_os_setTimeout(ctx, JS_UNDEFINED, 2, timer_args);
+    assert(!JS_IsException(timer_id));
+    JS_FreeValue(ctx, timer_args[0]);
+    cross_thread_signal_calls = 0;
+    assert(pthread_create(&worker, NULL, send_signal_from_worker, NULL) == 0);
+    assert(js_os_poll(ctx, 1000) >= 0);
+    assert(pthread_join(worker, NULL) == 0);
+    assert(cross_thread_signal_calls == 1);
+    value = js_os_clearTimeout(ctx, JS_UNDEFINED, 1, &timer_id);
+    assert(!JS_IsException(value));
+    JS_FreeValue(ctx, value);
+    args[1] = JS_NULL;
+    value = js_os_signal(ctx, JS_UNDEFINED, 2, args);
+    assert(!JS_IsException(value));
+    JS_FreeValue(ctx, value);
+    js_std_free_handlers(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+#endif
+
 static JSValue foreign_sigint_handler(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv)
 {
@@ -181,5 +248,8 @@ int main(void)
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     test_foreign_sigint_owner();
+#ifndef _WIN32
+    test_cross_thread_signal_wake();
+#endif
     return 0;
 }
