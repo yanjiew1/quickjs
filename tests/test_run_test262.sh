@@ -828,3 +828,46 @@ JS
 invoke_runner no -q -v -c "$test262_tmp/config" -f "$test262_tmp/phases/no-evaluation.js"
 test "$test262_status" -eq 1
 ! grep -Fq 'RESOLUTION BODY RAN' "$test262_tmp/out"
+
+# Fixture names may contain a suffix after the marker. A directory name
+# containing the marker must not hide ordinary tests inside that directory.
+mkdir "$test262_tmp/fixture-cases" "$test262_tmp/fixture-cases/dir_FIXTURE"
+for test262_fixture in example_FIXTURE.js example_FIXTURE_more.js; do
+    printf '%s\n' 'throw new Error("fixture executed");' > "$test262_tmp/fixture-cases/$test262_fixture"
+done
+cat > "$test262_tmp/fixture-cases/dir_FIXTURE/ordinary.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+print("ordinary fixture-directory test ran");
+JS
+invoke_runner no -q -v -c "$test262_tmp/config" --timing-log "$test262_tmp/fixture-dir-timing.jsonl" \
+    -d "$test262_tmp/fixture-cases"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/fixture-dir-timing.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1 and rows[0]['status'] == 'pass'
+assert rows[0]['file'].replace('\\', '/').endswith('/dir_FIXTURE/ordinary.js')
+PYCODE
+
+# Invalid metadata proves explicit fixture selection does not even parse it.
+cat > "$test262_tmp/fixture-cases/example_FIXTURE_more.js" <<'JS'
+/*---
+negative:
+  phase: unknown-phase
+  type: Error
+---*/
+throw new Error("fixture executed");
+JS
+# Explicit file selection must not execute fixtures either.
+invoke_runner no -q -v -c "$test262_tmp/config" --timing-log "$test262_tmp/fixture-timing.jsonl" \
+    -f "$test262_tmp/fixture-cases/example_FIXTURE_more.js"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/fixture-timing.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1 and rows[0]['status'] == 'skipped'
+PYCODE

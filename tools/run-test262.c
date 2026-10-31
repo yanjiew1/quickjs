@@ -544,6 +544,18 @@ void namelist_free(namelist_t *lp)
     lp->size = 0;
 }
 
+/* Test262 fixture markers apply to file names, not parent directories. */
+static BOOL is_fixture_file(const char *filename)
+{
+    const char *name = strrchr(filename, '/');
+#ifdef _WIN32
+    const char *backslash = strrchr(filename, '\\');
+    if (backslash && (!name || backslash > name))
+        name = backslash;
+#endif
+    return strstr(name ? name + 1 : filename, "_FIXTURE") != NULL;
+}
+
 static int add_test_file(const char *filename, const struct stat *ptr, int flag)
 {
     namelist_t *lp = &test_list;
@@ -551,7 +563,7 @@ static int add_test_file(const char *filename, const struct stat *ptr, int flag)
     /* ftw initializes this string in libc without updating MSan shadow. */
     __msan_unpoison_string(filename);
 #endif
-    if (has_suffix(filename, ".js") && !has_suffix(filename, "_FIXTURE.js"))
+    if (has_suffix(filename, ".js") && !is_fixture_file(filename))
         namelist_add(lp, NULL, filename);
     return 0;
 }
@@ -2441,6 +2453,12 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index,
     TestPhase negative_phase = TEST_PHASE_ANY;
     namelist_t include_list = { 0 }, *ip = &include_list;
 
+    /* Directly selected fixtures are not tests: do not read their metadata. */
+    if (is_fixture_file(filename)) {
+        atomic_inc(&test_skipped);
+        write_test_timing(filename, thread_index, index, "none", "skipped", 0);
+        return -2;
+    }
     is_nostrict = is_onlystrict = is_negative = is_async = is_module = skip = FALSE;
     can_block = TRUE;
     error_type = NULL;
