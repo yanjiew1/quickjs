@@ -4175,3 +4175,50 @@ for (const pattern of ["[^\\q{ab}--\\q{ab}]", "[^\\q{}--\\q{}]",
 }
 assert(new RegExp("[^\\q{ab}&&a]", "v").test("b"));
 assert(new RegExp("[^a--\\q{ab}]", "v").test("b"));
+
+function test_multiple_loop_labels()
+{
+    for (const loop of ["for (let i = 0; i < 2; i++)", "while (n < 2)",
+                        "for (const i of [0, 1])", "for (const i in [0, 1])"]) {
+        assert(eval(`let n = 0; outer: middle: inner: ${loop} {
+            n++; continue outer;
+        } n;`), 2);
+    }
+    assert(eval("let n = 0; outer: inner: do { n++; continue outer; } while (n < 2); n;"), 2);
+    const closures = [];
+    outer: inner: for (let i = 0; i < 2; i++) {
+        closures.push(() => i);
+        continue outer;
+    }
+    assert(closures.map(f => f()).join(), "0,1");
+    // Continuing the same labelled loop must not close its iterator.
+    let closed = 0, n = 0;
+    const iterator = {
+        [Symbol.iterator]() { return this; },
+        next() { return { done: n == 2, value: n++ }; },
+        return() { closed++; return {}; },
+    };
+    outer: inner: for (const value of iterator) { continue outer; }
+    assert(closed, 0);
+    let disposed = 0, innerClosed = 0;
+    outer: inner: for (let i = 0; i < 2; i++) {
+        using resource = { [Symbol.dispose]() { disposed++; } };
+        const nested = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: 1, done: false }; },
+            return() { innerClosed++; return {}; },
+        };
+        for (const value of nested) { continue outer; }
+    }
+    assert(disposed, 2);
+    assert(innerClosed, 2);
+    for (const source of ["outer: if (true) inner: for (;;) continue outer;",
+                          "outer: { inner: for (;;) continue outer; }",
+                          "outer: outer: for (;;) break;"]) {
+        let error;
+        try { eval(source); } catch (caught) { error = caught; }
+        assert(error instanceof SyntaxError);
+    }
+}
+
+test_multiple_loop_labels();

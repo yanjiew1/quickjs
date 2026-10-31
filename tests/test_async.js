@@ -2431,3 +2431,15 @@ async function test_all_settled_shared_callback_state()
 }
 
 await test_all_settled_shared_callback_state();
+
+async function test_multiple_async_loop_labels()
+{
+    let n = 0;
+    outer: inner: for await (const value of [0, 1]) {
+        n++;
+        continue outer;
+    }
+    assert(n, 2);
+}
+
+await test_multiple_async_loop_labels();
