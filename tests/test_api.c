@@ -4644,12 +4644,93 @@ static void test_eval_compile_oom(void)
     }
 }
 
+static int retry_native_init(JSContext *ctx, JSModuleDef *m)
+{
+    (void)ctx;
+    (void)m;
+    return 0;
+}
+
+static JSModuleDef *retry_cycle_loader(JSContext *ctx, const char *name,
+                                       void *opaque)
+{
+    const char *source = "import 'entry'; export let cycle = 1;";
+    JSValue compiled;
+    JSModuleDef *m;
+
+    (void)opaque;
+    assert(!strcmp(name, "cycle"));
+    compiled = JS_Eval(ctx, source, strlen(source), name,
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(compiled))
+        return NULL;
+    m = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return m;
+}
+
+static void test_module_preparation_retry(void)
+{
+    const char *source = "import 'cycle'; import * as ns from 'native';"
+                         "export function f() {} export let result = ns.export0;";
+    int mode, fail_at, failures = 0, successes = 0;
+
+    /* Sweep closure, export and linking allocations; the cycle exercises
+       rollback of nodes already visited before a sibling fails. */
+    for (mode = 0; mode < 2; mode++) {
+        for (fail_at = 1; fail_at <= 32; fail_at++) {
+            OOMTestAllocator allocator;
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSModuleDef *m = JS_NewCModule(ctx, "native", retry_native_init);
+            JSValue compiled, result;
+            char name[32];
+            int i;
+
+            assert(ctx && m);
+            for (i = 0; i < (mode ? 4000 : 1); i++) {
+                snprintf(name, sizeof(name), "export%d", i);
+                assert(JS_AddModuleExport(ctx, m, name) == 0);
+            }
+            JS_SetModuleLoaderFunc(rt, NULL, retry_cycle_loader, NULL);
+            compiled = JS_Eval(ctx, source, strlen(source), "entry",
+                               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            assert(!JS_IsException(compiled));
+            oom_test_begin(&allocator, fail_at);
+            result = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+            oom_test_end(&allocator);
+            if (JS_IsException(result)) {
+                failures++;
+                JS_FreeValue(ctx, JS_GetException(ctx));
+            }
+            JS_FreeValue(ctx, result);
+            result = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+            /* Failures after evaluation starts may remain cached. Retrying
+               preparation/linking must still be safe and release all roots. */
+            if (JS_IsException(result)) {
+                JS_FreeValue(ctx, JS_GetException(ctx));
+            } else {
+                assert(JS_PromiseState(ctx, result) != JS_PROMISE_PENDING);
+                if (JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED)
+                    successes++;
+            }
+            JS_FreeValue(ctx, result);
+            JS_FreeValue(ctx, compiled);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(allocator.live == 0);
+        }
+    }
+    assert(failures > 0 && successes > 0);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "module-preparation-retry", test_module_preparation_retry },
         { "eval-compile-oom", test_eval_compile_oom },
         { "module-namespace-oom", test_module_namespace_oom },
         { "collection-growth-oom", test_collection_growth_oom },
