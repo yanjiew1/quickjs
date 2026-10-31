@@ -75,6 +75,37 @@ static void check_virtual_import_meta(JSContext *ctx)
     assert(!JS_HasException(ctx));
 }
 
+static void check_long_import_meta(JSContext *ctx, int is_url)
+{
+    char filename[5001];
+    char expected[sizeof(filename) + 7];
+    JSValue module, meta, url;
+    JSModuleDef *m;
+    const char *text;
+
+    memset(filename, 'x', sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+    if (is_url)
+        memcpy(filename, "test:", 5);
+    else {
+        memcpy(expected, "file://", 7);
+        memcpy(expected + 7, filename, sizeof(filename));
+    }
+    module = JS_Eval(ctx, "", 0, filename,
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(module));
+    assert(js_module_set_import_meta(ctx, module, 0, 0) == 0);
+    m = JS_VALUE_GET_PTR(module);
+    meta = JS_GetImportMeta(ctx, m);
+    url = JS_GetPropertyStr(ctx, meta, "url");
+    text = JS_ToCString(ctx, url);
+    assert(text && !strcmp(text, is_url ? filename : expected));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, url);
+    JS_FreeValue(ctx, meta);
+    JS_FreeValue(ctx, module);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -87,6 +118,8 @@ int main(void)
     test_one_input_init(rt, ctx);
     assert(!JS_HasException(ctx));
     check_virtual_import_meta(ctx);
+    check_long_import_meta(ctx, 1);
+    check_long_import_meta(ctx, 0);
     result = eval_source(ctx,
                          "typeof std.sprintf === 'function' &&"
                          "typeof os.open === 'function'",
