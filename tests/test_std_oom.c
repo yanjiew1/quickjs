@@ -27,6 +27,7 @@
 
 static FILE *test_pipe;
 static int test_pipe_closed;
+static long test_pipe_close_position, test_pipe_body_start, test_pipe_end;
 
 static FILE *test_popen(const char *command, const char *mode)
 {
@@ -41,6 +42,7 @@ static FILE *test_popen(const char *command, const char *mode)
 static int test_pclose(FILE *f)
 {
     test_pipe_closed++;
+    test_pipe_close_position = ftell(f);
     return fclose(f);
 }
 
@@ -111,9 +113,11 @@ static FILE *test_stream(int mode)
             fputs("\r\n\r\n", f);
     }
     if (mode != 3) {
+        test_pipe_body_start = ftell(f);
         for (i = 0; i < 8192; i++)
             fputc('d', f);
     }
+    test_pipe_end = ftell(f);
     assert(!ferror(f));
     rewind(f);
     return f;
@@ -320,6 +324,7 @@ static void test_load_file_failure(void)
 static void test_failure(int mode)
 {
     size_t fail_at, allocations = 0;
+    int stopped_after_body_oom = 0;
 
     for (fail_at = 0; fail_at <= allocations; fail_at++) {
         OOMTestAllocator allocator;
@@ -332,6 +337,7 @@ static void test_failure(int mode)
 
         assert(ctx);
         test_pipe_closed = 0;
+        test_pipe_close_position = -1;
         if (!mode) {
             JS_NewClassID(&js_std_file_class_id);
             assert(JS_NewClass(rt, js_std_file_class_id, &js_std_file_class) == 0);
@@ -363,6 +369,10 @@ static void test_failure(int mode)
         if (JS_IsException(result)) {
             assert(fail_at);
             oom_test_check_exception(ctx);
+            if (mode == 2 && test_pipe_closed &&
+                test_pipe_close_position > test_pipe_body_start &&
+                test_pipe_close_position < test_pipe_end)
+                stopped_after_body_oom = 1;
         } else {
             assert(!JS_HasException(ctx));
             if (mode >= 2) {
@@ -397,6 +407,8 @@ static void test_failure(int mode)
         JS_FreeRuntime(rt);
         assert(allocator.live == 0);
     }
+    if (mode == 2)
+        assert(stopped_after_body_oom);
 }
 
 static void test_class_registration_failure(int worker)
