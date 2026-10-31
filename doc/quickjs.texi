@@ -926,7 +926,11 @@ The existing no-argument @code{JS_NewError()} remains unchanged.
 
 @subsection Script evaluation
 
-Use @code{JS_Eval()} to evaluate a script or module source.
+Use @code{JS_Eval()} to evaluate a script or module source. For a compiled
+module, @code{JS_LinkModule()} loads dependencies and instantiates bindings
+without running the module body. It returns zero on success and minus one with
+a pending exception on failure. The caller retains ownership of the compiled
+module and may subsequently pass it to @code{JS_EvalFunction()}.
 
 If the script or module was compiled to bytecode with @code{qjsc}, it
 can be evaluated by calling @code{js_std_eval_binary()}. The advantage

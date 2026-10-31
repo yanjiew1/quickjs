@@ -4881,12 +4881,40 @@ static void test_module_resolution_retry(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_module_link_without_evaluation(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    const char *source = "globalThis.linked_body = 1; export const value = 2;";
+    JSValue compiled, global, value;
+
+    compiled = JS_Eval(ctx, source, strlen(source), "link-only",
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    assert(JS_LinkModule(ctx, compiled) == 0);
+    global = JS_GetGlobalObject(ctx);
+    value = JS_GetPropertyStr(ctx, global, "linked_body");
+    assert(JS_IsUndefined(value));
+    JS_FreeValue(ctx, value);
+    value = JS_EvalFunction(ctx, compiled);
+    assert(!JS_IsException(value));
+    assert(JS_PromiseState(ctx, value) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, value);
+    value = JS_GetPropertyStr(ctx, global, "linked_body");
+    assert(JS_VALUE_GET_INT(value) == 1);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
         { "array-length-atom-failure", test_array_length_atom_failure },
