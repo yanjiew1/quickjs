@@ -1263,6 +1263,61 @@ static void test_autoinit_allocation_failure(int kind, BOOL retry)
     assert(failure.live_allocations == 0);
 }
 
+static void test_inherited_autoinit_set_failure(void)
+{
+    static const char source[] = "(function inheritedPrototype() {})";
+    PromiseAllocationFailure failure = { 0 };
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+    JSContext *ctx;
+    JSValue function, receiver, value, exception;
+    JSAtom atom;
+    int refs;
+    void *ptr;
+
+    mf.js_malloc = promise_failure_malloc;
+    mf.js_free = promise_failure_free;
+    mf.js_realloc = promise_failure_realloc;
+    rt = JS_NewRuntime2(&mf, &failure);
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetGCThreshold(rt, SIZE_MAX);
+    function = JS_Eval(ctx, source, sizeof(source) - 1,
+                       "autoinit-set-oom", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(function));
+    receiver = JS_NewObjectProto(ctx, function);
+    value = JS_NewObject(ctx);
+    atom = JS_NewAtom(ctx, "prototype");
+    assert(!JS_IsException(receiver) && !JS_IsException(value));
+    assert(atom != JS_ATOM_NULL);
+    refs = js_rc(JS_VALUE_GET_PTR(value))->ref_count;
+
+    /* The receiver has no own property; the inherited lazy recipe must fail. */
+    exhaust_pooled_free_blocks(rt, &failure);
+    failure.fail_next = TRUE;
+    assert(JS_SetPropertyInternal(ctx, receiver, atom,
+                                  JS_DupValue(ctx, value), receiver,
+                                  JS_PROP_THROW) < 0);
+    assert(!failure.fail_next && failure.failures == 1);
+    exception = JS_GetException(ctx);
+    assert(JS_IsError(ctx, exception));
+    JS_FreeValue(ctx, exception);
+    assert(js_rc(JS_VALUE_GET_PTR(value))->ref_count == refs);
+
+    while ((ptr = failure.padding) != NULL) {
+        memcpy(&failure.padding, ptr, sizeof(failure.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeAtom(ctx, atom);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, receiver);
+    JS_FreeValue(ctx, function);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 static void test_atom_table_allocation_failure(void)
 {
     AllocationFailure failure = { 0 };
@@ -2243,6 +2298,7 @@ int main(void)
         test_autoinit_allocation_failure(kind, FALSE);
         test_autoinit_allocation_failure(kind, TRUE);
     }
+    test_inherited_autoinit_set_failure();
     test_backtrace_allocation_failure();
     test_pending_backtrace_allocation_failure();
     test_raw_context_allocation_failure();
