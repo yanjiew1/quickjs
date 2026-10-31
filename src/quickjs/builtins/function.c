@@ -312,8 +312,9 @@ static JSValue js_function_bind(JSContext *ctx, JSValueConst this_val,
             len_val = JS_NewInt32(ctx, 0);
         }
     }
-    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_length,
-                           len_val, JS_PROP_CONFIGURABLE);
+    if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_length,
+                               len_val, JS_PROP_CONFIGURABLE) < 0)
+        goto exception;
 
     name1 = JS_GetProperty(ctx, this_val, JS_ATOM_name);
     if (JS_IsException(name1))
@@ -325,8 +326,9 @@ static JSValue js_function_bind(JSContext *ctx, JSValueConst this_val,
     name1 = JS_ConcatString3(ctx, "bound ", name1, "");
     if (JS_IsException(name1))
         goto exception;
-    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_name, name1,
-                           JS_PROP_CONFIGURABLE);
+    if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_name, name1,
+                               JS_PROP_CONFIGURABLE) < 0)
+        goto exception;
     return func_obj;
  exception:
     JS_FreeValue(ctx, func_obj);

@@ -26,6 +26,7 @@
 
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/internal/function.h"
+#include "oom-allocator.h"
 #include "pool-padding.h"
 
 /* Inspect real chains rather than timing the lookup implementation. */
@@ -232,6 +233,79 @@ static void test_delete_global_varref_oom(JSContext *ctx)
     JS_FreeValue(ctx, global);
 }
 
+static JSValue bound_function_name_after_oom(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv)
+{
+    if (JS_HasException(ctx)) {
+        JSValue error = JS_GetException(ctx);
+        JS_FreeValue(ctx, error);
+    }
+    return JS_NewString(ctx, "f");
+}
+
+static void test_bound_function_properties_oom(void)
+{
+    size_t step;
+    int failures = 0, success = 0;
+
+    for (step = 1; step < 64; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue target, bind, bound, error, proto, peer;
+        JSValueConst this_arg = JS_UNDEFINED;
+        JSAtom length_atom, name_atom;
+        void *padding;
+
+        assert(ctx);
+        target = JS_Eval(ctx, "(function f(a, b) {})", 21,
+                         "<bound-oom>", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(target));
+        proto = JS_GetPrototype(ctx, target);
+        peer = JS_NewObjectProto(ctx, proto);
+        assert(!JS_IsException(proto) && !JS_IsException(peer));
+        bind = JS_GetPropertyStr(ctx, target, "bind");
+        assert(!JS_IsException(bind));
+        length_atom = JS_NewAtom(ctx, "length");
+        name_atom = JS_NewAtom(ctx, "name");
+        assert(length_atom != JS_ATOM_NULL && name_atom != JS_ATOM_NULL);
+        assert(JS_DefinePropertyGetSet(ctx, target, name_atom,
+                   JS_NewCFunction(ctx, bound_function_name_after_oom,
+                                   "nameAfterOOM", 0), JS_UNDEFINED,
+                   JS_PROP_CONFIGURABLE) == 1);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        bound = JS_Call(ctx, bind, target, 1, &this_arg);
+        oom_test_end(&allocator);
+        failures += allocator.failures;
+        if (JS_IsException(bound)) {
+            assert(JS_HasException(ctx));
+            error = JS_GetException(ctx);
+            JS_FreeValue(ctx, error);
+        } else {
+            assert(!JS_HasException(ctx));
+            assert(JS_GetOwnProperty(ctx, NULL, bound, length_atom) == 1);
+            assert(JS_GetOwnProperty(ctx, NULL, bound, name_atom) == 1);
+            success = !allocator.failures;
+            JS_FreeValue(ctx, bound);
+        }
+        JS_FreeValue(ctx, bind);
+        JS_FreeValue(ctx, peer);
+        JS_FreeValue(ctx, proto);
+        JS_FreeValue(ctx, target);
+        JS_FreeAtom(ctx, length_atom);
+        JS_FreeAtom(ctx, name_atom);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+        if (success)
+            break;
+    }
+    assert(success && failures >= 2);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -246,6 +320,7 @@ int main(void)
     test_integrity_proxy_cleanup(ctx);
     test_set_prototype_oom(ctx);
     test_delete_global_varref_oom(ctx);
+    test_bound_function_properties_oom();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;
