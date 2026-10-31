@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <string.h>
 #include "quickjs.h"
+#include "../src/quickjs/internal/runtime.h"
 #include "pool-padding.h"
 #include "oom-allocator.h"
 
@@ -786,6 +787,74 @@ static void test_combinator_final_resolve_oom(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_race_resolve_oom(void)
+{
+    static const char source[] =
+        "var cachedThen = function(resolve) { resolve(1); };"
+        "var value = {};"
+        "var fulfilled = Promise.resolve(value);"
+        "Object.defineProperty(value, 'then', {"
+        "  get() { armAssimilationOOM(); return cachedThen; } });"
+        "Promise.race([fulfilled])";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, promise, reason;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "armAssimilationOOM",
+               JS_NewCFunction(ctx, arm_assimilation_oom, "armAssimilationOOM", 0)) > 0);
+    assimilation_padding = NULL;
+    assimilation_armed = 0;
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<race-resolve-oom>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise) && JS_IsJobPending(rt));
+    assert(JS_ExecutePendingJob(rt, NULL) == 1);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(assimilation_armed);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason) || JS_IsNull(reason));
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, assimilation_padding);
+    assimilation_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static int interrupt_race_reaction(JSRuntime *rt, void *opaque)
+{
+    return 1;
+}
+
+static void test_race_interrupt_does_not_settle(void)
+{
+    static const char source[] = "Promise.race([Promise.resolve(1)])";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, error;
+
+    assert(rt && ctx);
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<race-interrupt>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(promise) && JS_IsJobPending(rt));
+    JS_SetInterruptHandler(rt, interrupt_race_reaction, NULL);
+    ctx->interrupt_counter = 1;
+    JS_ExecutePendingJob(rt, NULL);
+    JS_SetInterruptHandler(rt, NULL, NULL);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+    if (JS_HasException(ctx)) {
+        error = JS_GetException(ctx);
+        JS_FreeValue(ctx, error);
+        JS_SetUncatchableException(ctx, 0);
+    }
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_custom_combinator_resolve_throw(void)
 {
     static const char source[] =
@@ -920,6 +989,8 @@ int main(void)
     test_thenable_job_resolver_oom();
     test_combinator_reaction_oom();
     test_combinator_final_resolve_oom();
+    test_race_resolve_oom();
+    test_race_interrupt_does_not_settle();
     test_custom_combinator_resolve_throw();
     test_async_function_return_oom();
     test_async_generator_result_oom();
