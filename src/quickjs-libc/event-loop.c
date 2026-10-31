@@ -53,6 +53,24 @@ static JSThreadState *signal_owner[64];
 static pthread_mutex_t signal_owner_mutex = PTHREAD_MUTEX_INITIALIZER;
 _Atomic(JSOSPollFunc *) os_poll_func;
 
+int js_os_sigint_owned_by_other(JSThreadState *ts)
+{
+    int foreign;
+
+    pthread_mutex_lock(&signal_owner_mutex);
+    foreign = signal_owner[SIGINT] && signal_owner[SIGINT] != ts;
+    pthread_mutex_unlock(&signal_owner_mutex);
+    return foreign;
+}
+
+void js_os_clear_eval_sigint(JSThreadState *ts)
+{
+    pthread_mutex_lock(&signal_owner_mutex);
+    if (!signal_owner[SIGINT] || signal_owner[SIGINT] == ts)
+        os_pending_signals[SIGINT] = 0;
+    pthread_mutex_unlock(&signal_owner_mutex);
+}
+
 static JSOSRWHandler *find_rh(JSThreadState *ts, int fd)
 {
     JSOSRWHandler *rh;

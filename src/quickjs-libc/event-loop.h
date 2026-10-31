@@ -55,6 +55,8 @@ typedef struct {
 } JSOSTimer;
 
 extern volatile sig_atomic_t os_pending_signals[64];
+int js_os_sigint_owned_by_other(JSThreadState *ts);
+void js_os_clear_eval_sigint(JSThreadState *ts);
 /* -3: callback exception, -2: poll error, -1: idle, 0: alive, 1: progress. */
 typedef int JSOSPollFunc(JSContext *ctx, int timeout_ms);
 extern _Atomic(JSOSPollFunc *) os_poll_func;

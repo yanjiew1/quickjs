@@ -604,7 +604,8 @@ static int interrupt_handler(JSRuntime *rt, void *opaque)
 {
     JSThreadState *ts = opaque;
 
-    if (os_pending_signals[SIGINT]) {
+    /* A handler registered by another runtime owns its pending signal. */
+    if (os_pending_signals[SIGINT] && !js_os_sigint_owned_by_other(ts)) {
         ts->eval_script_sigint = 1;
         return 1;
     }
@@ -674,7 +675,7 @@ static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
                                ts->prev_interrupt_opaque);
         ts->prev_interrupt_handler = NULL;
         ts->prev_interrupt_opaque = NULL;
-        os_pending_signals[SIGINT] = 0;
+        js_os_clear_eval_sigint(ts);
         /* convert the uncatchable "interrupted" error into a normal error
            so that it can be caught by the REPL */
         if (JS_IsException(ret) && ts->eval_script_sigint)
