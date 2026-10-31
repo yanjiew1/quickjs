@@ -151,6 +151,7 @@ tests/test_realm.js
 tests/test_resource_realms.js
 tests/test_rw_handler.js
 tests/test_std.js
+tests/test_std_large_file.js
 tests/test_stripped_functions.js
 tests/test_unicode_property_grammar.js
 tests/test_var_ref.js
