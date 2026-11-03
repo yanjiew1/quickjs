@@ -28,20 +28,26 @@
 #include "base.h"
 #include "object.h"
 
-/* Native function names use LP64 padding or a native-only ILP32 tail. */
+/* C functions keep the name in a tail; ILP32 also stores magic there so
+   general objects do not grow to accommodate the full public int value. */
 static inline JSAtom *js_c_function_initial_name(JSObject *p)
 {
-#ifdef JS_PTR64
-    return &p->u.cfunc.initial_name;
-#else
     return (JSAtom *)(p + 1);
+}
+
+static inline int *js_c_function_magic(JSObject *p)
+{
+#ifdef JS_PTR64
+    return &p->u.cfunc.magic;
+#else
+    return (int *)(js_c_function_initial_name(p) + 1);
 #endif
 }
 
 typedef struct JSCFunctionDataRecord {
     JSCFunctionData *func;
     uint8_t length;
-    uint16_t magic;
+    int magic;
     int data_len;
     JSValue data[0];
 } JSCFunctionDataRecord;

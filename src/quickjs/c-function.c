@@ -92,7 +92,7 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
     p->u.cfunc.c_function.generic = func;
     p->u.cfunc.length = padded_length;
     p->u.cfunc.cproto = cproto;
-    p->u.cfunc.magic = magic;
+    *js_c_function_magic(p) = magic;
     p->is_constructor = (cproto == JS_CFUNC_constructor ||
                          cproto == JS_CFUNC_constructor_magic ||
                          cproto == JS_CFUNC_constructor_or_func ||
@@ -200,7 +200,7 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
         /* fall thru */
     case JS_CFUNC_generic_magic:
         ret_val = func.generic_magic(ctx, this_obj, argc, arg_buf,
-                                     p->u.cfunc.magic);
+                                     *js_c_function_magic(p));
         break;
     case JS_CFUNC_getter:
         ret_val = func.getter(ctx, this_obj);
@@ -209,10 +209,10 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
         ret_val = func.setter(ctx, this_obj, arg_buf[0]);
         break;
     case JS_CFUNC_getter_magic:
-        ret_val = func.getter_magic(ctx, this_obj, p->u.cfunc.magic);
+        ret_val = func.getter_magic(ctx, this_obj, *js_c_function_magic(p));
         break;
     case JS_CFUNC_setter_magic:
-        ret_val = func.setter_magic(ctx, this_obj, arg_buf[0], p->u.cfunc.magic);
+        ret_val = func.setter_magic(ctx, this_obj, arg_buf[0], *js_c_function_magic(p));
         break;
     case JS_CFUNC_f_f:
         {
@@ -244,7 +244,7 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
         {
             int done;
             ret_val = func.iterator_next(ctx, this_obj, argc, arg_buf,
-                                         &done, p->u.cfunc.magic);
+                                         &done, *js_c_function_magic(p));
             if (!JS_IsException(ret_val) && done != 2) {
                 ret_val = js_create_iterator_result(ctx, ret_val, done);
             }
@@ -393,7 +393,7 @@ BOOL JS_IsCFunction(JSValueConst val, JSCFunction *func, int magic)
         return FALSE;
     p = JS_VALUE_GET_OBJ(val);
     if (p->class_id == JS_CLASS_C_FUNCTION)
-        return (p->u.cfunc.c_function.generic == func && p->u.cfunc.magic == magic);
+        return (p->u.cfunc.c_function.generic == func && *js_c_function_magic(p) == magic);
     else
         return FALSE;
 }

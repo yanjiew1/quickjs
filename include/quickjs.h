@@ -1256,11 +1256,12 @@ typedef union JSCFunctionType {
 } JSCFunctionType;
 
 /* length must be in [0, 255]. At least length argv entries are readable;
-   argc remains the actual argument count. Invalid length or cproto throws
-   RangeError, and a NULL callback throws TypeError. */
+   argc remains the actual argument count. The full int magic value is retained.
+   Invalid length or cproto throws RangeError, and a NULL callback throws TypeError. */
 JS_EXTERN JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func,
                                    const char *name,
                                    int length, JSCFunctionEnum cproto, int magic);
+/* The full int magic value is passed to the data callback unchanged. */
 JS_EXTERN JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
                                       int length, int magic, int data_len,
                                       JSValueConst *data);

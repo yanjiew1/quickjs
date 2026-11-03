@@ -41,6 +41,13 @@ static JSValue last_capture(JSContext *ctx, JSValueConst this_val,
     return JS_DupValue(ctx, data[magic]);
 }
 
+static JSValue return_magic(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv, int magic,
+                            JSValue *data)
+{
+    return JS_NewInt32(ctx, magic);
+}
+
 static void test_large_capture_set(JSContext *ctx, int cycle)
 {
     JSValue resource, function, result;
@@ -116,6 +123,31 @@ static JSValue padded_setter_magic(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
+static JSValue return_c_function_magic(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int magic)
+{
+    return JS_NewInt32(ctx, magic);
+}
+
+static JSValue padded_iterator_next(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv,
+                                    int *done, int magic)
+{
+    assert(argc == 0 && magic == INT_MAX);
+    assert(JS_IsUndefined(argv[0]) && JS_IsUndefined(argv[1]));
+    *done = 0;
+    return JS_NewInt32(ctx, 42);
+}
+
+static JSValue one_iterator_next(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv,
+                                 int *done, int magic)
+{
+    assert(argc == 0 && magic == INT_MIN && JS_IsUndefined(argv[0]));
+    *done = 0;
+    return JS_NewInt32(ctx, 24);
+}
+
 static void test_c_function_lengths(JSContext *ctx)
 {
     JSCFunctionType callback;
@@ -129,6 +161,22 @@ static void test_c_function_lengths(JSContext *ctx)
                                       (JSCFunctionEnum)255, 0), "RangeError");
     check_error(ctx, JS_NewCFunction2(ctx, NULL, "f", 0,
                                       JS_CFUNC_generic, 0), "TypeError");
+    {
+        const int values[] = { INT_MIN, INT16_MIN, -1, INT16_MAX, 65535, INT_MAX };
+        size_t i;
+
+        callback.generic_magic = return_c_function_magic;
+        for (i = 0; i < sizeof(values) / sizeof(*values); i++) {
+            int32_t actual;
+            function = JS_NewCFunction2(ctx, callback.generic, "f", 0,
+                                        JS_CFUNC_generic_magic, values[i]);
+            assert(!JS_IsException(function));
+            result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+            assert(!JS_ToInt32(ctx, &actual, result) && actual == values[i]);
+            JS_FreeValue(ctx, result);
+            JS_FreeValue(ctx, function);
+        }
+    }
     function = JS_NewCFunction2(ctx, padded_generic, "f", 255,
                                 JS_CFUNC_generic, 0);
     assert(!JS_IsException(function));
@@ -186,6 +234,30 @@ static void test_c_function_lengths(JSContext *ctx)
     assert(JS_IsNumber(result));
     JS_FreeValue(ctx, result);
     JS_FreeValue(ctx, function);
+
+    callback.iterator_next = padded_iterator_next;
+    function = JS_NewCFunction2(ctx, callback.generic, "next", 2,
+                                JS_CFUNC_iterator_next, INT_MAX);
+    assert(!JS_IsException(function));
+    {
+        JS_BOOL done;
+        result = JS_IteratorNext(ctx, JS_UNDEFINED, function, &done);
+        assert(!done && JS_IsNumber(result) && JS_VALUE_GET_INT(result) == 42);
+    }
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    callback.iterator_next = one_iterator_next;
+    function = JS_NewCFunction2(ctx, callback.generic, "next", 1,
+                                JS_CFUNC_iterator_next, INT_MIN);
+    assert(!JS_IsException(function));
+    {
+        JS_BOOL done;
+        result = JS_IteratorNext(ctx, JS_UNDEFINED, function, &done);
+        assert(!done && JS_IsNumber(result) && JS_VALUE_GET_INT(result) == 24);
+    }
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
 }
 
 static void test_invalid_metadata(JSContext *ctx)
@@ -204,6 +276,26 @@ static void test_invalid_metadata(JSContext *ctx)
     if (SIZE_MAX / sizeof(JSValue) < INT_MAX)
         check_error(ctx, JS_NewCFunctionData(ctx, last_capture, 0, 0, INT_MAX,
                                             (JSValueConst *)&data), "RangeError");
+}
+
+static void test_full_data_magic(JSContext *ctx)
+{
+    const int values[] = { INT_MIN, -1, 65535, INT_MAX };
+    size_t i;
+
+    for (i = 0; i < sizeof(values) / sizeof(*values); i++) {
+        JSValue function = i & 1 ?
+            JS_NewCFunctionData2(ctx, return_magic, "f", 0, values[i], 0, NULL) :
+            JS_NewCFunctionData(ctx, return_magic, 0, values[i], 0, NULL);
+        JSValue result;
+        int32_t actual;
+
+        assert(!JS_IsException(function));
+        result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+        assert(!JS_ToInt32(ctx, &actual, result) && actual == values[i]);
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, function);
+    }
 }
 
 static JSValue padded_capture(JSContext *ctx, JSValueConst this_val,
@@ -357,6 +449,7 @@ int main(void)
     test_large_capture_set(ctx, 0);
     test_large_capture_set(ctx, 1);
     test_invalid_metadata(ctx);
+    test_full_data_magic(ctx);
     test_c_function_lengths(ctx);
     test_named_callback(ctx);
     JS_FreeContext(ctx);

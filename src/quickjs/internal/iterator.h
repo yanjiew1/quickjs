@@ -26,6 +26,7 @@
 #define QUICKJS_ITERATOR_H
 
 #include "object.h"
+#include "c-function.h"
 
 typedef enum JSIteratorKindEnum {
     JS_ITERATOR_KIND_KEY,
@@ -46,7 +47,8 @@ static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
     if (JS_IsObject(method)) {
         JSObject *p = JS_VALUE_GET_OBJ(method);
         if (p->class_id == JS_CLASS_C_FUNCTION &&
-            p->u.cfunc.cproto == JS_CFUNC_iterator_next) {
+            p->u.cfunc.cproto == JS_CFUNC_iterator_next &&
+            p->u.cfunc.length <= 1) {
             JSCFunctionType func;
             JSValueConst args[1];
 
@@ -57,7 +59,7 @@ static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
             }
             func = p->u.cfunc.c_function;
             return func.iterator_next(p->u.cfunc.realm, enum_obj, argc, argv,
-                                      pdone, p->u.cfunc.magic);
+                                      pdone, *js_c_function_magic(p));
         }
     }
     obj = JS_Call(ctx, method, enum_obj, argc, argv);
