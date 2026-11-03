@@ -31,7 +31,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include <windows.h>
+#else
 #include <sys/wait.h>
 #endif
 
@@ -186,11 +188,36 @@ static void get_c_name(char *buf, size_t buf_size, const char *file)
 
 static BOOL same_file(const char *left, const char *right)
 {
+#if defined(_WIN32)
+    HANDLE left_handle, right_handle;
+    BY_HANDLE_FILE_INFORMATION left_info, right_info;
+    BOOL same = FALSE;
+
+    left_handle = CreateFileA(left, FILE_READ_ATTRIBUTES,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (left_handle == INVALID_HANDLE_VALUE)
+        return FALSE;
+    right_handle = CreateFileA(right, FILE_READ_ATTRIBUTES,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (right_handle != INVALID_HANDLE_VALUE) {
+        if (GetFileInformationByHandle(left_handle, &left_info) &&
+            GetFileInformationByHandle(right_handle, &right_info))
+            same = left_info.dwVolumeSerialNumber == right_info.dwVolumeSerialNumber &&
+                   left_info.nFileIndexHigh == right_info.nFileIndexHigh &&
+                   left_info.nFileIndexLow == right_info.nFileIndexLow;
+        CloseHandle(right_handle);
+    }
+    CloseHandle(left_handle);
+    return same;
+#else
     struct stat left_stat, right_stat;
 
     return stat(left, &left_stat) == 0 && stat(right, &right_stat) == 0 &&
            left_stat.st_dev == right_stat.st_dev &&
            left_stat.st_ino == right_stat.st_ino;
+#endif
 }
 
 static BOOL output_is_input(const char *output, int argc, char **argv,
@@ -1003,7 +1030,6 @@ int main(int argc, char **argv)
         if (rt)
             JS_FreeRuntime(rt);
         fclose(fo);
-        unlink(cfilename);
         fprintf(stderr, "qjsc: out of memory\n");
         return 1;
     }

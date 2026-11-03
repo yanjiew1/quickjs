@@ -272,6 +272,22 @@ test(
   timeout: 120,
 )
 
+startup_oom_test = executable(
+  'test_qjsc_startup_oom',
+  'test_qjsc_startup_oom.c',
+  c_args: target_qjsc_args,
+  include_directories: inc,
+  dependencies: engine_dep,
+  override_options: public_test_overrides,
+)
+test(
+  'test_qjsc_startup_oom',
+  startup_oom_test,
+  suite: ['repo', 'native', 'unit'],
+  workdir: test_workdir,
+  timeout: 120,
+)
+
 trace_reader = static_library(
   'quickjs-tracing-reader',
   '../src/quickjs/serialization/reader.c',
