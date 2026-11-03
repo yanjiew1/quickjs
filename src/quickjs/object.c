@@ -813,10 +813,12 @@ JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
     int i;
     size_t size = sizeof(JSObject), gc_size = SIZE_MAX;
 
-#ifndef JS_PTR64
-    if (class_id == JS_CLASS_C_FUNCTION)
+    if (class_id == JS_CLASS_C_FUNCTION) {
         size += sizeof(JSAtom);
+#ifndef JS_PTR64
+        size += sizeof(int);
 #endif
+    }
     if ((size_t)sh->prop_size <= (SIZE_MAX - size) / sizeof(JSProperty))
         gc_size = size + sizeof(JSProperty) * sh->prop_size;
     /* Property storage is allocated immediately after the object header.

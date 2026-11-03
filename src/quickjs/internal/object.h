@@ -138,9 +138,8 @@ struct JSObject {
             JSCFunctionType c_function;
             uint8_t length;
             uint8_t cproto;
-            int16_t magic;
 #ifdef JS_PTR64
-            JSAtom initial_name;
+            int magic;
 #endif
         } cfunc;
         /* array part for fast arrays and typed arrays */
