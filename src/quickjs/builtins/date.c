@@ -32,6 +32,7 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
+#include "environment.h"
 
 /* Date */
 
@@ -64,19 +65,24 @@ static int getTimezoneOffset(int64_t time)
         }
     }
     ti = time;
+    js_host_environment_lock();
 #if defined(_WIN32)
     {
         struct tm *tm;
         time_t gm_ti, loc_ti;
 
         tm = gmtime(&ti);
-        if (!tm)
+        if (!tm) {
+            js_host_environment_unlock();
             return 0;
+        }
         gm_ti = mktime(tm);
 
         tm = localtime(&ti);
-        if (!tm)
+        if (!tm) {
+            js_host_environment_unlock();
             return 0;
+        }
         loc_ti = mktime(tm);
 
         res = (gm_ti - loc_ti) / 60;
@@ -84,11 +90,14 @@ static int getTimezoneOffset(int64_t time)
 #else
     {
         struct tm tm;
-        if (!localtime_r(&ti, &tm))
+        if (!localtime_r(&ti, &tm)) {
+            js_host_environment_unlock();
             return 0;
+        }
         res = -tm.tm_gmtoff / 60;
     }
 #endif
+    js_host_environment_unlock();
     return res;
 }
 
