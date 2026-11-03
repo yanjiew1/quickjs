@@ -21,6 +21,7 @@
  */
 #include "system-zone.h"
 #include "timezone.h"
+#include "environment.h"
 #include "../calendar/iso.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -162,9 +163,14 @@ static int host_offset(int64_t *result)
     struct tm local, utc;
     QJSISODate local_date, utc_date;
     int64_t local_days, utc_days;
+    int valid;
 
+    js_host_environment_lock();
     tzset();
-    if (now == (time_t)-1 || !localtime_r(&now, &local) || !gmtime_r(&now, &utc))
+    valid = now != (time_t)-1 && localtime_r(&now, &local) &&
+            gmtime_r(&now, &utc);
+    js_host_environment_unlock();
+    if (!valid)
         return QJS_TZ_DATA;
     if ((int64_t)local.tm_year + 1900 > INT32_MAX ||
         (int64_t)utc.tm_year + 1900 > INT32_MAX)
@@ -195,7 +201,9 @@ int qjs_timezone_system_default(char *result, size_t capacity,
         error = qjs_timezone_parse_environment(selected, sizeof(selected), name);
 #endif
 #else
+    js_host_environment_lock();
     error = qjs_timezone_parse_environment(selected, sizeof(selected), getenv("TZ"));
+    js_host_environment_unlock();
 #endif
     if (!error)
         return copy_identifier(result, capacity, selected);
