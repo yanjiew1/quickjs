@@ -90,6 +90,13 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
 
     # An output alias must not truncate a source before qjsc reads it.
     source.write_text('print(42);\n')
+    existing = scratch / 'existing-output.c'
+    existing.write_text('old output\n')
+    replaced = subprocess.run([qjsc, '-c', '-o', str(existing), str(source)],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=30)
+    assert replaced.returncode == 0, replaced.stderr
+    assert 'File generated automatically' in existing.read_text()
     for output in (source, scratch / 'source-link.js',
                    scratch / 'source-hardlink.js'):
         if output.name == 'source-link.js' and os.name == 'nt':
