@@ -84,7 +84,8 @@ static int getTimezoneOffset(int64_t time)
 #else
     {
         struct tm tm;
-        localtime_r(&ti, &tm);
+        if (!localtime_r(&ti, &tm))
+            return 0;
         res = -tm.tm_gmtoff / 60;
     }
 #endif
