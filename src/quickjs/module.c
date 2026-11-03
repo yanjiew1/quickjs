@@ -1016,9 +1016,11 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
             } else {
                 if (res_me->u.local.var_ref) {
                     en->u.var_ref = res_me->u.local.var_ref;
-                } else {
+                } else if (JS_IsObject(res_m->func_obj)) {
                     JSObject *p1 = JS_VALUE_GET_OBJ(res_m->func_obj);
                     en->u.var_ref = p1->u.func.var_refs[res_me->u.local.var_idx];
+                } else {
+                    en->u.var_ref = NULL;
                 }
                 if (en->u.var_ref == NULL)
                     en->export_type = EXPORTED_NAME_DELAYED;
@@ -1079,6 +1081,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
 
 JSValue JS_GetModuleNamespace(JSContext *ctx, JSModuleDef *m)
 {
+    if (!m)
+        return JS_ThrowTypeError(ctx, "invalid module");
+    if (m->status == JS_MODULE_STATUS_UNLINKED)
+        return JS_ThrowTypeError(ctx, "module is not linked");
     if (JS_IsUndefined(m->module_ns)) {
         JSValue val;
         val = js_build_module_ns(ctx, m);

@@ -4718,6 +4718,35 @@ static int retry_native_init(JSContext *ctx, JSModuleDef *m)
     return 0;
 }
 
+static void test_unlinked_module_namespace(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSModuleDef *module;
+    JSValue result, error, name;
+    const char *text;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    module = JS_NewCModule(ctx, "unlinked", retry_native_init);
+    assert(module && JS_AddModuleExport(ctx, module, "value") == 0);
+    result = JS_GetModuleNamespace(ctx, NULL);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    result = JS_GetModuleNamespace(ctx, module);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, error, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "TypeError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, error);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static JSModuleDef *retry_cycle_loader(JSContext *ctx, const char *name,
                                        void *opaque)
 {
@@ -5097,6 +5126,7 @@ int main(int argc, char **argv)
         { "fast-array-growth-oom", test_fast_array_growth_oom },
         { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
+        { "unlinked-module-namespace", test_unlinked_module_namespace },
         { "async-module-ancestor-oom", test_async_module_ancestor_oom },
         { "eval-compile-oom", test_eval_compile_oom },
         { "module-namespace-oom", test_module_namespace_oom },
