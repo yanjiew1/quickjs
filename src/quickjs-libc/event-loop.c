@@ -218,8 +218,12 @@ static void os_signal_handler(int sig_num)
         if (signal_wake_write_plus_one[sig_num]) {
             int saved_errno = errno;
             char byte = 0;
-            ssize_t written = write(signal_wake_write_plus_one[sig_num] - 1,
-                                    &byte, 1);
+            ssize_t written;
+
+            do {
+                written = write(signal_wake_write_plus_one[sig_num] - 1,
+                                &byte, 1);
+            } while (written < 0 && errno == EINTR);
             /* A full nonblocking pipe is already readable by the owner. */
             (void)written;
             errno = saved_errno;
