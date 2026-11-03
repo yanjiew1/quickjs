@@ -20,9 +20,52 @@
  * THE SOFTWARE.
  */
 #include "../src/timezone/identifier.h"
+#include "../src/timezone/system-zone.h"
+#include "environment.h"
 #include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <pthread.h>
+
+static void *change_timezone(void *opaque)
+{
+    int i;
+    (void)opaque;
+    for (i = 0; i < 1000; i++) {
+        js_host_environment_lock();
+        assert(!setenv("TZ", i & 1 ? "UTC" : "UTC0", 1));
+        js_host_environment_unlock();
+    }
+    return NULL;
+}
+
+static void test_concurrent_system_timezone(void)
+{
+    char *old = js_host_getenv_copy("TZ");
+    char zone[64];
+    pthread_t thread;
+    int i;
+
+    js_host_environment_lock();
+    assert(!setenv("TZ", "UTC", 1));
+    js_host_environment_unlock();
+    assert(!pthread_create(&thread, NULL, change_timezone, NULL));
+    for (i = 0; i < 1000; i++) {
+        assert(!qjs_timezone_system_default(zone, sizeof(zone), 0));
+        assert(!strcmp(zone, "UTC") || !strcmp(zone, "+00:00"));
+    }
+    assert(!pthread_join(thread, NULL));
+    js_host_environment_lock();
+    if (old)
+        assert(!setenv("TZ", old, 1));
+    else
+        assert(!unsetenv("TZ"));
+    js_host_environment_unlock();
+    free(old);
+}
+#endif
 
 int main(void)
 {
@@ -38,6 +81,9 @@ int main(void)
     int32_t offset;
     int64_t result;
     size_t i;
+#ifndef _WIN32
+    test_concurrent_system_timezone();
+#endif
     for (i = 0; i < sizeof(valid) / sizeof(*valid); i++) {
         assert(!qjs_timezone_parse_identifier(&zone, valid[i].input, strlen(valid[i].input)));
         assert(zone.is_offset && !zone.named && !strcmp(zone.identifier, valid[i].canonical));
