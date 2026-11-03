@@ -701,12 +701,16 @@ Add a read handler to the file handle @code{fd}. @code{func} is called
 each time there is data pending for @code{fd}. A single read handler
 per file handle is supported. Use @code{func = null} to remove the
 handler.
+On Windows, only a read handler for standard input (@code{fd = 0}) is
+supported; registering another descriptor throws @code{TypeError}.
 
 @item setWriteHandler(fd, func)
 Add a write handler to the file handle @code{fd}. @code{func} is
 called each time data can be written to @code{fd}. A single write
 handler per file handle is supported. Use @code{func = null} to remove
 the handler.
+Windows does not support write handlers; registration throws
+@code{TypeError}.
 
 @item signal(signal, func)
 Call the function @code{func} when the signal @code{signal}
