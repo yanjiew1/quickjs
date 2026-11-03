@@ -37,6 +37,7 @@
 #include <time.h>
 #include <signal.h>
 #include <limits.h>
+#include <stddef.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #if defined(_WIN32)
@@ -49,7 +50,7 @@
 #include <sys/wait.h>
 #include <poll.h>
 #include <sys/resource.h>
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 #include <sys/syscall.h>
 #endif
 
@@ -928,6 +929,100 @@ static int my_execvpe(const char *filename, char **argv, char **envp,
     return -1;
 }
 
+#if ((defined(__linux__) && defined(SYS_getdents64)) || defined(__APPLE__)) && \
+    (!defined(HAVE_CLOSEFROM) || defined(TEST_CLOSE_FDS))
+/* Used after fork: avoid allocation and libc directory-stream locks. */
+static int js_close_fds_proc(void)
+{
+#if defined(__linux__)
+    struct fd_dirent {
+        uint64_t ino;
+        int64_t off;
+        unsigned short reclen;
+        unsigned char type;
+        char name[];
+    };
+#endif
+    union {
+        uint64_t align;
+        char bytes[4096];
+    } buffer;
+    int dirfd, result = -1;
+    long n;
+
+    do {
+#if defined(__linux__)
+        dirfd = open("/proc/self/fd", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+#else
+        dirfd = open("/dev/fd", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+#endif
+    } while (dirfd < 0 && errno == EINTR);
+    if (dirfd < 0)
+        return -1;
+    for (;;) {
+        size_t pos;
+        /* Raw syscalls are not intercepted by MemorySanitizer. */
+        memset(buffer.bytes, 0, sizeof(buffer.bytes));
+        do {
+#if defined(__linux__)
+            n = syscall(SYS_getdents64, dirfd, buffer.bytes, sizeof(buffer.bytes));
+#else
+            off_t position;
+            /* Darwin's getdirentries64 syscall has number 344. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            n = syscall(344, dirfd, buffer.bytes, sizeof(buffer.bytes), &position);
+#pragma clang diagnostic pop
+#endif
+        } while (n < 0 && errno == EINTR);
+        if (n < 0)
+            break;
+        if (n == 0) {
+            result = 0;
+            break;
+        }
+        for (pos = 0; pos < (size_t)n;) {
+#if defined(__linux__)
+            size_t name_offset = offsetof(struct fd_dirent, name);
+            size_t reclen_offset = offsetof(struct fd_dirent, reclen);
+#else
+            size_t name_offset = offsetof(struct dirent, d_name);
+            size_t reclen_offset = offsetof(struct dirent, d_reclen);
+#endif
+            unsigned short record_len;
+            const char *entry_name;
+            const char *p, *end;
+            int fd = 0;
+
+            if ((size_t)n - pos <= name_offset)
+                goto done;
+            memcpy(&record_len, buffer.bytes + pos + reclen_offset,
+                   sizeof(record_len));
+            entry_name = buffer.bytes + pos + name_offset;
+            if (record_len <= name_offset || record_len > (size_t)n - pos)
+                goto done;
+            p = entry_name;
+            end = buffer.bytes + pos + record_len;
+            if (*p >= '0' && *p <= '9') {
+                while (p < end && *p >= '0' && *p <= '9') {
+                    if (fd > (INT_MAX - (*p - '0')) / 10)
+                        goto done;
+                    fd = fd * 10 + (*p++ - '0');
+                }
+                if (p == end || *p != '\0')
+                    goto done;
+                if (fd >= 3 && fd != dirfd && close(fd) < 0 && errno != EBADF)
+                    goto done;
+            }
+            pos += record_len;
+        }
+    }
+done:
+    close(dirfd);
+    return result;
+}
+#endif
+
 /* exec(args[, options]) -> exitcode */
 static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv)
@@ -944,7 +1039,7 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     static const char *std_name[3] = { "stdin", "stdout", "stderr" };
     int std_fds[3];
     uint32_t uid = -1, gid = -1;
-#if !defined(HAVE_CLOSEFROM)
+#if !defined(HAVE_CLOSEFROM) && !(defined(__linux__) && defined(SYS_getdents64)) && !defined(__APPLE__)
     long fd_limit;
     struct rlimit nofile_limit;
 #endif
@@ -1069,7 +1164,7 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         }
     }
 
-#if !defined(HAVE_CLOSEFROM)
+#if !defined(HAVE_CLOSEFROM) && !(defined(__linux__) && defined(SYS_getdents64)) && !defined(__APPLE__)
     fd_limit = sysconf(_SC_OPEN_MAX);
     if (fd_limit < 0) {
         if (getrlimit(RLIMIT_NOFILE, &nofile_limit) < 0) {
@@ -1132,9 +1227,14 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
             if (syscall(SYS_close_range, 3U, UINT_MAX, 0) == 0)
                 goto descriptors_closed;
 #endif
+#if (defined(__linux__) && defined(SYS_getdents64)) || defined(__APPLE__)
+            if (js_close_fds_proc() < 0)
+                _exit(127);
+#else
             long fd;
             for (fd = 3; fd < fd_limit; fd++)
                 close((int)fd);
+#endif
         }
 #if defined(__linux__) && defined(SYS_close_range)
 descriptors_closed:
