@@ -19,6 +19,7 @@
  * THE SOFTWARE.
  */
 #include "system.h"
+#include "environment.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -72,11 +73,16 @@ QJSIntlStatus qjs_intl_locale_system_default(char *out, size_t capacity)
     size_t i;
     if (!out || !capacity)
         return QJS_INTL_INVALID_ARGUMENT;
+    js_host_environment_lock();
     for (i = 0; i < sizeof(variables) / sizeof(*variables); i++) {
         const char *value = getenv(variables[i]);
-        if (value && *value)
-            return qjs_intl_locale_parse_environment(out, capacity, value);
+        if (value && *value) {
+            QJSIntlStatus status = qjs_intl_locale_parse_environment(out, capacity, value);
+            js_host_environment_unlock();
+            return status;
+        }
     }
+    js_host_environment_unlock();
     return QJS_INTL_UNSUPPORTED;
 #endif
 }
