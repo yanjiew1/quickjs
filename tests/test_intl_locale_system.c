@@ -23,9 +23,25 @@
 
 /* Host discovery does not mutate the libc locale or claim service support. */
 #include "../src/intl/locale/system.h"
+#include "environment.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <pthread.h>
+
+static void *change_locale(void *opaque)
+{
+    int i;
+    (void)opaque;
+    for (i = 0; i < 1000; i++) {
+        js_host_environment_lock();
+        assert(!setenv("LC_ALL", i & 1 ? "en_US.UTF-8" : "fr_FR.UTF-8", 1));
+        js_host_environment_unlock();
+    }
+    return NULL;
+}
+#endif
 
 static void parsed(const char *source, const char *expected)
 {
@@ -80,6 +96,16 @@ int main(void)
         assert(!setenv("LC_ALL", "C", 1));
         assert(qjs_intl_locale_system_default(buffer, sizeof(buffer)) == QJS_INTL_OK);
         assert(!strcmp(buffer, "en"));
+        {
+            pthread_t worker;
+            assert(!setenv("LC_ALL", "en_US.UTF-8", 1));
+            assert(!pthread_create(&worker, NULL, change_locale, NULL));
+            for (i = 0; i < 1000; i++) {
+                assert(qjs_intl_locale_system_default(buffer, sizeof(buffer)) == QJS_INTL_OK);
+                assert(!strcmp(buffer, "en-US") || !strcmp(buffer, "fr-FR"));
+            }
+            assert(!pthread_join(worker, NULL));
+        }
         for (i = 0; i < 3; i++) {
             if (saved[i]) {
                 assert(!setenv(names[i], saved[i], 1));
