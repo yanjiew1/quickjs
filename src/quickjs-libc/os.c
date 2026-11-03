@@ -49,7 +49,6 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <poll.h>
-#include <sys/resource.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <sys/syscall.h>
 #endif
@@ -1039,10 +1038,6 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     static const char *std_name[3] = { "stdin", "stdout", "stderr" };
     int std_fds[3];
     uint32_t uid = -1, gid = -1;
-#if !defined(HAVE_CLOSEFROM) && !(defined(__linux__) && defined(SYS_getdents64)) && !defined(__APPLE__)
-    long fd_limit;
-    struct rlimit nofile_limit;
-#endif
 
     val = JS_GetPropertyStr(ctx, args, "length");
     if (JS_IsException(val))
@@ -1164,17 +1159,6 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         }
     }
 
-#if !defined(HAVE_CLOSEFROM) && !(defined(__linux__) && defined(SYS_getdents64)) && !defined(__APPLE__)
-    fd_limit = sysconf(_SC_OPEN_MAX);
-    if (fd_limit < 0) {
-        if (getrlimit(RLIMIT_NOFILE, &nofile_limit) < 0) {
-            JS_ThrowInternalError(ctx, "cannot read descriptor limit");
-            goto exception;
-        }
-        fd_limit = nofile_limit.rlim_cur < INT_MAX ?
-                   (long)nofile_limit.rlim_cur : INT_MAX;
-    }
-#endif
     pid = fork();
     if (pid < 0) {
         JS_ThrowTypeError(ctx, "fork error");
@@ -1221,8 +1205,7 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
         closefrom(3);
 #else
         {
-            /* Linux closes the entire range in one syscall. Older kernels
-               and other hosts must cover the full descriptor limit. */
+            /* Linux closes the entire range in one syscall. */
 #if defined(__linux__) && defined(SYS_close_range)
             if (syscall(SYS_close_range, 3U, UINT_MAX, 0) == 0)
                 goto descriptors_closed;
@@ -1231,9 +1214,9 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
             if (js_close_fds_proc() < 0)
                 _exit(127);
 #else
-            long fd;
-            for (fd = 3; fd < fd_limit; fd++)
-                close((int)fd);
+            /* The current limit does not bound descriptors opened before a
+               limit reduction. Do not execute with unknown inherited fds. */
+            _exit(127);
 #endif
         }
 #if defined(__linux__) && defined(SYS_close_range)
