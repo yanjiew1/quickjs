@@ -69,6 +69,30 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
 
+    if os.name != 'nt' and Path('/tmp').is_dir():
+        # Seed the old PID-derived name in the child before it execs qjsc.
+        # qjsc must leave this unrelated file alone.
+        def seed_old_temp():
+            path = '/tmp/out%d.c' % os.getpid()
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                os.write(fd, b'preserve')
+            finally:
+                os.close(fd)
+
+        source.write_text('print(42);\n')
+        proc = subprocess.Popen([qjsc, '-o', str(executable), str(source)],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                preexec_fn=seed_old_temp)
+        old_temp = Path('/tmp/out%d.c' % proc.pid)
+        try:
+            stdout, stderr = proc.communicate(timeout=30)
+            assert proc.returncode == 0, (stdout, stderr)
+            assert old_temp.read_bytes() == b'preserve'
+        finally:
+            if old_temp.exists():
+                old_temp.unlink()
+
     for invalid_size in ['inf', '-1', 'G', '1Gjunk', '18446744073709551616']:
         rejected = subprocess.run([qjsc, '-S', invalid_size, '-c',
                                    '-o', str(scratch / 'invalid-size.c'), str(source)],
