@@ -72,7 +72,6 @@ static namelist_t init_module_list;
 static uint64_t feature_bitmap;
 static FILE *outfile;
 static const char *target_output_filename;
-static const char *temporary_output_filename;
 static BOOL byte_swap;
 static BOOL dynamic_export;
 static const char *c_ident_prefix = "qjsc_";
@@ -443,10 +442,8 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
         uint8_t *buf;
         char cname[1024];
 
-        if ((target_output_filename &&
-             same_file(target_output_filename, module_name)) ||
-            (temporary_output_filename &&
-             same_file(temporary_output_filename, module_name))) {
+        if (target_output_filename &&
+            same_file(target_output_filename, module_name)) {
             JS_ThrowTypeError(ctx, "output file is also an imported source: %s",
                               module_name);
             return NULL;
@@ -712,6 +709,7 @@ static int output_executable(const char *out_filename, const char *cfilename,
         size_t i;
         if (countof(configured_cc) > countof(argv) - 32) {
             fprintf(stderr, "Too many configured compiler arguments\n");
+            unlink(cfilename);
             return 1;
         }
         for (i = 0; i < countof(configured_cc); i++)
@@ -752,7 +750,11 @@ static int output_executable(const char *out_filename, const char *cfilename,
     *arg++ = out_filename;
     if (dynamic_export)
         *arg++ = "-rdynamic";
+    *arg++ = "-x";
+    *arg++ = "c";
     *arg++ = cfilename;
+    *arg++ = "-x";
+    *arg++ = "none";
 #ifdef CONFIG_SHARED_LIBRARY
     /* Keep installed generated programs able to find the selected shared engine. */
     ret = snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
@@ -823,7 +825,9 @@ int main(int argc, char **argv)
 {
     int i, verbose, strip_flags;
     const char *out_filename, *cname;
+#if defined(CONFIG_CC) && !defined(_WIN32)
     char temporary_cfilename[1024];
+#endif
     const char *cfilename;
     FILE *fo;
     JSRuntime *rt;
@@ -995,27 +999,19 @@ int main(int argc, char **argv)
         }
     }
 
+    cfilename = out_filename;
+#if !defined(CONFIG_CC) || defined(_WIN32)
     if (output_type == OUTPUT_EXECUTABLE) {
-#if defined(_WIN32) || defined(__ANDROID__)
-        /* XXX: find a /tmp directory ? */
-        snprintf(temporary_cfilename, sizeof(temporary_cfilename), "out%d.c", getpid());
-#else
-        snprintf(temporary_cfilename, sizeof(temporary_cfilename), "/tmp/out%d.c", getpid());
-#endif
-        cfilename = temporary_cfilename;
-    } else {
-        cfilename = out_filename;
+        fprintf(stderr, "Executable output is not supported for this target\n");
+        return 1;
     }
-
-    if (output_is_input(out_filename, argc, argv, optind) ||
-        (output_type == OUTPUT_EXECUTABLE &&
-         output_is_input(cfilename, argc, argv, optind))) {
+#endif
+    if (output_is_input(out_filename, argc, argv, optind)) {
         fprintf(stderr, "qjsc: output file is also an input file: %s\n",
                 out_filename);
         return 1;
     }
     target_output_filename = out_filename;
-    temporary_output_filename = output_type == OUTPUT_EXECUTABLE ? cfilename : NULL;
     /* Modules are discovered while compiling. Stage C output so a late
        import can be checked before either output path is overwritten. */
     fo = tmpfile();
@@ -1151,6 +1147,24 @@ int main(int argc, char **argv)
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 
+#if defined(CONFIG_CC) && !defined(_WIN32)
+    if (output_type == OUTPUT_EXECUTABLE) {
+        int fd;
+#ifdef __ANDROID__
+        pstrcpy(temporary_cfilename, sizeof(temporary_cfilename), "qjsc-XXXXXX");
+#else
+        pstrcpy(temporary_cfilename, sizeof(temporary_cfilename), "/tmp/qjsc-XXXXXX");
+#endif
+        fd = mkstemp(temporary_cfilename);
+        if (fd < 0) {
+            perror("qjsc temporary output");
+            fclose(fo);
+            return 1;
+        }
+        close(fd);
+        cfilename = temporary_cfilename;
+    }
+#endif
     write_error = ferror(fo);
     if (!write_error)
         write_error = write_staged_output(fo, cfilename) < 0;
