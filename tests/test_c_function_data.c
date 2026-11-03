@@ -21,6 +21,7 @@
  */
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <string.h>
 #include "quickjs.h"
 #include "oom-allocator.h"
@@ -81,6 +82,110 @@ static void check_error(JSContext *ctx, JSValue result, const char *type)
     JS_FreeCString(ctx, text);
     JS_FreeValue(ctx, name);
     JS_FreeValue(ctx, error);
+}
+
+static JSValue padded_generic(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
+{
+    assert(argc == 0 && JS_IsUndefined(argv[254]));
+    return JS_UNDEFINED;
+}
+
+static JSValue padded_setter(JSContext *ctx, JSValueConst this_val,
+                             JSValueConst value)
+{
+    assert(JS_IsUndefined(value));
+    return JS_UNDEFINED;
+}
+
+static double padded_binary(double left, double right)
+{
+    assert((isnan(left) || left == 5) && isnan(right));
+    return 7;
+}
+
+static double padded_unary(double value)
+{
+    return 9;
+}
+
+static JSValue padded_setter_magic(JSContext *ctx, JSValueConst this_val,
+                                   JSValueConst value, int magic)
+{
+    assert(JS_IsUndefined(value) && magic == 3);
+    return JS_UNDEFINED;
+}
+
+static void test_c_function_lengths(JSContext *ctx)
+{
+    JSCFunctionType callback;
+    JSValue function, result, length;
+
+    check_error(ctx, JS_NewCFunction2(ctx, padded_generic, "f", -1,
+                                      JS_CFUNC_generic, 0), "RangeError");
+    check_error(ctx, JS_NewCFunction2(ctx, padded_generic, "f", 256,
+                                      JS_CFUNC_generic, 0), "RangeError");
+    check_error(ctx, JS_NewCFunction2(ctx, padded_generic, "f", 0,
+                                      (JSCFunctionEnum)255, 0), "RangeError");
+    check_error(ctx, JS_NewCFunction2(ctx, NULL, "f", 0,
+                                      JS_CFUNC_generic, 0), "TypeError");
+    function = JS_NewCFunction2(ctx, padded_generic, "f", 255,
+                                JS_CFUNC_generic, 0);
+    assert(!JS_IsException(function));
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    callback.setter = padded_setter;
+    function = JS_NewCFunction2(ctx, callback.generic, "f", 0,
+                                JS_CFUNC_setter, 0);
+    assert(!JS_IsException(function));
+    length = JS_GetPropertyStr(ctx, function, "length");
+    assert(JS_IsNumber(length) && JS_VALUE_GET_INT(length) == 0);
+    JS_FreeValue(ctx, length);
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    callback.setter_magic = padded_setter_magic;
+    function = JS_NewCFunction2(ctx, callback.generic, "f", 0,
+                                JS_CFUNC_setter_magic, 3);
+    assert(!JS_IsException(function));
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    callback.f_f = padded_unary;
+    function = JS_NewCFunction2(ctx, callback.generic, "f", 0,
+                                JS_CFUNC_f_f, 0);
+    assert(!JS_IsException(function));
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(JS_IsNumber(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    callback.f_f_f = padded_binary;
+    function = JS_NewCFunction2(ctx, callback.generic, "f", 0,
+                                JS_CFUNC_f_f_f, 0);
+    assert(!JS_IsException(function));
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(JS_IsNumber(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+
+    function = JS_NewCFunction2(ctx, callback.generic, "f", 1,
+                                JS_CFUNC_f_f_f, 0);
+    assert(!JS_IsException(function));
+    {
+        JSValue arg = JS_NewInt32(ctx, 5);
+        result = JS_Call(ctx, function, JS_UNDEFINED, 1, &arg);
+    }
+    assert(JS_IsNumber(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
 }
 
 static void test_invalid_metadata(JSContext *ctx)
@@ -252,6 +357,7 @@ int main(void)
     test_large_capture_set(ctx, 0);
     test_large_capture_set(ctx, 1);
     test_invalid_metadata(ctx);
+    test_c_function_lengths(ctx);
     test_named_callback(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

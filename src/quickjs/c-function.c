@@ -66,6 +66,19 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
     JSValue func_obj;
     JSObject *p;
     JSAtom name_atom;
+    int padded_length = length;
+
+    if (length < 0 || length > UINT8_MAX)
+        return JS_ThrowRangeError(ctx, "invalid native function length");
+    if (!func)
+        return JS_ThrowTypeError(ctx, "invalid native callback");
+    if ((unsigned)cproto > JS_CFUNC_constructor_or_func_flags)
+        return JS_ThrowRangeError(ctx, "invalid native function prototype");
+    if (cproto == JS_CFUNC_f_f_f && padded_length < 2)
+        padded_length = 2;
+    else if ((cproto == JS_CFUNC_f_f || cproto == JS_CFUNC_setter ||
+              cproto == JS_CFUNC_setter_magic) && padded_length < 1)
+        padded_length = 1;
 
     if (n_fields > 0) {
         func_obj = JS_NewObjectProtoClassAlloc(ctx, proto_val, JS_CLASS_C_FUNCTION, n_fields);
@@ -77,7 +90,7 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
     p = JS_VALUE_GET_OBJ(func_obj);
     p->u.cfunc.realm = JS_DupContext(ctx);
     p->u.cfunc.c_function.generic = func;
-    p->u.cfunc.length = length;
+    p->u.cfunc.length = padded_length;
     p->u.cfunc.cproto = cproto;
     p->u.cfunc.magic = magic;
     p->is_constructor = (cproto == JS_CFUNC_constructor ||
