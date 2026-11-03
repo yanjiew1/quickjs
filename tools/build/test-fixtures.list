@@ -160,5 +160,6 @@ tests/test_wait_async_agents.js
 tests/test_wait_async_worker_overflow.js
 tests/test_wait_async_worker_overflow_module.js
 tests/test_worker.js
+tests/test_windows_io_handlers.js
 tests/test_worker_module.js
 tests/test_host_loop_worker.js

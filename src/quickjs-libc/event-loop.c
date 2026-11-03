@@ -162,6 +162,10 @@ JSValue js_os_setReadHandler(JSContext *ctx, JSValueConst this_val,
     } else {
         if (!JS_IsFunction(ctx, func))
             return JS_ThrowTypeError(ctx, "not a function");
+#ifdef _WIN32
+        if (fd != 0 || magic != 0 || _get_osfhandle(fd) == -1)
+            return JS_ThrowTypeError(ctx, "unsupported Windows I/O handler");
+#endif
         rh = find_rh(ts, fd);
         if (!rh) {
             rh = js_mallocz(ctx, sizeof(*rh));

@@ -483,6 +483,7 @@ js_tests = {
 if host_machine.system() == 'windows'
   js_tests += {
     'std-large-file': ['tests/test_std_large_file.js'],
+    'windows-io-handlers': ['tests/test_windows_io_handlers.js'],
     'wait-worker-overflow': ['-m', 'tests/test_wait_async_worker_overflow.js'],
   }
 else
