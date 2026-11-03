@@ -731,7 +731,10 @@ Send the signal @code{sig} to the process @code{pid}.
 
 @item exec(args[, options])
 Execute a process with the arguments @code{args}. @code{options} is an
-object containing optional parameters:
+object containing optional parameters. On Unix, if the child cannot prepare
+its descriptors or execute the requested program, it exits with status 127.
+Closing inherited descriptors requires @code{closefrom}, Linux
+@code{close_range} or @code{/proc/self/fd}, or macOS @code{/dev/fd}.
 
   @table @code
   @item block

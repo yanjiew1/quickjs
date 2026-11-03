@@ -109,6 +109,12 @@ native_test_names = [
   'test_promise_oom',
   'test_qjsc_json_preload',
 ]
+if host_machine.system() in ['linux', 'darwin']
+  native_test_names += 'test_close_fds'
+endif
+if host_machine.system() == 'linux'
+  native_test_names += 'test_close_fds_unavailable'
+endif
 foreach name : native_test_names
   public_consumer = name in public_native_test_names
   app = executable(
