@@ -328,7 +328,7 @@ JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
                          JSValue str2, const char *str3)
 {
     StringBuffer b_s, *b = &b_s;
-    int len1, len3;
+    size_t len1, len3, len;
     JSString *p;
 
     if (unlikely(JS_VALUE_GET_TAG(str2) != JS_TAG_STRING)) {
@@ -339,8 +339,17 @@ JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
     p = JS_VALUE_GET_STRING(str2);
     len1 = strlen(str1);
     len3 = strlen(str3);
+    if (len1 > JS_STRING_LEN_MAX - p->len) {
+        JS_ThrowInternalError(ctx, "string too long");
+        goto fail;
+    }
+    len = len1 + p->len;
+    if (len3 > JS_STRING_LEN_MAX - len) {
+        JS_ThrowInternalError(ctx, "string too long");
+        goto fail;
+    }
 
-    if (string_buffer_init2(ctx, b, len1 + p->len + len3, p->is_wide_char))
+    if (string_buffer_init2(ctx, b, (int)(len + len3), p->is_wide_char))
         goto fail;
 
     string_buffer_write8(b, (const uint8_t *)str1, len1);
