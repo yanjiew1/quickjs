@@ -142,7 +142,8 @@ QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmentInput *input, size_t sta
         at = start;
         while (at < end) {
             uint32_t c = unicode_utf16_next(input->text.data, end, &at);
-            if (lre_is_letter(c) || lre_is_decimal_digit(c)) {
+            if (lre_is_letter(c) || lre_is_decimal_digit(c) ||
+                lre_is_letter_number(c)) {
                 out->is_word_like = 1;
                 break;
             }
