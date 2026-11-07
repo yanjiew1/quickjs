@@ -1367,6 +1367,7 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
     size_t buf_len;
     uint8_t *buf;
     JSModuleDef *m;
+    int res;
     char *filename, *slash, path[1024];
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
@@ -1395,7 +1396,12 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
         return NULL;
     }
 
-    if (js_module_test_json(ctx, attributes) == 1) {
+    res = js_module_test_json(ctx, attributes);
+    if (JS_HasException(ctx)) {
+        js_free(ctx, buf);
+        return NULL;
+    }
+    if (res == 1) {
         /* compile as JSON */
         JSValue val;
         val = JS_ParseJSON(ctx, (char *)buf, buf_len, module_name);
