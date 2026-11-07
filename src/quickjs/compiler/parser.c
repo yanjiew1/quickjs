@@ -1277,6 +1277,7 @@ static BOOL is_regexp_allowed(int tok)
 #define SKIP_HAS_ELLIPSIS   (1 << 1)
 #define SKIP_HAS_ASSIGNMENT (1 << 2)
 #define SKIP_HAS_COMPUTED_KEY (1 << 3)
+#define SKIP_CONTROL_END    (TOK_NUMBER - 1)
 
 /* XXX: improve speed with early bailout */
 /* XXX: no longer works if regexps are present. Could use previous
@@ -1299,7 +1300,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     s->suppress_parse_errors = TRUE;
     last_tok = previous_tok = 0;
     for (;;) {
-        BOOL control_paren_end = FALSE;
+        BOOL control_paren_end = FALSE, control_block_end = FALSE;
         switch(s->token.val) {
         case '[':
             /* A computed property name in an object binding pattern is
@@ -1312,13 +1313,20 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         case '{':
             if (level >= sizeof(state))
                 goto done;
-            state[level++] = s->token.val;
+            c = (s->token.val == '{' &&
+                 (last_tok == SKIP_CONTROL_END || last_tok == TOK_ELSE ||
+                  last_tok == TOK_TRY || last_tok == TOK_CATCH ||
+                  last_tok == TOK_FINALLY || last_tok == TOK_DO ||
+                  ((last_tok == '{' || last_tok == ';') &&
+                   (state[level - 1] == '{' || state[level - 1] == 'B'))));
+            state[level++] = c ? 'B' : s->token.val;
             break;
         case '(':
             if (level >= sizeof(state))
                 goto done;
             if ((last_tok == TOK_IF || last_tok == TOK_WHILE ||
                  last_tok == TOK_FOR || last_tok == TOK_WITH ||
+                 last_tok == TOK_SWITCH || last_tok == TOK_CATCH ||
                  (last_tok == TOK_AWAIT && previous_tok == TOK_FOR)) &&
                 previous_tok != '.' && previous_tok != TOK_QUESTION_MARK_DOT)
                 /* A statement can start with a regexp after this header. */
@@ -1347,6 +1355,8 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                 if (js_parse_template_part(s, s->buf_ptr))
                     goto scan_error;
                 goto handle_template;
+            } else if (c == 'B') {
+                control_block_end = TRUE;
             } else if (c != '{') {
                 goto done;
             }
@@ -1394,6 +1404,8 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         /* last_tok is only used to recognize regexps */
         previous_tok = last_tok;
         if (control_paren_end) {
+            last_tok = SKIP_CONTROL_END;
+        } else if (control_block_end) {
             last_tok = ';';
         } else if (s->token.val == TOK_IDENT && last_tok == TOK_FOR &&
                    token_is_pseudo_keyword(s, JS_ATOM_await)) {

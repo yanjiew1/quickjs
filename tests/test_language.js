@@ -4295,6 +4295,13 @@ function test_regexp_after_control_header_in_initializer()
     for (const statement of [
         "if (true) /}/.test('}');",
         "if ((true)) /* comment */ /[}]/.test('}');",
+        "if (true) { { } } /[}]/.test('}');",
+        "if (true) {} else {} /[}]/.test('}');",
+        "try {} catch (e) {} finally {} /[}]/.test('}');",
+        "switch (1) { case 1: break; } /[}]/.test('}');",
+        "for (let i = 0; i < 1; i++) { `${{x: 1}.x}`; } /[}]/.test('}');",
+        "{} /[}]/.test('}');",
+        "; {} /[}]/.test('}');",
         "for (; false;) /[}]/.test('}');",
         "while (false) /[}]/.test('}');",
         "with ({}) /[}]/.test('}');",
@@ -4306,6 +4313,14 @@ function test_regexp_after_control_header_in_initializer()
     const divide = "let x; [{x = function () { const obj = { if(x) { return x; } }; " +
                    "return obj?.if(8) / 2 / 2; }}] = [{}]; return x();";
     assert(Function(divide)(), 2);
+    const objectDivision = "let x; [{x = function () { " +
+                           "return ({f(){return {v:8}}}).f().v / 2; " +
+                           "}}] = [{}]; return x();";
+    assert(Function(objectDivision)(), 4);
+    const forDivision = "let x; [{x = function () { " +
+                        "for (; {} / 2; ) break; return 42; " +
+                        "}}] = [{}]; return x();";
+    assert(Function(forDivision)(), 42);
     const asyncLoop = "let x; [{x = async function () { " +
                       "for await (const v of []) /[}]/.test('}'); " +
                       "return 42; }}] = [{}]; return typeof x;";
