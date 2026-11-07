@@ -1186,7 +1186,8 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
         newlen = p->u.array.count;
         len = min_int(len, newlen);
     }
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        goto fail;
 
     /* XXX: optimize with direct access */
     for(i = 0; i < len; i++) {
