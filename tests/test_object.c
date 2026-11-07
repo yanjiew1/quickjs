@@ -438,6 +438,41 @@ static void test_property_enum_size_overflow(JSContext *ctx)
     JS_FreeValue(ctx, array);
 }
 
+static void test_deep_bound_function_realm(JSContext *ctx)
+{
+    static const char source[] = "(function() {})";
+    JSValue function = JS_Eval(ctx, source, sizeof(source) - 1,
+                               "deep-bound-realm.js", JS_EVAL_TYPE_GLOBAL);
+    int i;
+
+    assert(!JS_IsException(function));
+    for (i = 0; i < 60000; i++) {
+        JSValue bound = JS_NewObjectProtoClass(ctx, ctx->function_proto,
+                                                JS_CLASS_BOUND_FUNCTION);
+        JSBoundFunction *data;
+
+        assert(!JS_IsException(bound));
+        data = js_malloc(ctx, sizeof(*data));
+        assert(data);
+        data->func_obj = function; /* transfer ownership to the next link */
+        data->this_val = JS_UNDEFINED;
+        data->argc = 0;
+        JS_VALUE_GET_OBJ(bound)->u.bound_function = data;
+        function = bound;
+    }
+    assert(JS_GetFunctionRealm(ctx, function) == ctx);
+    /* Detach each link so releasing the chain also uses constant C stack. */
+    while (JS_VALUE_GET_OBJ(function)->class_id == JS_CLASS_BOUND_FUNCTION) {
+        JSBoundFunction *bound = JS_VALUE_GET_OBJ(function)->u.bound_function;
+        JSValue next = bound->func_obj;
+
+        bound->func_obj = JS_UNDEFINED;
+        JS_FreeValue(ctx, function);
+        function = next;
+    }
+    JS_FreeValue(ctx, function);
+}
+
 static void test_proxy_construct_method_cleanup(JSContext *ctx)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
@@ -488,6 +523,7 @@ int main(void)
     test_detached_exotic_prototype(ctx);
     test_reentrant_exotic_enumeration(ctx);
     test_property_enum_size_overflow(ctx);
+    test_deep_bound_function_realm(ctx);
     test_proxy_construct_method_cleanup(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
