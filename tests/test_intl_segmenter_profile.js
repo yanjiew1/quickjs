@@ -31,6 +31,10 @@ const same = (actual, expected) => assert(JSON.stringify(actual), JSON.stringify
 const requested = ["en", "en-US", "fr", "ja", "th", "zh"];
 same(Intl.Segmenter.supportedLocalesOf(requested), native ? requested : ["en", "en-US"]);
 
+const word = new Intl.Segmenter("en", {granularity: "word"});
+same([...word.segment("Ⅳ")].map(value => [value.segment, value.isWordLike]),
+     [["Ⅳ", true]]);
+
 // Unicode18 default GB9c joins a leading linker. The pinned CLDR root rule
 // requires a preceding consonant; this test records the selected profile.
 const grapheme = new Intl.Segmenter("en");
