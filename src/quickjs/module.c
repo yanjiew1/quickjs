@@ -696,6 +696,10 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
 
     *pmodule = NULL;
     *pme = NULL;
+    if (js_check_stack_overflow(ctx->rt, 0)) {
+        JS_ThrowStackOverflow(ctx);
+        return JS_RESOLVE_RES_EXCEPTION;
+    }
     if (find_resolve_entry(s, m, export_name) >= 0)
         return JS_RESOLVE_RES_CIRCULAR;
     if (add_resolve_entry(ctx, s, m, export_name) < 0)
@@ -866,6 +870,10 @@ static __exception int get_exported_names(JSContext *ctx,
     ExportedNameEntry *en;
     int i, j;
 
+    if (js_check_stack_overflow(ctx->rt, 0)) {
+        JS_ThrowStackOverflow(ctx);
+        return -1;
+    }
     /* check circular reference */
     for(i = 0; i < s->modules_count; i++) {
         if (s->modules[i] == m)
@@ -1103,6 +1111,10 @@ static int js_resolve_module1(JSContext *ctx, JSModuleDef *m)
 
     if (m->resolved)
         return 0;
+    if (js_check_stack_overflow(ctx->rt, 0)) {
+        JS_ThrowStackOverflow(ctx);
+        return -1;
+    }
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
@@ -1180,7 +1192,8 @@ static int js_create_module_bytecode_function(JSContext *ctx, JSModuleDef *m)
 }
 
 /* must be done before js_link_module() because of cyclic references */
-static int js_create_module_function1(JSContext *ctx, JSModuleDef *m)
+static int js_create_module_function1(JSContext *ctx, JSModuleDef *m,
+                                      JSModuleDef **created)
 {
     BOOL is_c_module;
     int i;
@@ -1188,6 +1201,10 @@ static int js_create_module_function1(JSContext *ctx, JSModuleDef *m)
 
     if (m->func_created)
         return 0;
+    if (js_check_stack_overflow(ctx->rt, 0)) {
+        JS_ThrowStackOverflow(ctx);
+        return -1;
+    }
 
     is_c_module = (m->init_func != NULL);
 
@@ -1207,12 +1224,15 @@ static int js_create_module_function1(JSContext *ctx, JSModuleDef *m)
             return -1;
     }
     m->func_created = TRUE;
+    /* Failure cleanup must remain iterative even at the stack limit. */
+    m->creation_next = *created;
+    *created = m;
 
     /* do it on the dependencies */
 
     for(i = 0; i < m->req_module_entries_count; i++) {
         JSReqModuleEntry *rme = &m->req_module_entries[i];
-        if (js_create_module_function1(ctx, rme->module) < 0)
+        if (js_create_module_function1(ctx, rme->module, created) < 0)
             return -1;
     }
 
@@ -1220,26 +1240,19 @@ static int js_create_module_function1(JSContext *ctx, JSModuleDef *m)
 }
 
 
-/* Reset traversal marks, retaining successfully allocated local state.
-   Clear before descending so cyclic import graphs terminate. */
-static void js_reset_module_function(JSModuleDef *m)
-{
-    int i;
-
-    if (!m->func_created)
-        return;
-    m->func_created = FALSE;
-    for (i = 0; i < m->req_module_entries_count; i++)
-        js_reset_module_function(m->req_module_entries[i].module);
-}
-
 int js_create_module_function(JSContext *ctx, JSModuleDef *m)
 {
-    if (js_create_module_function1(ctx, m) < 0) {
-        js_reset_module_function(m);
-        return -1;
+    JSModuleDef *created = NULL, *node;
+    int ret = js_create_module_function1(ctx, m, &created);
+
+    while (created) {
+        node = created;
+        created = node->creation_next;
+        node->creation_next = NULL;
+        if (ret < 0)
+            node->func_created = FALSE;
     }
-    return 0;
+    return ret;
 }
 
 /* Prepare a module to be executed by resolving all the imported
