@@ -306,6 +306,68 @@ static void test_bound_function_properties_oom(void)
     assert(success && failures >= 2);
 }
 
+static JSValue detaching_prototype_root;
+static int detaching_prototype_calls;
+
+static int detach_prototype_on_lookup(JSContext *ctx,
+                                      JSPropertyDescriptor *desc,
+                                      JSValueConst obj, JSAtom prop)
+{
+    detaching_prototype_calls++;
+    assert(JS_SetPrototype(ctx, detaching_prototype_root, JS_NULL) == 1);
+    return FALSE;
+}
+
+static void test_detached_exotic_prototype(JSContext *ctx)
+{
+    static JSClassExoticMethods exotic = {
+        .get_own_property = detach_prototype_on_lookup,
+    };
+    JSClassDef class_def = {
+        .class_name = "DetachingPrototype",
+        .exotic = &exotic,
+    };
+    JSClassID class_id = 0;
+    JSValue root, proto, value;
+    JSAtom key;
+    int operation;
+
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(JS_GetRuntime(ctx), class_id, &class_def) == 0);
+    root = JS_NewObject(ctx);
+    assert(!JS_IsException(root));
+    detaching_prototype_root = root;
+    key = JS_NewAtom(ctx, "missing");
+    assert(key != JS_ATOM_NULL);
+
+    for (operation = 0; operation < 3; operation++) {
+        proto = JS_NewObjectClass(ctx, class_id);
+        assert(!JS_IsException(proto));
+        assert(JS_SetPrototype(ctx, root, proto) == 1);
+        /* The root now owns the only reference that the callback can drop. */
+        JS_FreeValue(ctx, proto);
+        detaching_prototype_calls = 0;
+
+        if (operation == 0) {
+            assert(JS_HasProperty(ctx, root, key) == FALSE);
+        } else if (operation == 1) {
+            value = JS_GetProperty(ctx, root, key);
+            assert(JS_IsUndefined(value));
+            JS_FreeValue(ctx, value);
+        } else {
+            assert(JS_SetProperty(ctx, root, key, JS_NewInt32(ctx, 42)) == TRUE);
+        }
+        assert(detaching_prototype_calls == 1);
+    }
+    value = JS_GetProperty(ctx, root, key);
+    assert(JS_VALUE_GET_TAG(value) == JS_TAG_INT &&
+           JS_VALUE_GET_INT(value) == 42);
+    JS_FreeValue(ctx, value);
+    JS_FreeAtom(ctx, key);
+    detaching_prototype_root = JS_UNDEFINED;
+    JS_FreeValue(ctx, root);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -320,6 +382,7 @@ int main(void)
     test_integrity_proxy_cleanup(ctx);
     test_set_prototype_oom(ctx);
     test_delete_global_varref_oom(ctx);
+    test_detached_exotic_prototype(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
