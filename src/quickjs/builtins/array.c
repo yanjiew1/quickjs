@@ -190,6 +190,10 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(next_method))
             goto exception;
         for (k = 0;; k++) {
+            if (k >= MAX_SAFE_INTEGER) {
+                JS_ThrowTypeError(ctx, "Array too long");
+                goto exception_close;
+            }
             v = JS_IteratorNext(ctx, enum_obj, next_method, &done);
             if (JS_IsException(v))
                 goto exception;
@@ -197,7 +201,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 break;
             if (mapping) {
                 args[0] = v;
-                args[1] = JS_NewInt32(ctx, k);
+                args[1] = JS_NewInt64(ctx, k);
                 v2 = JS_Call(ctx, mapfn, this_arg, 2, args);
                 JS_FreeValue(ctx, v);
                 v = v2;
@@ -230,7 +234,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             if (mapping) {
                 args[0] = v;
-                args[1] = JS_NewInt32(ctx, k);
+                args[1] = JS_NewInt64(ctx, k);
                 v2 = JS_Call(ctx, mapfn, this_arg, 2, args);
                 JS_FreeValue(ctx, v);
                 v = v2;
@@ -242,7 +246,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
     }
-    if (JS_SetProperty(ctx, r, JS_ATOM_length, JS_NewUint32(ctx, k)) < 0)
+    if (JS_SetProperty(ctx, r, JS_ATOM_length, JS_NewInt64(ctx, k)) < 0)
         goto exception;
     goto done;
 
