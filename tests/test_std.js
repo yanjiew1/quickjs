@@ -193,6 +193,42 @@ function test_empty_buffer_io()
     f.close();
 }
 
+function test_file_closed_during_coercion()
+{
+    const buffer = new ArrayBuffer(1);
+    for (const invoke of [
+        (f, value) => f.puts(value),
+        (f, value) => f.puts("first", value),
+        (f, value) => f.printf(value),
+        (f, value) => f.printf("%s", value),
+        (f, value) => f.seek(value, std.SEEK_SET),
+        (f, value) => f.seek(0, value),
+        (f, value) => f.read(buffer, value, 1),
+        (f, value) => f.read(buffer, 0, value),
+        (f, value) => f.write(buffer, value, 1),
+        (f, value) => f.write(buffer, 0, value),
+        (f, value) => f.readAsString(value),
+        (f, value) => f.putByte(value),
+    ]) {
+        const file = std.tmpfile();
+        const value = {
+            toString() { file.close(); return "x"; },
+            valueOf() { file.close(); return 0; },
+        };
+        let error;
+        try { invoke(file, value); } catch (e) { error = e; }
+        assert(error instanceof TypeError);
+    }
+    const file = std.tmpfile();
+    const sentinel = {};
+    const value = { toString() { file.close(); throw sentinel; } };
+    let error;
+    try { file.printf("%s", value); } catch (e) { error = e; }
+    assert(error, sentinel);
+}
+
+test_file_closed_during_coercion();
+
 function test_file2()
 {
     var f, str, i, size;
