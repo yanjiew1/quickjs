@@ -86,6 +86,7 @@ native_test_names = [
   'test_regexp_oom',
   'test_bigint_oom',
   'test_bytecode',
+  'test_module_depth',
   'test_typed_array',
   'test_allocator',
   'test_object',
