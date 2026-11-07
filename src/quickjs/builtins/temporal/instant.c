@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include "temporal-internal.h"
+#include "../duration-value.h"
 #include "../temporal.h"
 #include "../../../temporal/format.h"
 
@@ -227,27 +228,22 @@ static JSValue js_temporal_instant_add(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv, int subtract)
 {
     JSTemporalInstantData *instant;
-    JSTemporalDurationData *duration;
+    QJSTemporalDuration duration;
     QJSTemporalInternalDuration normalized;
     QJSTemporalEpochNs result;
-    JSValue converted;
     int i, ret;
 
     instant = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_INSTANT);
     if (!instant)
         return JS_EXCEPTION;
-    converted = js_temporal_to_duration(ctx, argv[0]);
-    if (JS_IsException(converted))
-        return converted;
-    duration = JS_GetOpaque(converted, JS_CLASS_TEMPORAL_DURATION);
+    if (js_duration_to_record(ctx, argv[0], &duration))
+        return JS_EXCEPTION;
     for (i = QJS_TEMPORAL_YEAR; i <= QJS_TEMPORAL_DAY; i++) {
-        if (duration->fields[i]) {
-            JS_FreeValue(ctx, converted);
+        if (duration.fields[i]) {
             return JS_ThrowRangeError(ctx, "Instant arithmetic requires time units");
         }
     }
-    ret = qjs_temporal_duration_normalize(&normalized, duration, 1);
-    JS_FreeValue(ctx, converted);
+    ret = qjs_temporal_duration_normalize(&normalized, &duration, 1);
     if (ret)
         return JS_ThrowRangeError(ctx, "Temporal duration is outside the valid range");
     ret = subtract ?
