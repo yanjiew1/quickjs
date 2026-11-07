@@ -1528,6 +1528,25 @@ function test_typed_array_species_content()
     assert(big.slice() instanceof BigUint64Array, true);
 }
 
+function test_typed_array_filter_set_override()
+{
+    for (const Type of [Uint8Array, BigInt64Array]) {
+        const source = new Type(Type === Uint8Array ? [1, 2] : [1n, 2n]);
+        source.constructor = {
+            [Symbol.species]: function(length) {
+                const result = new Type(length);
+                Object.defineProperty(result, "set", {
+                    get() { throw Error("filter must not access set"); },
+                });
+                return result;
+            },
+        };
+        const result = source.filter((value, index) => index === 1);
+        assert(result.length, 1);
+        assert(result[0], Type === Uint8Array ? 2 : 2n);
+    }
+}
+
 function test_typed_array_set_overlap()
 {
     for (const [Source, Destination] of [[Uint8Array, Uint16Array],
@@ -6069,6 +6088,7 @@ test_atomics_initial_oob();
 test_typed_array_constructor_content();
 test_typed_array_from_constructor_order();
 test_typed_array_species_content();
+test_typed_array_filter_set_override();
 test_typed_array_set_overlap();
 test_typed_array_slice_overlap();
 test_uint8array_hex_code_unit_length();

@@ -689,11 +689,14 @@ done:
         arr = js_typed_array___speciesCreate(ctx, JS_UNDEFINED, 2, args);
         if (JS_IsException(arr))
             goto exception;
-        args[0] = ret;
-        res = JS_Invoke(ctx, arr, JS_ATOM_set, 1, args);
-        if (check_exception_free(rt, res)) {
-            JS_FreeValue(ctx, arr);
-            goto exception;
+        for (k = 0; k < n; k++) {
+            res = JS_GetPropertyInt64(ctx, ret, k);
+            if (JS_IsException(res) ||
+                JS_SetPropertyValue(ctx, arr, JS_NewInt32(ctx, k), res,
+                                    JS_PROP_THROW) < 0) {
+                JS_FreeValue(ctx, arr);
+                goto exception;
+            }
         }
         JS_FreeValue(ctx, ret);
         ret = arr;
