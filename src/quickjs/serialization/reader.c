@@ -538,6 +538,12 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         goto fail;
     if (bc_get_leb128_int(s, &local_count))
         goto fail;
+    if (bc.closure_var_count < 0 || bc.cpool_count < 0 ||
+        bc.byte_code_len < 0 ||
+        local_count != bc.arg_count + bc.var_count) {
+        JS_ThrowSyntaxError(ctx, "invalid function bytecode counts");
+        goto fail;
+    }
 
     if (bc.has_debug) {
         function_size = sizeof(*b);

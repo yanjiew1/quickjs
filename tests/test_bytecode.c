@@ -710,6 +710,22 @@ static void test_malformed_function_bytecode(void)
     assert(JS_IsException(result));
     JS_FreeValue(ctx, JS_GetException(ctx));
 
+    /* A short vardef table must not be freed using larger header counts. */
+    memset(buf + 3, 0, sizeof(buf) - 3);
+    buf[7] = 2;  /* arg_count */
+    buf[15] = 1; /* local_count */
+    result = JS_ReadObject(ctx, buf, 16, JS_READ_OBJ_BYTECODE);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    /* A count above INT_MAX previously wrapped the allocation size. */
+    memset(buf + 3, 0, sizeof(buf) - 3);
+    buf[13] = buf[14] = buf[15] = buf[16] = 255;
+    buf[17] = 15; /* cpool_count = 0xffffffff */
+    result = JS_ReadObject(ctx, buf, 20, JS_READ_OBJ_BYTECODE);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 }
