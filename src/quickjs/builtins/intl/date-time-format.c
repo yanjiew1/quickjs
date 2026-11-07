@@ -682,13 +682,9 @@ JSValue js_intl_format_date_time(JSContext *ctx, JSValueConst receiver, int argc
 static JSValue bound_format(JSContext *ctx, JSValueConst this_val, int argc,
                             JSValueConst *argv, int magic, JSValue *data)
 {
-    JSContext *realm;
     (void)this_val;
     (void)magic;
-    /* Data callbacks run with their caller's context; the marked constructor
-       anchors the getter's intrinsic realm even for a borrowed format getter. */
-    realm = JS_GetFunctionRealm(ctx, data[1]);
-    return realm ? datetime_format(realm, data[0], argc, argv, -1) : JS_EXCEPTION;
+    return datetime_format(ctx, data[0], argc, argv, -1);
 }
 
 static JSValue datetime_format_get(JSContext *ctx, JSValueConst this_val)
@@ -701,7 +697,7 @@ static JSValue datetime_format_get(JSContext *ctx, JSValueConst this_val)
     if (!state)
         goto done;
     if (JS_IsUndefined(state->bound_format)) {
-        JSValueConst data[] = {value, ctx->intl_datetime_ctor};
+        JSValueConst data[] = {value};
         JSValue function = JS_NewCFunctionData(ctx, bound_format, 1, 0, countof(data), data);
         if (JS_IsException(function))
             goto done;
