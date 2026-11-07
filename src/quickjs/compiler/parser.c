@@ -1286,7 +1286,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     char state[256];
     size_t level = 0;
     JSParsePos pos;
-    int last_tok, tok = TOK_EOF;
+    int last_tok, previous_tok, tok = TOK_EOF;
     int c, tok_len, bits = 0;
     BOOL saved_suppress_errors = s->suppress_parse_errors;
     
@@ -1297,8 +1297,9 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     /* RegExp recognition is heuristic. Ignore provisional syntax errors,
        while retaining allocation and other non-syntax failures. */
     s->suppress_parse_errors = TRUE;
-    last_tok = 0;
+    last_tok = previous_tok = 0;
     for (;;) {
+        BOOL control_paren_end = FALSE;
         switch(s->token.val) {
         case '[':
             /* A computed property name in an object binding pattern is
@@ -1308,15 +1309,28 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                 (last_tok == '{' || last_tok == ','))
                 bits |= SKIP_HAS_COMPUTED_KEY;
             /* fall through */
-        case '(':
         case '{':
             if (level >= sizeof(state))
                 goto done;
             state[level++] = s->token.val;
             break;
-        case ')':
-            if (state[--level] != '(')
+        case '(':
+            if (level >= sizeof(state))
                 goto done;
+            if ((last_tok == TOK_IF || last_tok == TOK_WHILE ||
+                 last_tok == TOK_FOR || last_tok == TOK_WITH ||
+                 (last_tok == TOK_AWAIT && previous_tok == TOK_FOR)) &&
+                previous_tok != '.' && previous_tok != TOK_QUESTION_MARK_DOT)
+                /* A statement can start with a regexp after this header. */
+                state[level++] = 'I';
+            else
+                state[level++] = '(';
+            break;
+        case ')':
+            c = state[--level];
+            if (c != '(' && c != 'I')
+                goto done;
+            control_paren_end = (c == 'I');
             break;
         case ']':
             if (state[--level] != '[')
@@ -1378,7 +1392,13 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             break;
         }
         /* last_tok is only used to recognize regexps */
-        if (s->token.val == TOK_IDENT &&
+        previous_tok = last_tok;
+        if (control_paren_end) {
+            last_tok = ';';
+        } else if (s->token.val == TOK_IDENT && last_tok == TOK_FOR &&
+                   token_is_pseudo_keyword(s, JS_ATOM_await)) {
+            last_tok = TOK_AWAIT;
+        } else if (s->token.val == TOK_IDENT &&
             (token_is_pseudo_keyword(s, JS_ATOM_of) ||
              token_is_pseudo_keyword(s, JS_ATOM_yield))) {
             last_tok = TOK_OF;
