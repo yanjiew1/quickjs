@@ -963,6 +963,11 @@ int main(void)
     test_class_strict_exotics();
     test_bytecode_roundtrip("function saved() { return 42; } saved();");
     test_bytecode_roundtrip(
+        "((s) => Object.isFrozen(s) && Object.isFrozen(s.raw) &&"
+        " !Object.getOwnPropertyDescriptor(s, 'length').writable &&"
+        " !Object.getOwnPropertyDescriptor(s.raw, 'length').writable"
+        " ? 42 : 0)`template`;");
+    test_bytecode_roundtrip(
         "(function() { let effects = 0; const binding = 1;"
         " function saved() { with ({}) { binding ||= ++effects;"
         " try { binding = ++effects; } catch (e) {"
