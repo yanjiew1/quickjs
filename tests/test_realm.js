@@ -156,10 +156,26 @@ function test_bigint_locale_realm()
     std.gc();
 }
 
+async function test_c_function_data_realm()
+{
+    const owner = std.createRealm();
+    const caller = std.createRealm();
+    const PromiseSubclass = owner.evalScript(
+        "(class RealmPromise extends Promise { static resolve(value) { return value; } })");
+    const thenable = caller.evalScript("({ then(resolve) { resolve(42); } })");
+    const results = await PromiseSubclass.allSettled([thenable]);
+
+    check(Object.getPrototypeOf(results[0]), owner.global.Object.prototype,
+          "allSettled result uses the callback's creation realm");
+    check(results[0].value, 42);
+    std.gc();
+}
+
 export async function test_realms()
 {
     await test_create_realm();
     test_bigint_locale_realm();
+    await test_c_function_data_realm();
 }
 
 await test_realms();
