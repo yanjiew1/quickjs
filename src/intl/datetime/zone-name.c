@@ -222,7 +222,9 @@ static QJSIntlStatus choose(const QJSIntlDateZoneData *data, const Zone *zone,
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code, Text *out)
+/* CLDR permits short country names for regionFormat, but not fallbackFormat. */
+static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code,
+                             QJSIntlNameStyle style, Text *out)
 {
     QJSIntlNameLabel label;
     QJSIntlStatus status;
@@ -239,8 +241,9 @@ static QJSIntlStatus country(const QJSIntlDateZoneData *data, QJSIntlBytes code,
         unsigned int c = (uint8_t)code.data[i];
         normalized[i] = c >= 'A' && c <= 'Z' ? c + ('a' - 'A') : c;
     }
-    status = qjs_intl_name_select(data->regions, data->regions_locale, QJS_INTL_NAME_REGION,
-                                  QJS_INTL_NAME_SHORT, 0, (QJSIntlBytes){normalized, code.length}, &label);
+    status = qjs_intl_name_select(data->regions, data->regions_locale,
+                                  QJS_INTL_NAME_REGION, style, 0,
+                                  (QJSIntlBytes){normalized, code.length}, &label);
     if (status)
         return status;
     if (label.found && label.entry.text.length)
@@ -325,7 +328,8 @@ static QJSIntlStatus location(const QJSIntlDateZoneData *data, const Zone *zone,
                 return status;
         }
     }
-    status = selected ? country(data, region, &body) : city(data, zone, &body);
+    status = selected ? country(data, region, QJS_INTL_NAME_SHORT, &body) :
+                        city(data, zone, &body);
     if (status || !body.bytes.length)
         return status;
     status = format_source(data, "regionFormat", &pattern);
@@ -346,9 +350,13 @@ static QJSIntlStatus qualified(const QJSIntlDateZoneData *data, const Zone *zone
     QJSIntlStatus status;
     int selected = 0;
     Text qualifier, meta = {label, 0};
-    status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, region, &preferred);
+    status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                       zone->period.metazone,
+                                                       region, &preferred);
     if (status == QJS_INTL_UNSUPPORTED && !same(region, bytes("001")))
-        status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, bytes("001"), &preferred);
+        status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                           zone->period.metazone,
+                                                           bytes("001"), &preferred);
     if (!status)
         status = same_identity(data, preferred, zone, &selected);
     if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
@@ -359,13 +367,20 @@ static QJSIntlStatus qualified(const QJSIntlDateZoneData *data, const Zone *zone
     }
     region = bytes(zone->identity.territory);
     if (region.length) {
-        status = qjs_intl_timezone_presentation_preferred(data->presentation, zone->period.metazone, region, &preferred);
+        status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                           zone->period.metazone,
+                                                           region, &preferred);
+        if (status == QJS_INTL_UNSUPPORTED && !same(region, bytes("001")))
+            status = qjs_intl_timezone_presentation_preferred(data->presentation,
+                                                               zone->period.metazone,
+                                                               bytes("001"), &preferred);
         if (!status)
             status = same_identity(data, preferred, zone, &selected);
         if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
             return status;
     }
-    status = selected ? country(data, region, &qualifier) : city(data, zone, &qualifier);
+    status = selected ? country(data, region, QJS_INTL_NAME_LONG, &qualifier) :
+                        city(data, zone, &qualifier);
     if (status || !qualifier.bytes.length)
         return status;
     status = format_source(data, "fallbackFormat", &pattern);
