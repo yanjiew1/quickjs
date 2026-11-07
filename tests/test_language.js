@@ -4273,3 +4273,19 @@ for (const slow of [false, true]) {
     catch (caught) { error = caught; }
     assert(error instanceof SyntaxError);
 }
+
+function test_lookahead_line_terminators()
+{
+    for (const line of ["\n", "\r", "\u2028", "\u2029"]) {
+        for (const arrow of ["x", "(x)", "async x", "async (x)"]) {
+            assert_throws(SyntaxError, () => Function("return " + arrow + line + "=> 1"));
+            assert_throws(SyntaxError, () => Function("return " + arrow + "/*" + line + "*/=> 1"));
+        }
+        const result = Function("let=1; if (true) let" + line + "foo=2; return [let,foo]")();
+        assert(result.join(","), "1,2");
+        assert(Function("foo// comment" + line + ": for (;;) { break foo; } return 42")(), 42);
+    }
+    assert(Function("return (x) /* same line */ => x")()(7), 7);
+}
+
+test_lookahead_line_terminators();

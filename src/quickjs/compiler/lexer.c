@@ -995,13 +995,18 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
             if (*p == '/') {
                 if (no_line_terminator)
                     return '\n';
-                while (*p && *p != '\r' && *p != '\n')
+                while (*p && *p != '\r' && *p != '\n' &&
+                       !(p[0] == 0xe2 && p[1] == 0x80 &&
+                         (p[2] == 0xa8 || p[2] == 0xa9)))
                     p++;
                 continue;
             }
             if (*p == '*') {
                 while (*++p) {
                     if ((*p == '\r' || *p == '\n') && no_line_terminator)
+                        return '\n';
+                    if (no_line_terminator && p[0] == 0xe2 && p[1] == 0x80 &&
+                        (p[2] == 0xa8 || p[2] == 0xa9))
                         return '\n';
                     if (*p == '*' && p[1] == '/') {
                         p += 2;
