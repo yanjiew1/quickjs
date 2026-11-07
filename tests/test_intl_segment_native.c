@@ -114,11 +114,11 @@ static void check_routes_and_lifetimes(const QJSIntlAllocator *allocator)
     assert(state->live == 1);
     memset(units, 0xff, sizeof(units));
     calls = state->calls;
-    assert(!qjs_intl_segment_next(&input, 0, &first) && first.end == 2);
+    assert(!qjs_intl_segment_next(&input, 0, &first) && first.end == 1);
     assert(!qjs_intl_segment_containing(&input, 3, &found) && found.start == 2 && found.end == 4);
-    assert(!qjs_intl_segment_next(&input, first.end, &first) && first.start == 2 && first.end == 4);
-    assert(!qjs_intl_segment_containing(&input, 0, &found) && found.start == 0 && found.end == 2);
-    assert(!qjs_intl_segment_containing(&input, 1, &found) && found.start == 0 && found.end == 2);
+    assert(!qjs_intl_segment_next(&input, first.end, &first) && first.start == 1 && first.end == 2);
+    assert(!qjs_intl_segment_containing(&input, 0, &found) && found.start == 0 && found.end == 1);
+    assert(!qjs_intl_segment_containing(&input, 1, &found) && found.start == 1 && found.end == 2);
     assert(!qjs_intl_segment_next(&input, 6, &found) && !found.present);
     assert(!qjs_intl_segment_containing(&input, SIZE_MAX, &found) && !found.present);
     assert(qjs_intl_segment_next(&input, 3, &found) == QJS_INTL_INVALID_ARGUMENT && !found.present);

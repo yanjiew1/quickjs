@@ -128,19 +128,19 @@ owns those decisions; the native provider admits only complete data profiles.
 ## Final native input owner
 
 `segment/native-input.[ch]` connects decoding, compiled rule scans, literal
-sentence suppression and native grapheme protection into final boundary vectors.
+sentence suppression and dictionary refinement into final boundary vectors.
 The private pipeline connects grapheme, word and sentence preparation.
 The native provider validates the production data and complete locale capability
 before exposing this pipeline through the common service interface.
 
-Selected and grapheme scans share one decoded scalar/UTF-16 owner during
-preparation. For sentence input, remove approved suppression cuts, then
-intersect with the native grapheme decisions. Only after every fallible stage
-succeeds are final UTF-16 indexes copied into one retained allocation. Temporary
+For sentence input, remove approved suppression cuts from the selected scan.
+Only after every fallible stage succeeds are final UTF-16 indexes copied into one
+retained allocation. Temporary
 text, scans and matcher scratch are all released, including on OOM.
 
-Word input uses the same decoded owner and native grapheme scan, refines through
-the selected dictionaries/routing cache, then applies final grapheme protection.
+Word input uses the same decoded owner and a native grapheme scan to refine
+through the selected dictionaries/routing cache. Base word boundaries remain
+independent of grapheme boundaries; refinement introduces cuts only at clusters.
 One monotonic pass classifies final spans by Letter or decimal-digit membership.
 Word status is stored with the final vectors, so queries never rescan text.
 The borrowed rule configuration names selected/grapheme programs and required
