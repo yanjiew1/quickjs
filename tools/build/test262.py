@@ -27,7 +27,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-PIN = '91c70759363c46557b694792bf34a2551a7af5ba'
+PIN = 'e4fbf57745c6aae3d1f12f181ecef78b1665d812'
 
 
 def main():
