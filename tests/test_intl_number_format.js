@@ -120,7 +120,11 @@ assert(new NumberFormat('en', {useGrouping: false}).resolvedOptions().useGroupin
 assert(new NumberFormat('en', {maximumSignificantDigits: 4}).resolvedOptions().minimumFractionDigits, undefined);
 assert(new NumberFormat('en', {notation: 'compact'}).resolvedOptions().roundingPriority, 'morePrecision');
 assert(new NumberFormat('en', {style: 'currency', currency: 'JPY'}).resolvedOptions().maximumFractionDigits, 0);
-assert(new NumberFormat('en', {style: 'currency', currency: 'JPY', notation: 'scientific'}).resolvedOptions().maximumFractionDigits, 3);
+for (const notation of ['scientific', 'engineering']) {
+    const yen = new NumberFormat('en', {style: 'currency', currency: 'JPY', notation});
+    assert(yen.resolvedOptions().maximumFractionDigits, 0);
+    assert(yen.format(1.23), '¥1E0');
+}
 for (const [request, option, locale, system] of [
     ['en-u-nu-arab', undefined, 'en-u-nu-arab', 'arab'],
     ['en-u-nu-arab', 'ARAB', 'en-u-nu-arab', 'arab'],
