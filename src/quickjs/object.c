@@ -1961,42 +1961,12 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
 
     is_module_ns = (p->class_id == JS_CLASS_MODULE_NS);
 
-    /* compute the number of returned properties */
     num_keys_count = 0;
     str_keys_count = 0;
     sym_keys_count = 0;
     exotic_keys_count = 0;
     exotic_count = 0;
     tab_exotic = NULL;
-    sh = p->shape;
-    for(i = 0, prs = get_shape_prop(sh); i < sh->prop_count; i++, prs++) {
-        atom = prs->atom;
-        if (atom != JS_ATOM_NULL) {
-            is_enumerable = ((prs->flags & JS_PROP_ENUMERABLE) != 0);
-            kind = JS_AtomGetKind(rt, atom);
-            if ((!(flags & JS_GPN_ENUM_ONLY) || is_enumerable) &&
-                ((flags >> kind) & 1) != 0) {
-                /* need to raise an exception in case of the module
-                   name space (implicit GetOwnProperty) */
-                if (unlikely((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) &&
-                    (flags & (JS_GPN_SET_ENUM | JS_GPN_ENUM_ONLY))) {
-                    JSVarRef *var_ref = p->prop[i].u.var_ref;
-                    if (unlikely(JS_IsUninitialized(*var_ref->pvalue))) {
-                        JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
-                        return -1;
-                    }
-                }
-                if (!is_module_ns && JS_AtomIsArrayIndex(rt, &num_key, atom)) {
-                    num_keys_count++;
-                } else if (kind == JS_ATOM_KIND_STRING) {
-                    str_keys_count++;
-                } else {
-                    sym_keys_count++;
-                }
-            }
-        }
-    }
-
     if (p->is_exotic) {
         if (p->fast_array) {
             if (flags & JS_GPN_STRING_MASK) {
@@ -2040,6 +2010,38 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                             exotic_keys_count++;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /* Exotic callbacks may add ordinary own properties. Count the shape only
+       after they finish, so the allocation and fill see the same keys. */
+    sh = p->shape;
+    for(i = 0, prs = get_shape_prop(sh); i < sh->prop_count; i++, prs++) {
+        atom = prs->atom;
+        if (atom != JS_ATOM_NULL) {
+            is_enumerable = ((prs->flags & JS_PROP_ENUMERABLE) != 0);
+            kind = JS_AtomGetKind(rt, atom);
+            if ((!(flags & JS_GPN_ENUM_ONLY) || is_enumerable) &&
+                ((flags >> kind) & 1) != 0) {
+                /* need to raise an exception in case of the module
+                   name space (implicit GetOwnProperty) */
+                if (unlikely((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) &&
+                    (flags & (JS_GPN_SET_ENUM | JS_GPN_ENUM_ONLY))) {
+                    JSVarRef *var_ref = p->prop[i].u.var_ref;
+                    if (unlikely(JS_IsUninitialized(*var_ref->pvalue))) {
+                        JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
+                        JS_FreePropertyEnum(ctx, tab_exotic, exotic_count);
+                        return -1;
+                    }
+                }
+                if (!is_module_ns && JS_AtomIsArrayIndex(rt, &num_key, atom)) {
+                    num_keys_count++;
+                } else if (kind == JS_ATOM_KIND_STRING) {
+                    str_keys_count++;
+                } else {
+                    sym_keys_count++;
                 }
             }
         }
