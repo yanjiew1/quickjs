@@ -2412,9 +2412,10 @@ static int js_op_define_class(JSContext *ctx, JSValue *sp,
     js_method_set_home_object(ctx->rt, ctor, proto);
     JS_SetConstructorBit(ctx, ctor, TRUE);
 
-    JS_DefinePropertyValue(ctx, ctor, JS_ATOM_length,
-                           JS_NewInt32(ctx, b->defined_arg_count),
-                           JS_PROP_CONFIGURABLE);
+    if (JS_DefinePropertyValue(ctx, ctor, JS_ATOM_length,
+                               JS_NewInt32(ctx, b->defined_arg_count),
+                               JS_PROP_CONFIGURABLE) < 0)
+        goto fail;
 
     if (is_computed_name) {
         /* The class-mode catch, when present, separates the computed
