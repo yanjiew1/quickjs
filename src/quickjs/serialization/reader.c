@@ -880,7 +880,12 @@ static JSValue JS_ReadArray(BCReaderState *s, int tag)
             if (ret < 0)
                 goto fail;
         }
-        JS_PreventExtensions(ctx, obj);
+        /* Array length is writable by default, even when its elements are
+           read-only. Template objects must also freeze that property. */
+        if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_length,
+                                   JS_NewUint32(ctx, len), 0) < 0 ||
+            JS_PreventExtensions(ctx, obj) < 0)
+            goto fail;
     }
     return obj;
  fail:
