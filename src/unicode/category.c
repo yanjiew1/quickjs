@@ -69,6 +69,13 @@ int lre_is_letter(uint32_t c)
     return unicode_gc_contains(c, M(Lu) | M(Ll) | M(Lt) | M(Lm) | M(Lo), NULL);
 }
 
+int lre_is_letter_number(uint32_t c)
+{
+    if (c < 128)
+        return 0;
+    return unicode_gc_contains(c, M(Nl), NULL);
+}
+
 int lre_is_mark(uint32_t c)
 {
     if (c < 128)

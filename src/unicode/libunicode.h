@@ -119,6 +119,7 @@ int unicode_script(CharRange *cr, const char *script_name, int is_ext);
 int unicode_general_category(CharRange *cr, const char *gc_name);
 /* Allocation-free General_Category predicates (L, M, Nd, S/Z), not Alphabetic. */
 int lre_is_letter(uint32_t c);
+int lre_is_letter_number(uint32_t c);
 int lre_is_mark(uint32_t c);
 int lre_is_decimal_digit(uint32_t c);
 /* Unicode Decimal_Digit_Value, or -1 for non-Nd / out-of-range input. */
