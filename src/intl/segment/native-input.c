@@ -98,10 +98,12 @@ QJSIntlStatus qjs_intl_segment_native_input_prepare(const QJSIntlAllocator *allo
     {
         int word_like = 0;
         /* Classify each final span once. Neither containing nor an independent
-           iterator needs to rescan original text for Letter/Nd membership. */
+           iterator needs to rescan original text for Letter/Nd/Nl membership. */
         for (i = 0; i < text.count; i++) {
             if (selected->kind == QJS_INTL_SEGMENT_WORD && !word_like &&
-                (lre_is_letter(text.scalars[i]) || lre_is_decimal_digit(text.scalars[i])))
+                (lre_is_letter(text.scalars[i]) ||
+                 lre_is_decimal_digit(text.scalars[i]) ||
+                 lre_is_letter_number(text.scalars[i])))
                 word_like = 1;
             if (scan.breaks[i + 1]) {
                 result->word_like[at - 1] = word_like;
