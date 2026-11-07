@@ -327,7 +327,7 @@ static JSValue js_printf_internal(JSContext *ctx,
         res = JS_ThrowOutOfMemory(ctx);
     } else {
         if (fp) {
-            len = fwrite(dbuf.buf, 1, dbuf.size, fp);
+            len = dbuf.size ? fwrite(dbuf.buf, 1, dbuf.size, fp) : 0;
             res = JS_NewInt32(ctx, len);
         } else {
             res = JS_NewStringLen(ctx, (char *)dbuf.buf, dbuf.size);

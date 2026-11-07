@@ -49,6 +49,16 @@ try { std.loadScript("test_assert.js"); } catch(e) {}
 
 function test_printf()
 {
+    const file = std.tmpfile();
+    assert(std.printf(), 0);
+    assert(file.printf(), 0);
+    assert(file.printf(""), 0);
+    assert(file.tell(), 0);
+    assert(file.printf("x"), 1);
+    file.seek(0, std.SEEK_SET);
+    assert(file.readAsString(), "x");
+    file.close();
+
     assert(std.sprintf("a=%d s=%s", 123, "abc"), "a=123 s=abc");
     assert(std.sprintf("%010d", 123), "0000000123");
     assert(std.sprintf("%x", -2), "fffffffe");
