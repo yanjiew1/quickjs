@@ -7234,3 +7234,27 @@ function test_number_extreme_exponents()
 }
 
 test_number_extreme_exponents();
+
+function test_object_integrity_extensibility_order()
+{
+    for (const check of [Object.isSealed, Object.isFrozen]) {
+        const calls = [];
+        const obj = new Proxy({}, {
+            isExtensible(target) { calls.push("isExtensible"); return true; },
+            ownKeys() { throw Error("unexpected ownKeys"); },
+        });
+        assert(check(obj), false);
+        assert(calls.join(","), "isExtensible");
+
+        const fixed = Object.preventExtensions({});
+        const order = [];
+        const proxy = new Proxy(fixed, {
+            isExtensible(target) { order.push("isExtensible"); return false; },
+            ownKeys(target) { order.push("ownKeys"); return []; },
+        });
+        assert(check(proxy), true);
+        assert(order.join(","), "isExtensible,ownKeys");
+    }
+}
+
+test_object_integrity_extensibility_order();
