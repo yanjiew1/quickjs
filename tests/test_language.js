@@ -4328,3 +4328,85 @@ function test_regexp_after_control_header_in_initializer()
 }
 
 test_regexp_after_control_header_in_initializer();
+
+function test_regexp_after_declaration_in_initializer()
+{
+    /* Lookahead must skip the entire initializer without treating a brace
+       inside a regexp as the end of the surrounding binding pattern. */
+    for (const statement of [
+        "label: {} /}/.test('}');",
+        "outer: inner: { break outer; } /[}]/.test('}');",
+        "function f() {} /}/.test('}');",
+        "function* f() {} /[}]/.test('}');",
+        "async function f() {} /}/.test('}');",
+        "async function* f() {} /[}]/.test('}');",
+        "class C {} /}/.test('}');",
+        "class C extends class {} {} /[}]/.test('}');",
+        "class C extends function () {} {} /}/.test('}');",
+        "class C extends (true ? class {} : Object) {} /[}]/.test('}');",
+        "class C { static { label: {} /}/.test('}'); } } /}/.test('}');",
+        "void 0\nfunction f() {} /}/.test('}');",
+        "void 0\nclass C {} /}/.test('}');",
+        "debugger\nfunction f() {} /}/.test('}');",
+        "let of = 0; of\nfunction f() {} /}/.test('}');",
+        "class C { x = 1\nstatic { label: {} /}/.test('}'); } }",
+        "const f = () => {}\n/}/.test('}');",
+    ]) {
+        const body = "function () { " + statement + " return 42; }";
+        assert(Function("let x; [{x = " + body +
+                        "}] = [{}]; return x();")(), 42);
+        assert(Function("return (x = " + body + ") => x();")()(), 42);
+    }
+
+    /* These braces end expressions, so the slash must remain division.
+       Include keyword property names and class heritage expressions to
+       guard against mistaking them for declaration headers. */
+    for (const expression of [
+        "{} / (2 / 1)",
+        "true ? {} / (2 / 1) : 0",
+        "function () {} / (2 / 1)",
+        "class {} / (2 / 1)",
+        "class extends class {} {} / (2 / 1)",
+        "class extends function () {} {} / (2 / 1)",
+        "class { function() {} class() {} } / (2 / 1)",
+        "`${class {}}` / (2 / 1)",
+        "(() => {}) / (2 / 1)",
+    ]) {
+        const source = "let x; [{x = function () { return " + expression +
+                       "; }}] = [{}]; return x();";
+        assert(Number.isNaN(Function(source)()));
+    }
+
+    for (const expression of [
+        "({function: function () { return 8; }}).function() / 2",
+        "({class: class { static value = 8; }}).class.value / 2",
+        "({get function() { return 8; }}).function / 2",
+        "({async class() {}} , 8) / 2",
+        "new (class { function() { return 8; } class() { return 8; } })().class() / 2",
+    ]) {
+        const source = "let x; [{x = function () { return " + expression +
+                       "; }}] = [{}]; return x();";
+        assert(Function(source)(), 4);
+    }
+
+    /* An object literal can occur in ClassHeritage. Parsing succeeds even
+       though attempting to use that object as a superclass would throw. */
+    assert(typeof Function("let x; [{x = class extends {} {}}] = [{}];"),
+           "function");
+
+    for (const heritage of ["of", "obj.of", "tag`x`", "tag`x${1}`"]) {
+        const source = "const of = Object, obj = {of}, tag = () => Object; " +
+                       "let x; [{x = class extends " + heritage +
+                       " {}}] = [{}]; return typeof x;";
+        assert(Function(source)(), "function");
+    }
+
+    /* Pending class headers must not reduce the supported nesting depth. */
+    const nested = "class extends ".repeat(260) + "Object" + " {}".repeat(260);
+    assert(Function("let x; [{x = " + nested +
+                    "}] = [{}]; return typeof x;")(), "function");
+    assert_throws(SyntaxError, () => Function(
+        "let x; [{x = function () { const f = () => {} /}/.test('}'); }}] = [{}];"));
+}
+
+test_regexp_after_declaration_in_initializer();
