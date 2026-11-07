@@ -707,15 +707,12 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
         return JS_ThrowTypeError(ctx, "cannot convert to object");
 
     if (JS_IsObject(regexp)) {
+        if (atom == JS_ATOM_Symbol_matchAll &&
+            check_regexp_g_flag(ctx, regexp) < 0)
+            return JS_EXCEPTION;
         matcher = JS_GetProperty(ctx, regexp, atom);
         if (JS_IsException(matcher))
             return JS_EXCEPTION;
-        if (atom == JS_ATOM_Symbol_matchAll) {
-            if (check_regexp_g_flag(ctx, regexp) < 0) {
-                JS_FreeValue(ctx, matcher);
-                return JS_EXCEPTION;
-            }
-        }
         if (!JS_IsUndefined(matcher) && !JS_IsNull(matcher)) {
             return JS_CallFree(ctx, matcher, regexp, 1, &O);
         }

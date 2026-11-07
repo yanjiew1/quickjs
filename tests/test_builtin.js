@@ -648,6 +648,33 @@ function test_array()
     assert(err && a.toString() === "1,2,3,4");
 }
 
+function test_string_match_all_order()
+{
+    const order = [];
+    const result = {};
+    const regexp = {
+        get [Symbol.match]() { order.push("match"); return true; },
+        get flags() { order.push("flags"); return "g"; },
+        get [Symbol.matchAll]() {
+            order.push("matchAll");
+            return function(value) {
+                assert(this, regexp);
+                assert(value, "text");
+                return result;
+            };
+        },
+    };
+    assert("text".matchAll(regexp), result);
+    assert(order.join(","), "match,flags,matchAll");
+
+    const nonglobal = {
+        [Symbol.match]: true,
+        flags: "",
+        get [Symbol.matchAll]() { throw Error("unexpected matchAll lookup"); },
+    };
+    assert_throws(TypeError, () => "text".matchAll(nonglobal));
+}
+
 function test_string()
 {
     var a;
@@ -6202,6 +6229,7 @@ test_function_constructor_boundaries();
 test_enum();
 test_copy_data_property_reentrancy();
 test_array();
+test_string_match_all_order();
 test_reflect_construct_order();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
