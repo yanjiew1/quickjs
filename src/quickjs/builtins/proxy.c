@@ -866,8 +866,10 @@ static JSValue js_proxy_call_constructor(JSContext *ctx, JSValueConst func_obj,
     s = get_proxy_method(ctx, &method, func_obj, JS_ATOM_construct);
     if (!s)
         return JS_EXCEPTION;
-    if (!JS_IsConstructor(ctx, s->target))
+    if (!JS_IsConstructor(ctx, s->target)) {
+        JS_FreeValue(ctx, method);
         return JS_ThrowTypeErrorNotAConstructor(ctx, s->target);
+    }
     if (JS_IsUndefined(method))
         return JS_CallConstructor2(ctx, s->target, new_target, argc, argv);
     arg_array = js_create_array(ctx, argc, argv);

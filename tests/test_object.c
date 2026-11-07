@@ -414,6 +414,39 @@ static void test_reentrant_exotic_enumeration(JSContext *ctx)
     JS_FreeValue(ctx, obj);
 }
 
+static void test_proxy_construct_method_cleanup(JSContext *ctx)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue global, target, proxy, result;
+    JSMemoryUsage before, after;
+    int i;
+
+    eval_ok(ctx, "var constructTarget = function() {};"
+                 "var constructProxy = new Proxy(constructTarget, {"
+                 "  get construct() { return function() {}; }"
+                 "});");
+    global = JS_GetGlobalObject(ctx);
+    target = JS_GetPropertyStr(ctx, global, "constructTarget");
+    proxy = JS_GetPropertyStr(ctx, global, "constructProxy");
+    assert(!JS_IsException(target) && !JS_IsException(proxy));
+    assert(JS_SetConstructorBit(ctx, target, FALSE));
+
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &before);
+    for (i = 0; i < 32; i++) {
+        result = JS_CallConstructor(ctx, proxy, 0, NULL);
+        assert(JS_IsException(result));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    }
+    JS_RunGC(rt);
+    JS_ComputeMemoryUsage(rt, &after);
+    assert(after.malloc_count <= before.malloc_count + 4);
+
+    JS_FreeValue(ctx, proxy);
+    JS_FreeValue(ctx, target);
+    JS_FreeValue(ctx, global);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -430,6 +463,7 @@ int main(void)
     test_delete_global_varref_oom(ctx);
     test_detached_exotic_prototype(ctx);
     test_reentrant_exotic_enumeration(ctx);
+    test_proxy_construct_method_cleanup(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
