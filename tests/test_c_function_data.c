@@ -432,6 +432,54 @@ static void test_named_callback_oom(void)
     assert(failures > 0 && successes > 0);
 }
 
+static int data_call_depth;
+
+static JSValue recursive_data_call(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv, int magic,
+                                   JSValue *data)
+{
+    JSValue function, result;
+
+    if (++data_call_depth >= 100)
+        return JS_NewInt32(ctx, data_call_depth);
+    function = JS_GetPropertyStr(ctx, data[0], "function");
+    if (JS_IsException(function))
+        return function;
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    JS_FreeValue(ctx, function);
+    return result;
+}
+
+static void test_data_call_stack_limit(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue holder, function, result;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    holder = JS_NewObject(ctx);
+    assert(!JS_IsException(holder));
+    function = JS_NewCFunctionData(ctx, recursive_data_call, 255, 0, 1,
+                                   (JSValueConst *)&holder);
+    assert(!JS_IsException(function));
+    assert(JS_SetPropertyStr(ctx, holder, "function",
+                             JS_DupValue(ctx, function)) == 1);
+
+    data_call_depth = 0;
+    JS_SetMaxStackSize(rt, 16384);
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(JS_IsException(result) && data_call_depth < 100);
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    JS_FreeValue(ctx, function);
+    JS_FreeValue(ctx, holder);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     JSClassDef def = {
@@ -456,5 +504,6 @@ int main(void)
     JS_FreeRuntime(rt);
     assert(finalized == 2);
     test_named_callback_oom();
+    test_data_call_stack_limit();
     return 0;
 }

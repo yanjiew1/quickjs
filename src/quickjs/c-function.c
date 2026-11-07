@@ -347,6 +347,8 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
     int i;
 
     /* XXX: could add the function on the stack for debug */
+    if (js_check_stack_overflow(ctx->rt, sizeof(arg_buf[0]) * s->length))
+        return JS_ThrowStackOverflow(ctx);
     if (unlikely(argc < s->length)) {
         arg_buf = alloca(sizeof(arg_buf[0]) * s->length);
         for(i = 0; i < argc; i++)
