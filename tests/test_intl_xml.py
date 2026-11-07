@@ -87,6 +87,8 @@ class SchemaTests(unittest.TestCase):
             b'<!ATTLIST pattern a CDATA #IMPLIED>',
             b'<!ELEMENT pattern EMPTY><!ENTITY extra "x">',
             DTD + b'<!ATTLIST pattern type NMTOKEN #IMPLIED>',
+            b'<!ELEMENT sample ANY><!ATTLIST sample type NMTOKEN #REQUIRED',
+            DTD + b'<!-- unterminated',
         )
         for data in cases:
             with self.assertRaises(cldr.DataError):
