@@ -1398,6 +1398,15 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             (s->token.u.ident.atom == JS_ATOM_await ||
              s->token.u.ident.atom == JS_ATOM_yield))
             reparse_ident_token(s, flags >> SKIP_FUNC_SHIFT);
+        /* These tokens cannot continue a completed expression. Preserve
+           the inserted boundary before `async`, not just before `function`.
+           Return/yield also have restricted line terminators; await does not. */
+        if (s->got_lf && new_statement &&
+            js_parse_skip_is_statement(top->kind) &&
+            (line_boundary || last_tok == TOK_RETURN ||
+             last_tok == TOK_YIELD || last_tok == TOK_BREAK ||
+             last_tok == TOK_CONTINUE || last_tok == TOK_DEBUGGER))
+            last_tok = ';';
         async_parameter = last_is_async && !s->got_lf &&
             s->token.val == TOK_IDENT;
 
@@ -1443,12 +1452,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                  last_tok == TOK_ELSE || last_tok == TOK_DO ||
                  (last_is_async &&
                   (previous_tok == '{' || previous_tok == ';' ||
-                   previous_tok == TOK_ELSE || previous_tok == TOK_DO)) ||
-                 (s->got_lf &&
-                  (!is_regexp_allowed(last_tok) ||
-                   last_tok == TOK_RETURN ||
-                   last_tok == TOK_BREAK || last_tok == TOK_CONTINUE ||
-                   last_tok == TOK_DEBUGGER)));
+                   previous_tok == TOK_ELSE || previous_tok == TOK_DO)));
             if (s->token.val == TOK_FUNCTION) {
                 c = c ? SKIP_FUNCTION_DECL_HEAD : SKIP_FUNCTION_HEAD;
                 flags = last_is_async && !s->got_lf ? SKIP_ASYNC : 0;

@@ -4401,6 +4401,9 @@ function test_regexp_after_declaration_in_initializer()
         "class C { static { label: {} /}/.test('}'); } } /}/.test('}');",
         "void 0\nfunction f() {} /}/.test('}');",
         "void 0\nclass C {} /}/.test('}');",
+        "void 0\n{} /}/.test('}');",
+        "void 0\nasync function f() {} /}/.test('}');",
+        "void 0\nasync function* f() {} /}/.test('}');",
         "debugger\nfunction f() {} /}/.test('}');",
         "let of = 0; of\nfunction f() {} /}/.test('}');",
         "class C { x = 1\nstatic { label: {} /}/.test('}'); } }",
@@ -4543,3 +4546,27 @@ function test_lookahead_lexical_contexts()
 }
 
 test_lookahead_lexical_contexts();
+
+function test_lookahead_restricted_asi()
+{
+    assert(Function("let x; [{x = function () { return\n" +
+                    "{} /}/.test('}'); }}] = [{}]; return x();")(), undefined);
+    for (const statement of ["{}", "function f() {}", "class C {}",
+                             "async function f() {}"]) {
+        const g = Function("let x; [{x = function* () { yield\n" + statement +
+                           " /}/.test('}'); return 42; }}] = [{}]; return x;")();
+        const iterator = g();
+        const first = iterator.next();
+        assert(first.value, undefined);
+        assert(first.done, false);
+        const last = iterator.next();
+        assert(last.value, 42);
+        assert(last.done, true);
+    }
+    /* Await keeps its operand across a newline. It cannot become an empty
+       expression statement followed by a block and a regexp. */
+    assert_throws(SyntaxError, () => Function(
+        "let x; [{x = async function () { await\n{} /}/.test('}'); }}] = [{}];"));
+}
+
+test_lookahead_restricted_asi();
