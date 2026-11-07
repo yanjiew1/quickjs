@@ -420,6 +420,10 @@ size_t (js_malloc_usable_size)(JSContext *ctx, const void *ptr)
 char *js_strndup(JSContext *ctx, const char *s, size_t n)
 {
     char *ptr;
+    if (n == SIZE_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
     ptr = js_malloc(ctx, n + 1);
     if (ptr) {
         memcpy(ptr, s, n);

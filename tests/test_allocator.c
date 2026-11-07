@@ -2308,8 +2308,27 @@ static void test_shape_capacity_limits(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_strndup_length_overflow(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    char *copy;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    assert(js_strndup(ctx, "x", SIZE_MAX) == NULL);
+    oom_test_check_exception(ctx);
+    copy = js_strndup(ctx, "x", 1);
+    assert(copy && strcmp(copy, "x") == 0);
+    js_free(ctx, copy);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_strndup_length_overflow();
     test_rope_rebalance_allocation_failure(FALSE);
     test_rope_rebalance_allocation_failure(TRUE);
     test_vm_result_allocation_failures();
