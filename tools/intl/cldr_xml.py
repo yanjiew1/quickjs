@@ -92,7 +92,11 @@ class Schema:
         self.elements = set()
         self.fields = {}
         current = None
+        cursor = 0
         for match in TOKENS.finditer(text):
+            if '<!' in text[cursor:match.start()]:
+                raise DataError('unterminated DTD declaration')
+            cursor = match.end()
             token = match.group()
             if token.startswith('<!--'):
                 annotation = token[4:-3].strip()
@@ -138,6 +142,8 @@ class Schema:
                 current = (fields, name)
             else:
                 raise DataError('unsupported DTD declaration: ' + token)
+        if '<!' in text[cursor:]:
+            raise DataError('unterminated DTD declaration')
         if not self.elements or set(self.fields) - self.elements:
             raise DataError('missing DTD element declarations')
 
