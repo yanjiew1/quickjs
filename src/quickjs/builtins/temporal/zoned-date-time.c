@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "calendar-fields.h"
+#include "../duration-value.h"
 #include "../temporal.h"
 #include "../../../temporal/format.h"
 
@@ -589,22 +590,17 @@ static JSValue js_temporal_zoned_add(JSContext *ctx, JSValueConst this_val,
 {
     static const char *const overflows[] = { "constrain", "reject" };
     JSTemporalZonedDateTimeData *s;
-    JSTemporalDurationData *duration;
     QJSTemporalDuration copy;
     QJSTemporalInternalDuration internal;
     QJSTemporalEpochNs epoch;
-    JSValue converted, options;
+    JSValue options;
     int overflow, i, ret;
 
     s = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_ZONED_DATE_TIME);
     if (!s)
         return JS_EXCEPTION;
-    converted = js_temporal_to_duration(ctx, zdt_argument(argc, argv, 0));
-    if (JS_IsException(converted))
-        return converted;
-    duration = JS_GetOpaque(converted, JS_CLASS_TEMPORAL_DURATION);
-    copy = *duration;
-    JS_FreeValue(ctx, converted);
+    if (js_duration_to_record(ctx, zdt_argument(argc, argv, 0), &copy))
+        return JS_EXCEPTION;
     if (subtract) {
         for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++)
             copy.fields[i] = -copy.fields[i];
