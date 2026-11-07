@@ -53,8 +53,11 @@ def source_selection(checkout):
                 features.update(re.findall(r'[\w.-]+', line))
             else:
                 in_features = False
-        if ('toLocaleString' not in path.relative_to(root).parts and
-                'Intl-enumeration' not in features):
+        # Era/month-code support is provided by Temporal's calendar backend;
+        # other Intl features require the Intl API itself.
+        needs_intl = any(feature.startswith('Intl') and
+                         feature != 'Intl.Era-monthcode' for feature in features)
+        if 'toLocaleString' not in path.relative_to(root).parts and not needs_intl:
             applicable.add(name)
     if not all_cases or not applicable:
         raise ValueError('empty Temporal conformance selection')
@@ -89,8 +92,8 @@ def audit(rows, problems, all_cases, applicable):
              '{} of {} source files are applicable without Intl; {} executed.'
              .format(len(applicable), len(all_cases), len(executed)), '',
              'Execution includes failures: this audits coverage, while the '
-             'runner reports conformance. Formatting and Intl enumeration '
-             'remain capability skips.', '']
+             'runner reports conformance. Tests requiring Intl APIs remain '
+             'capability skips.', '']
     if issues:
         lines += ['**Selection audit failed.**', '']
         lines += ['- ' + issue for issue in issues]
