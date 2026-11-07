@@ -154,6 +154,8 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
 
     /* skip the Error() function in the backtrace */
     build_backtrace(ctx, obj, NULL, 0, 0, JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL);
+    if (JS_HasException(ctx))
+        goto exception;
     return obj;
  exception:
     JS_FreeValue(ctx, obj);

@@ -2308,6 +2308,40 @@ static void test_shape_capacity_limits(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_error_constructor_backtrace_failure(void)
+{
+    int fail_at, saw_failure = 0;
+
+    for (fail_at = 1; fail_at <= 24; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue make, result;
+
+        assert(ctx);
+        make = JS_Eval(ctx, "(function make() { return new Error('message'); })",
+                       strlen("(function make() { return new Error('message'); })"),
+                       "error-oom", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(make));
+        oom_test_begin(&allocator, fail_at);
+        result = JS_Call(ctx, make, JS_UNDEFINED, 0, NULL);
+        oom_test_end(&allocator);
+        if (JS_HasException(ctx)) {
+            assert(JS_IsException(result));
+            oom_test_check_exception(ctx);
+            saw_failure |= allocator.failures != 0;
+        } else {
+            assert(!JS_IsException(result));
+            JS_FreeValue(ctx, result);
+        }
+        JS_FreeValue(ctx, make);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+    assert(saw_failure);
+}
+
 static void test_strndup_length_overflow(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -2328,6 +2362,7 @@ static void test_strndup_length_overflow(void)
 
 int main(void)
 {
+    test_error_constructor_backtrace_failure();
     test_strndup_length_overflow();
     test_rope_rebalance_allocation_failure(FALSE);
     test_rope_rebalance_allocation_failure(TRUE);
