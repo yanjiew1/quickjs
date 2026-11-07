@@ -127,7 +127,9 @@ for (const [currency, digits] of [['USD', 2], ['JPY', 0], ['KWD', 3], ['XXX', 2]
         minimumFractionDigits: digits, maximumFractionDigits: digits});
 for (const notation of ['scientific', 'engineering']) {
     fields(full({style: 'currency', currency: 'KWD', notation}), {
-        minimumFractionDigits: 0, maximumFractionDigits: 3});
+        minimumFractionDigits: 3, maximumFractionDigits: 3});
+    fields(full({style: 'currency', currency: 'JPY', notation}), {
+        minimumFractionDigits: 0, maximumFractionDigits: 0});
     fields(full({style: 'percent', notation}), {
         minimumFractionDigits: 0, maximumFractionDigits: 0});
 }
@@ -135,7 +137,7 @@ fields(full({notation: 'compact', compactDisplay: 'long'}), {notation: 3,
     compactDisplay: 1, useGrouping: 3, minimumFractionDigits: 0, maximumFractionDigits: 0,
     minimumSignificantDigits: 1, maximumSignificantDigits: 2, roundingPriority: 1});
 fields(full({style: 'currency', currency: 'KWD', notation: 'compact', maximumFractionDigits: 3}),
-    {minimumFractionDigits: 0, maximumFractionDigits: 3,
+    {minimumFractionDigits: 3, maximumFractionDigits: 3,
         minimumSignificantDigits: undefined, maximumSignificantDigits: undefined});
 assert(full({compactDisplay: 'long'}).compactDisplay, 0);
 fields(full({maximumSignificantDigits: 4}), {minimumFractionDigits: undefined,
