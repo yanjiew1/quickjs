@@ -1434,24 +1434,6 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
     return m;
 }
 
-int is_line_sep(char c)
-{
-    return (c == '\0' || c == '\n' || c == '\r');
-}
-
-char *find_line(const char *str, const char *line)
-{
-    if (str) {
-        const char *p;
-        int len = strlen(line);
-        for (p = str; (p = strstr(p, line)) != NULL; p += len + 1) {
-            if ((p == str || is_line_sep(p[-1])) && is_line_sep(p[len]))
-                return (char *)p;
-        }
-    }
-    return NULL;
-}
-
 int is_word_sep(char c)
 {
     return (c == '\0' || isspace((unsigned char)c) || c == ',');
