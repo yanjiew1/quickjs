@@ -39,6 +39,27 @@ import "./test_module_bindings_review.js";
 
 import "./test_module_namespace_review.js";
 
+/* Array binding leaves export the same live bindings as object patterns. */
+export var [arrayVarExport = 1] = [];
+export let [arrayLetExport, {nested: [nestedArrayExport]}, ...arrayRestExport] =
+    [2, {nested: [3]}, 4, 5];
+export const [arrayConstExport] = [6];
+assert(selfNamespace.arrayVarExport, 1);
+assert(selfNamespace.arrayLetExport, 2);
+assert(selfNamespace.nestedArrayExport, 3);
+assert(selfNamespace.arrayRestExport.join(","), "4,5");
+assert(selfNamespace.arrayConstExport, 6);
+arrayLetExport = 7;
+assert(selfNamespace.arrayLetExport, 7);
+
+let duplicateArrayExportError;
+try {
+    await import("./fixture_module_duplicate_array_export.js");
+} catch (e) {
+    duplicateArrayExportError = e;
+}
+assert(duplicateArrayExportError instanceof SyntaxError);
+
 assert(plainMetaModule.meta !== attributedMetaModule.meta);
 assert(plainMetaModule.readMeta() === plainMetaModule.meta);
 assert(attributedMetaModule.readMeta() === attributedMetaModule.meta);
