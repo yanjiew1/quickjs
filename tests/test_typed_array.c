@@ -22,12 +22,14 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/builtins/array-buffer.h"
 #include "../src/quickjs/builtins/typed-array.h"
+#include "pool-padding.h"
 
 static JSValue new_view(JSContext *ctx, JSValueConst buffer,
                         JSTypedArrayEnum type, int offset, int length)
@@ -427,6 +429,37 @@ static void test_unaligned_atomics(JSContext *ctx, JSTypedArrayEnum type,
 }
 #endif
 
+static void test_bigint_descriptor_oom(JSContext *ctx)
+{
+    static const char source[] = "new BigUint64Array([18446744073709551615n])";
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue view, error;
+    JSPropertyDescriptor desc;
+    JSAtom index;
+    void *padding;
+    int ret;
+
+    view = JS_Eval(ctx, source, sizeof(source) - 1,
+                   "typed-array-descriptor", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(view));
+    index = JS_NewAtomUInt32(ctx, 0);
+    assert(index != JS_ATOM_NULL);
+
+    padding = test_pool_padding(rt);
+    JS_SetMemoryLimit(rt, 1);
+    ret = JS_GetOwnProperty(ctx, &desc, view, index);
+    JS_SetMemoryLimit(rt, SIZE_MAX);
+    assert(ret == -1 && JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    JS_FreeValue(ctx, error);
+    test_pool_padding_free(rt, padding);
+
+    assert(JS_GetOwnProperty(ctx, &desc, view, index) == TRUE);
+    js_free_desc(rt, &desc);
+    JS_FreeAtom(ctx, index);
+    JS_FreeValue(ctx, view);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -446,6 +479,7 @@ int main(void)
             test_unaligned_atomics(ctx, type, element_size);
 #endif
     }
+    test_bigint_descriptor_oom(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;

@@ -2276,6 +2276,8 @@ retry:
                         desc->getter = JS_UNDEFINED;
                         desc->setter = JS_UNDEFINED;
                         desc->value = JS_GetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p), idx);
+                        if (JS_IsException(desc->value))
+                            return -1;
                     }
                     return TRUE;
                 }
