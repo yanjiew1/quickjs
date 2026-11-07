@@ -410,62 +410,51 @@ JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void 
    NULL in case of exception (case of revoked proxy only) */
 JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
 {
+    JSValue current = func_obj;
     JSObject *p;
-    JSContext *realm;
 
-    if (JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)
-        return ctx;
-    p = JS_VALUE_GET_OBJ(func_obj);
-    switch(p->class_id) {
-    case JS_CLASS_C_FUNCTION:
-        realm = p->u.cfunc.realm;
-        break;
-    case JS_CLASS_C_CLOSURE:
-        realm = ((JSCClosureRecord *)p->u.opaque)->realm;
-        break;
-    case JS_CLASS_C_FUNCTION_DATA:
-        realm = ((JSCFunctionDataRecord *)p->u.opaque)->realm;
-        break;
-    case JS_CLASS_PROMISE_RESOLVE_FUNCTION:
-    case JS_CLASS_PROMISE_REJECT_FUNCTION:
-        realm = js_promise_resolving_function_realm(func_obj);
-        if (!realm)
-            realm = ctx;
-        break;
-    case JS_CLASS_BYTECODE_FUNCTION:
-    case JS_CLASS_GENERATOR_FUNCTION:
-    case JS_CLASS_ASYNC_FUNCTION:
-    case JS_CLASS_ASYNC_GENERATOR_FUNCTION:
-        {
-            JSFunctionBytecode *b;
-            b = p->u.func.function_bytecode;
-            realm = b->realm;
-        }
-        break;
-    case JS_CLASS_PROXY:
-        {
-            JSProxyData *s = p->u.opaque;
-            if (!s)
-                return ctx;
-            if (s->is_revoked) {
-                JS_ThrowTypeErrorRevokedProxy(ctx);
-                return NULL;
-            } else {
-                realm = JS_GetFunctionRealm(ctx, s->target);
+    /* Bound functions and proxies can form arbitrarily deep wrapper chains. */
+    for (;;) {
+        if (JS_VALUE_GET_TAG(current) != JS_TAG_OBJECT)
+            return ctx;
+        p = JS_VALUE_GET_OBJ(current);
+        switch(p->class_id) {
+        case JS_CLASS_C_FUNCTION:
+            return p->u.cfunc.realm;
+        case JS_CLASS_C_CLOSURE:
+            return ((JSCClosureRecord *)p->u.opaque)->realm;
+        case JS_CLASS_C_FUNCTION_DATA:
+            return ((JSCFunctionDataRecord *)p->u.opaque)->realm;
+        case JS_CLASS_PROMISE_RESOLVE_FUNCTION:
+        case JS_CLASS_PROMISE_REJECT_FUNCTION:
+            {
+                JSContext *realm = js_promise_resolving_function_realm(current);
+                return realm ? realm : ctx;
             }
+        case JS_CLASS_BYTECODE_FUNCTION:
+        case JS_CLASS_GENERATOR_FUNCTION:
+        case JS_CLASS_ASYNC_FUNCTION:
+        case JS_CLASS_ASYNC_GENERATOR_FUNCTION:
+            return p->u.func.function_bytecode->realm;
+        case JS_CLASS_PROXY:
+            {
+                JSProxyData *s = p->u.opaque;
+                if (!s)
+                    return ctx;
+                if (s->is_revoked) {
+                    JS_ThrowTypeErrorRevokedProxy(ctx);
+                    return NULL;
+                }
+                current = s->target;
+                break;
+            }
+        case JS_CLASS_BOUND_FUNCTION:
+            current = p->u.bound_function->func_obj;
+            break;
+        default:
+            return ctx;
         }
-        break;
-    case JS_CLASS_BOUND_FUNCTION:
-        {
-            JSBoundFunction *bf = p->u.bound_function;
-            realm = JS_GetFunctionRealm(ctx, bf->func_obj);
-        }
-        break;
-    default:
-        realm = ctx;
-        break;
     }
-    return realm;
 }
 
 JSValue JS_CreateFromConstructor(JSContext *ctx, JSValueConst ctor,
