@@ -4290,6 +4290,25 @@ function test_lookahead_line_terminators()
 
 test_lookahead_line_terminators();
 
+function test_line_comment_terminators()
+{
+    /* A single-line comment excludes its terminator. Preserve the same
+       restricted-production and ASI behavior for every line separator. */
+    for (const line of ["\n", "\r", "\u2028", "\u2029"]) {
+        for (const comment of ["// comment", "<!-- comment"]) {
+            assert(Function("return " + comment + line + "42;")(), undefined);
+            assert_throws(SyntaxError,
+                          () => Function("throw " + comment + line + "42;"));
+            assert_throws(SyntaxError, () => Function(
+                "return (x) " + comment + line + "=> x;"));
+            assert(Function("let a=1,b=1; a " + comment + line +
+                            "++b; return [a,b];")().join(","), "1,2");
+        }
+    }
+}
+
+test_line_comment_terminators();
+
 function test_regexp_after_control_header_in_initializer()
 {
     for (const statement of [
