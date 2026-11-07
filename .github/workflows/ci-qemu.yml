@@ -107,15 +107,20 @@ jobs:
           submodules: recursive
       - name: Install QEMU binary format handlers
         # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
-        run: docker run --privileged --rm tonistiigi/binfmt:master --install all
+        run: |
+          docker run --rm tonistiigi/binfmt:master --version
+          docker run --privileged --rm tonistiigi/binfmt:master --install all
       - name: Start Alpine container
         run: >-
           docker run --detach --name quickjs-qemu
           --mount "type=bind,source=$GITHUB_WORKSPACE,target=/host"
           --platform '${{ matrix.platform }}' --workdir /host
-          alpine tail -f /dev/null
+          alpine:latest tail -f /dev/null
       - name: Install dependencies
-        run: docker exec quickjs-qemu apk add --no-cache git patch meson ninja gcc libc-dev python3
+        run: |
+          docker exec quickjs-qemu apk upgrade --no-cache
+          docker exec quickjs-qemu cat /etc/alpine-release
+          docker exec quickjs-qemu apk add --no-cache git patch meson ninja gcc libc-dev python3
       - name: Configure
         run: docker exec quickjs-qemu meson setup build
       - name: Compile
