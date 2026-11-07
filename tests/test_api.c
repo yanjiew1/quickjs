@@ -4240,6 +4240,57 @@ static void test_proxy_property_oom(void)
     test_proxy_property_failures(1);
 }
 
+static void test_boxed_string_oom(void)
+{
+    static const char source[] = "(class extends String {})";
+    size_t step, calls = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue ctor, proto, peer, input, result, length;
+        void *padding;
+
+        assert(ctx);
+        ctor = JS_Eval(ctx, source, sizeof(source) - 1, "string-oom", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(ctor));
+        proto = JS_GetPropertyStr(ctx, ctor, "prototype");
+        peer = JS_NewObjectProto(ctx, proto);
+        input = JS_NewString(ctx, "abcdef");
+        assert(!JS_IsException(proto) && !JS_IsException(peer) && !JS_IsException(input));
+        /* The shared shape and filled pools exercise the length-property path. */
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_CallConstructor(ctx, ctor, 1, (JSValueConst *)&input);
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(step);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            length = JS_GetPropertyStr(ctx, result, "length");
+            assert(JS_StrictEq(ctx, length, JS_NewInt32(ctx, 6)));
+            JS_FreeValue(ctx, length);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, input);
+        JS_FreeValue(ctx, peer);
+        JS_FreeValue(ctx, proto);
+        JS_FreeValue(ctx, ctor);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+}
+
 static void test_bound_function_oom(void)
 {
     static const char source[] = "(function target(a, b) { return a + b; })";
@@ -5185,6 +5236,7 @@ int main(int argc, char **argv)
         { "collection-growth-oom", test_collection_growth_oom },
         { "weakref-checkpoints", test_weakref_checkpoints },
         { "weakref-kept-oom", test_weakref_kept_oom },
+        { "boxed-string-oom", test_boxed_string_oom },
         { "bound-function-oom", test_bound_function_oom },
         { "shared-write-retry", test_shared_write_retry },
         { "promise-constructor-bit", test_promise_constructor_bit },
