@@ -302,6 +302,7 @@ static JSValue js_new_c_function_data(JSContext *ctx, JSCFunctionData *func,
         return JS_EXCEPTION;
     }
     s->func = func;
+    s->realm = JS_DupContext(ctx);
     s->length = length;
     s->data_len = data_len;
     s->magic = magic;
@@ -343,11 +344,14 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
                                 int argc, JSValueConst *argv, int flags)
 {
     JSCFunctionDataRecord *s = JS_GetOpaque(func_obj, JS_CLASS_C_FUNCTION_DATA);
-    JSValueConst *arg_buf;
+    JSRuntime *rt = ctx->rt;
+    JSStackFrame sf;
+    JSValueConst *arg_buf = argv;
+    JSValue result;
     int i;
 
-    /* XXX: could add the function on the stack for debug */
-    if (js_check_stack_overflow(ctx->rt, sizeof(arg_buf[0]) * s->length))
+    ctx = s->realm;
+    if (js_check_stack_overflow(rt, sizeof(arg_buf[0]) * s->length))
         return JS_ThrowStackOverflow(ctx);
     if (unlikely(argc < s->length)) {
         arg_buf = alloca(sizeof(arg_buf[0]) * s->length);
@@ -355,11 +359,16 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
             arg_buf[i] = argv[i];
         for(i = argc; i < s->length; i++)
             arg_buf[i] = JS_UNDEFINED;
-    } else {
-        arg_buf = argv;
     }
-
-    return s->func(ctx, this_val, argc, arg_buf, s->magic, s->data);
+    sf.prev_frame = rt->current_stack_frame;
+    sf.cur_func = (JSValue)func_obj;
+    sf.arg_count = max_int(argc, s->length);
+    sf.arg_buf = (JSValue *)arg_buf;
+    sf.js_mode = 0;
+    rt->current_stack_frame = &sf;
+    result = s->func(ctx, this_val, argc, arg_buf, s->magic, s->data);
+    rt->current_stack_frame = sf.prev_frame;
+    return result;
 }
 
 void js_c_function_data_finalizer(JSRuntime *rt, JSValue val)
@@ -371,6 +380,7 @@ void js_c_function_data_finalizer(JSRuntime *rt, JSValue val)
         for(i = 0; i < s->data_len; i++) {
             JS_FreeValueRT(rt, s->data[i]);
         }
+        JS_FreeContext(s->realm);
         js_free_rt(rt, s);
     }
 }
@@ -382,6 +392,7 @@ void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
     int i;
 
     if (s) {
+        mark_func(rt, &s->realm->header);
         for(i = 0; i < s->data_len; i++) {
             JS_MarkValue(rt, s->data[i], mark_func);
         }

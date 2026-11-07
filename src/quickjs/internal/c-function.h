@@ -46,6 +46,7 @@ static inline int *js_c_function_magic(JSObject *p)
 
 typedef struct JSCFunctionDataRecord {
     JSCFunctionData *func;
+    JSContext *realm;
     uint8_t length;
     int magic;
     int data_len;

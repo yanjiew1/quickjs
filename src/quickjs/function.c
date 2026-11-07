@@ -422,6 +422,9 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
     case JS_CLASS_C_CLOSURE:
         realm = ((JSCClosureRecord *)p->u.opaque)->realm;
         break;
+    case JS_CLASS_C_FUNCTION_DATA:
+        realm = ((JSCFunctionDataRecord *)p->u.opaque)->realm;
+        break;
     case JS_CLASS_BYTECODE_FUNCTION:
     case JS_CLASS_GENERATOR_FUNCTION:
     case JS_CLASS_ASYNC_FUNCTION:
