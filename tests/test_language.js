@@ -77,6 +77,26 @@ function test_arrow_for_in_grammar()
     assert(value(), false);
 }
 
+function test_for_of_let_head()
+{
+    for (const prefix of ["for", "for await"]) {
+        const wrap = source => prefix == "for await" ?
+            "return async function () { " + source + " };" : source;
+        const loop = head => "var let = {foo: 0}; " + prefix +
+            " (" + head + " of []) {}";
+        assert_throws(SyntaxError, () => Function(wrap(loop("let.foo"))));
+        assert_throws(SyntaxError, () => Function(wrap(loop("let\n.foo"))));
+        /* The restriction is on the initial unescaped token, not the
+           resulting binding name or every use of the identifier let. */
+        Function(wrap(loop("(let.foo)")));
+        Function(wrap(loop("l\\u0065t.foo")));
+        Function(wrap(prefix + " (let of of []) {}"));
+    }
+    Function("var let = {}; for (let.foo in {}) {}");
+}
+
+test_for_of_let_head();
+
 function test_eval_call_receiver()
 {
     function parameter(value = eval(`

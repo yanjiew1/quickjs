@@ -6074,7 +6074,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
     JSAtom var_name;
-    BOOL has_initializer, is_for_of, has_destructuring, is_using;
+    BOOL has_initializer, is_for_of, has_destructuring, is_using, has_let_head;
     int tok, tok1, opcode, scope, block_scope_level, resource_operation;
     int label_next, label_expr, label_cont, label_body, label_break;
     int pos_next, pos_expr;
@@ -6086,6 +6086,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     has_destructuring = FALSE;
     is_for_of = FALSE;
     is_using = FALSE;
+    has_let_head = FALSE;
     block_scope_level = fd->scope_level;
     label_cont = new_label(s);
     label_body = new_label(s);
@@ -6178,6 +6179,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         return js_parse_error(s, "'for of' expression cannot start with 'async'");
     } else {
         int skip_bits;
+        has_let_head = token_is_pseudo_keyword(s, JS_ATOM_let);
         tok1 = 0;
         if (s->token.val == '[' || s->token.val == '{') {
             tok1 = js_parse_skip_parens_token(s, &skip_bits, FALSE);
@@ -6237,6 +6239,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     JS_FreeAtom(ctx, var_name);
 
     if (token_is_pseudo_keyword(s, JS_ATOM_of)) {
+        if (has_let_head)
+            return js_parse_error(s, "'for of' expression cannot start with 'let'");
         is_for_of = TRUE;
         if (has_initializer)
             goto initializer_error;
