@@ -1534,6 +1534,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
     JSObject *p;
     JSProperty *pr;
     JSShapeProperty *prs;
+    JSValue held = JS_UNDEFINED, result;
     uint32_t tag;
 
     tag = JS_VALUE_GET_TAG(obj);
@@ -1591,26 +1592,34 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
             if (unlikely(prs->flags & JS_PROP_TMASK)) {
                 if ((prs->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
                     if (unlikely(!pr->u.getset.getter)) {
-                        return JS_UNDEFINED;
+                        result = JS_UNDEFINED;
+                        goto done;
                     } else {
                         JSValue func = JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.getter);
                         /* Note: the field could be removed in the getter */
                         func = JS_DupValue(ctx, func);
-                        return JS_CallFree(ctx, func, this_obj, 0, NULL);
+                        result = JS_CallFree(ctx, func, this_obj, 0, NULL);
+                        goto done;
                     }
                 } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
                     JSValue val = *pr->u.var_ref->pvalue;
-                    if (unlikely(JS_IsUninitialized(val)))
-                        return JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
-                    return JS_DupValue(ctx, val);
+                    if (unlikely(JS_IsUninitialized(val))) {
+                        result = JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
+                        goto done;
+                    }
+                    result = JS_DupValue(ctx, val);
+                    goto done;
                 } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
                     /* Instantiate property and retry */
-                    if (JS_AutoInitProperty(ctx, p, prop, pr, prs))
-                        return JS_EXCEPTION;
+                    if (JS_AutoInitProperty(ctx, p, prop, pr, prs)) {
+                        result = JS_EXCEPTION;
+                        goto done;
+                    }
                     continue;
                 }
             } else {
-                return JS_DupValue(ctx, pr->u.value);
+                result = JS_DupValue(ctx, pr->u.value);
+                goto done;
             }
         }
         if (unlikely(p->is_exotic)) {
@@ -1620,21 +1629,26 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                     uint32_t idx = __JS_AtomToUInt32(prop);
                     if (idx < p->u.array.count) {
                         /* we avoid duplicating the code */
-                        return JS_GetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p), idx);
+                        result = JS_GetPropertyUint32(ctx,
+                            JS_MKPTR(JS_TAG_OBJECT, p), idx);
+                        goto done;
                     } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
                                p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
-                        if (idx < js_typed_array_update_length(p))
-                            return JS_GetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p), idx);
-                        return JS_UNDEFINED;
+                        if (idx < js_typed_array_update_length(p)) {
+                            result = JS_GetPropertyUint32(ctx,
+                                JS_MKPTR(JS_TAG_OBJECT, p), idx);
+                        } else {
+                            result = JS_UNDEFINED;
+                        }
+                        goto done;
                     }
                 } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
                            p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
                     int ret;
                     ret = JS_AtomIsNumericIndex(ctx, prop);
                     if (ret != 0) {
-                        if (ret < 0)
-                            return JS_EXCEPTION;
-                        return JS_UNDEFINED;
+                        result = ret < 0 ? JS_EXCEPTION : JS_UNDEFINED;
+                        goto done;
                     }
                 }
             } else {
@@ -1648,7 +1662,8 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                         obj1 = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
                         retval = em->get_property(ctx, obj1, prop, this_obj);
                         JS_FreeValue(ctx, obj1);
-                        return retval;
+                        result = retval;
+                        goto done;
                     }
                     if (em->get_own_property) {
                         JSPropertyDescriptor desc;
@@ -1659,30 +1674,48 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                            freed in the called function */
                         obj1 = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
                         ret = em->get_own_property(ctx, &desc, obj1, prop);
-                        JS_FreeValue(ctx, obj1);
-                        if (ret < 0)
-                            return JS_EXCEPTION;
+                        if (ret < 0) {
+                            JS_FreeValue(ctx, obj1);
+                            result = JS_EXCEPTION;
+                            goto done;
+                        }
                         if (ret) {
+                            JS_FreeValue(ctx, obj1);
                             if (desc.flags & JS_PROP_GETSET) {
                                 JS_FreeValue(ctx, desc.setter);
-                                return JS_CallFree(ctx, desc.getter, this_obj, 0, NULL);
+                                result = JS_CallFree(ctx, desc.getter,
+                                                     this_obj, 0, NULL);
                             } else {
-                                return desc.value;
+                                result = desc.value;
                             }
+                            goto done;
                         }
+                        /* Keep the detached prototype until its successor
+                           has been pinned at the loop transition. */
+                        JS_FreeValue(ctx, held);
+                        held = obj1;
                     }
                 }
             }
         }
         p = p->shape->proto;
+        if (!JS_IsUndefined(held)) {
+            JSValue next = p ? JS_DupValue(ctx,
+                JS_MKPTR(JS_TAG_OBJECT, p)) : JS_UNDEFINED;
+            JS_FreeValue(ctx, held);
+            held = next;
+        }
         if (!p)
             break;
     }
     if (unlikely(throw_ref_error)) {
-        return JS_ThrowReferenceErrorNotDefined(ctx, prop);
+        result = JS_ThrowReferenceErrorNotDefined(ctx, prop);
     } else {
-        return JS_UNDEFINED;
+        result = JS_UNDEFINED;
     }
+ done:
+    JS_FreeValue(ctx, held);
+    return result;
 }
 
 static JSValue JS_ThrowTypeErrorPrivateNotFound(JSContext *ctx, JSAtom atom)
@@ -2355,40 +2388,45 @@ int JS_HasProperty(JSContext *ctx, JSValueConst obj, JSAtom prop)
 {
     JSObject *p;
     int ret;
-    JSValue obj1;
+    JSValue current, next;
 
     if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
         return FALSE;
-    p = JS_VALUE_GET_OBJ(obj);
+    /* A property hook can detach a prototype while this walk is using it. */
+    current = JS_DupValue(ctx, obj);
     for(;;) {
+        p = JS_VALUE_GET_OBJ(current);
         if (p->is_exotic) {
             const JSClassExoticMethods *em = ctx->rt->class_array[p->class_id].exotic;
             if (em && em->has_property) {
-                /* has_property can free the prototype */
-                obj1 = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
-                ret = em->has_property(ctx, obj1, prop);
-                JS_FreeValue(ctx, obj1);
+                ret = em->has_property(ctx, current, prop);
+                JS_FreeValue(ctx, current);
                 return ret;
             }
         }
-        /* JS_GetOwnPropertyInternal can free the prototype */
-        JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
         ret = JS_GetOwnPropertyInternal(ctx, NULL, p, prop);
-        JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
-        if (ret != 0)
+        if (ret != 0) {
+            JS_FreeValue(ctx, current);
             return ret;
+        }
         if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
             p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
             ret = JS_AtomIsNumericIndex(ctx, prop);
             if (ret != 0) {
+                JS_FreeValue(ctx, current);
                 if (ret < 0)
                     return -1;
                 return FALSE;
             }
         }
         p = p->shape->proto;
-        if (!p)
+        if (!p) {
+            JS_FreeValue(ctx, current);
             break;
+        }
+        next = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
+        JS_FreeValue(ctx, current);
+        current = next;
     }
     return FALSE;
 }
@@ -3046,6 +3084,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
     JSProperty *pr;
     uint32_t tag;
     JSPropertyDescriptor desc;
+    JSValue held = JS_UNDEFINED;
     int ret;
 #if 0
     printf("JS_SetPropertyInternal: "); print_atom(ctx->rt, prop); printf("\n");
@@ -3131,22 +3170,29 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                 if (__JS_AtomIsTaggedInt(prop)) {
                     uint32_t idx = __JS_AtomToUInt32(prop);
                     if (idx < p1->u.array.count) {
-                        if (unlikely(p == p1))
-                            return JS_SetPropertyValue(ctx, this_obj, JS_NewInt32(ctx, idx), val, flags);
-                        else
+                        if (unlikely(p == p1)) {
+                            ret = JS_SetPropertyValue(ctx, this_obj,
+                                JS_NewInt32(ctx, idx), val, flags);
+                            goto done;
+                        } else {
                             break;
+                        }
                     } else if (p1->class_id >= JS_CLASS_UINT8C_ARRAY &&
                                p1->class_id <= JS_CLASS_FLOAT64_ARRAY) {
                         if (idx < js_typed_array_update_length(p1)) {
-                            if (p == p1)
-                                return JS_SetPropertyValue(ctx, this_obj,
+                            if (p == p1) {
+                                ret = JS_SetPropertyValue(ctx, this_obj,
                                     JS_NewInt32(ctx, idx), val, flags);
+                                goto done;
+                            }
                             break;
                         }
                         if (p == p1 && p1->u.typed_array->track_rab &&
-                            p1->u.typed_array->buffer->u.array_buffer->shared)
-                            return JS_SetPropertyValue(ctx, this_obj,
+                            p1->u.typed_array->buffer->u.array_buffer->shared) {
+                            ret = JS_SetPropertyValue(ctx, this_obj,
                                 JS_NewInt32(ctx, idx), val, flags);
+                            goto done;
+                        }
                         goto typed_array_oob;
                     }
                 } else if (p1->class_id >= JS_CLASS_UINT8C_ARRAY &&
@@ -3155,7 +3201,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                     if (ret != 0) {
                         if (ret < 0) {
                             JS_FreeValue(ctx, val);
-                            return -1;
+                            goto done;
                         }
                     typed_array_oob:
                         if (p == p1) {
@@ -3163,18 +3209,23 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                             if (p1->class_id == JS_CLASS_BIG_INT64_ARRAY ||
                                 p1->class_id == JS_CLASS_BIG_UINT64_ARRAY) {
                                 int64_t v;
-                                if (JS_ToBigInt64Free(ctx, &v, val))
-                                    return -1;
+                                if (JS_ToBigInt64Free(ctx, &v, val)) {
+                                    ret = -1;
+                                    goto done;
+                                }
                             } else {
                                 val = JS_ToNumberFree(ctx, val);
                                 JS_FreeValue(ctx, val);
-                                if (JS_IsException(val))
-                                    return -1;
+                                if (JS_IsException(val)) {
+                                    ret = -1;
+                                    goto done;
+                                }
                             }
                         } else {
                             JS_FreeValue(ctx, val);
                         }
-                        return TRUE;
+                        ret = TRUE;
+                        goto done;
                     }
                 }
             } else {
@@ -3190,19 +3241,20 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                                val, this_obj, flags);
                         JS_FreeValue(ctx, obj1);
                         JS_FreeValue(ctx, val);
-                        return ret;
+                        goto done;
                     }
                     if (em->get_own_property) {
                         /* get_own_property can free the prototype */
                         obj1 = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p1));
                         ret = em->get_own_property(ctx, &desc,
                                                    obj1, prop);
-                        JS_FreeValue(ctx, obj1);
                         if (ret < 0) {
+                            JS_FreeValue(ctx, obj1);
                             JS_FreeValue(ctx, val);
-                            return ret;
+                            goto done;
                         }
                         if (ret) {
+                            JS_FreeValue(ctx, obj1);
                             if (desc.flags & JS_PROP_GETSET) {
                                 JSObject *setter;
                                 if (JS_IsUndefined(desc.setter))
@@ -3212,7 +3264,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                 ret = call_setter(ctx, setter, this_obj, val, flags);
                                 JS_FreeValue(ctx, desc.getter);
                                 JS_FreeValue(ctx, desc.setter);
-                                return ret;
+                                goto done;
                             } else {
                                 JS_FreeValue(ctx, desc.value);
                                 if (!(desc.flags & JS_PROP_WRITABLE))
@@ -3222,17 +3274,27 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                                             JS_UNDEFINED, JS_UNDEFINED,
                                                             JS_PROP_HAS_VALUE);
                                     JS_FreeValue(ctx, val);
-                                    return ret;
+                                    goto done;
                                 } else {
                                     break;
                                 }
                             }
                         }
+                        /* Keep this object alive until the loop pins its
+                           successor, which the callback may have changed. */
+                        JS_FreeValue(ctx, held);
+                        held = obj1;
                     }
                 }
             }
         }
         p1 = p1->shape->proto;
+        if (!JS_IsUndefined(held)) {
+            JSValue next = p1 ? JS_DupValue(ctx,
+                JS_MKPTR(JS_TAG_OBJECT, p1)) : JS_UNDEFINED;
+            JS_FreeValue(ctx, held);
+            held = next;
+        }
     prototype_lookup:
         if (!p1)
             break;
@@ -3243,12 +3305,15 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
             if (p1->class_id == JS_CLASS_MODULE_NS)
                 goto read_only_prop;
             if ((prs->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
-                return call_setter(ctx, pr->u.getset.setter, this_obj, val, flags);
+                ret = call_setter(ctx, pr->u.getset.setter,
+                                  this_obj, val, flags);
+                goto done;
             } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
                 /* Instantiate property and retry (potentially useless) */
                 if (JS_AutoInitProperty(ctx, p1, prop, pr, prs)) {
                     JS_FreeValue(ctx, val);
-                    return -1;
+                    ret = -1;
+                    goto done;
                 }
                 goto retry2;
             } else if (!(prs->flags & JS_PROP_WRITABLE)) {
@@ -3258,6 +3323,8 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
             }
         }
     }
+    JS_FreeValue(ctx, held);
+    held = JS_UNDEFINED;
 
     if (unlikely(!p)) {
         JS_FreeValue(ctx, val);
@@ -3315,6 +3382,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                 if (!(desc.flags & JS_PROP_WRITABLE) ||
                     p->class_id == JS_CLASS_MODULE_NS) {
                 read_only_prop:
+                    JS_FreeValue(ctx, held);
                     JS_FreeValue(ctx, val);
                     return JS_ThrowTypeErrorReadOnly(ctx, flags, prop);
                 }
@@ -3338,6 +3406,9 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
             return ret;
         }
     }
+ done:
+    JS_FreeValue(ctx, held);
+    return ret;
 }
 
 static inline void js_typed_array_put_float32(uint8_t *ptr, float val)

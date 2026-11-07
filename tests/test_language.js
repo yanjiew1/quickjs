@@ -334,6 +334,21 @@ function test_prototype()
     assert(g.prototype.constructor, g, "prototype");
 }
 
+function test_deep_exotic_prototype()
+{
+    const root = new String('');
+    let previous = root;
+    for (let i = 1; i < 3000; i++) {
+        const next = new String('');
+        Object.setPrototypeOf(previous, next);
+        previous = next;
+    }
+    assert(root.missing, undefined);
+    assert('other' in root, false);
+    root.missing = 7;
+    assert(root.missing, 7);
+}
+
 function test_arguments()
 {
     function f2() {
@@ -2055,6 +2070,7 @@ test_op2();
 test_constructor();
 test_delete();
 test_prototype();
+test_deep_exotic_prototype();
 test_arguments();
 test_class();
 test_class_element_line_terminators();
