@@ -33,6 +33,7 @@
 #include "internal/c-function.h"
 #include "internal/bytecode-format.h"
 #include "builtins/proxy.h"
+#include "builtins/promise.h"
 #include "internal/generator.h"
 #include "internal/error.h"
 #include "value/compare.h"
@@ -424,6 +425,12 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
         break;
     case JS_CLASS_C_FUNCTION_DATA:
         realm = ((JSCFunctionDataRecord *)p->u.opaque)->realm;
+        break;
+    case JS_CLASS_PROMISE_RESOLVE_FUNCTION:
+    case JS_CLASS_PROMISE_REJECT_FUNCTION:
+        realm = js_promise_resolving_function_realm(func_obj);
+        if (!realm)
+            realm = ctx;
         break;
     case JS_CLASS_BYTECODE_FUNCTION:
     case JS_CLASS_GENERATOR_FUNCTION:

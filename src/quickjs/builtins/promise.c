@@ -65,6 +65,7 @@ typedef struct JSPromiseFunctionDataResolved {
 typedef struct JSPromiseFunctionData {
     JSValue promise;
     JSPromiseFunctionDataResolved *presolved;
+    JSContext *realm;
 } JSPromiseFunctionData;
 
 JSPromiseStateEnum JS_PromiseState(JSContext *ctx, JSValue promise)
@@ -282,6 +283,7 @@ static int js_create_resolving_functions(JSContext *ctx,
         sr->ref_count++;
         s->presolved = sr;
         s->promise = JS_DupValue(ctx, promise);
+        s->realm = JS_DupContext(ctx);
         JS_SetOpaque(obj, s);
         if (js_function_set_properties(ctx, obj, JS_ATOM_empty_string, 1) < 0) {
             JS_FreeValue(ctx, obj);
@@ -305,6 +307,7 @@ static void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
     if (s) {
         js_promise_resolve_function_free_resolved(rt, s->presolved);
         JS_FreeValueRT(rt, s->promise);
+        JS_FreeContext(s->realm);
         js_free_rt(rt, s);
     }
 }
@@ -314,8 +317,15 @@ static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
 {
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
     if (s) {
+        mark_func(rt, &s->realm->header);
         JS_MarkValue(rt, s->promise, mark_func);
     }
+}
+
+JSContext *js_promise_resolving_function_realm(JSValueConst func_obj)
+{
+    JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(func_obj)->u.promise_function_data;
+    return s ? s->realm : NULL;
 }
 
 static JSValue js_promise_resolve_function_call(JSContext *ctx,
@@ -334,6 +344,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     s = p->u.promise_function_data;
     if (!s || s->presolved->already_resolved)
         return JS_UNDEFINED;
+    ctx = s->realm;
     s->presolved->already_resolved = TRUE;
     is_reject = p->class_id - JS_CLASS_PROMISE_RESOLVE_FUNCTION;
     if (argc > 0)
@@ -366,10 +377,18 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
         if (fulfill_or_reject_promise(ctx, s->promise, resolution, is_reject) < 0)
             return JS_EXCEPTION;
     } else {
+        JSContext *then_realm = JS_GetFunctionRealm(ctx, then);
+
+        if (!then_realm) {
+            /* A revoked proxy cannot reveal its realm. The job uses the
+               current realm in that case, without retaining the error. */
+            JS_FreeValue(ctx, JS_GetException(ctx));
+            then_realm = ctx;
+        }
         args[0] = s->promise;
         args[1] = resolution;
         args[2] = then;
-        ret = JS_EnqueueJob(ctx, js_promise_resolve_thenable_job, 3, args);
+        ret = JS_EnqueueJob(then_realm, js_promise_resolve_thenable_job, 3, args);
         JS_FreeValue(ctx, then);
         if (ret < 0) {
             /* No assimilation was published. Let the caller reject or retry

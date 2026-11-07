@@ -171,11 +171,51 @@ async function test_c_function_data_realm()
     std.gc();
 }
 
+async function test_promise_resolver_realm()
+{
+    const owner = std.createRealm();
+    const caller = std.createRealm();
+    const promise = owner.evalScript(
+        "var resolveForRealm; new Promise(resolve => { resolveForRealm = resolve; })");
+    caller.global.resolveForRealm = owner.global.resolveForRealm;
+    caller.global.promiseForRealm = promise;
+    caller.evalScript("resolveForRealm(promiseForRealm)");
+
+    let rejected = false;
+    try {
+        await promise;
+    } catch (error) {
+        rejected = true;
+        check(Object.getPrototypeOf(error), owner.global.TypeError.prototype,
+              "self-resolution error uses the resolver's creation realm");
+    }
+    check(rejected, true, "self-resolution must reject");
+
+    const thenRealm = std.createRealm();
+    const assimilated = owner.evalScript(
+        "var resolveForThen; new Promise(resolve => { resolveForThen = resolve; })");
+    thenRealm.global.promiseForThen = assimilated;
+    const thenable = thenRealm.evalScript(
+        "({ then(resolve) { resolve(promiseForThen); } })");
+    owner.global.resolveForThen(thenable);
+    rejected = false;
+    try {
+        await assimilated;
+    } catch (error) {
+        rejected = true;
+        check(Object.getPrototypeOf(error), thenRealm.global.TypeError.prototype,
+              "thenable job creates resolving functions in the then realm");
+    }
+    check(rejected, true, "thenable self-resolution must reject");
+    std.gc();
+}
+
 export async function test_realms()
 {
     await test_create_realm();
     test_bigint_locale_realm();
     await test_c_function_data_realm();
+    await test_promise_resolver_realm();
 }
 
 await test_realms();
