@@ -112,6 +112,39 @@ class SegmentLoweringTests(unittest.TestCase):
         self.assertEqual(ends(rules[1].left, 'A~', 0), frozenset())
         self.assertEqual(ends(rules[1].left, 'B~', 0), frozenset((1, 2)))
 
+    def test_ignored_suffix_does_not_cross_excluded_characters(self):
+        rules = compile_rules(rows=(IGNORE, ('5', '$CR ×'),
+                                    ('6', '[A\\u000D] ×'), ('7', '$A ×')))
+        self.assertEqual(ends(rules[1].left, '\r~~', 0), frozenset((1,)))
+        self.assertEqual(ends(rules[2].left, '\r~~', 0), frozenset((1,)))
+        self.assertEqual(ends(rules[2].left, 'A~~', 0), frozenset((1, 2, 3)))
+        self.assertEqual(ends(rules[3].left, 'A~~', 0), frozenset((1, 2, 3)))
+
+    def test_regional_indicator_context_ignores_format_without_restarting(self):
+        variables, _ = prepare((('$RI', '[R]'),))
+        rows = tuple(InheritedRule(key, text, 'root', 'common/segments/root.xml')
+                     for key, text in (IGNORE, ('15', '^ ( $RI $RI ) * $RI × $RI'),
+                                       ('16', '[^$RI]  ($RI $RI)* $RI  × $RI')))
+        prepared = prepare_rules(rows, variables, 'WordBreak')
+        self.assertIs(prepared[2].source, rows[2])
+        self.assertEqual(prepared[2].right_start, rows[2].expression.index('×') + 1)
+        rules = lower.lower_rules(prepared, variables, {}.__getitem__).rules
+        self.assertEqual(winning(rules, 'RzRR', 2), (False, '15'))
+        self.assertEqual(winning(rules, 'RzRR', 3), (True, None))
+        self.assertEqual(winning(rules, 'zRR', 2), (False, '15'))
+
+        # NBSP is a literal in this grammar, not formatting whitespace.
+        text = '^\u00a0($RI $RI)* $RI × $RI'
+        root = InheritedRule('15', text, 'root', 'common/segments/root.xml')
+        other = InheritedRule('15', text, 'root', 'fixture.xml')
+        root_rule = prepare_rules((root,), variables, 'WordBreak')[0]
+        other_rule = prepare_rules((other,), variables, 'WordBreak')[0]
+        self.assertEqual(root_rule.left, other_rule.left)
+        malformed = InheritedRule('16', '[ ^$RI] ($RI $RI)* $RI × $RI',
+                                  'root', 'common/segments/root.xml')
+        with self.assertRaises(DataError):
+            prepare_rules((malformed,), variables, 'WordBreak')
+
     def test_unreviewed_mixed_negation_and_repeated_ignore_fail_with_source(self):
         for text in ('[[A][^B]] ×', '[[^A]-[B]] ×', '[^[^A]] ×'):
             with self.subTest(text=text), self.assertRaisesRegex(DataError, 'fixture.xml:root:5:.*unreviewed'):
