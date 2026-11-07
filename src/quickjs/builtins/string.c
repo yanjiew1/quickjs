@@ -167,7 +167,11 @@ JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
             JS_FreeValue(ctx, val);
         } else {
             JS_SetObjectData(ctx, obj, val);
-            JS_DefinePropertyValue(ctx, obj, JS_ATOM_length, JS_NewInt32(ctx, p1->len), 0);
+            if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_length,
+                                       JS_NewInt32(ctx, p1->len), 0) < 0) {
+                JS_FreeValue(ctx, obj);
+                return JS_EXCEPTION;
+            }
         }
         return obj;
     } else {
