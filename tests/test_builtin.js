@@ -1817,6 +1817,45 @@ function test_empty_array_buffer()
     assert_throws(RangeError, () => view.setUint8(0, 1));
 }
 
+function test_dataview_out_of_bounds_getters()
+{
+    const buffer = new ArrayBuffer(8, { maxByteLength: 16 });
+    const fixed = new DataView(buffer, 4, 4);
+    const tracking = new DataView(buffer, 4);
+    for (const view of [fixed, tracking]) {
+        assert(view.byteLength, 4);
+        assert(view.byteOffset, 4);
+    }
+    buffer.resize(6);
+    assert(fixed.byteLength, 0);
+    assert(fixed.byteOffset, 0);
+    assert(tracking.byteLength, 2);
+    assert(tracking.byteOffset, 4);
+    buffer.resize(4);
+    assert(tracking.byteLength, 0);
+    assert(tracking.byteOffset, 4);
+    buffer.resize(2);
+    for (const view of [fixed, tracking]) {
+        assert(Object.is(view.byteLength, 0), true);
+        assert(Object.is(view.byteOffset, 0), true);
+        assert_throws(TypeError, () => view.getUint8(0));
+    }
+    buffer.resize(8);
+    for (const view of [fixed, tracking]) {
+        assert(view.byteLength, 4);
+        assert(view.byteOffset, 4);
+    }
+    buffer.transfer();
+    for (const view of [fixed, tracking]) {
+        assert(Object.is(view.byteLength, 0), true);
+        assert(Object.is(view.byteOffset, 0), true);
+    }
+    for (const key of ["byteLength", "byteOffset"]) {
+        const getter = Object.getOwnPropertyDescriptor(DataView.prototype, key).get;
+        assert_throws(TypeError, () => getter.call({}));
+    }
+}
+
 function test_empty_typed_array()
 {
     const constructors = [
@@ -6199,6 +6238,7 @@ test_uint8array_hex_code_unit_length();
 test_typed_array_constructor_length();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
+test_dataview_out_of_bounds_getters();
 test_empty_typed_array();
 test_dataview_oob_error_order();
 test_typed_array_resize_bounds();
