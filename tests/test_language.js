@@ -4464,3 +4464,82 @@ function test_regexp_after_declaration_in_initializer()
 }
 
 test_regexp_after_declaration_in_initializer();
+
+function test_lookahead_lexical_contexts()
+{
+    for (const name of ["of", "yield"]) {
+        assert(Function("const f = (" + name + ", x = " + name +
+                        " / 2) => x; return f(8);")(), 4);
+        assert(Function("const " + name + " = 8; let x; [{x = " + name +
+                        " / 2}] = [{}]; return x;")(), 4);
+    }
+
+    /* Nested function kinds select the regexp lexical goal independently
+       of the function whose tokens the lookahead scanner is traversing. */
+    for (const expression of [
+        "async function () { await /}/; }",
+        "async function* () { await /}/; yield /}/; }",
+        "function* () { yield /}/; }",
+        "async () => { await /}/; }",
+        "async x => await /}/",
+        "async (x) => await /}/",
+        "x => async y => await /}/",
+        "async () => true ? await /}/ : /}/",
+        "async () => ({async m() { await /}/; }, *g() { yield /}/; }})",
+        "async () => class { [await /}/]() {} async m() { await /}/; } }",
+        "function () { for (let of of /}/) {} }",
+        "function () { for (var of of /}/) {} }",
+        "function () { let of; for (of of /}/) {} }",
+        "async () => await\nasync(await /}/)",
+        "() => x => {}",
+    ]) {
+        assert(Function("let x; [{x = " + expression +
+                        "}] = [{}]; return typeof x;")(), "function");
+    }
+
+    /* Ordinary methods/arrows reset Await/Yield; separators restore the
+       outer mode after an expression-bodied arrow has finished. */
+    for (const body of [
+        "const await = 8; return (() => await / 2)();",
+        "const yield = 8; return (() => yield / 2)();",
+        "const o = {m() { const await=8; return await / 2; }}; return o.m();",
+        "class C { m() { const await=8; return await / 2; } } return new C().m();",
+        "const await=8; const a=[async x => await /}/, await / 2]; return a[1];",
+        "const await=8; const a=true ? async x => await /}/ : await / 2; return await / 2;",
+    ]) {
+        assert(Function("let x; [{x = function () { " + body +
+                        " }}] = [{}]; return x();")(), 4);
+    }
+    assert(Function("const yield=8; function* g() { let x; " +
+                    "[{x = () => yield / 2}] = [{}]; return x(); } " +
+                    "return g().next().value;")(), 4);
+    assert(typeof Function("const await=8; return async function () { let x; " +
+                           "[{x = () => await / 2}] = [{}]; return x(); };")(),
+           "function");
+    assert(Function("let x; [{x = function () { let sum=0; " +
+                    "for (let of of [2,4]) sum += of / 2; return sum; " +
+                    "}}] = [{}]; return x();")(), 3);
+    for (const field of ["x => x", "() => x", "x => y => y",
+                         "async x => await /}/"]) {
+        for (const method of ["m()", "get m()", "static"]) {
+            Function("let x; [{x = class { f = " + field + "\n" + method +
+                     " { label: {} /}/.test('}'); } }}] = [{}];");
+        }
+    }
+    for (const field of ["() => {}", "() => () => {}",
+                         "true ? () => {} : () => {}"]) {
+        for (const method of ['["m"]()', "*m()", "in()", "instanceof()"]) {
+            const body = method[0] == '*' ? "yield /}/;" :
+                "label: {} /}/.test('}');";
+            Function("let x; [{x = class { f = " + field + "\n" + method +
+                     " { " + body + " } }}] = [{}];");
+        }
+    }
+    for (const field of ["(() => {})", "true ? () => {} : 1"]) {
+        assert_throws(SyntaxError, () => Function(
+            "let x; [{x = class { f = " + field +
+            '\n["m"]() {} }}] = [{}];'));
+    }
+}
+
+test_lookahead_lexical_contexts();
