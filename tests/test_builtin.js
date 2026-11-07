@@ -4831,6 +4831,24 @@ function test_finalization_registry()
         }, 0);
     }
     {
+        const live = {};
+        let calls = 0;
+        const registry = new FinalizationRegistry(() => { calls++; });
+        registry.register(live, 0);
+        registry.register({}, 1);
+        registry.register({}, 2);
+        std.gc();
+        os.setTimeout(() => {
+            try {
+                assert(calls, 2);
+                assert(live instanceof Object, true);
+            } catch (e) {
+                console.log(e.stack);
+                std.exit(1);
+            }
+        }, 0);
+    }
+    {
         let expected = {};
         let actual;
         let finrec = new FinalizationRegistry(v => { actual = v });
