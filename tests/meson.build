@@ -4252,7 +4252,7 @@ if intl_enabled
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-collator': ['-m', 'tests/test_intl_collator.js'],
-    'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js'],
+    'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js', get_option('intl'), get_option('timezone_backend')],
     'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js', get_option('calendars'), get_option('timezone_backend')],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
