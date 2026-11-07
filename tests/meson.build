@@ -114,6 +114,7 @@ if host_machine.system() in ['linux', 'darwin']
 endif
 if host_machine.system() == 'linux'
   native_test_names += 'test_close_fds_unavailable'
+  native_test_names += 'test_emscripten_allocator'
 endif
 foreach name : native_test_names
   public_consumer = name in public_native_test_names
