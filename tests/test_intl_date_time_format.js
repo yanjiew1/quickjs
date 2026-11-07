@@ -571,6 +571,17 @@ if (typeof Temporal !== 'undefined') {
     }
 }
 
+if (scriptArgs[1] === 'native' && scriptArgs[2] === 'native') {
+    // The CLDR metazone fallback requires the named-zone backend.
+    // CLDR's golden 001 zone is preferred when a country has no mapZone row.
+    // The fallback qualifier uses the full country name, unlike regionFormat.
+    const parts = new DTF('en-CA', {
+        timeZone: 'America/Los_Angeles', timeZoneName: 'longGeneric'
+    }).formatToParts(0);
+    assert(parts.find(part => part.type === 'timeZoneName').value,
+           'Pacific Time (United States)');
+}
+
 // Match the staging String/internalUsage witness on a supported locale. Its
 // German exact-output variant remains part of the full native Test262 run.
 {
