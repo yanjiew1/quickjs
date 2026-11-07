@@ -4328,6 +4328,22 @@ function test_strict_class_binding_names()
 
 test_strict_class_binding_names();
 
+function test_escaped_keyword_prefix()
+{
+    for (const suffix of ["\\u0061", "\\u{61}", "\\u0030"]) {
+        const name = "function" + suffix;
+        const f = Function("return async " + name + " => " + name + ";")();
+        assert(typeof f, "function");
+    }
+    /* Escaping a reserved word does not make it a valid parameter name. */
+    assert_throws(SyntaxError,
+                  () => Function("return async functio\\u006e => 0;"));
+    assert_throws(SyntaxError,
+                  () => Function("return async function\\u002d => 0;"));
+}
+
+test_escaped_keyword_prefix();
+
 function test_regexp_after_control_header_in_initializer()
 {
     for (const statement of [
