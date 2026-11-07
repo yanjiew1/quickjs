@@ -107,6 +107,19 @@ for invalid_threads in -1 invalid 1025 999999999999999999999; do
     grep -Fq 'invalid thread count' "$test262_tmp/err"
 done
 
+# An unreadable input tree must not silently disappear from a larger run.
+invoke_runner yes -q -c "$test262_tmp/config" -d "$test262_tmp/missing" \
+    -d "$test262_tmp/failure"
+[ "$test262_status" -eq 1 ]
+grep -Fq "$test262_tmp/missing" "$test262_tmp/err"
+
+# A directory ending in .js is not itself a test case.
+mkdir "$test262_tmp/suite/directory.js"
+invoke_runner no -q -c "$test262_tmp/config" -d "$test262_tmp/suite"
+[ "$test262_status" -eq 1 ]
+grep -Fq 'usage: run-test262' "$test262_tmp/out"
+rmdir "$test262_tmp/suite/directory.js"
+
 # Timings depend on host speed and do not describe test output. Match only
 # the complete timing line emitted by run-test262 after a slow test.
 normalize_report() {

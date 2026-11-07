@@ -563,7 +563,9 @@ static int add_test_file(const char *filename, const struct stat *ptr, int flag)
     /* ftw initializes this string in libc without updating MSan shadow. */
     __msan_unpoison_string(filename);
 #endif
-    if (has_suffix(filename, ".js") && !is_fixture_file(filename))
+    if (flag == FTW_DNR || flag == FTW_NS)
+        fatal(1, "cannot inspect test path: %s", filename);
+    if (flag == FTW_F && has_suffix(filename, ".js") && !is_fixture_file(filename))
         namelist_add(lp, NULL, filename);
     return 0;
 }
@@ -573,7 +575,8 @@ static void enumerate_tests(const char *path)
 {
     namelist_t *lp = &test_list;
     int start = lp->count;
-    ftw(path, add_test_file, 100);
+    if (ftw(path, add_test_file, 100) != 0)
+        perror_exit(1, path);
     if (lp->count - start > 1) {
         qsort(lp->array + start, lp->count - start, sizeof(*lp->array),
               namelist_cmp_indirect);
