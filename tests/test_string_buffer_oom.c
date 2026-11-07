@@ -180,6 +180,47 @@ static void test_string_html_builder_oom(size_t fail_at)
     assert(!allocator.live);
 }
 
+static void test_uri_builder_oom(int encode)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, method, arg, result, exception, name;
+    const char *text;
+    void *padding;
+    const char *source = "String.fromCharCode(55296)";
+
+    assert(ctx);
+    global = JS_GetGlobalObject(ctx);
+    method = JS_GetPropertyStr(ctx, global,
+                               encode ? "encodeURIComponent" : "decodeURIComponent");
+    arg = encode ? JS_Eval(ctx, source, strlen(source), "<surrogate>", 0)
+                 : JS_NewString(ctx, "%");
+    assert(!JS_IsException(global) && !JS_IsException(method) && !JS_IsException(arg));
+
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    result = JS_Call(ctx, method, JS_UNDEFINED, 1, (JSValueConst *)&arg);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    exception = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, exception, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && strcmp(text, "InternalError") == 0);
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, exception);
+
+    JS_FreeValue(ctx, result);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, arg);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
 static JSValue join_length_fail(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
@@ -457,6 +498,8 @@ int main(void)
     test_typed_array_locale_init_oom();
     test_string_html_builder_oom(1);
     test_string_html_builder_oom(2);
+    test_uri_builder_oom(0);
+    test_uri_builder_oom(1);
     test_empty_write_after_failed_init();
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);
