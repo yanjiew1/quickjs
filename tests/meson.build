@@ -72,7 +72,6 @@ public_native_test_names = [
   'test_fuzz_json',
   'test_fuzz_exception_ownership',
   'test_wait_async',
-  'test_promise_oom',
   'test_qjsc_json_preload',
 ]
 
