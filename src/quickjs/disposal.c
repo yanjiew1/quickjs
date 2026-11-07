@@ -160,9 +160,6 @@ static JSValue js_async_dispose_sync_wrapper(JSContext *ctx,
     JSValue promise, funcs[2], result;
     BOOL reject;
 
-    /* The private intrinsic owns the hidden builtin creation realm. */
-    ctx = JS_GetFunctionRealm(ctx, data[1]);
-
     promise = JS_NewPromiseCapability(ctx, funcs);
     if (JS_IsException(promise))
         return promise;
@@ -202,7 +199,7 @@ static JSValue js_get_disposal_method(JSContext *ctx, JSValueConst value,
 static JSValue js_get_async_dispose_method(JSContext *ctx, JSValueConst value)
 {
     JSValue method, wrapper;
-    JSValueConst data[2];
+    JSValueConst data[1];
 
     method = js_get_disposal_method(ctx, value, JS_ATOM_Symbol_asyncDispose);
     if (!JS_IsUndefined(method))
@@ -211,7 +208,6 @@ static JSValue js_get_async_dispose_method(JSContext *ctx, JSValueConst value)
     if (JS_IsException(method) || JS_IsUndefined(method))
         return method;
     data[0] = method;
-    data[1] = ctx->promise_ctor;
     wrapper = JS_NewCFunctionData(ctx, js_async_dispose_sync_wrapper,
                                   0, 0, countof(data), data);
     JS_FreeValue(ctx, method);
