@@ -27,6 +27,8 @@
 
 #include "../internal/base.h"
 
+JSContext *js_promise_resolving_function_realm(JSValueConst func_obj);
+
 JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv, int magic);
 __exception int perform_promise_then(JSContext *ctx,
