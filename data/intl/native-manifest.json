@@ -2,7 +2,7 @@
   "bytes": 64695400,
   "complete_services": [],
   "format": 1,
-  "generation": "c7f35a15ac7637ee7b8924bd51cd1821f14aec0012985389030c81cdadaa06b3",
+  "generation": "c5371cf9297a6c7059e38b0e299e5500b9ced14f9b19d845931553dbef04c96f",
   "inputs": {
     "cldr": {
       "archive": {
@@ -369,7 +369,7 @@
       },
       "40": {
         "count": 4,
-        "sha256": "ec4fc2ea1b4f74a458c7f66b512c6ea3628e929419857b2c9b75bad199db0b56"
+        "sha256": "15b8b5f06db5c83287d866ba9a513eb0c9484babe1d66f47e72f4efd0edcaa61"
       },
       "41": {
         "count": 8,
@@ -2712,6 +2712,6 @@
   },
   "locales": 1184,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts, date-field labels, date/time styles and connectors, calendar names, available date patterns, append templates, interval and localized timezone source layers, supplemental metazone presentation, day-period clock facts and explicit era name keys, optional bound compiled collation, layered display names and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "ad2115793620fbb838acc634fb108c8597d2b211a2dace33e3f5ad2cab787757",
+  "sha256": "091faa5884da96be2da69a0388db774a60f0e79422fb09dd97032a99c4778351",
   "strings": 391196
 }
