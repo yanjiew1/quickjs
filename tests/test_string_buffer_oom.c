@@ -54,6 +54,45 @@ static JSValue later_value(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
+static void test_from_char_code_init_oom(void)
+{
+    OOMTestAllocator allocator;
+    StringOOMState state = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, ctor, method, arg, result;
+    void *padding;
+
+    assert(ctx);
+    JS_SetContextOpaque(ctx, &state);
+    global = JS_GetGlobalObject(ctx);
+    ctor = JS_GetPropertyStr(ctx, global, "String");
+    method = JS_GetPropertyStr(ctx, ctor, "fromCharCode");
+    arg = JS_NewObject(ctx);
+    assert(!JS_IsException(global) && !JS_IsException(ctor) &&
+           !JS_IsException(method) && !JS_IsException(arg));
+    assert(JS_SetPropertyStr(ctx, arg, "valueOf",
+                             JS_NewCFunction(ctx, later_value, "valueOf", 0)) >= 0);
+
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    result = JS_Call(ctx, method, JS_UNDEFINED, 1, (JSValueConst *)&arg);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(state.later_calls == 0);
+    oom_test_check_exception(ctx);
+
+    JS_FreeValue(ctx, result);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, arg);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
 static JSValue join_length_fail(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
@@ -327,6 +366,7 @@ static void test_empty_write_after_failed_init(void)
 
 int main(void)
 {
+    test_from_char_code_init_oom();
     test_empty_write_after_failed_init();
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);

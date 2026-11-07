@@ -201,7 +201,8 @@ static JSValue js_string_fromCharCode(JSContext *ctx, JSValueConst this_val,
     int i;
     StringBuffer b_s, *b = &b_s;
 
-    string_buffer_init(ctx, b, argc);
+    if (string_buffer_init(ctx, b, argc))
+        return JS_EXCEPTION;
 
     for(i = 0; i < argc; i++) {
         int32_t c;
