@@ -4781,6 +4781,56 @@ function test_weak_ref()
 function test_finalization_registry()
 {
     {
+        const map = new WeakMap();
+        let key = {};
+        let registry = new FinalizationRegistry(() => {});
+        registry.register({}, 1);
+        map.set(key, registry);
+        key = null;
+        registry = null;
+        /* Weak map cleanup can release the registry during the same GC. */
+        std.gc();
+        assert(map instanceof WeakMap, true);
+    }
+    {
+        const token = {};
+        let called = false;
+        const registry = new FinalizationRegistry(() => { called = true; });
+        registry.register({}, "held", token);
+        std.gc();
+        assert(registry.unregister(token), true);
+        os.setTimeout(() => {
+            try {
+                assert(called, false);
+            } catch (e) {
+                console.log(e.stack);
+                std.exit(1);
+            }
+        }, 0);
+    }
+    {
+        const tokens = [{}, {}];
+        let calls = 0;
+        let removed = false;
+        const registry = new FinalizationRegistry(index => {
+            calls++;
+            removed = registry.unregister(tokens[1 - index]);
+            std.gc();
+        });
+        registry.register({}, 0, tokens[0]);
+        registry.register({}, 1, tokens[1]);
+        std.gc();
+        os.setTimeout(() => {
+            try {
+                assert(calls, 1);
+                assert(removed, true);
+            } catch (e) {
+                console.log(e.stack);
+                std.exit(1);
+            }
+        }, 0);
+    }
+    {
         let expected = {};
         let actual;
         let finrec = new FinalizationRegistry(v => { actual = v });
