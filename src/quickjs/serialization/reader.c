@@ -222,6 +222,25 @@ static int bc_get_leb128_int(BCReaderState *s, int *pval)
     return bc_get_leb128(s, (uint32_t *)pval);
 }
 
+static int bc_get_module_count(BCReaderState *s, int *pcount,
+                               size_t entry_size)
+{
+    uint32_t count;
+
+    if (bc_get_leb128(s, &count))
+        return -1;
+    /* Every entry consumes input. Reject impossible tables before computing
+       their allocation size, including multiplication that wraps on i386. */
+    if (count > INT_MAX ||
+        (size_t)count > (size_t)(s->buf_end - s->ptr) ||
+        (size_t)count > SIZE_MAX / entry_size) {
+        JS_ThrowSyntaxError(s->ctx, "invalid module table count");
+        return s->error_state = -1;
+    }
+    *pcount = count;
+    return 0;
+}
+
 static int bc_get_leb128_u16(BCReaderState *s, uint16_t *pval)
 {
     uint32_t val;
@@ -737,7 +756,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
     obj = JS_NewModuleValue(m);
     /* GC may inspect a registered module during any allocation. Publish table
        counts only after their zero-initialized storage is available. */
-    if (bc_get_leb128_int(s, &count))
+    if (bc_get_module_count(s, &count, sizeof(m->req_module_entries[0])))
         goto fail;
     if (count != 0) {
         m->req_module_entries = js_mallocz(ctx, sizeof(m->req_module_entries[0]) * count);
@@ -756,7 +775,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &count))
+    if (bc_get_module_count(s, &count, sizeof(m->export_entries[0])))
         goto fail;
     if (count != 0) {
         m->export_entries = js_mallocz(ctx, sizeof(m->export_entries[0]) * count);
@@ -786,7 +805,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &count))
+    if (bc_get_module_count(s, &count, sizeof(m->star_export_entries[0])))
         goto fail;
     if (count != 0) {
         m->star_export_entries = js_mallocz(ctx, sizeof(m->star_export_entries[0]) * count);
@@ -800,7 +819,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
         }
     }
 
-    if (bc_get_leb128_int(s, &count))
+    if (bc_get_module_count(s, &count, sizeof(m->import_entries[0])))
         goto fail;
     if (count != 0) {
         m->import_entries = js_mallocz(ctx, sizeof(m->import_entries[0]) * count);
