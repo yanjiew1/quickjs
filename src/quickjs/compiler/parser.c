@@ -1278,17 +1278,6 @@ static BOOL is_regexp_allowed(int tok)
 #define SKIP_HAS_ASSIGNMENT (1 << 2)
 #define SKIP_HAS_COMPUTED_KEY (1 << 3)
 
-static BOOL has_lf_in_range(const uint8_t *p1, const uint8_t *p2)
-{
-    const uint8_t *tmp;
-    if (p1 > p2) {
-        tmp = p1;
-        p1 = p2;
-        p2 = tmp;
-    }
-    return (memchr(p1, '\n', p2 - p1) != NULL);
-}
-
 /* XXX: improve speed with early bailout */
 /* XXX: no longer works if regexps are present. Could use previous
    regexp parsing heuristics to handle most cases */
@@ -1300,7 +1289,6 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     int last_tok, tok = TOK_EOF;
     int c, tok_len, bits = 0;
     BOOL saved_suppress_errors = s->suppress_parse_errors;
-    const uint8_t *last_token_ptr;
     
     /* protect from underflow */
     state[level++] = 0;
@@ -1397,7 +1385,6 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         } else {
             last_tok = s->token.val;
         }
-        last_token_ptr = s->token.ptr;
         if (next_token(s)) {
             goto scan_error;
         }
@@ -1405,7 +1392,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             tok = s->token.val;
             if (token_is_pseudo_keyword(s, JS_ATOM_of))
                 tok = TOK_OF;
-            if (no_line_terminator && has_lf_in_range(last_token_ptr, s->token.ptr))
+            if (no_line_terminator && s->got_lf)
                 tok = '\n';
             break;
         }
@@ -5613,13 +5600,11 @@ static BOOL is_label(JSParseState *s)
 static int is_let(JSParseState *s, int decl_mask)
 {
     int res = FALSE;
-    const uint8_t *last_token_ptr;
     
     if (token_is_pseudo_keyword(s, JS_ATOM_let)) {
         JSParsePos pos;
         js_parse_get_pos(s, &pos);
         for (;;) {
-            last_token_ptr = s->token.ptr;
             if (next_token(s)) {
                 res = -1;
                 break;
@@ -5638,7 +5623,7 @@ static int is_let(JSParseState *s, int decl_mask)
                 /* Check for possible ASI if not scanning for Declaration */
                 /* XXX: should also check that `{` introduces a BindingPattern,
                    but Firefox does not and rejects eval("let=1;let\n{if(1)2;}") */
-                if (!has_lf_in_range(last_token_ptr, s->token.ptr) ||
+                if (!s->got_lf ||
                     (decl_mask & DECL_MASK_OTHER)) {
                     res = TRUE;
                     break;
