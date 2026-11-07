@@ -865,6 +865,8 @@ JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
         if (js_get_fast_array(obj, &arrp, &count)) {
+            if (count > len)
+                count = len;
             for (; n < count; n++) {
                 if (js_strict_eq2(argv[0], arrp[n],
                                   JS_EQ_SAME_VALUE_ZERO)) {
@@ -918,6 +920,8 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
         if (js_get_fast_array(obj, &arrp, &count)) {
+            if (count > len)
+                count = len;
             for (; n < count; n++) {
                 if (js_strict_eq2(argv[0], arrp[n], JS_EQ_STRICT)) {
                     res = n;

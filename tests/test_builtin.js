@@ -570,6 +570,16 @@ function test_array_find_receiver()
     }
 }
 
+function test_array_search_length_snapshot()
+{
+    for (const method of ["includes", "indexOf"]) {
+        const values = [0];
+        const fromIndex = { valueOf() { values.push(5); return 0; } };
+        assert(values[method](5, fromIndex), method === "includes" ? false : -1);
+        assert(values.length, 2);
+    }
+}
+
 function test_array()
 {
     var a, err;
@@ -6066,6 +6076,7 @@ test_array_constructor_own_elements();
 test_array_sort_writeback();
 test_array_copy_reads();
 test_array_find_receiver();
+test_array_search_length_snapshot();
 test_string();
 test_string_html_attribute_coercion();
 test_string_unicode_18();
