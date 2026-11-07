@@ -102,6 +102,19 @@ static void enqueue_promise_reaction(JSContext *ctx, JSJobEntry *entry,
                                      JSValueConst value, BOOL is_reject)
 {
     JSValue unused;
+    JSValueConst handler = entry->argv[is_reject ? 3 : 2];
+    JSContext *job_ctx = ctx;
+
+    if (!JS_IsUndefined(handler)) {
+        job_ctx = JS_GetFunctionRealm(ctx, handler);
+        if (!job_ctx) {
+            /* A revoked Proxy uses the current realm for the reaction job. */
+            JS_FreeValue(ctx, JS_GetException(ctx));
+            job_ctx = ctx;
+        }
+    }
+    /* Keep the entry in the Promise's GC-traced list until the realm is known. */
+    list_del(&entry->link);
 
     /* The pending entry owns both handlers. Keep only the selected one when
        it becomes an ordinary five-argument reaction job. */
@@ -113,7 +126,7 @@ static void enqueue_promise_reaction(JSContext *ctx, JSJobEntry *entry,
     }
     entry->argv[3] = JS_NewBool(ctx, is_reject);
     entry->argv[4] = JS_DupValue(ctx, value);
-    js_enqueue_prepared_job(ctx, entry);
+    js_enqueue_prepared_job(job_ctx, entry);
     JS_FreeValue(ctx, unused);
 }
 
@@ -205,7 +218,6 @@ static int fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
 
     list_for_each_safe(el, el1, &s->promise_reactions) {
         entry = list_entry(el, JSJobEntry, link);
-        list_del(&entry->link);
         enqueue_promise_reaction(ctx, entry, value, is_reject);
     }
     return 0;
@@ -1051,10 +1063,9 @@ __exception int perform_promise_then(JSContext *ctx,
         entry->argv[i + 2] = JS_DupValue(ctx, handler);
     }
 
+    list_add_tail(&entry->link, &s->promise_reactions);
     js_promise_mark_as_handled(ctx, promise, s);
-    if (s->promise_state == JS_PROMISE_PENDING) {
-        list_add_tail(&entry->link, &s->promise_reactions);
-    } else {
+    if (s->promise_state != JS_PROMISE_PENDING) {
         enqueue_promise_reaction(ctx, entry, s->promise_result,
                                  s->promise_state == JS_PROMISE_REJECTED);
     }
