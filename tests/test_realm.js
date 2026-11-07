@@ -210,12 +210,50 @@ async function test_promise_resolver_realm()
     std.gc();
 }
 
+async function test_promise_reaction_realm()
+{
+    const handlerRealm = std.createRealm();
+    const promiseRealm = std.createRealm();
+    const handler = handlerRealm.evalScript("new Proxy(() => 1, { apply: 0 })");
+
+    for (const settled of [true, false]) {
+        const promise = settled ? promiseRealm.evalScript("Promise.resolve(1)") :
+            promiseRealm.evalScript(
+                "var settleForRealm; new Promise(resolve => { settleForRealm = resolve; })");
+        const result = promise.then(handler);
+        if (!settled)
+            promiseRealm.global.settleForRealm(1);
+
+        let rejected = false;
+        try {
+            await result;
+        } catch (error) {
+            rejected = true;
+            check(Object.getPrototypeOf(error), handlerRealm.global.TypeError.prototype,
+                  "reaction error uses its handler realm");
+        }
+        check(rejected, true, "invalid apply trap must reject");
+    }
+    const revocable = handlerRealm.global.Proxy.revocable(() => 1, {});
+    revocable.revoke();
+    const revokedResult = promiseRealm.evalScript("Promise.resolve(1)").then(revocable.proxy);
+    try {
+        await revokedResult;
+        throw Error("revoked handler must reject");
+    } catch (error) {
+        check(Object.getPrototypeOf(error), promiseRealm.global.TypeError.prototype,
+              "revoked handler falls back to the scheduling realm");
+    }
+    std.gc();
+}
+
 export async function test_realms()
 {
     await test_create_realm();
     test_bigint_locale_realm();
     await test_c_function_data_realm();
     await test_promise_resolver_realm();
+    await test_promise_reaction_realm();
 }
 
 await test_realms();
