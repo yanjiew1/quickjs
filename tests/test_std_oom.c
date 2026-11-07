@@ -744,7 +744,7 @@ static void test_format_stops_after_oom(int mode)
 
     padding = test_pool_padding(rt);
     oom_test_begin(&allocator, 1);
-    result = js_printf_internal(ctx, argc, (JSValueConst *)args, NULL);
+    result = js_printf_internal(ctx, argc, (JSValueConst *)args, NULL, JS_UNDEFINED);
     oom_test_end(&allocator);
     assert(allocator.failures == 1 && JS_IsException(result));
     assert(calls == 0);

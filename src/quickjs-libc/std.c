@@ -85,9 +85,12 @@ static BOOL my_isdigit(int c)
     return (c >= '0' && c <= '9');
 }
 
+static FILE *js_std_file_get(JSContext *ctx, JSValueConst obj);
+
 /* XXX: use 'o' and 'O' for object using JS_PrintValue() ? */
 static JSValue js_printf_internal(JSContext *ctx,
-                                  int argc, JSValueConst *argv, FILE *fp)
+                                  int argc, JSValueConst *argv, FILE *fp,
+                                  JSValueConst file_obj)
 {
     char fmtbuf[32];
     uint8_t cbuf[UTF8_CHAR_LEN_MAX+1];
@@ -326,6 +329,13 @@ static JSValue js_printf_internal(JSContext *ctx,
     if (dbuf.error) {
         res = JS_ThrowOutOfMemory(ctx);
     } else {
+        if (!JS_IsUndefined(file_obj)) {
+            fp = js_std_file_get(ctx, file_obj);
+            if (!fp) {
+                dbuf_free(&dbuf);
+                return JS_EXCEPTION;
+            }
+        }
         if (fp) {
             len = dbuf.size ? fwrite(dbuf.buf, 1, dbuf.size, fp) : 0;
             res = JS_NewInt32(ctx, len);
@@ -932,13 +942,13 @@ static JSValue js_std_tmpfile(JSContext *ctx, JSValueConst this_val,
 static JSValue js_std_sprintf(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv)
 {
-    return js_printf_internal(ctx, argc, argv, NULL);
+    return js_printf_internal(ctx, argc, argv, NULL, JS_UNDEFINED);
 }
 
 static JSValue js_std_printf(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
-    return js_printf_internal(ctx, argc, argv, stdout);
+    return js_printf_internal(ctx, argc, argv, stdout, JS_UNDEFINED);
 }
 
 static FILE *js_std_file_get(JSContext *ctx, JSValueConst obj)
@@ -973,6 +983,13 @@ static JSValue js_std_file_puts(JSContext *ctx, JSValueConst this_val,
         str = JS_ToCStringLen(ctx, &len, argv[i]);
         if (!str)
             return JS_EXCEPTION;
+        if (magic != 0) {
+            f = js_std_file_get(ctx, this_val);
+            if (!f) {
+                JS_FreeCString(ctx, str);
+                return JS_EXCEPTION;
+            }
+        }
         fwrite(str, 1, len, f);
         JS_FreeCString(ctx, str);
     }
@@ -1002,7 +1019,7 @@ static JSValue js_std_file_printf(JSContext *ctx, JSValueConst this_val,
     FILE *f = js_std_file_get(ctx, this_val);
     if (!f)
         return JS_EXCEPTION;
-    return js_printf_internal(ctx, argc, argv, f);
+    return js_printf_internal(ctx, argc, argv, f, this_val);
 }
 
 void js_print_value_write(void *opaque, const char *buf, size_t len)
@@ -1059,6 +1076,9 @@ static JSValue js_std_file_seek(JSContext *ctx, JSValueConst this_val,
     if (JS_ToInt64Ext(ctx, &pos, argv[0]))
         return JS_EXCEPTION;
     if (JS_ToInt32(ctx, &whence, argv[1]))
+        return JS_EXCEPTION;
+    f = js_std_file_get(ctx, this_val);
+    if (!f)
         return JS_EXCEPTION;
 #if defined(_WIN32)
     ret = _fseeki64(f, pos, whence);
@@ -1122,6 +1142,9 @@ static JSValue js_std_file_read_write(JSContext *ctx, JSValueConst this_val,
     if (JS_ToIndex(ctx, &pos, argv[1]))
         return JS_EXCEPTION;
     if (JS_ToIndex(ctx, &len, argv[2]))
+        return JS_EXCEPTION;
+    f = js_std_file_get(ctx, this_val);
+    if (!f)
         return JS_EXCEPTION;
     buf = JS_GetArrayBuffer(ctx, &size, argv[0]);
     if (!buf)
@@ -1198,6 +1221,10 @@ static JSValue js_std_file_readAsString(JSContext *ctx, JSValueConst this_val,
             max_size = max_size64;
     }
 
+    f = js_std_file_get(ctx, this_val);
+    if (!f)
+        return JS_EXCEPTION;
+
     js_std_dbuf_init(JS_GetRuntime(ctx), &dbuf);
     while (max_size != 0) {
         c = fgetc(f);
@@ -1231,6 +1258,9 @@ static JSValue js_std_file_putByte(JSContext *ctx, JSValueConst this_val,
     if (!f)
         return JS_EXCEPTION;
     if (JS_ToInt32(ctx, &c, argv[0]))
+        return JS_EXCEPTION;
+    f = js_std_file_get(ctx, this_val);
+    if (!f)
         return JS_EXCEPTION;
     c = fputc(c, f);
     return JS_NewInt32(ctx, c);
