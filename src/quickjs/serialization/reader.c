@@ -27,6 +27,7 @@
 #include "../internal/base.h"
 #include "../value/print.h"
 #include "../internal/runtime.h"
+#include "../internal/atom.h"
 #include "../internal/allocator.h"
 #include "../internal/gc.h"
 #include "../internal/number.h"
@@ -351,6 +352,19 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
     }
     b->byte_code_buf = bc_buf;
 
+    /* Check instruction boundaries before endian swapping or reading atoms.
+       On failure the bytecode owns no atoms yet. */
+    pos = 0;
+    while (pos < bc_len) {
+        op = bc_buf[pos];
+        if (op == OP_invalid || op >= OP_COUNT)
+            goto invalid_bytecode;
+        len = short_opcode_info(op).size;
+        if (len <= 0 || len > bc_len - pos)
+            goto invalid_bytecode;
+        pos += len;
+    }
+
     if (is_be())
         bc_byte_swap(bc_buf, bc_len);
 
@@ -366,7 +380,16 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
         case OP_FMT_atom_label_u16:
             idx = get_u32(bc_buf + pos + 1);
             if (s->is_rom_data) {
-                /* just increment the reference count of the atom */
+                JSRuntime *rt = s->ctx->rt;
+                if (idx == JS_ATOM_NULL ||
+                    (!__JS_AtomIsTaggedInt(idx) &&
+                     (idx >= (uint32_t)rt->atom_size ||
+                      !rt->atom_array[idx] ||
+                      atom_is_free(rt->atom_array[idx])))) {
+                    /* The preceding instructions are the only atom owners. */
+                    b->byte_code_len = pos;
+                    goto invalid_bytecode_atom;
+                }
                 JS_DupAtom(s->ctx, (JSAtom)idx);
             } else {
                 if (bc_idx_to_atom(s, &atom, idx)) {
@@ -386,6 +409,11 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
         pos += len;
     }
     return 0;
+ invalid_bytecode:
+    b->byte_code_len = 0;
+ invalid_bytecode_atom:
+    JS_ThrowSyntaxError(s->ctx, "invalid bytecode instruction or atom");
+    return s->error_state = -1;
 }
 
 static JSValue JS_ReadBigInt(BCReaderState *s)

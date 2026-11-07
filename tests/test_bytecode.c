@@ -32,6 +32,7 @@
 #include "../src/quickjs/internal/function.h"
 #include "../src/quickjs/internal/module.h"
 #include "../src/quickjs/internal/string.h"
+#include "../src/quickjs/serialization/format.h"
 
 static void rope_print_write(void *opaque, const char *buf, size_t len)
 {
@@ -679,6 +680,40 @@ static void test_truncated_function_atoms(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_malformed_function_bytecode(void)
+{
+    /* Minimal function record with no atoms or locals. Offsets 14 and 16
+       hold the encoded bytecode length and first opcode, respectively. */
+    uint8_t buf[21] = { BC_VERSION, 0, BC_TAG_FUNCTION_BYTECODE };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue result;
+
+    assert(rt && ctx);
+    buf[14] = 1;
+    buf[16] = OP_push_atom_value;
+    result = JS_ReadObject(ctx, buf, 17, JS_READ_OBJ_BYTECODE);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    buf[16] = 255;
+    result = JS_ReadObject(ctx, buf, 17, JS_READ_OBJ_BYTECODE);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    buf[14] = 5;
+    buf[16] = OP_push_atom_value;
+    buf[17] = buf[18] = buf[19] = 255;
+    buf[20] = 127;
+    result = JS_ReadObject(ctx, buf, sizeof(buf),
+                           JS_READ_OBJ_BYTECODE | JS_READ_OBJ_ROM_DATA);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_module_read_oom(void)
 {
     static const char source[] =
@@ -935,6 +970,7 @@ int main(void)
     test_reference_read_oom(0);
     test_reference_read_oom(1);
     test_truncated_function_atoms();
+    test_malformed_function_bytecode();
     test_rope_serialization();
     test_bytecode_roundtrip(
         "var fn = function self() {"
