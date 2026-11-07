@@ -136,9 +136,13 @@ advertisement are subsequent acceptance stages.
 while retaining each original rule and character-atom source. At an ignore
 record, it inserts a no-break rule `complement(excluded) × ignored`. Earlier
 rules remain raw. Later positive character atoms acquire a following ignored
-closure; complemented atoms do not. Grouped one-character alternations and
-positive set differences remain single predicates. Unreviewed mixed/nested
-negation shapes fail rather than receive guessed Boolean-to-language semantics.
+closure except for the excluded hard-break characters; complemented atoms do
+not. The reviewed root word RI parity rules also exclude ignored characters
+from the preceding non-RI sentinel. Their derived left expressions retain the
+original rule record, but node offsets refer to the derived expression. Grouped
+one-character alternations and positive set differences remain single
+predicates. Unreviewed mixed/nested negation shapes fail rather than receive
+guessed Boolean-to-language semantics.
 
 The returned `LoweredProgram` retains its matching `PreparedVariables` owner:
 a shared character source can be a declaration span rather than a substring
@@ -243,11 +247,12 @@ Context-to-predicate lookups occur once per context; flag assignment then uses
 at most five bit tests for each of the alphabet's at most 16,384 classes.
 
 Profile identity includes granularity, rule roles, class context and unresolved
-requirements, in addition to base machine tables. Word requires dictionaries,
-word status and selected grapheme protection; sentence requires suppressions and
-grapheme protection. These prepared flags do not advertise executable native
-coverage. The runtime must satisfy every requirement and retain endpoint
-and hard-boundary protections before exposing native locales.
+requirements, in addition to base machine tables. Word uses grapheme boundaries
+for dictionary refinement; sentence uses suppressions. The prepared sentence
+profile still carries the grapheme requirement in the data contract. These flags
+do not advertise executable native coverage. The runtime must satisfy every
+requirement and retain endpoint and hard-boundary protections before exposing
+native locales.
 
 References reviewed 2026-10-23:
 

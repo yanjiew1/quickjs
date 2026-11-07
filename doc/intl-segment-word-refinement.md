@@ -56,8 +56,7 @@ dictionary words to join default cuts.
 Run endpoints are virtual path vertices. They never force a break next to
 outside ignored text or a different family. Preserve endpoints and all
 non-grapheme/protected decisions throughout refinement.
-The final native-input pipeline separately intersects with grapheme decisions;
-this helper never introduces a cut inside a cluster or rewrites those base bits.
+This helper never introduces a cut inside a cluster or rewrites those base bits.
 
 ## CJK costs and Southeast Asian matching
 
