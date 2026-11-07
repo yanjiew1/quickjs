@@ -409,6 +409,7 @@ JS_EXTERN int JS_AddRuntimeFinalizer(JSRuntime *rt, JSRuntimeFinalizer *finalize
                                    void *opaque);
 typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
 JS_EXTERN void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+/* A request made during object destruction is ignored. */
 JS_EXTERN void JS_RunGC(JSRuntime *rt);
 /* Release WeakRef targets after a job/microtask checkpoint. Does nothing
    while JavaScript is executing; JS_RunGC itself preserves these roots. */

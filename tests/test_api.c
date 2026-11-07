@@ -5114,12 +5114,52 @@ static void test_module_link_without_evaluation(void)
     JS_FreeRuntime(rt);
 }
 
+static int reentrant_gc_finalizer_count;
+
+static void reentrant_gc_finalizer(JSRuntime *rt, JSValue obj)
+{
+    (void)obj;
+    reentrant_gc_finalizer_count++;
+    JS_RunGC(rt);
+}
+
+static void test_reentrant_gc_finalizer(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSClassID class_id = 0;
+    JSClassDef class_def = { .class_name = "ReentrantGC",
+                             .finalizer = reentrant_gc_finalizer };
+    JSValue obj;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(rt, class_id, &class_def) == 0);
+    reentrant_gc_finalizer_count = 0;
+    obj = JS_NewObjectClass(ctx, class_id);
+    assert(!JS_IsException(obj));
+    JS_FreeValue(ctx, obj);
+    assert(reentrant_gc_finalizer_count == 1);
+
+    obj = JS_NewObjectClass(ctx, class_id);
+    assert(!JS_IsException(obj));
+    assert(JS_SetPropertyStr(ctx, obj, "self", JS_DupValue(ctx, obj)) >= 0);
+    JS_FreeValue(ctx, obj);
+    JS_RunGC(rt);
+    assert(reentrant_gc_finalizer_count == 2);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "reentrant-gc-finalizer", test_reentrant_gc_finalizer },
         { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },

@@ -542,6 +542,9 @@ void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects)
 
 void JS_RunGC(JSRuntime *rt)
 {
+    /* Finalizers may request GC while objects are already being freed. */
+    if (rt->gc_phase != JS_GC_PHASE_NONE)
+        return;
     JS_RunGCInternal(rt, TRUE);
 }
 
