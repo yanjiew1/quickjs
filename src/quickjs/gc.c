@@ -522,6 +522,10 @@ static void gc_free_cycles(JSRuntime *rt)
 
 void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects)
 {
+    /* Native mark hooks and finalizers can request collection recursively. */
+    if (rt->gc_running || rt->gc_phase != JS_GC_PHASE_NONE)
+        return;
+    rt->gc_running = TRUE;
     if (remove_weak_objects) {
         /* free the weakly referenced object or symbol structures, delete
            the associated Map/Set entries and queue the finalization
@@ -538,6 +542,7 @@ void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects)
 
     /* free the GC objects in a cycle */
     gc_free_cycles(rt);
+    rt->gc_running = FALSE;
 }
 
 void JS_RunGC(JSRuntime *rt)
