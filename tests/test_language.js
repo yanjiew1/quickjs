@@ -4289,3 +4289,27 @@ function test_lookahead_line_terminators()
 }
 
 test_lookahead_line_terminators();
+
+function test_regexp_after_control_header_in_initializer()
+{
+    for (const statement of [
+        "if (true) /}/.test('}');",
+        "if ((true)) /* comment */ /[}]/.test('}');",
+        "for (; false;) /[}]/.test('}');",
+        "while (false) /[}]/.test('}');",
+        "with ({}) /[}]/.test('}');",
+    ]) {
+        const source = "let x; [{x = function () { " + statement +
+                       " return 42; }}] = [{}]; return x();";
+        assert(Function(source)(), 42);
+    }
+    const divide = "let x; [{x = function () { const obj = { if(x) { return x; } }; " +
+                   "return obj?.if(8) / 2 / 2; }}] = [{}]; return x();";
+    assert(Function(divide)(), 2);
+    const asyncLoop = "let x; [{x = async function () { " +
+                      "for await (const v of []) /[}]/.test('}'); " +
+                      "return 42; }}] = [{}]; return typeof x;";
+    assert(Function(asyncLoop)(), "function");
+}
+
+test_regexp_after_control_header_in_initializer();
