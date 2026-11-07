@@ -7115,6 +7115,24 @@ function test_sort_identical_comparisons()
 
 test_sort_identical_comparisons();
 
+function test_sort_object_string_conversions()
+{
+    for (const method of ["sort", "toSorted"]) {
+        let conversions = 0;
+        const values = [3, 2, 1].map(value => ({
+            toString() {
+                if (++conversions === 4)
+                    throw new TypeError("fourth conversion");
+                return String(value);
+            },
+        }));
+        assert_throws(TypeError, () => values[method]());
+        assert(conversions, 4);
+    }
+}
+
+test_sort_object_string_conversions();
+
 function test_number_extreme_exponents()
 {
     for (const mantissa of ["111111111111", "1".repeat(100)]) {

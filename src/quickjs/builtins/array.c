@@ -1821,6 +1821,24 @@ struct array_sort_context {
     JSValueConst method;
 };
 
+static JSString *js_array_sort_string(JSContext *ctx, ValueSlot *slot,
+                                      JSValue *temporary)
+{
+    JSValue str;
+
+    *temporary = JS_UNDEFINED;
+    if (slot->str)
+        return slot->str;
+    str = JS_ToString(ctx, slot->val);
+    if (JS_IsException(str))
+        return NULL;
+    if (JS_IsObject(slot->val))
+        *temporary = str;
+    else
+        slot->str = JS_VALUE_GET_STRING(str);
+    return JS_VALUE_GET_STRING(str);
+}
+
 static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
     struct array_sort_context *psc = opaque;
     JSContext *ctx = psc->ctx;
@@ -1849,22 +1867,20 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
             cmp = (val > 0) - (val < 0);
         }
     } else {
-        /* Not supposed to bypass ToString even for identical objects as
-         * tested in test262/test/built-ins/Array/prototype/sort/bug_596_1.js
-         */
-        if (!ap->str) {
-            JSValue str = JS_ToString(ctx, ap->val);
-            if (JS_IsException(str))
-                goto exception;
-            ap->str = JS_VALUE_GET_STRING(str);
+        JSValue a_temp, b_temp;
+        JSString *a_str = js_array_sort_string(ctx, ap, &a_temp);
+        JSString *b_str;
+
+        if (!a_str)
+            goto exception;
+        b_str = js_array_sort_string(ctx, bp, &b_temp);
+        if (!b_str) {
+            JS_FreeValue(ctx, a_temp);
+            goto exception;
         }
-        if (!bp->str) {
-            JSValue str = JS_ToString(ctx, bp->val);
-            if (JS_IsException(str))
-                goto exception;
-            bp->str = JS_VALUE_GET_STRING(str);
-        }
-        cmp = js_string_compare(ap->str, bp->str);
+        cmp = js_string_compare(a_str, b_str);
+        JS_FreeValue(ctx, a_temp);
+        JS_FreeValue(ctx, b_temp);
     }
     if (cmp != 0)
         return cmp;
