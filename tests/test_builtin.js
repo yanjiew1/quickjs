@@ -580,6 +580,30 @@ function test_array_search_length_snapshot()
     }
 }
 
+function test_array_from_indices_and_close()
+{
+    function Result() {}
+    for (const input of [[3, 4], { 0: 3, 1: 4, length: 2 }]) {
+        const indices = [];
+        const result = Array.from.call(Result, input, (value, index) => {
+            indices.push(index);
+            return value + index;
+        });
+        assert(indices.join(","), "0,1");
+        assert(result[0], 3);
+        assert(result[1], 5);
+        assert(result.length, 2);
+    }
+    let closed = false;
+    const iterator = {
+        [Symbol.iterator]() { return this; },
+        next() { return { value: 1, done: false }; },
+        return() { closed = true; return {}; },
+    };
+    assert_throws(TypeError, () => Array.from(iterator, () => { throw new TypeError(); }));
+    assert(closed, true);
+}
+
 function test_array()
 {
     var a, err;
@@ -6077,6 +6101,7 @@ test_array_sort_writeback();
 test_array_copy_reads();
 test_array_find_receiver();
 test_array_search_length_snapshot();
+test_array_from_indices_and_close();
 test_string();
 test_string_html_attribute_coercion();
 test_string_unicode_18();
