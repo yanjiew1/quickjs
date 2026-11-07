@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include "temporal-internal.h"
+#include "../duration-value.h"
 #include "../../../temporal/duration.h"
 #include "../../../temporal/time.h"
 
@@ -298,19 +299,16 @@ static JSValue js_temporal_plain_time_add(JSContext *ctx, JSValueConst this_val,
     QJSTemporalInternalDuration normalized;
     QJSTemporalISOTime result;
     QJSTemporalEpochNs zero = { 0, 0 };
-    JSValue duration;
+    QJSTemporalDuration duration;
     int64_t days;
     int ret;
 
     time = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_PLAIN_TIME);
     if (!time)
         return JS_EXCEPTION;
-    duration = js_temporal_to_duration(ctx, argv[0]);
-    if (JS_IsException(duration))
-        return duration;
-    ret = qjs_temporal_duration_normalize(&normalized,
-        JS_GetOpaque(duration, JS_CLASS_TEMPORAL_DURATION), 0);
-    JS_FreeValue(ctx, duration);
+    if (js_duration_to_record(ctx, argv[0], &duration))
+        return JS_EXCEPTION;
+    ret = qjs_temporal_duration_normalize(&normalized, &duration, 0);
     if (!ret && subtract)
         ret = qjs_temporal_epoch_ns_subtract(&normalized.time, zero,
                                               normalized.time);
