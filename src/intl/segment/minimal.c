@@ -135,14 +135,15 @@ QJSIntlStatus qjs_intl_segment_next(const QJSIntlSegmentInput *input, size_t sta
         return QJS_INTL_DATA_ERROR;
     *out = (QJSIntlSegment){start, end, 1, 0};
     if (input->granularity == QJS_INTL_SEGMENT_WORD) {
-        /* Minimal policy: a word-like segment contains a Letter or Nd. This
+        /* Minimal policy: a word-like segment contains a Letter, Nl or Nd. This
            includes Han/Hiragana/complex-context letters without treating a
            punctuation-only underscore or emoji as a word. Native dictionary
            classification can replace this policy behind the same contract. */
         at = start;
         while (at < end) {
             uint32_t c = unicode_utf16_next(input->text.data, end, &at);
-            if (lre_is_letter(c) || lre_is_decimal_digit(c)) {
+            if (lre_is_letter(c) || lre_is_decimal_digit(c) ||
+                lre_is_letter_number(c)) {
                 out->is_word_like = 1;
                 break;
             }
