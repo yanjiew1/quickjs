@@ -414,6 +414,30 @@ static void test_reentrant_exotic_enumeration(JSContext *ctx)
     JS_FreeValue(ctx, obj);
 }
 
+static void test_property_enum_size_overflow(JSContext *ctx)
+{
+    JSPropertyEnum *properties;
+    JSValue array;
+    JSObject *p;
+    uint32_t length, saved_count;
+
+    if (sizeof(void *) != 4)
+        return;
+    array = JS_NewArray(ctx);
+    assert(!JS_IsException(array));
+    p = JS_VALUE_GET_OBJ(array);
+    assert(p->fast_array);
+    saved_count = p->u.array.count;
+    /* Avoid a large backing allocation while testing the i386 size wrap. */
+    p->u.array.count = UINT32_C(0x20000000);
+    assert(JS_GetOwnPropertyNames(ctx, &properties, &length, array,
+                                  JS_GPN_STRING_MASK) < 0);
+    assert(!properties && length == 0);
+    p->u.array.count = saved_count;
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    JS_FreeValue(ctx, array);
+}
+
 static void test_proxy_construct_method_cleanup(JSContext *ctx)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
@@ -463,6 +487,7 @@ int main(void)
     test_delete_global_varref_oom(ctx);
     test_detached_exotic_prototype(ctx);
     test_reentrant_exotic_enumeration(ctx);
+    test_property_enum_size_overflow(ctx);
     test_proxy_construct_method_cleanup(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
