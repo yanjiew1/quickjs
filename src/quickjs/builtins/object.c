@@ -654,11 +654,11 @@ JSValue js_object_seal(JSContext *ctx, JSValueConst this_val,
             res = JS_GetOwnPropertyInternal(ctx, &desc, p, prop);
             if (res < 0)
                 goto exception;
-            if (res) {
-                if (desc.flags & JS_PROP_WRITABLE)
-                    desc_flags |= JS_PROP_HAS_WRITABLE;
-                js_free_desc(ctx->rt, &desc);
-            }
+            if (!res)
+                continue;
+            if (desc.flags & JS_PROP_WRITABLE)
+                desc_flags |= JS_PROP_HAS_WRITABLE;
+            js_free_desc(ctx->rt, &desc);
         }
         if (JS_DefineProperty(ctx, obj, prop, JS_UNDEFINED,
                               JS_UNDEFINED, JS_UNDEFINED, desc_flags) < 0)
