@@ -600,7 +600,7 @@ __exception int next_token(JSParseState *s)
                     c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
                     /* LS or PS are considered as line terminator */
                     if (c == CP_LS || c == CP_PS) {
-                        break;
+                        goto line_terminator;
                     } else if (c == -1) {
                         p++; /* skip invalid UTF-8 */
                     }
