@@ -488,14 +488,25 @@ void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size)
 }
 
 /* default memory allocation functions with memory limitation */
+#ifdef __EMSCRIPTEN__
+/* The requested size is needed when the host allocator cannot report it. */
+typedef union {
+    max_align_t alignment;
+    size_t size;
+} JSMallocSizeHeader;
+#define JS_DEF_MALLOC_OVERHEAD (MALLOC_OVERHEAD + sizeof(JSMallocSizeHeader))
+#else
+#define JS_DEF_MALLOC_OVERHEAD MALLOC_OVERHEAD
+#endif
+
 static size_t js_def_malloc_usable_size(const void *ptr)
 {
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+    return ((const JSMallocSizeHeader *)ptr)[-1].size;
+#elif defined(__APPLE__)
     return malloc_size(ptr);
 #elif defined(_WIN32)
     return _msize((void *)ptr);
-#elif defined(__EMSCRIPTEN__)
-    return 0;
 #elif defined(__linux__) || defined(__GLIBC__)
     return malloc_usable_size((void *)ptr);
 #else
@@ -515,12 +526,24 @@ static void *js_def_malloc(JSMallocState *s, size_t size)
                  size > s->malloc_limit - s->malloc_size))
         return NULL;
 
+#ifdef __EMSCRIPTEN__
+    if (size > SIZE_MAX - sizeof(JSMallocSizeHeader))
+        return NULL;
+    {
+        JSMallocSizeHeader *header = malloc(sizeof(*header) + size);
+        if (!header)
+            return NULL;
+        header->size = size;
+        ptr = header + 1;
+    }
+#else
     ptr = malloc(size);
+#endif
     if (!ptr)
         return NULL;
 
     s->malloc_count++;
-    s->malloc_size += js_def_malloc_usable_size(ptr) + MALLOC_OVERHEAD;
+    s->malloc_size += js_def_malloc_usable_size(ptr) + JS_DEF_MALLOC_OVERHEAD;
     return ptr;
 }
 
@@ -530,8 +553,12 @@ static void js_def_free(JSMallocState *s, void *ptr)
         return;
 
     s->malloc_count--;
-    s->malloc_size -= js_def_malloc_usable_size(ptr) + MALLOC_OVERHEAD;
+    s->malloc_size -= js_def_malloc_usable_size(ptr) + JS_DEF_MALLOC_OVERHEAD;
+#ifdef __EMSCRIPTEN__
+    free((JSMallocSizeHeader *)ptr - 1);
+#else
     free(ptr);
+#endif
 }
 
 static void *js_def_realloc(JSMallocState *s, void *ptr, size_t size)
@@ -546,15 +573,32 @@ static void *js_def_realloc(JSMallocState *s, void *ptr, size_t size)
     old_size = js_def_malloc_usable_size(ptr);
     if (size == 0) {
         s->malloc_count--;
-        s->malloc_size -= old_size + MALLOC_OVERHEAD;
+        s->malloc_size -= old_size + JS_DEF_MALLOC_OVERHEAD;
+#ifdef __EMSCRIPTEN__
+        free((JSMallocSizeHeader *)ptr - 1);
+#else
         free(ptr);
+#endif
         return NULL;
     }
     if (s->malloc_size - old_size > s->malloc_limit ||
         size > s->malloc_limit - (s->malloc_size - old_size))
         return NULL;
 
+#ifdef __EMSCRIPTEN__
+    if (size > SIZE_MAX - sizeof(JSMallocSizeHeader))
+        return NULL;
+    {
+        JSMallocSizeHeader *header = realloc((JSMallocSizeHeader *)ptr - 1,
+                                              sizeof(*header) + size);
+        if (!header)
+            return NULL;
+        header->size = size;
+        ptr = header + 1;
+    }
+#else
     ptr = realloc(ptr, size);
+#endif
     if (!ptr)
         return NULL;
 
