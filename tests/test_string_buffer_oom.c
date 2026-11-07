@@ -33,6 +33,7 @@ typedef struct StringOOMState {
     JSValue long_string;
     int first_calls;
     int later_calls;
+    int later_after_failure;
 } StringOOMState;
 
 static JSValue first_value(JSContext *ctx, JSValueConst this_val,
@@ -51,6 +52,8 @@ static JSValue later_value(JSContext *ctx, JSValueConst this_val,
     StringOOMState *state = JS_GetContextOpaque(ctx);
 
     state->later_calls++;
+    if (state->allocator && state->allocator->failures)
+        state->later_after_failure = 1;
     return JS_UNDEFINED;
 }
 
@@ -86,6 +89,104 @@ static void test_from_char_code_init_oom(void)
     test_pool_padding_free(rt, padding);
     JS_FreeValue(ctx, arg);
     JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
+static void test_typed_array_locale_init_oom(void)
+{
+    OOMTestAllocator allocator;
+    StringOOMState state = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, ctor, proto, array, method, result;
+    void *padding;
+    const char *source = "new Uint8Array([3])";
+
+    assert(ctx);
+    JS_SetContextOpaque(ctx, &state);
+    global = JS_GetGlobalObject(ctx);
+    ctor = JS_GetPropertyStr(ctx, global, "Number");
+    proto = JS_GetPropertyStr(ctx, ctor, "prototype");
+    array = JS_Eval(ctx, source, strlen(source), "<typed-array>", 0);
+    method = JS_GetPropertyStr(ctx, array, "toLocaleString");
+    assert(!JS_IsException(global) && !JS_IsException(ctor) &&
+           !JS_IsException(proto) && !JS_IsException(array) &&
+           !JS_IsException(method));
+    assert(JS_SetPropertyStr(ctx, proto, "toLocaleString",
+                             JS_NewCFunction(ctx, later_value, "toLocaleString", 0)) >= 0);
+
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, 1);
+    result = JS_Call(ctx, method, array, 0, NULL);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && JS_IsException(result));
+    assert(state.later_calls == 0);
+    oom_test_check_exception(ctx);
+
+    JS_FreeValue(ctx, result);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, array);
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+
+static void test_string_html_builder_oom(size_t fail_at)
+{
+    OOMTestAllocator allocator;
+    StringOOMState state = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, ctor, proto, method, arg, holder, result;
+    void *padding;
+
+    assert(ctx);
+    state.allocator = &allocator;
+    JS_SetContextOpaque(ctx, &state);
+    global = JS_GetGlobalObject(ctx);
+    ctor = JS_GetPropertyStr(ctx, global, "String");
+    proto = JS_GetPropertyStr(ctx, ctor, "prototype");
+    method = JS_GetPropertyStr(ctx, proto, "link");
+    arg = JS_NewObject(ctx);
+    holder = JS_NewString(ctx, "x");
+    assert(!JS_IsException(global) && !JS_IsException(ctor) &&
+           !JS_IsException(proto) && !JS_IsException(method) &&
+           !JS_IsException(arg) && !JS_IsException(holder));
+    assert(JS_SetPropertyStr(ctx, arg, "toString",
+                             JS_NewCFunction(ctx, later_value, "toString", 0)) >= 0);
+
+    padding = test_pool_padding(rt);
+    oom_test_begin(&allocator, fail_at);
+    result = JS_Call(ctx, method, holder, 1, (JSValueConst *)&arg);
+    oom_test_end(&allocator);
+    assert(!state.later_after_failure);
+    if (allocator.failures && !state.later_calls)
+        assert(JS_IsException(result));
+    if (fail_at == 1) {
+        assert(allocator.failures == 1 && JS_IsException(result));
+        assert(state.later_calls == 0);
+    }
+    if (JS_IsException(result)) {
+        assert(allocator.failures == 1);
+        oom_test_check_exception(ctx);
+    } else {
+        assert(!JS_HasException(ctx));
+    }
+
+    JS_FreeValue(ctx, result);
+    test_pool_padding_free(rt, padding);
+    JS_FreeValue(ctx, holder);
+    JS_FreeValue(ctx, arg);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, proto);
     JS_FreeValue(ctx, ctor);
     JS_FreeValue(ctx, global);
     JS_FreeContext(ctx);
@@ -367,6 +468,9 @@ static void test_empty_write_after_failed_init(void)
 int main(void)
 {
     test_from_char_code_init_oom();
+    test_typed_array_locale_init_oom();
+    test_string_html_builder_oom(1);
+    test_string_html_builder_oom(2);
     test_empty_write_after_failed_init();
     test_public_string_builder_oom(0);
     test_public_string_builder_oom(1);

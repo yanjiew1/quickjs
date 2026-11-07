@@ -1648,23 +1648,22 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
     str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return JS_EXCEPTION;
-    string_buffer_init(ctx, b, 7);
-    string_buffer_putc8(b, '<');
-    string_buffer_puts8(b, defs[magic].tag);
+    if (string_buffer_init(ctx, b, 7) ||
+        string_buffer_putc8(b, '<') ||
+        string_buffer_puts8(b, defs[magic].tag))
+        goto fail;
     if (defs[magic].attr) {
         // r += " " + attr + "=\"" + value + "\"";
         JSValue value;
         int i;
 
-        string_buffer_putc8(b, ' ');
-        string_buffer_puts8(b, defs[magic].attr);
-        string_buffer_puts8(b, "=\"");
+        if (string_buffer_putc8(b, ' ') ||
+            string_buffer_puts8(b, defs[magic].attr) ||
+            string_buffer_puts8(b, "=\""))
+            goto fail;
         value = JS_ToString(ctx, argv[0]);
-        if (JS_IsException(value)) {
-            JS_FreeValue(ctx, str);
-            string_buffer_free(b);
-            return JS_EXCEPTION;
-        }
+        if (JS_IsException(value))
+            goto fail;
         p = JS_VALUE_GET_STRING(value);
         for (i = 0; i < p->len; i++) {
             int c = string_get(p, i);
@@ -1684,6 +1683,10 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
     string_buffer_puts8(b, defs[magic].tag);
     string_buffer_putc8(b, '>');
     return string_buffer_end(b);
+fail:
+    JS_FreeValue(ctx, str);
+    string_buffer_free(b);
+    return JS_EXCEPTION;
 }
 
 const JSCFunctionListEntry js_string_funcs[] = {
