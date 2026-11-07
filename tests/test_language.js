@@ -4309,6 +4309,25 @@ function test_line_comment_terminators()
 
 test_line_comment_terminators();
 
+function test_strict_class_binding_names()
+{
+    /* A class's explicit BindingIdentifier is strict code even when the
+       surrounding script is sloppy. Escapes do not change its StringValue. */
+    for (const name of ["eval", "arguments", "\\u0065val", "argum\\u0065nts"]) {
+        for (const source of ["class " + name + " {}",
+                              "return class " + name + " {};"]) {
+            assert_throws(SyntaxError, () => Function(source));
+            assert_throws(SyntaxError, () => Function('"use strict"; ' + source));
+        }
+    }
+    /* Inferred names and method names are not BindingIdentifiers. */
+    assert(Function("var eval = class {}; return eval.name;")(), "eval");
+    assert(Function("var arguments = class {}; return arguments.name;")(), "arguments");
+    Function("class C { eval() {} arguments() {} }");
+}
+
+test_strict_class_binding_names();
+
 function test_regexp_after_control_header_in_initializer()
 {
     for (const statement of [

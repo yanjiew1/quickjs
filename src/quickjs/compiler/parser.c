@@ -2033,6 +2033,11 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             js_parse_error_reserved_identifier(s);
             goto fail;
         }
+        if (s->token.u.ident.atom == JS_ATOM_eval ||
+            s->token.u.ident.atom == JS_ATOM_arguments) {
+            js_parse_error(s, "invalid class name in strict mode");
+            goto fail;
+        }
         class_name = JS_DupAtom(ctx, s->token.u.ident.atom);
         if (next_token(s))
             goto fail;
