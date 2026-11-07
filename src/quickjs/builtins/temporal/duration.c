@@ -158,31 +158,27 @@ static JSValue js_temporal_duration_add(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv,
                                         int subtract)
 {
-    JSTemporalDurationData *data, *other;
+    JSTemporalDurationData *data;
+    QJSTemporalDuration other;
     QJSTemporalInternalDuration one, two;
     QJSTemporalDuration result;
     QJSTemporalUnit largest, other_largest;
-    JSValue converted;
     int ret;
 
     data = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_DURATION);
     if (!data)
         return JS_EXCEPTION;
-    converted = js_temporal_to_duration(ctx, argv[0]);
-    if (JS_IsException(converted))
-        return converted;
-    other = JS_GetOpaque(converted, JS_CLASS_TEMPORAL_DURATION);
+    if (js_duration_to_record(ctx, argv[0], &other))
+        return JS_EXCEPTION;
     largest = qjs_temporal_duration_largest_unit(data);
-    other_largest = qjs_temporal_duration_largest_unit(other);
+    other_largest = qjs_temporal_duration_largest_unit(&other);
     if (other_largest < largest)
         largest = other_largest;
     if (largest < QJS_TEMPORAL_DAY) {
-        JS_FreeValue(ctx, converted);
         return JS_ThrowRangeError(ctx, "calendar duration addition requires a date");
     }
     ret = qjs_temporal_duration_normalize(&one, data, 1) ||
-        qjs_temporal_duration_normalize(&two, other, 1);
-    JS_FreeValue(ctx, converted);
+        qjs_temporal_duration_normalize(&two, &other, 1);
     if (!ret) {
         if (subtract)
             ret = qjs_temporal_epoch_ns_subtract(&one.time, one.time, two.time);
@@ -225,8 +221,9 @@ static JSValue js_temporal_duration_compare(JSContext *ctx,
                                             JSValueConst this_val,
                                             int argc, JSValueConst *argv)
 {
-    JSValue one = JS_UNDEFINED, two = JS_UNDEFINED, options;
-    JSTemporalDurationData *a, *b;
+    JSValue options;
+    QJSTemporalDuration one, two;
+    const QJSTemporalDuration *a = &one, *b = &two;
     JSTemporalPlainDateData *plain;
     JSTemporalZonedDateTimeData *zoned;
     JSTemporalRelativeTo relative = { JS_UNDEFINED, JS_UNDEFINED };
@@ -237,11 +234,9 @@ static JSValue js_temporal_duration_compare(JSContext *ctx,
     int i, comparison = 0, ret;
     JSValue result = JS_EXCEPTION;
 
-    one = js_temporal_to_duration(ctx, argv[0]);
-    if (JS_IsException(one))
+    if (js_duration_to_record(ctx, argv[0], &one))
         goto done;
-    two = js_temporal_to_duration(ctx, argv[1]);
-    if (JS_IsException(two))
+    if (js_duration_to_record(ctx, argv[1], &two))
         goto done;
     options = js_temporal_get_options(ctx, argc > 2 ? argv[2] : JS_UNDEFINED);
     if (JS_IsException(options))
@@ -250,8 +245,6 @@ static JSValue js_temporal_duration_compare(JSContext *ctx,
     JS_FreeValue(ctx, options);
     if (ret)
         goto done;
-    a = JS_GetOpaque(one, JS_CLASS_TEMPORAL_DURATION);
-    b = JS_GetOpaque(two, JS_CLASS_TEMPORAL_DURATION);
     for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++) {
         if (a->fields[i] != b->fields[i])
             break;
@@ -301,8 +294,6 @@ static JSValue js_temporal_duration_compare(JSContext *ctx,
  overflow:
     JS_ThrowRangeError(ctx, "Temporal duration comparison overflow");
  done:
-    JS_FreeValue(ctx, one);
-    JS_FreeValue(ctx, two);
     js_temporal_free_relative_to(ctx, &relative);
     return result;
 }
