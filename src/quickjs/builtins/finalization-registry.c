@@ -43,8 +43,10 @@ typedef struct JSFinRecEntry {
 typedef struct JSFinalizationRegistryData {
     JSWeakRefHeader weakref_header;
     struct list_head entries; /* list of JSFinRecEntry.link */
+    JSObject *owner; /* borrowed; queued jobs hold the object alive */
     JSContext *realm;
     JSValue cb;
+    BOOL cleanup_queued;
 } JSFinalizationRegistryData;
 
 static void js_finrec_finalizer(JSRuntime *rt, JSValue val)
@@ -83,13 +85,45 @@ static void js_finrec_mark(JSRuntime *rt, JSValueConst val,
 
 static JSValue js_finrec_job(JSContext *ctx, int argc, JSValueConst *argv)
 {
-    return JS_Call(ctx, argv[0], JS_UNDEFINED, 1, &argv[1]);
+    JSFinalizationRegistryData *frd = JS_GetOpaque(argv[0], JS_CLASS_FINALIZATION_REGISTRY);
+    JSRuntime *rt = ctx->rt;
+    struct list_head *el;
+
+    frd->cleanup_queued = FALSE;
+    for (;;) {
+        JSFinRecEntry *fre = NULL;
+        JSValue held, result;
+
+        list_for_each(el, &frd->entries) {
+            JSFinRecEntry *entry = list_entry(el, JSFinRecEntry, link);
+            if (JS_IsUndefined(entry->target)) {
+                fre = entry;
+                break;
+            }
+        }
+        if (!fre)
+            return JS_UNDEFINED;
+        /* The callback may unregister other entries or trigger another GC. */
+        list_del(&fre->link);
+        js_weakref_free(rt, fre->token);
+        held = fre->held_val;
+        js_free_rt(rt, fre);
+        result = JS_Call(ctx, frd->cb, JS_UNDEFINED, 1, (JSValueConst *)&held);
+        JS_FreeValue(ctx, held);
+        if (JS_IsException(result))
+            return result;
+        JS_FreeValue(ctx, result);
+    }
 }
 
 void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
 {
     JSFinalizationRegistryData *frd = container_of(wh, JSFinalizationRegistryData, weakref_header);
     struct list_head *el, *el1;
+
+    /* An earlier weak collection may have queued this registry for freeing. */
+    if (js_rc(frd->owner)->ref_count == 0)
+        return;
 
     list_for_each_safe(el, el1, &frd->entries) {
         JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
@@ -99,18 +133,15 @@ void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
             fre->token = JS_UNDEFINED;
         }
 
-        if (!js_weakref_is_live(fre->target)) {
-            JSValueConst args[2];
-            args[0] = frd->cb;
-            args[1] = fre->held_val;
-            /* no exception is raised to avoid recursing into the GC */
-            JS_EnqueueJob2(frd->realm, js_finrec_job, 2, args, TRUE);
-                
+        if (!JS_IsUndefined(fre->target) && !js_weakref_is_live(fre->target)) {
             js_weakref_free(rt, fre->target);
-            js_weakref_free(rt, fre->token);
-            JS_FreeValueRT(rt, fre->held_val);
-            list_del(&fre->link);
-            js_free_rt(rt, fre);
+            fre->target = JS_UNDEFINED;
+        }
+        if (JS_IsUndefined(fre->target) && !frd->cleanup_queued) {
+            JSValueConst registry = JS_MKPTR(JS_TAG_OBJECT, frd->owner);
+            /* Do not raise an exception while the GC is running. */
+            if (JS_EnqueueJob2(frd->realm, js_finrec_job, 1, &registry, TRUE) == 0)
+                frd->cleanup_queued = TRUE;
         }
     }
 }
@@ -137,6 +168,7 @@ JSValue js_finrec_constructor(JSContext *ctx, JSValueConst new_target,
         return JS_EXCEPTION;
     }
     frd->weakref_header.weakref_type = JS_WEAKREF_TYPE_FINREC;
+    frd->owner = JS_VALUE_GET_OBJ(obj);
     list_add_tail(&frd->weakref_header.link, &ctx->rt->weakref_list);
     init_list_head(&frd->entries);
     frd->realm = JS_DupContext(ctx);
