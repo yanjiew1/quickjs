@@ -29,7 +29,7 @@ on:
     - '!LICENSE'
     - '!TODO'
     - '!doc/**'
-    - '!examples/**'
+    - 'doc/meson.build'
     - '.github/workflows/ci.yml'
   push:
     branches:
