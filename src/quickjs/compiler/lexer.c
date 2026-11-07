@@ -958,7 +958,9 @@ static int match_identifier(const uint8_t *p, const char *s) {
     c = *p;
     if (c >= 128)
         c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
-    return !lre_js_is_ident_next(c);
+    /* An escape may continue the identifier. Leave its validation to the
+       full lexer instead of recognizing a keyword prefix prematurely. */
+    return c != '\\' && !lre_js_is_ident_next(c);
 }
 
 /* simple_next_token() is used to check for the next token in simple cases.
