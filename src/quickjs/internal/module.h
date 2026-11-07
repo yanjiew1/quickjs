@@ -88,6 +88,7 @@ struct JSModuleDef {
     JSGCObjectHeader header; /* must come first */
     JSAtom module_name;
     JSModuleDef *resolution_next; /* temporary owned transaction chain */
+    JSModuleDef *creation_next; /* temporary function-creation cleanup chain */
     struct list_head link;
 
     JSReqModuleEntry *req_module_entries;
