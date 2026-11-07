@@ -167,7 +167,7 @@ int js_intl_number_format_options(JSContext *ctx, JSValueConst options,
     notation = js_intl_string_option(ctx, options, "notation", notations, countof(notations), 0);
     if (notation < 0)
         goto fail;
-    if (result.unit.style == QJS_INTL_NUMBER_CURRENCY && notation == QJS_INTL_NUMBER_STANDARD) {
+    if (result.unit.style == QJS_INTL_NUMBER_CURRENCY) {
         uint32_t digits;
         if (js_intl_error(ctx, qjs_intl_number_currency_digits(service,
                                   (QJSIntlBytes){result.unit.currency, 3}, &digits), "currency digits"))
