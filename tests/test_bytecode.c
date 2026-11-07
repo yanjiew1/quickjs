@@ -23,6 +23,7 @@
  */
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "quickjs.h"
@@ -730,6 +731,72 @@ static void test_malformed_function_bytecode(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_module_invalid_table_counts(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled, loaded;
+    uint8_t *encoded, *corrupt;
+    const uint8_t *ptr, *end;
+    size_t len, first_count, atom_bytes, count_len, i;
+    uint32_t atom_count, length, j;
+    static const uint8_t short_count[] = { 0xe8, 0x07 }; /* 1000 entries */
+    static const uint8_t wrapped_star_count[] = {
+        0x80, 0x80, 0x80, 0x80, 0x04, /* 0x40000000 entries */
+    };
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Eval(ctx, "", 0, "module-invalid-counts",
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    encoded = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(encoded && len > 4);
+    JS_FreeValue(ctx, compiled);
+
+    ptr = encoded + 1;
+    end = encoded + len;
+    atom_count = module_bytecode_get_leb128(&ptr, end);
+    for (j = 0; j < atom_count; j++) {
+        length = module_bytecode_get_leb128(&ptr, end);
+        atom_bytes = (size_t)(length >> 1) * (1 + (length & 1));
+        assert(atom_bytes <= (size_t)(end - ptr));
+        ptr += atom_bytes;
+    }
+    assert(ptr < end && *ptr++ == BC_TAG_MODULE);
+    module_bytecode_get_leb128(&ptr, end); /* module name */
+    assert(end - ptr >= 4);
+    first_count = ptr - encoded;
+    for (i = 0; i < 4; i++)
+        assert(ptr[i] == 0);
+
+    corrupt = malloc(len + 4);
+    assert(corrupt);
+    for (i = 0; i < 4; i++) {
+        const uint8_t *count_bytes = short_count;
+
+        count_len = sizeof(short_count);
+        if (i == 2 && sizeof(void *) == 4) {
+            /* The old star-table allocation wrapped to zero on i386. */
+            count_bytes = wrapped_star_count;
+            count_len = sizeof(wrapped_star_count);
+        }
+        memcpy(corrupt, encoded, first_count + i);
+        memcpy(corrupt + first_count + i, count_bytes, count_len);
+        memcpy(corrupt + first_count + i + count_len,
+               encoded + first_count + i + 1, len - first_count - i - 1);
+        loaded = JS_ReadObject(ctx, corrupt, len + count_len - 1,
+                               JS_READ_OBJ_BYTECODE);
+        assert(JS_IsException(loaded));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    }
+    free(corrupt);
+    js_free(ctx, encoded);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_module_read_oom(void)
 {
     static const char source[] =
@@ -1029,5 +1096,6 @@ int main(void)
     test_import_bytecode_roundtrip();
     test_module_names_bytecode_roundtrip();
     test_module_names_invalid_export_kind();
+    test_module_invalid_table_counts();
     return 0;
 }
