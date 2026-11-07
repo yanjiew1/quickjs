@@ -21,6 +21,7 @@
  */
 #include "../../../calendar/calendar.h"
 #include "calendar-fields.h"
+#include "../duration-value.h"
 #include "../../internal/object.h"
 #include "../../../temporal/civil.h"
 #include "../../../temporal/relative.h"
@@ -701,7 +702,6 @@ static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
 {
     int kind = magic >> 8, subtract = magic & 255, error, i;
     PlainValue value;
-    JSValue duration;
     QJSTemporalDuration input;
     QJSTemporalInternalDuration normalized;
     QJSTemporalOverflow overflow;
@@ -709,12 +709,8 @@ static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
     JSTemporalFields fields;
     if (get_plain(ctx, this_val, kind, &value, TRUE))
         return JS_EXCEPTION;
-    duration = js_temporal_to_duration(ctx, argument(argc, argv, 0));
-    if (JS_IsException(duration))
-        return duration;
-    input = *(JSTemporalDurationData *)JS_GetOpaque(duration,
-                                                    JS_CLASS_TEMPORAL_DURATION);
-    JS_FreeValue(ctx, duration);
+    if (js_duration_to_record(ctx, argument(argc, argv, 0), &input))
+        return JS_EXCEPTION;
     if (subtract)
         for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++)
             input.fields[i] = -input.fields[i];
