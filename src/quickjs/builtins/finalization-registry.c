@@ -87,21 +87,16 @@ static JSValue js_finrec_job(JSContext *ctx, int argc, JSValueConst *argv)
 {
     JSFinalizationRegistryData *frd = JS_GetOpaque(argv[0], JS_CLASS_FINALIZATION_REGISTRY);
     JSRuntime *rt = ctx->rt;
-    struct list_head *el;
 
     frd->cleanup_queued = FALSE;
     for (;;) {
-        JSFinRecEntry *fre = NULL;
+        JSFinRecEntry *fre;
         JSValue held, result;
 
-        list_for_each(el, &frd->entries) {
-            JSFinRecEntry *entry = list_entry(el, JSFinRecEntry, link);
-            if (JS_IsUndefined(entry->target)) {
-                fre = entry;
-                break;
-            }
-        }
-        if (!fre)
+        if (list_empty(&frd->entries))
+            return JS_UNDEFINED;
+        fre = list_entry(frd->entries.next, JSFinRecEntry, link);
+        if (!JS_IsUndefined(fre->target))
             return JS_UNDEFINED;
         /* The callback may unregister other entries or trigger another GC. */
         list_del(&fre->link);
@@ -136,6 +131,9 @@ void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
         if (!JS_IsUndefined(fre->target) && !js_weakref_is_live(fre->target)) {
             js_weakref_free(rt, fre->target);
             fre->target = JS_UNDEFINED;
+            /* Cleared entries form a prefix, avoiding repeated live scans. */
+            list_del(&fre->link);
+            list_add(&fre->link, &frd->entries);
         }
         if (JS_IsUndefined(fre->target) && !frd->cleanup_queued) {
             JSValueConst registry = JS_MKPTR(JS_TAG_OBJECT, frd->owner);
