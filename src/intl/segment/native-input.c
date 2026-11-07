@@ -57,20 +57,16 @@ QJSIntlStatus qjs_intl_segment_native_input_prepare(const QJSIntlAllocator *allo
         status = qjs_intl_segment_scan_prepare(allocator, selected, &text, &scan);
     if (status)
         goto done;
-    if (selected->kind != QJS_INTL_SEGMENT_GRAPHEME) {
-        if (selected->kind == QJS_INTL_SEGMENT_SENTENCE)
-            status = qjs_intl_segment_suppression_apply(allocator, selected, rules->suppressions, &text, &scan);
+    if (selected->kind == QJS_INTL_SEGMENT_SENTENCE) {
+        status = qjs_intl_segment_suppression_apply(allocator, selected, rules->suppressions, &text, &scan);
+    } else if (selected->kind == QJS_INTL_SEGMENT_WORD) {
+        status = qjs_intl_segment_scan_prepare(allocator, rules->grapheme, &text, &clusters);
         if (!status)
-            status = qjs_intl_segment_scan_prepare(allocator, rules->grapheme, &text, &clusters);
-        if (!status && selected->kind == QJS_INTL_SEGMENT_WORD)
             status = qjs_intl_segment_dictionary_refine(allocator, selected, &text, &clusters,
                                                         rules->dictionaries, rules->routing, &scan);
-        if (status)
-            goto done;
-        /* Refinement cannot introduce a boundary inside a native cluster. */
-        for (i = 1; i < text.count; i++)
-            scan.breaks[i] &= clusters.breaks[i];
     }
+    if (status)
+        goto done;
     for (i = 1; i <= text.count; i++)
         if (scan.breaks[i])
             count++;
