@@ -368,6 +368,52 @@ static void test_detached_exotic_prototype(JSContext *ctx)
     JS_FreeValue(ctx, root);
 }
 
+static int add_own_properties_during_enumeration(JSContext *ctx,
+                                                 JSPropertyEnum **ptab,
+                                                 uint32_t *plen,
+                                                 JSValueConst obj)
+{
+    *ptab = NULL;
+    *plen = 0;
+    if (JS_SetPropertyStr(ctx, obj, "first", JS_NewInt32(ctx, 1)) < 0 ||
+        JS_SetPropertyStr(ctx, obj, "second", JS_NewInt32(ctx, 2)) < 0)
+        return -1;
+    return 0;
+}
+
+static void test_reentrant_exotic_enumeration(JSContext *ctx)
+{
+    static JSClassExoticMethods exotic = {
+        .get_own_property_names = add_own_properties_during_enumeration,
+    };
+    static const JSClassDef class_def = {
+        .class_name = "MutatingEnumeration",
+        .exotic = &exotic,
+    };
+    JSClassID class_id = 0;
+    JSPropertyEnum *tab;
+    static const char *const expected[] = { "first", "second" };
+    uint32_t count;
+    int i;
+    JSValue obj;
+
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(JS_GetRuntime(ctx), class_id, &class_def) == 0);
+    obj = JS_NewObjectClass(ctx, class_id);
+    assert(!JS_IsException(obj));
+
+    assert(JS_GetOwnPropertyNames(ctx, &tab, &count, obj,
+                                  JS_GPN_STRING_MASK) == 0);
+    assert(count == 2);
+    for (i = 0; i < 2; i++) {
+        const char *name = JS_AtomToCString(ctx, tab[i].atom);
+        assert(name && !strcmp(name, expected[i]));
+        JS_FreeCString(ctx, name);
+    }
+    JS_FreePropertyEnum(ctx, tab, count);
+    JS_FreeValue(ctx, obj);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -383,6 +429,7 @@ int main(void)
     test_set_prototype_oom(ctx);
     test_delete_global_varref_oom(ctx);
     test_detached_exotic_prototype(ctx);
+    test_reentrant_exotic_enumeration(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
