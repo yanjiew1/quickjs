@@ -245,25 +245,22 @@ done:
 static JSValue bound_compare(JSContext *ctx, JSValueConst this_val, int argc,
                              JSValueConst *argv, int magic, JSValue *data)
 {
-    JSContext *realm = JS_GetFunctionRealm(ctx, data[1]);
     JSIntlCollator *state;
     JSValue a, b = JS_UNDEFINED, result = JS_EXCEPTION;
 
     (void)this_val;
     (void)magic;
-    if (!realm)
-        return JS_EXCEPTION;
-    state = JS_GetOpaque2(realm, data[0], JS_CLASS_INTL_COLLATOR);
+    state = JS_GetOpaque2(ctx, data[0], JS_CLASS_INTL_COLLATOR);
     if (!state)
         return JS_EXCEPTION;
-    a = JS_ToString(realm, argc ? argv[0] : JS_UNDEFINED);
+    a = JS_ToString(ctx, argc ? argv[0] : JS_UNDEFINED);
     if (JS_IsException(a))
         return a;
-    b = JS_ToString(realm, argc > 1 ? argv[1] : JS_UNDEFINED);
+    b = JS_ToString(ctx, argc > 1 ? argv[1] : JS_UNDEFINED);
     if (!JS_IsException(b))
-        result = compare_strings(realm, state, a, b);
-    JS_FreeValue(realm, a);
-    JS_FreeValue(realm, b);
+        result = compare_strings(ctx, state, a, b);
+    JS_FreeValue(ctx, a);
+    JS_FreeValue(ctx, b);
     return result;
 }
 
@@ -274,9 +271,7 @@ static JSValue collator_compare_get(JSContext *ctx, JSValueConst this_val)
     if (!state)
         return JS_EXCEPTION;
     if (JS_IsUndefined(state->bound_compare)) {
-        /* CFunctionData uses the caller context; this marked constructor keeps
-           the getter's realm for coercion/errors, including borrowed getters. */
-        JSValueConst data[] = {this_val, ctx->intl_collator_ctor};
+        JSValueConst data[] = {this_val};
         JSValue function = JS_NewCFunctionData(ctx, bound_compare, 2, 0, countof(data), data);
 
         if (JS_IsException(function))
