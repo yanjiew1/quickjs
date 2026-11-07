@@ -41,6 +41,7 @@ class SelectionTest(unittest.TestCase):
                 'PlainDate/from/message.js': '[Temporal]',
                 'PlainDate/prototype/toLocaleString/basic.js': '[Temporal]',
                 'ZonedDateTime/enum.js': '\n  - Temporal\n  - Intl-enumeration',
+                'PlainDate/from/calendar-intl-objects.js': '[Temporal, Intl.Locale]',
             }
             rows = []
             for name, features in sources.items():
@@ -49,7 +50,8 @@ class SelectionTest(unittest.TestCase):
                 path.write_text('/*---\nfeatures: {}\n---*/\n'
                                 'assert.sameValue("Intl.DateTimeFormat", '
                                 '"Intl.DateTimeFormat");\n'.format(features), encoding='utf-8')
-                skipped = 'toLocaleString' in name or name.endswith('enum.js')
+                skipped = ('toLocaleString' in name or name.endswith('enum.js') or
+                           name.endswith('calendar-intl-objects.js'))
                 rows.append(dict(file='test262/' + PREFIX + name, thread=0,
                                  index=len(rows), mode='none' if skipped else 'non-strict',
                                  status='skipped' if skipped else 'pass', duration_ms=0))
@@ -65,7 +67,7 @@ class SelectionTest(unittest.TestCase):
                 self.assertEqual(result.returncode, expected, result.stderr + result.stdout)
                 return output.read_text(encoding='utf-8')
 
-            self.assertIn('2 of 4 source files', check(rows, 0))
+            self.assertIn('2 of 5 source files', check(rows, 0))
             self.assertIn('Missing timing record', check(rows[1:], 1))
             changed = [dict(row) for row in rows]
             changed[0].update(status='skipped', mode='none')
