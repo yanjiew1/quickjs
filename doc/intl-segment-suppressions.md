@@ -74,7 +74,7 @@ sentence decisions. It matches raw entries at original scalar positions,
 including overlapping entries and internal cuts in multi-part abbreviations.
 Ignored characters inside a literal do not disappear. Its graph owner is the
 [section 41 reader](intl-segment-suppression-format.md); native locale admission
-and final grapheme protection remain separate integration steps.
+remains a separate integration step.
 
 At most `M` cursors are live, where `M` is the checked longest key length. A
 terminal records a full-match end and the furthest end for its start. A monotonic
