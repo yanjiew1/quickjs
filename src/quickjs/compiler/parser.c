@@ -1285,12 +1285,14 @@ typedef enum {
     SKIP_PAREN,
     SKIP_CONTROL_PAREN,
     SKIP_FUNCTION_PAREN,
+    SKIP_METHOD_PAREN,
     SKIP_ARRAY,
     SKIP_OBJECT,
     SKIP_BLOCK,
     SKIP_FUNCTION_BODY,
     SKIP_FUNCTION_DECL_BODY,
     SKIP_ARROW_BODY,
+    SKIP_ARROW_EXPR,
     SKIP_CLASS_BODY,
     SKIP_CLASS_DECL_BODY,
     SKIP_FUNCTION_HEAD,
@@ -1308,7 +1310,14 @@ typedef struct {
 
 #define SKIP_BODY_READY        (1 << 0)
 #define SKIP_CLASS_EXTENDS     (1 << 1)
-#define SKIP_CLASS_INITIALIZER (1 << 2)
+#define SKIP_MEMBER_VALUE (1 << 2)
+#define SKIP_FUNC_SHIFT        3
+#define SKIP_FUNC_MASK         (JS_FUNC_ASYNC_GENERATOR << SKIP_FUNC_SHIFT)
+#define SKIP_GENERATOR         (JS_FUNC_GENERATOR << SKIP_FUNC_SHIFT)
+#define SKIP_ASYNC             (JS_FUNC_ASYNC << SKIP_FUNC_SHIFT)
+#define SKIP_ASYNC_PREFIX      (1 << 5)
+#define SKIP_GENERATOR_PREFIX  (1 << 6)
+#define SKIP_FOR_HEADER        (1 << 7)
 
 static BOOL js_parse_skip_is_statement(int kind)
 {
@@ -1329,10 +1338,12 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     int last_tok, previous_tok, tok = TOK_EOF;
     int c, tok_len, bits = 0;
     BOOL last_is_async = FALSE, last_is_accessor = FALSE, last_is_static = FALSE;
+    BOOL last_async_parameter = FALSE, last_async_paren = FALSE;
     BOOL saved_suppress_errors = s->suppress_parse_errors;
     
     /* protect from underflow */
-    state[level++] = (JSParseSkipState){ SKIP_ROOT, 0, 0 };
+    state[level++] = (JSParseSkipState){ SKIP_ROOT,
+        s->cur_func->func_kind << SKIP_FUNC_SHIFT, 0 };
 
     js_parse_get_pos(s, &pos);
     /* RegExp recognition is heuristic. Ignore provisional syntax errors,
@@ -1340,18 +1351,77 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     s->suppress_parse_errors = TRUE;
     last_tok = previous_tok = 0;
     for (;;) {
-        JSParseSkipState *top = &state[level - 1];
+        JSParseSkipState *top;
         BOOL statement_end = FALSE, arrow_body_end = FALSE;
+        BOOL async_paren_end = FALSE, async_parameter;
+        BOOL new_statement = s->token.val == '{' ||
+            s->token.val == TOK_FUNCTION || s->token.val == TOK_CLASS ||
+            token_is_pseudo_keyword(s, JS_ATOM_async);
+        BOOL member_name = s->token.val == TOK_IDENT ||
+            s->token.val == TOK_PRIVATE_NAME || s->token.val == TOK_STRING ||
+            s->token.val == TOK_NUMBER ||
+            (s->token.val >= TOK_FIRST_KEYWORD &&
+             s->token.val <= TOK_LAST_KEYWORD &&
+             s->token.val != TOK_IN && s->token.val != TOK_INSTANCEOF);
+        BOOL line_boundary = s->got_lf && !is_regexp_allowed(last_tok);
+        int flags, enclosing;
+
+        if (line_boundary && member_name) {
+            /* A completed field arrow may be followed by a new method or
+               field. '[' and templates can instead continue its body. */
+            enclosing = level - 1;
+            while (state[enclosing].kind == SKIP_ARROW_EXPR &&
+                   !state[enclosing].conditional_depth)
+                enclosing--;
+            if (state[enclosing].kind == SKIP_CLASS_BODY ||
+                state[enclosing].kind == SKIP_CLASS_DECL_BODY)
+                new_statement = TRUE;
+        }
+
+        /* A concise arrow body is an AssignmentExpression. Its enclosing
+           delimiter or separator belongs to the surrounding lexical mode.
+           A conditional colon stays inside until its matching '?' is closed. */
+        while (state[level - 1].kind == SKIP_ARROW_EXPR &&
+               (s->token.val == ',' || s->token.val == ';' ||
+                s->token.val == ')' || s->token.val == ']' ||
+                s->token.val == '}' ||
+                (!state[level - 1].conditional_depth &&
+                 (s->token.val == ':' || (line_boundary && new_statement)))))
+            level--;
+        top = &state[level - 1];
+        flags = top->flags & SKIP_FUNC_MASK;
+
+        /* The full lexer normally uses cur_func. A nested function seen
+           only by lookahead needs its own Await/Yield grammar parameters. */
+        if ((s->token.val == TOK_IDENT || s->token.val == TOK_AWAIT ||
+             s->token.val == TOK_YIELD) &&
+            (s->token.u.ident.atom == JS_ATOM_await ||
+             s->token.u.ident.atom == JS_ATOM_yield))
+            reparse_ident_token(s, flags >> SKIP_FUNC_SHIFT);
+        async_parameter = last_is_async && !s->got_lf &&
+            s->token.val == TOK_IDENT;
 
         /* A new field or method after a completed initializer can insert a
            semicolon. A following '[' or template may instead continue it. */
         if ((top->kind == SKIP_CLASS_BODY ||
              top->kind == SKIP_CLASS_DECL_BODY) && s->got_lf &&
-            (!is_regexp_allowed(last_tok) || last_tok == TOK_OF) &&
-            (s->token.val == TOK_IDENT || s->token.val == TOK_PRIVATE_NAME ||
-             s->token.val == TOK_STATIC || s->token.val == TOK_FUNCTION ||
-             s->token.val == TOK_CLASS))
-            top->flags &= ~SKIP_CLASS_INITIALIZER;
+            !is_regexp_allowed(last_tok) && member_name)
+            top->flags &= ~SKIP_MEMBER_VALUE;
+
+        /* Preserve async/generator prefixes through computed method names,
+           but not through property values or class field initializers. */
+        if (((top->kind == SKIP_OBJECT &&
+              (last_tok == '{' || last_tok == ',')) ||
+             ((top->kind == SKIP_CLASS_BODY ||
+               top->kind == SKIP_CLASS_DECL_BODY) &&
+              !(top->flags & SKIP_MEMBER_VALUE) &&
+              (last_tok == '{' || last_tok == '}' || last_tok == ';' ||
+               last_is_static || s->got_lf))) &&
+            token_is_pseudo_keyword(s, JS_ATOM_async)) {
+            c = peek_token(s, TRUE);
+            if (c != '(' && c != '\n')
+                top->flags |= SKIP_ASYNC_PREFIX;
+        }
 
         switch(s->token.val) {
         case TOK_FUNCTION:
@@ -1360,11 +1430,12 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                expressions. Class field initializers, however, can do so. */
             if (last_tok == '.' || last_tok == TOK_QUESTION_MARK_DOT ||
                 (top->kind == SKIP_OBJECT &&
+                 !(top->flags & SKIP_MEMBER_VALUE) &&
                  (last_tok == '{' || last_tok == ',' || last_tok == '*' ||
                   last_is_accessor || last_is_async)) ||
                 ((top->kind == SKIP_CLASS_BODY ||
                   top->kind == SKIP_CLASS_DECL_BODY) &&
-                 !(top->flags & SKIP_CLASS_INITIALIZER))) {
+                 !(top->flags & SKIP_MEMBER_VALUE))) {
                 break;
             }
             c = js_parse_skip_is_statement(top->kind) &&
@@ -1374,14 +1445,31 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                   (previous_tok == '{' || previous_tok == ';' ||
                    previous_tok == TOK_ELSE || previous_tok == TOK_DO)) ||
                  (s->got_lf &&
-                  (!is_regexp_allowed(last_tok) || last_tok == TOK_OF ||
+                  (!is_regexp_allowed(last_tok) ||
                    last_tok == TOK_RETURN ||
                    last_tok == TOK_BREAK || last_tok == TOK_CONTINUE ||
                    last_tok == TOK_DEBUGGER)));
-            if (s->token.val == TOK_FUNCTION)
+            if (s->token.val == TOK_FUNCTION) {
                 c = c ? SKIP_FUNCTION_DECL_HEAD : SKIP_FUNCTION_HEAD;
-            else
+                flags = last_is_async && !s->got_lf ? SKIP_ASYNC : 0;
+            } else {
                 c = c ? SKIP_CLASS_DECL_HEAD : SKIP_CLASS_HEAD;
+            }
+            goto push_state;
+        case '*':
+            if (top->kind == SKIP_FUNCTION_HEAD ||
+                top->kind == SKIP_FUNCTION_DECL_HEAD) {
+                top->flags |= SKIP_GENERATOR;
+            } else if ((top->kind == SKIP_OBJECT ||
+                        top->kind == SKIP_CLASS_BODY ||
+                        top->kind == SKIP_CLASS_DECL_BODY) &&
+                       !(top->flags & SKIP_MEMBER_VALUE)) {
+                top->flags |= SKIP_GENERATOR_PREFIX;
+            }
+            break;
+        case TOK_ARROW:
+            c = SKIP_ARROW_EXPR;
+            flags = last_async_parameter || last_async_paren ? SKIP_ASYNC : 0;
             goto push_state;
         case TOK_EXTENDS:
             if (top->kind == SKIP_CLASS_HEAD ||
@@ -1401,7 +1489,9 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             /* A header stays on the stack through names, parameters and
                heritage expressions. Replace it only at its actual body:
                `class C extends class {} {}` contains two distinct bodies. */
-            if ((top->kind == SKIP_FUNCTION_HEAD ||
+            if (top->kind == SKIP_ARROW_EXPR && last_tok == TOK_ARROW) {
+                c = SKIP_ARROW_BODY;
+            } else if ((top->kind == SKIP_FUNCTION_HEAD ||
                  top->kind == SKIP_FUNCTION_DECL_HEAD) &&
                 (top->flags & SKIP_BODY_READY)) {
                 c = top->kind == SKIP_FUNCTION_DECL_HEAD ?
@@ -1409,19 +1499,19 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             } else if ((top->kind == SKIP_CLASS_HEAD ||
                         top->kind == SKIP_CLASS_DECL_HEAD) &&
                        (!(top->flags & SKIP_CLASS_EXTENDS) ||
-                        !is_regexp_allowed(last_tok) || last_tok == TOK_OF)) {
+                        !is_regexp_allowed(last_tok))) {
                 c = top->kind == SKIP_CLASS_DECL_HEAD ?
                     SKIP_CLASS_DECL_BODY : SKIP_CLASS_BODY;
             } else {
-                if (last_tok == TOK_ARROW ||
-                    (last_tok == ')' &&
+                if (last_tok == ')' && (top->flags & SKIP_BODY_READY) &&
                      (top->kind == SKIP_OBJECT ||
                       top->kind == SKIP_CLASS_BODY ||
-                      top->kind == SKIP_CLASS_DECL_BODY))) {
-                    c = last_tok == TOK_ARROW ? SKIP_ARROW_BODY :
-                        SKIP_FUNCTION_BODY;
-                    if (last_tok == ')')
-                        top->flags &= ~SKIP_CLASS_INITIALIZER;
+                      top->kind == SKIP_CLASS_DECL_BODY)) {
+                    c = SKIP_FUNCTION_BODY;
+                    flags = (top->flags & SKIP_ASYNC_PREFIX ? SKIP_ASYNC : 0) |
+                        (top->flags & SKIP_GENERATOR_PREFIX ? SKIP_GENERATOR : 0);
+                    top->flags &= ~(SKIP_BODY_READY | SKIP_ASYNC_PREFIX |
+                                    SKIP_GENERATOR_PREFIX);
                 } else if ((js_parse_skip_is_statement(top->kind) &&
                             (last_tok == '{' || last_tok == ';' ||
                              last_tok == TOK_ELSE || last_tok == TOK_TRY ||
@@ -1430,19 +1520,27 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                            ((top->kind == SKIP_CLASS_BODY ||
                              top->kind == SKIP_CLASS_DECL_BODY) &&
                             last_is_static &&
-                            !(top->flags & SKIP_CLASS_INITIALIZER))) {
+                            !(top->flags & SKIP_MEMBER_VALUE))) {
                     c = SKIP_BLOCK;
                 } else {
                     c = SKIP_OBJECT;
                 }
                 goto push_state;
             }
-            *top = (JSParseSkipState){ c, 0, 0 };
+            *top = (JSParseSkipState){ c, flags, 0 };
             break;
         case '(':
             if (top->kind == SKIP_FUNCTION_HEAD ||
                 top->kind == SKIP_FUNCTION_DECL_HEAD) {
                 c = SKIP_FUNCTION_PAREN;
+            } else if ((top->kind == SKIP_OBJECT ||
+                        top->kind == SKIP_CLASS_BODY ||
+                        top->kind == SKIP_CLASS_DECL_BODY) &&
+                       !(top->flags & SKIP_MEMBER_VALUE)) {
+                c = SKIP_METHOD_PAREN;
+                flags = (top->flags & SKIP_ASYNC_PREFIX ? SKIP_ASYNC : 0) |
+                    (top->flags & SKIP_GENERATOR_PREFIX ? SKIP_GENERATOR : 0);
+                top->flags &= ~(SKIP_ASYNC_PREFIX | SKIP_GENERATOR_PREFIX);
             } else if ((last_tok == TOK_IF || last_tok == TOK_WHILE ||
                  last_tok == TOK_FOR || last_tok == TOK_WITH ||
                  last_tok == TOK_SWITCH || last_tok == TOK_CATCH ||
@@ -1452,8 +1550,13 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                 top->kind != SKIP_CLASS_DECL_BODY) {
                 /* A statement can start with a regexp after this header. */
                 c = SKIP_CONTROL_PAREN;
+                if (last_tok == TOK_FOR ||
+                    (last_tok == TOK_AWAIT && previous_tok == TOK_FOR))
+                    flags |= SKIP_FOR_HEADER;
             } else {
                 c = SKIP_PAREN;
+                if (last_is_async && !s->got_lf)
+                    flags |= SKIP_ASYNC_PREFIX;
             }
         push_state:
             if (level >= state_size) {
@@ -1472,15 +1575,21 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                     memcpy(new_state, state_buf, sizeof(state_buf));
                 state = new_state;
             }
-            state[level++] = (JSParseSkipState){ c, 0, 0 };
+            state[level++] = (JSParseSkipState){ c, flags, 0 };
             break;
         case ')':
             c = state[--level].kind;
             if (c == SKIP_FUNCTION_PAREN) {
                 state[level - 1].flags |= SKIP_BODY_READY;
+            } else if (c == SKIP_METHOD_PAREN) {
+                state[level - 1].flags |= SKIP_BODY_READY |
+                    (state[level].flags & SKIP_ASYNC ? SKIP_ASYNC_PREFIX : 0) |
+                    (state[level].flags & SKIP_GENERATOR ? SKIP_GENERATOR_PREFIX : 0);
             } else if (c != SKIP_PAREN && c != SKIP_CONTROL_PAREN) {
                 goto done;
             }
+            async_paren_end = c == SKIP_PAREN &&
+                (state[level].flags & SKIP_ASYNC_PREFIX);
             statement_end = (c == SKIP_CONTROL_PAREN);
             break;
         case ']':
@@ -1520,21 +1629,28 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         case TOK_EOF:
             goto done;
         case ';':
-            top->flags &= ~SKIP_CLASS_INITIALIZER;
+            top->flags &= ~(SKIP_MEMBER_VALUE | SKIP_ASYNC_PREFIX |
+                            SKIP_GENERATOR_PREFIX | SKIP_FOR_HEADER);
             if (level == 2) {
                 bits |= SKIP_HAS_SEMI;
             }
             break;
         case TOK_ELLIPSIS:
+            if (top->kind == SKIP_OBJECT)
+                top->flags |= SKIP_MEMBER_VALUE;
             if (level == 2) {
                 bits |= SKIP_HAS_ELLIPSIS;
             }
             break;
         case '=':
             bits |= SKIP_HAS_ASSIGNMENT;
-            if (top->kind == SKIP_CLASS_BODY ||
+            if (top->kind == SKIP_OBJECT || top->kind == SKIP_CLASS_BODY ||
                 top->kind == SKIP_CLASS_DECL_BODY)
-                top->flags |= SKIP_CLASS_INITIALIZER;
+                top->flags = (top->flags & SKIP_FUNC_MASK) | SKIP_MEMBER_VALUE;
+            break;
+        case ',':
+            if (top->kind == SKIP_OBJECT)
+                top->flags &= SKIP_FUNC_MASK;
             break;
         case '?':
             top->conditional_depth++;
@@ -1546,6 +1662,8 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
                 /* Labels and switch clauses start statements; conditional
                    expressions and object properties do not. */
                 statement_end = TRUE;
+            } else if (top->kind == SKIP_OBJECT) {
+                top->flags = (top->flags & SKIP_FUNC_MASK) | SKIP_MEMBER_VALUE;
             }
             break;
 
@@ -1565,15 +1683,22 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         }
         /* Statement boundaries select a regexp lexical goal; other tokens
            also retain the context needed to recognize declaration headers. */
+        top = &state[level - 1];
         previous_tok = last_tok;
         if (statement_end) {
             last_tok = ';';
-        } else if (s->token.val == TOK_IDENT && last_tok == TOK_FOR &&
-                   token_is_pseudo_keyword(s, JS_ATOM_await)) {
-            last_tok = TOK_AWAIT;
-        } else if (s->token.val == TOK_IDENT &&
-            (token_is_pseudo_keyword(s, JS_ATOM_of) ||
-             token_is_pseudo_keyword(s, JS_ATOM_yield))) {
+        } else if (top->kind == SKIP_CONTROL_PAREN &&
+                   (top->flags & SKIP_FOR_HEADER) && last_tok == '(' &&
+                   token_is_pseudo_keyword(s, JS_ATOM_let)) {
+            /* In sloppy code `let` is initially an identifier. A binding
+               after it must not be mistaken for the for-of separator. */
+            c = peek_token(s, FALSE);
+            last_tok = c == TOK_IDENT || c == TOK_OF || c == '[' || c == '{' ?
+                TOK_LET : TOK_IDENT;
+        } else if (top->kind == SKIP_CONTROL_PAREN &&
+                   (top->flags & SKIP_FOR_HEADER) &&
+                   !is_regexp_allowed(last_tok) &&
+                   token_is_pseudo_keyword(s, JS_ATOM_of)) {
             last_tok = TOK_OF;
         } else {
             last_tok = s->token.val;
@@ -1591,14 +1716,20 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
             token_is_pseudo_keyword(s, JS_ATOM_set);
         last_is_static = s->token.val == TOK_STATIC ||
             token_is_pseudo_keyword(s, JS_ATOM_static);
+        last_async_parameter = async_parameter;
+        last_async_paren = async_paren_end;
         if (next_token(s)) {
             goto scan_error;
         }
         /* Unlike a function expression, an unparenthesized arrow with a
            block body cannot be the left operand of division. */
-        if (arrow_body_end && s->got_lf &&
-            js_parse_skip_is_statement(state[level - 1].kind))
-            last_tok = ';';
+        if (arrow_body_end) {
+            while (state[level - 1].kind == SKIP_ARROW_EXPR &&
+                   !state[level - 1].conditional_depth)
+                level--;
+            if (s->got_lf && js_parse_skip_is_statement(state[level - 1].kind))
+                last_tok = ';';
+        }
         if (level <= 1) {
             tok = s->token.val;
             if (token_is_pseudo_keyword(s, JS_ATOM_of))
