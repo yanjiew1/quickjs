@@ -686,6 +686,11 @@ static void test_malformed_function_bytecode(void)
     /* Minimal function record with no atoms or locals. Offsets 14 and 16
        hold the encoded bytecode length and first opcode, respectively. */
     uint8_t buf[21] = { BC_VERSION, 0, BC_TAG_FUNCTION_BYTECODE };
+    static const uint8_t overwide_arg_count[] = {
+        BC_VERSION, 0, BC_TAG_FUNCTION_BYTECODE, 0, 0, 0, 0,
+        0x80, 0x80, 0x04, /* arg_count = 65536, outside the u16 field */
+        0, 0, 0, 0, 0, 0, 1, 0, OP_return_undef,
+    };
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx = JS_NewContext(rt);
     JSValue result;
@@ -724,6 +729,11 @@ static void test_malformed_function_bytecode(void)
     buf[13] = buf[14] = buf[15] = buf[16] = 255;
     buf[17] = 15; /* cpool_count = 0xffffffff */
     result = JS_ReadObject(ctx, buf, 20, JS_READ_OBJ_BYTECODE);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+
+    result = JS_ReadObject(ctx, overwide_arg_count,
+                           sizeof(overwide_arg_count), JS_READ_OBJ_BYTECODE);
     assert(JS_IsException(result));
     JS_FreeValue(ctx, JS_GetException(ctx));
 

@@ -248,6 +248,11 @@ static int bc_get_leb128_u16(BCReaderState *s, uint16_t *pval)
         *pval = 0;
         return -1;
     }
+    if (val > UINT16_MAX) {
+        *pval = 0;
+        JS_ThrowSyntaxError(s->ctx, "invalid function bytecode count");
+        return s->error_state = -1;
+    }
     *pval = val;
     return 0;
 }
