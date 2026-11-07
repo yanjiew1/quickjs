@@ -7258,3 +7258,25 @@ function test_object_integrity_extensibility_order()
 }
 
 test_object_integrity_extensibility_order();
+
+function test_freeze_disappearing_property()
+{
+    const calls = [];
+    const target = { x: 1 };
+    const proxy = new Proxy(target, {
+        getOwnPropertyDescriptor(target, key) {
+            calls.push("descriptor:" + key);
+            delete target[key];
+            return undefined;
+        },
+        defineProperty(target, key, descriptor) {
+            calls.push("define:" + key);
+            return Reflect.defineProperty(target, key, descriptor);
+        },
+    });
+    assert(Object.freeze(proxy), proxy);
+    assert(calls.join(","), "descriptor:x");
+    assert(Object.isFrozen(target), true);
+}
+
+test_freeze_disappearing_property();
