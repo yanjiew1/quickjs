@@ -83,7 +83,8 @@ static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(str))
         return str;
 
-    string_buffer_init(ctx, b, 0);
+    if (string_buffer_init(ctx, b, 0))
+        goto fail;
 
     p = JS_VALUE_GET_STRING(str);
     for (k = 0; k < p->len;) {
@@ -136,7 +137,8 @@ static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
         } else {
             k++;
         }
-        string_buffer_putc(b, c);
+        if (string_buffer_putc(b, c))
+            goto fail;
     }
     JS_FreeValue(ctx, str);
     return string_buffer_end(b);
@@ -196,7 +198,8 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
         return str;
 
     p = JS_VALUE_GET_STRING(str);
-    string_buffer_init(ctx, b, p->len);
+    if (string_buffer_init(ctx, b, p->len))
+        goto fail;
     for (k = 0; k < p->len;) {
         c = string_get(p, k);
         k++;
@@ -237,6 +240,8 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
                 encodeURI_hex(b, (c & 0x3f) | 0x80);
             }
         }
+        if (b->error_status)
+            goto fail;
     }
     JS_FreeValue(ctx, str);
     return string_buffer_end(b);
