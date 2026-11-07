@@ -68,12 +68,13 @@ static int qjs_temporal_parse_fraction(uint32_t *result, size_t *position,
     return 0;
 }
 
-/* TimeSpec and UTCOffset share numeric fields and separator consistency;
-   only TimeSpec permits a leap second, normalized to 59 after parsing. */
+/* TimeSpec requires minutes; UTCOffset also permits an hour-only form.
+   Only TimeSpec permits a leap second, normalized to 59 after parsing. */
 static int qjs_temporal_parse_clock(QJSTemporalISOTime *result,
                                     size_t *consumed,
                                     const char *text, size_t length,
-                                    int allow_leap_second, int allow_seconds,
+                                    int require_minute, int allow_leap_second,
+                                    int allow_seconds,
                                     int *seconds_present)
 {
     QJSTemporalISOTime time = { 0 };
@@ -90,6 +91,8 @@ static int qjs_temporal_parse_clock(QJSTemporalISOTime *result,
     } else if (p < length && qjs_temporal_ascii_digit(text[p])) {
         has_minute = 1;
     }
+    if (require_minute && !has_minute)
+        return -1;
     if (has_minute) {
         if (qjs_temporal_parse_digits(&minute, &p, text, length, 2) || minute > 59)
             return -1;
@@ -175,7 +178,8 @@ int qjs_temporal_parse_iso_time_prefix(QJSTemporalISOTime *result,
                                        size_t *consumed,
                                        const char *text, size_t length)
 {
-    return qjs_temporal_parse_clock(result, consumed, text, length, 1, 1, NULL);
+    return qjs_temporal_parse_clock(result, consumed, text, length,
+                                    1, 1, 1, NULL);
 }
 
 int qjs_temporal_parse_utc_offset_prefix(QJSTemporalUTCOffset *result,
@@ -200,7 +204,7 @@ int qjs_temporal_parse_utc_offset_prefix(QJSTemporalUTCOffset *result,
         if (text[0] != '+' && text[0] != '-')
             return -1;
         negative = text[0] == '-';
-        if (qjs_temporal_parse_clock(&time, &p, text + 1, length - 1, 0,
+        if (qjs_temporal_parse_clock(&time, &p, text + 1, length - 1, 0, 0,
                                      flags & QJS_TEMPORAL_OFFSET_ALLOW_SECONDS,
                                      &offset.has_seconds))
             return -1;

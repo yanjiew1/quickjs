@@ -106,7 +106,7 @@ function test_time_conversion() {
 
 function test_time_strings() {
     const valid = [
-        ["T12", "12:00:00"],
+        ["T12:00", "12:00:00"],
         ["t1234", "12:34:00"],
         ["12:34:56.123456789", "12:34:56.123456789"],
         ["12:34:56,123456789", "12:34:56.123456789"],
@@ -117,7 +117,7 @@ function test_time_strings() {
     ];
     for (const [text, expected] of valid)
         assert(PlainTime.from(text).toString(), expected);
-    for (const text of ["", "1231", "12-31", "2024-01", "12:00Z", "12:00z",
+    for (const text of ["", "T12", "1231", "12-31", "2024-01", "12:00Z", "12:00z",
                         "1970-01-01T12:00Z", "24:00", "12:60", "12:00:61",
                         "12:00:00.1234567890", "12:3456", "1234:56", "12:00.1",
                         "12:00[!unknown=value]", "12:00[u-ca=iso8601][!u-ca=iso8601]",

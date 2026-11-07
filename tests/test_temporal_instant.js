@@ -81,10 +81,11 @@ function test_format() {
     assert_throws(TypeError, () => value.toString(1));
     assert_throws(TypeError, () => Instant.prototype.toString.call(Instant.prototype));
     assert_throws(TypeError, () => Instant.from(Instant.prototype));
+    assert_throws(RangeError, () => Instant.from("1970-01-01T00Z"));
     assert_throws(TypeError, () => Instant.compare(value, Instant.prototype));
     assert_throws(TypeError, () => value.equals(Instant.prototype));
     const custom = Object.create(Instant.prototype);
-    custom.toString = () => "1970-01-01T00Z";
+    custom.toString = () => "1970-01-01T00:00Z";
     assert(Instant.from(custom).epochNanoseconds, 0n);
 }
 
@@ -176,7 +177,7 @@ function test_observable_order() {
     assert(log.join(), "fractionalSecondDigits,roundingMode,smallestUnit,timeZone");
     log.length = 0;
     value.until({[Symbol.toPrimitive](hint) {
-        assert(hint, "string"); log.push("other"); return "1970-01-01T00Z";
+        assert(hint, "string"); log.push("other"); return "1970-01-01T00:00Z";
     }}, new Proxy({}, {get(_, key) {log.push(key); return undefined;}}));
     assert(log.join(), "other,largestUnit,roundingIncrement,roundingMode,smallestUnit");
     for (const name of ["add", "subtract", "until", "since", "round", "toString",

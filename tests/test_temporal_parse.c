@@ -35,17 +35,18 @@ static void assert_ns(QJSTemporalEpochNs actual, QJSTemporalEpochNs expected)
 static void test_numeric_iso_parsing(void)
 {
     static const char * const invalid[] = {
-        "1970-01-01", "1970-01-01T00:00", "1970-01-01T24Z",
+        "1970-01-01", "1970-01-01T00:00", "1970-01-01T00Z",
+        "1970-01-01T24Z",
         "1970-01-01T12:3456Z", "1970-01-01T1234:56Z",
         "1970-01-01T12:34.5Z", "1970-01-01T12:34:56.1234567890Z",
         "1970-01-01T12:34:61Z", "1970-01-01T12:34:56+24:00",
-        "1970-01-01T12:34:56+00:00:60", "1900-02-29T00Z",
-        "-000000-01-01T00Z", "1970-0101T00Z", "197001-01T00Z",
-        "1970-01-01T00Z ", "1970-01-01T00Zgarbage",
-        ("\xe2\x88\x92" "000001-01-01T00Z"),
+        "1970-01-01T12:34:56+00:00:60", "1900-02-29T00:00Z",
+        "-000000-01-01T00:00Z", "1970-0101T00:00Z", "197001-01T00:00Z",
+        "1970-01-01T00:00Z ", "1970-01-01T00:00Zgarbage",
+        ("\xe2\x88\x92" "000001-01-01T00:00Z"),
     };
     static const char bounded[] = {
-        '1', '9', '7', '0', '0', '1', '0', '1', 'T', '0', '0', 'Z',
+        '1', '9', '7', '0', '0', '1', '0', '1', 'T', '0', '0', ':', '0', '0', 'Z',
     };
     const char *text;
     QJSTemporalInstantPrefix prefix;
@@ -91,7 +92,7 @@ static void test_numeric_iso_parsing(void)
     assert(qjs_temporal_epoch_ns_is_valid(utc));
     /* Raw local fields can be outside Instant range before an offset
        makes the resulting exact UTC epoch valid. */
-    text = "+275760-09-13T01+01";
+    text = "+275760-09-13T01:00+01";
     assert(qjs_temporal_parse_instant_prefix(&prefix, &consumed,
                                             text, strlen(text)) == 0);
     assert(qjs_temporal_iso_datetime_to_epoch_ns(&utc, prefix.datetime) == 0);
@@ -106,7 +107,7 @@ static void test_numeric_iso_parsing(void)
                                                 invalid[i], strlen(invalid[i])) == -1);
         assert(prefix.datetime.date.year == 123 && consumed == 456);
     }
-    text = "1970-01-01T00Z[!unknown=value]";
+    text = "1970-01-01T00:00Z[!unknown=value]";
     assert(qjs_temporal_parse_instant_prefix(&prefix, &consumed,
                                             text, strlen(text)) == 0);
     assert(text[consumed] == '[');
@@ -136,7 +137,7 @@ static void expect_words(QJSTemporalEpochNs actual, uint64_t low, uint64_t high)
 
 static void test_lower_limit_after_offset(void)
 {
-    const char text[] = "-271821-04-19T23-01";
+    const char text[] = "-271821-04-19T23:00-01";
     QJSTemporalInstantPrefix prefix;
     QJSTemporalEpochNs local, offset, utc, minimum;
     size_t consumed;
@@ -157,8 +158,8 @@ static void test_lower_limit_after_offset(void)
 
 static void test_embedded_nul_and_unvalidated_annotation(void)
 {
-    const char with_nul[] = "1970-01-01T00Z\0[unknown=value]";
-    const char annotation[] = "1970-01-01T00Z[";
+    const char with_nul[] = "1970-01-01T00:00Z\0[unknown=value]";
+    const char annotation[] = "1970-01-01T00:00Z[";
     QJSTemporalInstantPrefix prefix;
     size_t consumed = 456;
 
@@ -172,7 +173,7 @@ static void test_embedded_nul_and_unvalidated_annotation(void)
     assert(qjs_temporal_parse_instant_prefix(&prefix, &consumed,
                                              annotation,
                                              sizeof(annotation) - 1) == 0);
-    assert(consumed == sizeof("1970-01-01T00Z") - 1);
+    assert(consumed == sizeof("1970-01-01T00:00Z") - 1);
     assert(annotation[consumed] == '[');
 }
 
@@ -241,7 +242,7 @@ static void test_exact_sized_iso_parser_buffers(void)
         "2000-02-29", "20000229", "+275760-09-13", "-0000010101",
     };
     static const char * const instants[] = {
-        "1970-01-01T00Z", "+275760-09-13T01+01",
+        "1970-01-01T00:00Z", "+275760-09-13T01:00+01",
         "2000-02-29T23:59:60.123456789Z",
     };
     const char *sample;
@@ -262,12 +263,11 @@ static void test_exact_sized_iso_parser_buffers(void)
                                              length == full, 0);
     }
 
-    /* Fragment APIs accept shorter complete forms: HH, HH:mm, HH:mm:ss,
-       and any one-through-nine-digit fractional seconds. */
+    /* TimeSpec requires minutes, while offsets also accept an hour alone. */
     sample = "23:59:60.123456789";
     full = strlen(sample);
     for (length = 0; length <= full; length++) {
-        int success = length == 2 || length == 5 || length == 8 || length >= 10;
+        int success = length == 5 || length == 8 || length >= 10;
         check_exact_sized_parser_buffer(PARSER_BUFFER_TIME, sample, length,
                                          success, 0);
     }
@@ -297,33 +297,33 @@ static void test_exact_sized_iso_parser_buffers(void)
 static void test_complete_instant_parsing(void)
 {
     static const char * const valid[] = {
-        "1970-01-01T00Z", "19700101t00z[Unknown/Zone]",
-        "1970-01-01T00Z[!Unknown/Zone]", "1970-01-01T00Z[!-01:30]",
-        "1970-01-01T00Z[+00][u-ca=iso8601][foo=bar-baz]",
-        "1970-01-01T00Z[foo=bar][u-ca=made-up-calendar]",
-        "1970-01-01T00Z[!u-ca=ISO8601]",
-        "1970-01-01T00Z[u-ca=iso8601][u-ca=other]",
-        "1970-01-01T00Z[_key=ABC-123][x=Y][x=Z]",
-        "1970-01-01T00Z[.]", "1970-01-01T00Z[Etc/GMT+1]",
+        "1970-01-01T00:00Z", "19700101t0000z[Unknown/Zone]",
+        "1970-01-01T00:00Z[!Unknown/Zone]", "1970-01-01T00:00Z[!-01:30]",
+        "1970-01-01T00:00Z[+00][u-ca=iso8601][foo=bar-baz]",
+        "1970-01-01T00:00Z[foo=bar][u-ca=made-up-calendar]",
+        "1970-01-01T00:00Z[!u-ca=ISO8601]",
+        "1970-01-01T00:00Z[u-ca=iso8601][u-ca=other]",
+        "1970-01-01T00:00Z[_key=ABC-123][x=Y][x=Z]",
+        "1970-01-01T00:00Z[.]", "1970-01-01T00:00Z[Etc/GMT+1]",
     };
     static const char * const invalid[] = {
-        "1970-01-01T00Z[", "1970-01-01T00Z[]", "1970-01-01T00Z[!]",
-        "1970-01-01T00Z[UTC]garbage", "1970-01-01T00Z[UTC][Europe/London]",
-        "1970-01-01T00Z[x=y][UTC]", "1970-01-01T00Z[!unknown=value]",
-        "1970-01-01T00Z[u-ca=iso8601][!u-ca=iso8601]",
-        "1970-01-01T00Z[!u-ca=iso8601][u-ca=iso8601]",
-        "1970-01-01T00Z[U-ca=iso8601]", "1970-01-01T00Z[1key=value]",
-        "1970-01-01T00Z[x=]", "1970-01-01T00Z[x=-a]",
-        "1970-01-01T00Z[x=a-]", "1970-01-01T00Z[x=a--b]",
-        "1970-01-01T00Z[x=a_b]", "1970-01-01T00Z[x=a=b]",
-        "1970-01-01T00Z[/UTC]", "1970-01-01T00Z[UTC/]",
-        "1970-01-01T00Z[Etc//UTC]", "1970-01-01T00Z[1UTC]",
-        "1970-01-01T00Z[+24:00]", "1970-01-01T00Z[+01:00:00]",
-        "1970-01-01T00Z[UTC][x=y]]", "1970-01-01T00Z[[UTC]]",
+        "1970-01-01T00:00Z[", "1970-01-01T00:00Z[]", "1970-01-01T00:00Z[!]",
+        "1970-01-01T00:00Z[UTC]garbage", "1970-01-01T00:00Z[UTC][Europe/London]",
+        "1970-01-01T00:00Z[x=y][UTC]", "1970-01-01T00:00Z[!unknown=value]",
+        "1970-01-01T00:00Z[u-ca=iso8601][!u-ca=iso8601]",
+        "1970-01-01T00:00Z[!u-ca=iso8601][u-ca=iso8601]",
+        "1970-01-01T00:00Z[U-ca=iso8601]", "1970-01-01T00:00Z[1key=value]",
+        "1970-01-01T00:00Z[x=]", "1970-01-01T00:00Z[x=-a]",
+        "1970-01-01T00:00Z[x=a-]", "1970-01-01T00:00Z[x=a--b]",
+        "1970-01-01T00:00Z[x=a_b]", "1970-01-01T00:00Z[x=a=b]",
+        "1970-01-01T00:00Z[/UTC]", "1970-01-01T00:00Z[UTC/]",
+        "1970-01-01T00:00Z[Etc//UTC]", "1970-01-01T00:00Z[1UTC]",
+        "1970-01-01T00:00Z[+24:00]", "1970-01-01T00:00Z[+01:00:00]",
+        "1970-01-01T00:00Z[UTC][x=y]]", "1970-01-01T00:00Z[[UTC]]",
         "+275760-09-13T00:00:00.000000001Z",
         "-271821-04-19T23:59:59.999999999Z",
     };
-    static const char embedded_nul[] = "1970-01-01T00Z\0[UTC]";
+    static const char embedded_nul[] = "1970-01-01T00:00Z\0[UTC]";
     QJSTemporalEpochNs value, unchanged = { 123, 456 };
     unsigned i;
 
@@ -344,14 +344,14 @@ static void test_complete_instant_parsing(void)
     assert(qjs_temporal_parse_instant(&value, "1969-12-31T23:59:59.999999999Z",
                                       sizeof("1969-12-31T23:59:59.999999999Z") - 1) == 0);
     assert_ns(value, qjs_temporal_epoch_ns_from_int64(-1));
-    assert(qjs_temporal_parse_instant(&value, "1970-01-01T01+01[!UTC]",
-                                      sizeof("1970-01-01T01+01[!UTC]") - 1) == 0);
+    assert(qjs_temporal_parse_instant(&value, "1970-01-01T01:00+01[!UTC]",
+                                      sizeof("1970-01-01T01:00+01[!UTC]") - 1) == 0);
     assert_ns(value, qjs_temporal_epoch_ns_from_int64(0));
-    assert(qjs_temporal_parse_instant(&value, "-271821-04-19T23-01",
-                                      sizeof("-271821-04-19T23-01") - 1) == 0);
+    assert(qjs_temporal_parse_instant(&value, "-271821-04-19T23:00-01",
+                                      sizeof("-271821-04-19T23:00-01") - 1) == 0);
     assert(qjs_temporal_epoch_ns_is_valid(value));
-    assert(qjs_temporal_parse_instant(&value, "+275760-09-13T01+01",
-                                      sizeof("+275760-09-13T01+01") - 1) == 0);
+    assert(qjs_temporal_parse_instant(&value, "+275760-09-13T01:00+01",
+                                      sizeof("+275760-09-13T01:00+01") - 1) == 0);
     assert(qjs_temporal_epoch_ns_is_valid(value));
 }
 
@@ -366,30 +366,34 @@ static void test_shared_iso_grammar(void)
         { "2000-02-29T12:34:60.123456789+01:02:03.4",
           QJS_TEMPORAL_PARSE_DATE_TIME, 1, 0, 0 },
         { "2000-02-29[!UTC][u-ca=iso8601]", QJS_TEMPORAL_PARSE_ZONED, 0, 0, 0 },
-        { "2000-02-29T12Z[UTC]", QJS_TEMPORAL_PARSE_ZONED, 1, 0, 0 },
-        { "2000-02-29T12Z", QJS_TEMPORAL_PARSE_INSTANT, 1, 0, 0 },
+        { "2000-02-29T12:00Z[UTC]", QJS_TEMPORAL_PARSE_ZONED, 1, 0, 0 },
+        { "2000-02-29T12:00Z", QJS_TEMPORAL_PARSE_INSTANT, 1, 0, 0 },
         { "T0701", QJS_TEMPORAL_PARSE_TIME, 1, 0, 0 },
         { "07:01", QJS_TEMPORAL_PARSE_TIME, 1, 0, 0 },
         { "202113", QJS_TEMPORAL_PARSE_TIME, 1, 0, 0 },
-        { "13-12", QJS_TEMPORAL_PARSE_TIME, 1, 0, 0 },
         { "2000-02-29T12:30[Unknown/Zone][!u-ca=imaginary]",
           QJS_TEMPORAL_PARSE_TIME, 1, 0, 0 },
         { "2020-02[u-ca=iso8601]", QJS_TEMPORAL_PARSE_YEAR_MONTH, 0, 0, 1 },
         { "2020-02[u-ca=ISO8601]", QJS_TEMPORAL_PARSE_YEAR_MONTH, 0, 0, 1 },
         { "202002", QJS_TEMPORAL_PARSE_YEAR_MONTH, 0, 0, 1 },
         { "+001970-01", QJS_TEMPORAL_PARSE_YEAR_MONTH, 0, 0, 1 },
-        { "2020-02-29T12", QJS_TEMPORAL_PARSE_YEAR_MONTH, 1, 0, 0 },
+        { "2020-02-29T12:00", QJS_TEMPORAL_PARSE_YEAR_MONTH, 1, 0, 0 },
         { "--02-29", QJS_TEMPORAL_PARSE_MONTH_DAY, 0, 1, 0 },
         { "0229", QJS_TEMPORAL_PARSE_MONTH_DAY, 0, 1, 0 },
-        { "2000-02-29T12", QJS_TEMPORAL_PARSE_MONTH_DAY, 1, 0, 0 },
+        { "2000-02-29T12:00", QJS_TEMPORAL_PARSE_MONTH_DAY, 1, 0, 0 },
     };
     static const struct { const char *text; unsigned grammar; } invalid[] = {
         { "2001-02-29", QJS_TEMPORAL_PARSE_DATE_TIME },
+        { "2000-02-29T12", QJS_TEMPORAL_PARSE_DATE_TIME },
         { "2000-02-29Z", QJS_TEMPORAL_PARSE_DATE_TIME },
-        { "2000-02-29T12Z", QJS_TEMPORAL_PARSE_DATE_TIME },
-        { "2000-02-29T12", QJS_TEMPORAL_PARSE_INSTANT },
+        { "2000-02-29T12Z", QJS_TEMPORAL_PARSE_INSTANT },
+        { "2000-02-29T12Z[UTC]", QJS_TEMPORAL_PARSE_ZONED },
+        { "T12", QJS_TEMPORAL_PARSE_TIME },
+        { "13-12", QJS_TEMPORAL_PARSE_TIME },
+        { "2000-02-29T12:00Z", QJS_TEMPORAL_PARSE_DATE_TIME },
+        { "2000-02-29T12:00", QJS_TEMPORAL_PARSE_INSTANT },
         { "2000-02-29Z[UTC]", QJS_TEMPORAL_PARSE_ZONED },
-        { "2000-02-29T12Z", QJS_TEMPORAL_PARSE_ZONED },
+        { "2000-02-29T12:00Z", QJS_TEMPORAL_PARSE_ZONED },
         { "2000-02-29", QJS_TEMPORAL_PARSE_TIME },
         { "0701", QJS_TEMPORAL_PARSE_TIME },
         { "07-12", QJS_TEMPORAL_PARSE_TIME },
