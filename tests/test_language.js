@@ -59,6 +59,28 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_destructuring_target_names()
+{
+    /* NamedEvaluation uses the target syntax, not just its eventual binding. */
+    for (const definition of ["function(){}", "()=>0", "async function(){}",
+                              "function*(){}", "class {}"]) {
+        for (const target of ["x", "\\u0078", "(x)", "((x))"]) {
+            const expected = target[0] === "(" ? "" : "x";
+            for (const pattern of ["[TARGET = VALUE] = []",
+                                   "({p: TARGET = VALUE} = {})",
+                                   "({['p']: TARGET = VALUE} = {})"])
+                assert(Function("let x; " + pattern.replace("TARGET", target)
+                    .replace("VALUE", definition) + "; return x.name;")(), expected);
+        }
+    }
+    let [arrayBinding = function(){}] = [];
+    let {propertyBinding = class {}} = {};
+    assert(arrayBinding.name, "arrayBinding");
+    assert(propertyBinding.name, "propertyBinding");
+}
+
+test_destructuring_target_names();
+
 function test_array_literal_separators()
 {
     /* Holes and the large-array path still require commas between values. */
