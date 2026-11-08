@@ -60,6 +60,75 @@ try {
 }
 assert(duplicateArrayExportError instanceof SyntaxError);
 
+async function test_import_redeclarations()
+{
+    const [directory, error] = os.getcwd();
+    assert(error, 0);
+    let temporary;
+    /* Atomic reservation also protects parallel runs with equal RNG seeds. */
+    for (let attempt = 0; attempt < 32; attempt++) {
+        const path = directory + "/module-binding-" + Math.random().toString(36).slice(2);
+        const status = os.mkdir(path, 0o700);
+        if (status === 0) {
+            temporary = path;
+            break;
+        }
+        assert(status, -std.Error.EEXIST);
+    }
+    assert(temporary !== undefined);
+    const prefix = temporary + "/module";
+    const dependency = prefix + "-dep.js";
+    let index = 0;
+
+    function write_module(path, source) {
+        const file = std.open(path, "w");
+        assert(file !== null);
+        file.puts(source);
+        assert(file.close(), 0);
+    }
+
+    /* Generate short fixtures in the build directory so both source orders
+       and import forms can be checked without duplicating fixture files. */
+    try {
+        write_module(dependency, "export default 1; export const value = 1;");
+        for (const clause of ["bound", "{value as bound}", "* as bound"]) {
+            const head = "import " + clause + " from " + JSON.stringify(dependency) + ";";
+            for (const declaration of ["var bound;", "let bound;", "const bound = 1;",
+                                       "function bound() {}", "class bound {}",
+                                       "using bound = null;", "{var bound;}"]) {
+                for (const source of [head + declaration, declaration + head]) {
+                    const path = prefix + "-" + index++ + ".js";
+                    write_module(path, source);
+                    let failure;
+                    try {
+                        await import(path);
+                    } catch (e) {
+                        failure = e;
+                    } finally {
+                        assert(os.remove(path), 0);
+                    }
+                    assert(failure instanceof SyntaxError, true, source);
+                }
+            }
+            for (const declaration of ["{let bound;}", "function f() {var bound;}",
+                                       "for (let bound of []) {}"]) {
+                const path = prefix + "-" + index++ + ".js";
+                write_module(path, head + declaration);
+                try {
+                    await import(path);
+                } finally {
+                    assert(os.remove(path), 0);
+                }
+            }
+        }
+    } finally {
+        os.remove(dependency);
+        assert(os.remove(temporary), 0);
+    }
+}
+
+await test_import_redeclarations();
+
 assert(plainMetaModule.meta !== attributedMetaModule.meta);
 assert(plainMetaModule.readMeta() === plainMetaModule.meta);
 assert(attributedMetaModule.readMeta() === attributedMetaModule.meta);
