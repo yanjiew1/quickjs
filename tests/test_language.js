@@ -59,6 +59,25 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_class_initializer_lookahead()
+{
+    /* A field's await identifier must not select the enclosing async RegExp goal. */
+    for (const expression of ["await / 2", "(await / 2)", "({x: await / 2})",
+                              "(() => await / 2)()", "class {x = await / 2}"]) {
+        const value = "class { x = " + expression + "; }";
+        for (const body of ["const f = (C = VALUE) => C;",
+                            "const f = async (C = VALUE) => C;",
+                            "let [C = VALUE] = [];", "let {C = VALUE} = {};"])
+            Function("async function outer() {" + body.replace("VALUE", value) + "}");
+    }
+    /* Computed names retain the enclosing context rather than the field's. */
+    Function("async function outer() { return class {x = await / 2; [await 0]() {}}; }");
+    assert_throws(SyntaxError, () => Function(
+        "async function outer() { const f = (C = class {x = 0; [await 0]() {}}) => C; }"));
+}
+
+test_class_initializer_lookahead();
+
 function test_destructuring_target_names()
 {
     /* NamedEvaluation uses the target syntax, not just its eventual binding. */
