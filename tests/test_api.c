@@ -5071,11 +5071,21 @@ static void test_array_length_atom_failure(void)
 }
 
 static int resolution_retry_calls;
+static JSValue resolution_reentry_obj;
 
 static JSModuleDef *resolution_retry_loader(JSContext *ctx, const char *name,
                                             void *opaque)
 {
     (void)opaque;
+    if (!JS_IsUndefined(resolution_reentry_obj)) {
+        JSValue result;
+        assert(JS_LinkModule(ctx, resolution_reentry_obj) < 0);
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        result = JS_EvalFunction(ctx, JS_DupValue(ctx, resolution_reentry_obj));
+        assert(JS_IsException(result));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        resolution_reentry_obj = JS_UNDEFINED;
+    }
     if (!strcmp(name, "cycle")) {
         const char *source = "import 'entry'; export const cycle = 1;";
         JSValue value = JS_Eval(ctx, source, strlen(source), name,
@@ -5173,19 +5183,120 @@ static void test_module_resolution_retry(void)
     ctx = JS_NewContext(rt);
     JS_SetModuleLoaderFunc(rt, NULL, resolution_retry_loader, NULL);
     value = JS_ReadObject(ctx, copy, length, JS_READ_OBJ_BYTECODE);
+    assert(!JS_IsException(value));
+    resolution_retry_calls = 0;
+    resolution_reentry_obj = value;
+    assert(JS_ResolveModule(ctx, value) < 0);
+    assert(JS_IsUndefined(resolution_reentry_obj));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    {
+        JSValue result = JS_EvalFunction(ctx, JS_DupValue(ctx, value));
+        assert(JS_IsException(result));
+        assert(JS_HasException(ctx));
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    }
+    value = JS_EvalFunction(ctx, value);
+    assert(!JS_IsException(value));
+    assert(resolution_retry_calls == 3);
+    assert(JS_PromiseState(ctx, value) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    rt = JS_NewRuntime();
+    ctx = JS_NewContext(rt);
+    JS_SetModuleLoaderFunc(rt, NULL, resolution_retry_loader, NULL);
+    value = JS_ReadObject(ctx, copy, length, JS_READ_OBJ_BYTECODE);
     free(copy);
     assert(!JS_IsException(value));
     resolution_retry_calls = 0;
     assert(JS_ResolveModule(ctx, value) < 0);
     JS_FreeValue(ctx, JS_GetException(ctx));
-    assert(JS_ResolveModule(ctx, value) < 0);
-    JS_FreeValue(ctx, JS_GetException(ctx));
-    assert(JS_ResolveModule(ctx, value) == 0);
-    assert(resolution_retry_calls == 3);
+    /* The failed resolution removed the context's module reference. */
+    resolution_retry_calls = 2;
     value = JS_EvalFunction(ctx, value);
     assert(!JS_IsException(value));
     assert(JS_PromiseState(ctx, value) == JS_PROMISE_FULFILLED);
     JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static int reentrant_module_init(JSContext *ctx, JSModuleDef *module)
+{
+    static const char nested[] = "import 'reentrant-module';";
+    JSValue object = JS_MKPTR(JS_TAG_MODULE, module);
+    JSValue result;
+
+    assert(JS_LinkModule(ctx, object) < 0);
+    assert(JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    result = JS_EvalFunction(ctx, JS_DupValue(ctx, object));
+    assert(JS_IsException(result));
+    assert(JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    result = JS_Eval(ctx, nested, sizeof(nested) - 1, "nested-module",
+                     JS_EVAL_TYPE_MODULE);
+    assert(JS_IsException(result));
+    assert(JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    return 0;
+}
+
+static void test_reentrant_module_evaluation(void)
+{
+    static const char source[] = "import 'reentrant-module';";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue result;
+
+    assert(rt && ctx);
+    assert(JS_NewCModule(ctx, "reentrant-module", reentrant_module_init));
+    result = JS_Eval(ctx, source, sizeof(source) - 1, "reentrant-test",
+                     JS_EVAL_TYPE_MODULE);
+    assert(!JS_IsException(result));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static JSValue reentrant_dependency;
+
+static int reentrant_dependency_init(JSContext *ctx, JSModuleDef *module)
+{
+    JSValue result = JS_EvalFunction(ctx, JS_DupValue(ctx, reentrant_dependency));
+
+    if (JS_IsException(result)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    } else {
+        assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+        JS_FreeValue(ctx, result);
+    }
+    return JS_SetModuleExport(ctx, module, "value", JS_NewInt32(ctx, 42));
+}
+
+static void test_reentrant_module_dependency(void)
+{
+    static const char source[] = "import {value} from 'base'; export const observed = value;";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *base;
+    JSValue result;
+
+    assert(rt && ctx);
+    base = JS_NewCModule(ctx, "base", reentrant_dependency_init);
+    assert(base && JS_AddModuleExport(ctx, base, "value") == 0);
+    reentrant_dependency = JS_Eval(ctx, source, sizeof(source) - 1,
+                                   "nested-dependency",
+                                   JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(reentrant_dependency));
+    assert(JS_LinkModule(ctx, reentrant_dependency) == 0);
+    result = JS_EvalFunction(ctx, JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, base)));
+    assert(!JS_IsException(result));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, reentrant_dependency);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 }
@@ -5371,6 +5482,8 @@ int main(int argc, char **argv)
         { "missing-module-export-exception", test_missing_module_export_exception },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
+        { "reentrant-module-evaluation", test_reentrant_module_evaluation },
+        { "reentrant-module-dependency", test_reentrant_module_dependency },
         { "fast-array-growth-oom", test_fast_array_growth_oom },
         { "array-length-atom-failure", test_array_length_atom_failure },
         { "module-preparation-retry", test_module_preparation_retry },
