@@ -5313,6 +5313,40 @@ static int missing_module_export_init(JSContext *ctx, JSModuleDef *module)
     return JS_SetModuleExport(ctx, module, "missing", JS_NewInt32(ctx, 1));
 }
 
+static JSModuleDef *silent_module_loader(JSContext *ctx, const char *name,
+                                         void *opaque)
+{
+    (void)ctx;
+    (void)name;
+    (void)opaque;
+    return NULL;
+}
+
+static void test_silent_module_loader(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, reason, name;
+    const char *text;
+
+    assert(rt && ctx);
+    JS_SetModuleLoaderFunc(rt, NULL, silent_module_loader, NULL);
+    promise = JS_LoadModule(ctx, "", "missing-module");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_IsError(ctx, reason));
+    name = JS_GetPropertyStr(ctx, reason, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "ReferenceError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_missing_module_export_exception(void)
 {
     static const char source[] = "import 'missing-export-test';";
@@ -5487,6 +5521,7 @@ int main(int argc, char **argv)
         { "reentrant-gc-finalizer", test_reentrant_gc_finalizer },
         { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "missing-module-export-exception", test_missing_module_export_exception },
+        { "silent-module-loader", test_silent_module_loader },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
         { "reentrant-module-evaluation", test_reentrant_module_evaluation },
