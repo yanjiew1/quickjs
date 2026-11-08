@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <fenv.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
@@ -5303,12 +5304,68 @@ static void test_reentrant_gc_finalizer(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_uint8_clamp_rounding_mode(void)
+{
+    static const char source[] =
+        "(function() {"
+        "  let a = new Uint8ClampedArray([1.25, 1.5, 2.5, 2.75]);"
+        "  let b = new Uint8ClampedArray(2);"
+        "  b[0] = 1.25; b.fill(2.5, 1);"
+        "  return a.join(',') === '1,2,2,3' && b.join(',') === '1,2';"
+        "})";
+    const int modes[] = {
+#ifdef FE_TONEAREST
+        FE_TONEAREST,
+#endif
+#ifdef FE_UPWARD
+        FE_UPWARD,
+#endif
+#ifdef FE_DOWNWARD
+        FE_DOWNWARD,
+#endif
+#ifdef FE_TOWARDZERO
+        FE_TOWARDZERO,
+#endif
+        -1,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue function;
+    int original = fegetround();
+    size_t i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    function = JS_Eval(ctx, source, sizeof(source) - 1, "clamp-rounding",
+                       JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(function));
+    if (original != -1) {
+        for (i = 0; modes[i] != -1; i++) {
+            JSValue result;
+            int passed, restored;
+            if (fesetround(modes[i]) != 0)
+                continue;
+            result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+            passed = !JS_IsException(result) && JS_ToBool(ctx, result) == 1;
+            JS_FreeValue(ctx, result);
+            restored = fesetround(original);
+            assert(restored == 0);
+            assert(passed);
+        }
+    }
+    JS_FreeValue(ctx, function);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "uint8-clamp-rounding-mode", test_uint8_clamp_rounding_mode },
         { "reentrant-gc-finalizer", test_reentrant_gc_finalizer },
         { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "missing-module-export-exception", test_missing_module_export_exception },

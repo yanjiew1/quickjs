@@ -662,8 +662,13 @@ int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
                     res = 0;
                 else if (d > 255)
                     res = 255;
-                else
-                    res = lrint(d);
+                else {
+                    double midpoint;
+                    res = (int)d;
+                    midpoint = res + 0.5;
+                    if (d > midpoint || (d == midpoint && (res & 1)))
+                        res++;
+                }
             }
         }
         break;
