@@ -2805,6 +2805,8 @@ static __exception int js_parse_array_literal(JSParseState *s)
         if (s->token.val == ',') {
             if (next_token(s))
                 return -1;
+        } else if (s->token.val != ']') {
+            return js_parse_error(s, "expecting ','");
         }
     }
     if (s->token.val == ']') {
