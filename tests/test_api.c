@@ -3304,10 +3304,17 @@ static void test_async_realm_job_roots(void)
         " const stack = new foreign.AsyncDisposableStack();"
         " stack.defer(make);"
         " const disposal = stack.disposeAsync();"
+        " const f = foreign.Function('return async function(p) { return await p; }')();"
+        " let resolve;"
+        " const pending = new Promise(r => { resolve = r; });"
+        " pending.constructor = foreign.Promise;"
+        " const resumed = f(pending);"
+        " resolve(43);"
         " globalThis.foreign = null;"
         " const result = await values;"
         " await disposal;"
-        " return result.length === 1 && result[0] === 42;"
+        " return result.length === 1 && result[0] === 42 &&"
+        "        await resumed === 43;"
         "})()";
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx, *foreign, *job_ctx;

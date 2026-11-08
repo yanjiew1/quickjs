@@ -139,4 +139,36 @@ export async function test_async_realms()
 {
     await test_array_from_async_realm();
     await test_promise_capability_realms();
+    const result = run_in_realms(async function () {
+        function check(actual, expected, message) {
+            if (actual !== expected) throw Error(message);
+        }
+        const foreignAsync = foreign.Function(
+            "return async function(p) { return await p; }")();
+        const source = foreign.Promise.resolve(42);
+        Object.defineProperty(source, "then", { get() { throw 99; } });
+        const promise = foreignAsync(source);
+        check(Object.getPrototypeOf(promise), foreign.Promise.prototype,
+              "async function result realm");
+        check(await promise, 42, "await must reuse the same-realm promise");
+
+        const foreignGenerator = foreign.Function(
+            "return async function*(p) { yield await p; }")();
+        const iterator = foreignGenerator(source);
+        const localNext = (async function* () {})().next;
+        check((await localNext.call(iterator)).value, 42,
+              "borrowed async generator next uses its body realm");
+
+        let resolve;
+        const pending = new Promise(r => { resolve = r; });
+        pending.constructor = foreign.Promise;
+        const later = foreignAsync(pending);
+        runGC();
+        resolve(43);
+        runGC();
+        check(await later, 43, "pending await resumes in the function realm");
+        return true;
+    });
+    check(await result, true, "async_function_realms");
+    std.gc();
 }
