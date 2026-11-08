@@ -28,14 +28,27 @@ on:
     - '!.gitignore'
     - '!LICENSE'
     - '!TODO'
-    - '!doc/**'
-    - 'doc/meson.build'
     - '.github/workflows/ci.yml'
   push:
     branches:
     - '*'
 
 jobs:
+  documentation:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install documentation tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build texinfo
+    - name: Configure documentation
+      run: meson setup build-docs -Ddocumentation=enabled -Dtests=false -Dexamples=false
+    - name: Build manual
+      run: meson compile -C build-docs docs
+
   unicode:
     name: Unicode table regeneration
     runs-on: ubuntu-latest
