@@ -237,6 +237,27 @@ static void emit_atom(JSParseState *s, JSAtom name)
     bc->size += 4;
 }
 
+/* Ordinary emission records allocation failure in DynBuf. Inspect it before
+   accessing emitted bytes, including child initializer functions. */
+static int js_parse_check_emission(JSFunctionDef *fd)
+{
+    if (dbuf_error(&fd->byte_code)) {
+        JS_ThrowOutOfMemory(fd->ctx);
+        return -1;
+    }
+    return 0;
+}
+
+/* Patch a non-owning operand. Replacing an atom needs explicit refcount handling. */
+static int js_parse_patch_u32(JSFunctionDef *fd, int pos, uint32_t value)
+{
+    if (js_parse_check_emission(fd))
+        return -1;
+    assert(pos >= 0 && (size_t)pos + 4 <= fd->byte_code.size);
+    put_u32(fd->byte_code.buf + pos, value);
+    return 0;
+}
+
 int new_label_fd(JSFunctionDef *fd)
 {
     int label;
@@ -2610,12 +2631,9 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
         if (js_parse_class_default_ctor(s, class_flags & JS_DEFINE_CLASS_HAS_HERITAGE, &ctor_fd))
             goto fail;
     }
-    if (dbuf_error(&fd->byte_code)) {
-        JS_ThrowOutOfMemory(ctx);
-        goto fail;
-    }
     /* patch the constant pool index for the constructor */
-    put_u32(fd->byte_code.buf + ctor_cpool_offset, ctor_fd->parent_cpool_idx);
+    if (js_parse_patch_u32(fd, ctor_cpool_offset, ctor_fd->parent_cpool_idx))
+        goto fail;
 
     /* store the class source code in the constructor. */
     if (!fd->strip_source) {
@@ -2649,6 +2667,10 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             }
             /* patch the start of the function to enable the
                OP_add_brand_instance code */
+            if (js_parse_check_emission(cf->fields_init_fd))
+                goto fail;
+            assert(cf->brand_push_pos >= 0 &&
+                   (size_t)cf->brand_push_pos < cf->fields_init_fd->byte_code.size);
             cf->fields_init_fd->byte_code.buf[cf->brand_push_pos] = OP_push_true;
         }
 
@@ -3836,10 +3858,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
             return -1;
         }
         /* Failed emission may leave no buffer to patch. */
-        if (dbuf_error(&s->cur_func->byte_code)) {
-            JS_ThrowOutOfMemory(s->ctx);
+        if (js_parse_check_emission(s->cur_func))
             return -1;
-        }
         /* remove test and decrement label ref count */
         memset(s->cur_func->byte_code.buf + start_addr, OP_nop,
                assign_addr - start_addr);
@@ -6972,10 +6992,8 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             label_case = -1;
             while (s->token.val != '}') {
                 /* Failed label emission must not become a source syntax error. */
-                if (dbuf_error(&s->cur_func->byte_code)) {
-                    JS_ThrowOutOfMemory(ctx);
+                if (js_parse_check_emission(s->cur_func))
                     goto fail;
-                }
                 if (s->token.val == TOK_CASE) {
                     label1 = -1;
                     if (label_case >= 0) {
@@ -7035,14 +7053,12 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             }
             if (js_parse_expect(s, '}'))
                 goto fail;
-            if (dbuf_error(&s->cur_func->byte_code)) {
-                JS_ThrowOutOfMemory(ctx);
+            if (js_parse_check_emission(s->cur_func))
                 goto fail;
-            }
             if (default_label_pos >= 0) {
-                /* Ugly patch for the `default` label, shameful and risky */
-                put_u32(s->cur_func->byte_code.buf + default_label_pos,
-                        label_case);
+                /* Resolve the reserved default-label operand after the body. */
+                if (js_parse_patch_u32(s->cur_func, default_label_pos, label_case))
+                    goto fail;
                 s->cur_func->label_slots[label_case].pos = default_label_pos + 4;
             } else {
                 emit_label(s, label_case);
