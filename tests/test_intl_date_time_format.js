@@ -571,6 +571,14 @@ if (typeof Temporal !== 'undefined') {
     }
 }
 
+if (scriptArgs[1] === 'native') {
+    // A parent ASCII alternative must not replace the regional clock style.
+    for (const timeStyle of ['short', 'medium', 'long', 'full']) {
+        const formatter = new DTF('en-GB', {...utc, timeStyle});
+        assert(formatter.formatToParts(0).find(part => part.type === 'hour').value, '00');
+    }
+}
+
 if (scriptArgs[1] === 'native' && scriptArgs[2] === 'native') {
     // The CLDR metazone fallback requires the named-zone backend.
     // CLDR's golden 001 zone is preferred when a country has no mapZone row.
