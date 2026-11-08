@@ -205,6 +205,11 @@ int unicode_from_utf8(const uint8_t *p, int max_len, const uint8_t **pp)
     return c;
 }
 
+/* Sort elements may hold floats, pointers, or structures, not integers. */
+typedef uint16_t alias_u16 __attribute__((__may_alias__));
+typedef uint32_t alias_u32 __attribute__((__may_alias__));
+typedef uint64_t alias_u64 __attribute__((__may_alias__));
+
 typedef void (*exchange_f)(void *a, void *b, size_t size);
 typedef int (*cmp_f)(const void *, const void *, void *opaque);
 
@@ -228,8 +233,8 @@ static void exchange_one_byte(void *a, void *b, size_t size) {
 }
 
 static void exchange_int16s(void *a, void *b, size_t size) {
-    uint16_t *ap = (uint16_t *)a;
-    uint16_t *bp = (uint16_t *)b;
+    alias_u16 *ap = (alias_u16 *)a;
+    alias_u16 *bp = (alias_u16 *)b;
 
     for (size /= sizeof(uint16_t); size-- != 0;) {
         uint16_t t = *ap;
@@ -239,16 +244,16 @@ static void exchange_int16s(void *a, void *b, size_t size) {
 }
 
 static void exchange_one_int16(void *a, void *b, size_t size) {
-    uint16_t *ap = (uint16_t *)a;
-    uint16_t *bp = (uint16_t *)b;
+    alias_u16 *ap = (alias_u16 *)a;
+    alias_u16 *bp = (alias_u16 *)b;
     uint16_t t = *ap;
     *ap = *bp;
     *bp = t;
 }
 
 static void exchange_int32s(void *a, void *b, size_t size) {
-    uint32_t *ap = (uint32_t *)a;
-    uint32_t *bp = (uint32_t *)b;
+    alias_u32 *ap = (alias_u32 *)a;
+    alias_u32 *bp = (alias_u32 *)b;
 
     for (size /= sizeof(uint32_t); size-- != 0;) {
         uint32_t t = *ap;
@@ -258,16 +263,16 @@ static void exchange_int32s(void *a, void *b, size_t size) {
 }
 
 static void exchange_one_int32(void *a, void *b, size_t size) {
-    uint32_t *ap = (uint32_t *)a;
-    uint32_t *bp = (uint32_t *)b;
+    alias_u32 *ap = (alias_u32 *)a;
+    alias_u32 *bp = (alias_u32 *)b;
     uint32_t t = *ap;
     *ap = *bp;
     *bp = t;
 }
 
 static void exchange_int64s(void *a, void *b, size_t size) {
-    uint64_t *ap = (uint64_t *)a;
-    uint64_t *bp = (uint64_t *)b;
+    alias_u64 *ap = (alias_u64 *)a;
+    alias_u64 *bp = (alias_u64 *)b;
 
     for (size /= sizeof(uint64_t); size-- != 0;) {
         uint64_t t = *ap;
@@ -277,16 +282,16 @@ static void exchange_int64s(void *a, void *b, size_t size) {
 }
 
 static void exchange_one_int64(void *a, void *b, size_t size) {
-    uint64_t *ap = (uint64_t *)a;
-    uint64_t *bp = (uint64_t *)b;
+    alias_u64 *ap = (alias_u64 *)a;
+    alias_u64 *bp = (alias_u64 *)b;
     uint64_t t = *ap;
     *ap = *bp;
     *bp = t;
 }
 
 static void exchange_int128s(void *a, void *b, size_t size) {
-    uint64_t *ap = (uint64_t *)a;
-    uint64_t *bp = (uint64_t *)b;
+    alias_u64 *ap = (alias_u64 *)a;
+    alias_u64 *bp = (alias_u64 *)b;
 
     for (size /= sizeof(uint64_t) * 2; size-- != 0; ap += 2, bp += 2) {
         uint64_t t = ap[0];
@@ -299,8 +304,8 @@ static void exchange_int128s(void *a, void *b, size_t size) {
 }
 
 static void exchange_one_int128(void *a, void *b, size_t size) {
-    uint64_t *ap = (uint64_t *)a;
-    uint64_t *bp = (uint64_t *)b;
+    alias_u64 *ap = (alias_u64 *)a;
+    alias_u64 *bp = (alias_u64 *)b;
     uint64_t t = ap[0];
     uint64_t u = ap[1];
     ap[0] = bp[0];

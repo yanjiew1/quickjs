@@ -207,6 +207,42 @@ static void test_rqsort_small_fragments(void)
         assert(mixed[i] == expected[i]);
 }
 
+typedef struct {
+    double key;
+    int id;
+} SortRecord;
+
+static int compare_record(const void *a, const void *b, void *opaque)
+{
+    const SortRecord *x = a, *y = b;
+
+    return (x->key > y->key) - (x->key < y->key);
+}
+
+static int compare_float(const void *a, const void *b, void *opaque)
+{
+    float x = *(const float *)a, y = *(const float *)b;
+
+    return (x > y) - (x < y);
+}
+
+static void test_rqsort_element_types(void)
+{
+    _Alignas(16) SortRecord records[] = {
+        { 3.5, 3 }, { 1.5, 1 }, { 2.5, 2 }, { 0.5, 0 },
+        { 5.5, 5 }, { 4.5, 4 }, { 7.5, 7 }, { 6.5, 6 },
+    };
+    float numbers[] = { 3, 1, 2, 0, 5, 4, 7, 6 };
+    size_t i;
+
+    rqsort(records, countof(records), sizeof(records[0]), compare_record, NULL);
+    rqsort(numbers, countof(numbers), sizeof(numbers[0]), compare_float, NULL);
+    for (i = 0; i < countof(records); i++) {
+        assert(records[i].key == (double)i + 0.5 && records[i].id == (int)i);
+        assert(numbers[i] == (float)i);
+    }
+}
+
 int main(void)
 {
     test_empty_dbuf();
@@ -215,5 +251,6 @@ int main(void)
     test_bounded_strings();
     test_typed_buffer_growth();
     test_rqsort_small_fragments();
+    test_rqsort_element_types();
     return 0;
 }
