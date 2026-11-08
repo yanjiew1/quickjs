@@ -107,6 +107,47 @@ function test_class_shorthand_arguments()
 
 test_class_shorthand_arguments();
 
+function test_sloppy_destructured_let_parameter()
+{
+    for (const parameters of ["{let = 1}", "[let] = [1]", "{let} = {let: 1}",
+                              '{["x"]: let} = {x: 1}',
+                              "{x: {let}} = {x: {let: 1}}", "{let}, x = 1"]) {
+        for (const kind of ["function", "function*", "async function", "async function*"])
+            Function("return " + kind + " (" + parameters + ") {return let;}");
+        Function("return (" + parameters + ") => let;");
+        Function("return async (" + parameters + ") => let;");
+        assert_throws(SyntaxError, () => Function(
+            '"use strict"; return function (' + parameters + ") {return let;}"));
+    }
+    assert(Function("return function ({let = 1}) {return let;}")()({}), 1);
+    assert(Function("return function ([let] = [2]) {return let;}")()(), 2);
+    assert_throws(SyntaxError, () => Function("let {let = 1} = {};"));
+}
+
+test_sloppy_destructured_let_parameter();
+
+function test_sloppy_catch_let_binding()
+{
+    for (const [pattern, value, result] of [
+        ["{let}", "{let: 3}", "let"], ["[let]", "[3]", "let"],
+        ["{x: let}", "{x: 3}", "let"], ["{let = 3}", "{}", "let"],
+        ["{...let}", "{x: 3}", "let.x"], ["[...let]", "[3]", "let[0]"]
+    ]) {
+        /* CatchParameter is not a LexicalDeclaration. Sloppy bindings may
+           be named let even when their storage is a lexical environment. */
+        const source = "try { throw " + value + "; } catch (" + pattern +
+            ") { return " + result + "; }";
+        assert(Function(source)(), 3);
+        assert_throws(SyntaxError, () => Function('"use strict";' + source));
+    }
+    assert_throws(SyntaxError, () => Function("try {} catch ({let}) {var let;}"));
+    assert_throws(SyntaxError, () => Function("try {} catch ({let, let}) {}"));
+    assert(Function("try {throw {let: 3};} catch ({let}) {" +
+                    "return (function(let) {return let;})(4);}")(), 4);
+}
+
+test_sloppy_catch_let_binding();
+
 function test_arrow_lookahead_asi_modes()
 {
     const wrap = body => "let target; [{target = " + body +
