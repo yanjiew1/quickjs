@@ -183,7 +183,6 @@ __exception int js_parse_string(JSParseState *s, int sep,
                         p++;
                     c = '\n';
                 }
-                /* do not update s->line_num */
             } else if (c == '\n' || c == '\r')
                 goto invalid_char;
         }
@@ -325,7 +324,7 @@ __exception int js_parse_regexp(JSParseState *s)
         } else if (c == '[') {
             in_class = TRUE;
         } else if (c == ']') {
-            /* XXX: incorrect as the first character in a class */
+            /* An unescaped closing bracket also ends an empty class. */
             in_class = FALSE;
         } else if (c == '\\') {
             if (string_buffer_putc8(b, c))
@@ -917,8 +916,6 @@ __exception int next_token(JSParseState *s)
             switch(c) {
             case CP_PS:
             case CP_LS:
-                /* XXX: should avoid incrementing line_number, but
-                   needed to handle HTML comments */
                 goto line_terminator;
             default:
                 if (lre_is_space(c)) {
