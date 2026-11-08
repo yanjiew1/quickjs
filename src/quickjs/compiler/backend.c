@@ -3677,6 +3677,14 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
         for(i = 0; i < fd->global_var_count; i++) {
             JSVarKindEnum var_kind;
             hf = &fd->global_vars[i];
+            /* All imports and hoisted declarations are known here, so this
+               check is independent of their order in the module source. */
+            if (fd->module &&
+                find_import_local(fd, fd->module, hf->var_name) >= 0) {
+                JS_ThrowSyntaxErrorAtom(ctx, "invalid redefinition of import '%s'",
+                                       hf->var_name);
+                return -1;
+            }
             if (hf->cpool_idx >= 0 && !hf->is_lexical) {
                 var_kind = JS_VAR_GLOBAL_FUNCTION_DECL;
             } else {
