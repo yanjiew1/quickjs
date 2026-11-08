@@ -59,6 +59,25 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_private_brand_relational_chain()
+{
+    class C {
+        #x;
+        test(object) {
+            return [#x in object < 1, #x in object > 0,
+                    #x in object <= 0, #x in object >= 1,
+                    #x in object in {true: 1}, #x in object instanceof Boolean];
+        }
+    }
+    const instance = new C();
+    assert(instance.test(instance).join(","), "false,true,false,true,true,false");
+    assert(instance.test({}).join(","), "true,false,true,false,false,false");
+    assert_throws(SyntaxError, () =>
+        Function("class C {#x; m(o) {return 1 < #x in o;}}"));
+}
+
+test_private_brand_relational_chain();
+
 function test_hashbang_line_terminators()
 {
     for (const terminator of ["\n", "\r", "\u2028", "\u2029"]) {
