@@ -78,6 +78,35 @@ function test_private_brand_relational_chain()
 
 test_private_brand_relational_chain();
 
+function test_class_shorthand_arguments()
+{
+    for (const name of ["arguments", "arg\\u0075ments"]) {
+        for (const expression of ["({NAME})", "() => ({NAME})",
+                                  "async () => ({NAME})"]) {
+            const value = expression.replace("NAME", name);
+            for (const member of ["x = " + value, "static x = " + value,
+                                   "static { " + value + "; }"])
+                assert_throws(SyntaxError, () => Function("class C {" + member + "}"));
+        }
+    }
+    /* Direct eval inherits the same restriction from its class context. */
+    for (const member of ['x = eval("({arguments})")',
+                          'static x = eval("({arguments})")',
+                          'static { eval("({arguments})"); }'])
+        assert_throws(SyntaxError, () => Function("return new class {" + member + "}")(42));
+
+    Function("class C {x = ({arguments: 1});}");
+    class C {
+        x = function () { return {arguments}; };
+        y = {method() { return {arguments}; }};
+    }
+    const object = new C();
+    assert(object.x(42).arguments[0], 42);
+    assert(object.y.method(43).arguments[0], 43);
+}
+
+test_class_shorthand_arguments();
+
 function test_hashbang_line_terminators()
 {
     for (const terminator of ["\n", "\r", "\u2028", "\u2029"]) {

@@ -133,6 +133,13 @@ static inline BOOL token_is_pseudo_keyword(JSParseState *s, JSAtom atom) {
         !s->token.u.ident.has_escape;
 }
 
+static int js_parse_check_identifier_reference(JSParseState *s, JSAtom name)
+{
+    if (name == JS_ATOM_arguments && !s->cur_func->arguments_allowed)
+        return js_parse_error(s, "'arguments' identifier is not allowed in class initializers");
+    return 0;
+}
+
 static inline int get_prev_opcode(JSFunctionDef *fd) {
     if (fd->last_opcode_pos < 0 || dbuf_error(&fd->byte_code))
         return OP_invalid;
@@ -1873,6 +1880,8 @@ static __exception int js_parse_object_literal(JSParseState *s)
 
         if (prop_type == PROP_TYPE_VAR) {
             /* shortcut for x: x */
+            if (js_parse_check_identifier_reference(s, name))
+                goto fail;
             emit_op(s, OP_scope_get_var);
             emit_atom(s, name);
             emit_u16(s, s->cur_func->scope_level);
@@ -3944,11 +3953,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
                     goto do_get_var;
                 }
             } else {
-                if (s->token.u.ident.atom == JS_ATOM_arguments &&
-                    !s->cur_func->arguments_allowed) {
-                    js_parse_error(s, "'arguments' identifier is not allowed in class field initializer");
+                if (js_parse_check_identifier_reference(s, s->token.u.ident.atom))
                     return -1;
-                }
                 name = JS_DupAtom(s->ctx, s->token.u.ident.atom);
                 if (next_token(s)) {
                     JS_FreeAtom(s->ctx, name);
