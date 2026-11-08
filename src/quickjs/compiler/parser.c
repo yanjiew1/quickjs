@@ -3189,7 +3189,16 @@ static int js_unsupported_keyword(JSParseState *s, JSAtom atom)
                           JS_AtomGetStrRT(s->ctx->rt, buf, sizeof(buf), atom));
 }
 
-static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
+/* Storage tokens do not determine binding-name rules: formals and catch
+   patterns may use lexical storage without being let declarations. */
+typedef enum {
+    JS_BINDING_DECLARATION,
+    JS_BINDING_PARAMETER,
+    JS_BINDING_CATCH,
+} JSBindingContext;
+
+static __exception int js_define_var(JSParseState *s, JSAtom name, int tok,
+                                    JSBindingContext binding_context)
 {
     JSFunctionDef *fd = s->cur_func;
     JSVarDefEnum var_def_type;
@@ -3201,7 +3210,7 @@ static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
     &&  (fd->js_mode & JS_MODE_STRICT)) {
         return js_parse_error(s, "invalid variable name in strict mode");
     }
-    if (name == JS_ATOM_let
+    if (binding_context == JS_BINDING_DECLARATION && name == JS_ATOM_let
     &&  (tok == TOK_LET || tok == TOK_CONST)) {
         return js_parse_error(s, "invalid lexical variable name");
     }
@@ -3290,7 +3299,8 @@ static BOOL need_var_reference(JSParseState *s, int tok)
     return TRUE;
 }
 
-static JSAtom js_parse_destructuring_var(JSParseState *s, int tok, int is_arg)
+static JSAtom js_parse_destructuring_var(JSParseState *s,
+                                        JSBindingContext binding_context)
 {
     JSAtom name;
 
@@ -3301,7 +3311,8 @@ static JSAtom js_parse_destructuring_var(JSParseState *s, int tok, int is_arg)
         return JS_ATOM_NULL;
     }
     name = JS_DupAtom(s->ctx, s->token.u.ident.atom);
-    if (is_arg && js_parse_check_duplicate_parameter(s, name))
+    if (binding_context == JS_BINDING_PARAMETER &&
+        js_parse_check_duplicate_parameter(s, name))
         goto fail;
     if (next_token(s))
         goto fail;
@@ -3314,7 +3325,8 @@ fail:
 
 /* Return -1 if error, 0 if no initializer, 1 if an initializer is
    present at the top level. */
-static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
+static int js_parse_destructuring_element(JSParseState *s, int tok,
+                                        JSBindingContext binding_context,
                                         int hasval, int has_ellipsis,
                                         BOOL allow_initializer, BOOL export_flag)
 {
@@ -3369,7 +3381,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                 if (next_token(s))
                     return -1;
                 if (tok) {
-                    var_name = js_parse_destructuring_var(s, tok, is_arg);
+                    var_name = js_parse_destructuring_var(s, binding_context);
                     if (var_name == JS_ATOM_NULL)
                         return -1;
                     if (need_var_reference(s, tok)) {
@@ -3442,7 +3454,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                         emit_op(s, OP_get_field2);
                         emit_u32(s, prop_name);
                     }
-                    if (js_parse_destructuring_element(s, tok, is_arg, TRUE, -1, TRUE, export_flag) < 0)
+                    if (js_parse_destructuring_element(s, tok, binding_context,
+                                                      TRUE, -1, TRUE, export_flag) < 0)
                         return -1;
                     if (s->token.val == '}')
                         break;
@@ -3475,7 +3488,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                     emit_op(s, OP_dup);
                 }
                 if (tok) {
-                    var_name = js_parse_destructuring_var(s, tok, is_arg);
+                    var_name = js_parse_destructuring_var(s, binding_context);
                     if (var_name == JS_ATOM_NULL)
                         goto prop_error;
                     if (need_var_reference(s, tok)) {
@@ -3555,7 +3568,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                 }
             } else {
                 /* prop_type = PROP_TYPE_VAR, cannot be a computed property */
-                if (is_arg && js_parse_check_duplicate_parameter(s, prop_name))
+                if (binding_context == JS_BINDING_PARAMETER &&
+                    js_parse_check_duplicate_parameter(s, prop_name))
                     goto prop_error;
                 if ((s->cur_func->js_mode & JS_MODE_STRICT) &&
                     (prop_name == JS_ATOM_eval || prop_name == JS_ATOM_arguments)) {
@@ -3593,7 +3607,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
             }
         set_val:
             if (tok) {
-                if (js_define_var(s, var_name, tok))
+                if (js_define_var(s, var_name, tok, binding_context))
                     goto var_error;
                 if (export_flag) {
                     if (!add_export_entry(s, s->cur_func->module, var_name, var_name,
@@ -3679,15 +3693,17 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                     emit_u8(s, 0);
                     emit_op(s, OP_drop);
                 }
-                if (js_parse_destructuring_element(s, tok, is_arg, TRUE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, export_flag) < 0)
+                if (js_parse_destructuring_element(s, tok, binding_context, TRUE,
+                                                  skip_bits & SKIP_HAS_ELLIPSIS,
+                                                  TRUE, export_flag) < 0)
                     return -1;
             } else {
                 var_name = JS_ATOM_NULL;
                 if (tok) {
-                    var_name = js_parse_destructuring_var(s, tok, is_arg);
+                    var_name = js_parse_destructuring_var(s, binding_context);
                     if (var_name == JS_ATOM_NULL)
                         goto var_error;
-                    if (js_define_var(s, var_name, tok))
+                    if (js_define_var(s, var_name, tok, binding_context))
                         goto var_error;
                     if (export_flag &&
                         !add_export_entry(s, s->cur_func->module,
@@ -5192,7 +5208,9 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         if (tok == -1)
             return -1;
         if (tok == '=') {
-            if (js_parse_destructuring_element(s, 0, 0, FALSE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, FALSE) < 0)
+            if (js_parse_destructuring_element(s, 0, JS_BINDING_DECLARATION, FALSE,
+                                              skip_bits & SKIP_HAS_ELLIPSIS,
+                                              TRUE, FALSE) < 0)
                 return -1;
             return 0;
         }
@@ -5952,7 +5970,7 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             }
             if (next_token(s))
                 goto var_error;
-            if (js_define_var(s, name, tok))
+            if (js_define_var(s, name, tok, JS_BINDING_DECLARATION))
                 goto var_error;
             if (export_flag) {
                 if (!add_export_entry(s, s->cur_func->module, name, name,
@@ -5988,7 +6006,9 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             }
             if (tok1 == '=') {
                 emit_op(s, OP_undefined);
-                if (js_parse_destructuring_element(s, tok, 0, TRUE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, export_flag) < 0)
+                if (js_parse_destructuring_element(s, tok, JS_BINDING_DECLARATION,
+                                                  TRUE, skip_bits & SKIP_HAS_ELLIPSIS,
+                                                  TRUE, export_flag) < 0)
                     return -1;
             } else {
                 return js_parse_error(s, "variable name expected");
@@ -6195,7 +6215,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
 
         if (!(s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved)) {
             if (!is_using && (s->token.val == '[' || s->token.val == '{')) {
-                if (js_parse_destructuring_element(s, tok, 0, TRUE, -1, FALSE, FALSE) < 0)
+                if (js_parse_destructuring_element(s, tok, JS_BINDING_DECLARATION,
+                                                  TRUE, -1, FALSE, FALSE) < 0)
                     return -1;
                 has_destructuring = TRUE;
             } else {
@@ -6210,7 +6231,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
-            if (js_define_var(s, var_name, tok)) {
+            if (js_define_var(s, var_name, tok, JS_BINDING_DECLARATION)) {
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
@@ -6234,7 +6255,9 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 return -1;
         }
         if (tok1 == TOK_IN || tok1 == TOK_OF) {
-            if (js_parse_destructuring_element(s, 0, 0, TRUE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, FALSE) < 0)
+            if (js_parse_destructuring_element(s, 0, JS_BINDING_DECLARATION, TRUE,
+                                              skip_bits & SKIP_HAS_ELLIPSIS,
+                                              TRUE, FALSE) < 0)
                 return -1;
         } else {
             int lvalue_label;
@@ -7056,8 +7079,11 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
                             emit_op(s, OP_put_loc);
                             emit_u16(s, catch_value_idx);
                             catch_has_handler = TRUE;
-                            /* XXX: TOK_LET is not completely correct */
-                            if (js_parse_destructuring_element(s, TOK_LET, 0, TRUE, -1, TRUE, FALSE) < 0)
+                            /* Catch patterns need lexical initialization but
+                               follow catch, rather than declaration, name rules. */
+                            if (js_parse_destructuring_element(s, TOK_LET,
+                                                              JS_BINDING_CATCH,
+                                                              TRUE, -1, TRUE, FALSE) < 0)
                                 goto fail;
                         } else {
                             js_parse_error(s, "identifier expected");
@@ -7066,7 +7092,7 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
                     } else {
                         name = JS_DupAtom(ctx, s->token.u.ident.atom);
                         if (next_token(s)
-                        ||  js_define_var(s, name, TOK_CATCH) < 0) {
+                        ||  js_define_var(s, name, TOK_CATCH, JS_BINDING_CATCH) < 0) {
                             JS_FreeAtom(ctx, name);
                             goto fail;
                         }
@@ -8195,7 +8221,9 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                     emit_op(s, OP_get_arg);
                     emit_u16(s, idx);
                 }
-                has_initializer = js_parse_destructuring_element(s, fd->has_parameter_expressions ? TOK_LET : TOK_VAR, 1, TRUE, -1, TRUE, FALSE);
+                has_initializer = js_parse_destructuring_element(s,
+                    fd->has_parameter_expressions ? TOK_LET : TOK_VAR,
+                    JS_BINDING_PARAMETER, TRUE, -1, TRUE, FALSE);
                 if (has_initializer < 0)
                     goto fail;
                 if (has_initializer)
