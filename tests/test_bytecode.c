@@ -814,6 +814,9 @@ static void test_compile_oom(void)
     static const char *const sources[] = {
         "/a/;",
         "switch (0) { default: break; case 1: break; }",
+        "while (true) { break; }",
+        "outer: do { continue outer; } while (false);",
+        "outer: { break outer; }",
         "class C { #x; m() { return this.#x; } }",
         "(function ({}) {})",
         "(function ([]) {})",
