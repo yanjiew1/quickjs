@@ -6960,6 +6960,8 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             if (push_scope(s) < 0)
                 goto fail;
             label_break = new_label(s);
+            if (label_break < 0)
+                goto fail;
             push_break_entry(s->cur_func, &break_entry,
                              label_name, label_break, -1, 1);
 
@@ -6969,6 +6971,11 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             default_label_pos = -1;
             label_case = -1;
             while (s->token.val != '}') {
+                /* Failed label emission must not become a source syntax error. */
+                if (dbuf_error(&s->cur_func->byte_code)) {
+                    JS_ThrowOutOfMemory(ctx);
+                    goto fail;
+                }
                 if (s->token.val == TOK_CASE) {
                     label1 = -1;
                     if (label_case >= 0) {
@@ -7028,6 +7035,10 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             }
             if (js_parse_expect(s, '}'))
                 goto fail;
+            if (dbuf_error(&s->cur_func->byte_code)) {
+                JS_ThrowOutOfMemory(ctx);
+                goto fail;
+            }
             if (default_label_pos >= 0) {
                 /* Ugly patch for the `default` label, shameful and risky */
                 put_u32(s->cur_func->byte_code.buf + default_label_pos,
