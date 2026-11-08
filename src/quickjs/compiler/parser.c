@@ -1138,8 +1138,7 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
             return js_parse_error(s, "expected '}' after template expression");
         }
         free_token(s, &s->token);
-        /* Resume TOK_TEMPLATE parsing (s->token.line_num and
-         * s->token.ptr are OK) */
+        /* Keep the closing brace's token.ptr when resuming the template. */
         s->got_lf = FALSE;
         if (js_parse_template_part(s, s->buf_ptr))
             return -1;
@@ -1672,8 +1671,7 @@ static int js_parse_scan_delimited(JSParseState *s, int *pbits, BOOL no_line_ter
             if (c == SKIP_TEMPLATE) {
                 /* continue the parsing of the template */
                 free_token(s, &s->token);
-                /* Resume TOK_TEMPLATE parsing (s->token.line_num and
-                 * s->token.ptr are OK) */
+                /* Keep the closing brace's token.ptr when resuming the template. */
                 s->got_lf = FALSE;
                 if (js_parse_template_part(s, s->buf_ptr))
                     goto scan_error;
