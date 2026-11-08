@@ -1451,7 +1451,19 @@ static int js_parse_scan_delimited(JSParseState *s, int *pbits, BOOL no_line_ter
                  (s->token.val == ':' || (line_boundary && new_statement)))))
             level--;
         top = &state[level - 1];
+        /* A new field or method can end the previous initializer by ASI.
+           Restore its outer context before classifying the next member. */
+        if ((top->kind == SKIP_CLASS_BODY ||
+             top->kind == SKIP_CLASS_DECL_BODY) && s->got_lf &&
+            !is_regexp_allowed(last_tok) && member_name)
+            top->flags &= ~SKIP_MEMBER_VALUE;
         flags = top->flags & SKIP_FUNC_MASK;
+        /* Field initializers run in an ordinary synthetic function. Keep
+           the stored outer flags for subsequent computed property names. */
+        if ((top->kind == SKIP_CLASS_BODY ||
+             top->kind == SKIP_CLASS_DECL_BODY) &&
+            (top->flags & SKIP_MEMBER_VALUE))
+            flags = 0;
 
         /* The full lexer normally uses cur_func. A nested function seen
            only by lookahead needs its own Await/Yield grammar parameters. */
@@ -1471,13 +1483,6 @@ static int js_parse_scan_delimited(JSParseState *s, int *pbits, BOOL no_line_ter
             last_tok = ';';
         async_parameter = last_is_async && !s->got_lf &&
             s->token.val == TOK_IDENT;
-
-        /* A new field or method after a completed initializer can insert a
-           semicolon. A following '[' or template may instead continue it. */
-        if ((top->kind == SKIP_CLASS_BODY ||
-             top->kind == SKIP_CLASS_DECL_BODY) && s->got_lf &&
-            !is_regexp_allowed(last_tok) && member_name)
-            top->flags &= ~SKIP_MEMBER_VALUE;
 
         /* Preserve async/generator prefixes through computed method names,
            but not through property values or class field initializers. */
