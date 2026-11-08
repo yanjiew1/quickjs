@@ -2858,33 +2858,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
                 return -1;
             if (js_parse_assign_expr(s))
                 return -1;
-#if 1
             emit_op(s, OP_append);
-#else
-            int label_next, label_done;
-            label_next = new_label(s);
-            label_done = new_label(s);
-            /* enumerate object */
-            emit_op(s, OP_for_of_start);
-            emit_op(s, OP_rot5l);
-            emit_op(s, OP_rot5l);
-            emit_label(s, label_next);
-            /* on stack: enum_rec array idx */
-            emit_op(s, OP_for_of_next);
-            emit_u8(s, 2);
-            emit_goto(s, OP_if_true, label_done);
-            /* append element */
-            /* enum_rec array idx val -> enum_rec array new_idx */
-            emit_op(s, OP_define_array_el);
-            emit_op(s, OP_inc);
-            emit_goto(s, OP_goto, label_next);
-            emit_label(s, label_done);
-            /* close enumeration */
-            emit_op(s, OP_drop); /* drop undef val */
-            emit_op(s, OP_nip1); /* drop enum_rec */
-            emit_op(s, OP_nip1);
-            emit_op(s, OP_nip1);
-#endif
         } else {
             need_length = TRUE;
             if (s->token.val != ',') {
@@ -4355,34 +4329,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
                             return -1;
                         if (js_parse_assign_expr(s))
                             return -1;
-#if 1
                         /* XXX: could pass is_last indicator? */
                         emit_op(s, OP_append);
-#else
-                        int label_next, label_done;
-                        label_next = new_label(s);
-                        label_done = new_label(s);
-                        /* push enumerate object below array/idx pair */
-                        emit_op(s, OP_for_of_start);
-                        emit_op(s, OP_rot5l);
-                        emit_op(s, OP_rot5l);
-                        emit_label(s, label_next);
-                        /* on stack: enum_rec array idx */
-                        emit_op(s, OP_for_of_next);
-                        emit_u8(s, 2);
-                        emit_goto(s, OP_if_true, label_done);
-                        /* append element */
-                        /* enum_rec array idx val -> enum_rec array new_idx */
-                        emit_op(s, OP_define_array_el);
-                        emit_op(s, OP_inc);
-                        emit_goto(s, OP_goto, label_next);
-                        emit_label(s, label_done);
-                        /* close enumeration, drop enum_rec and idx */
-                        emit_op(s, OP_drop); /* drop undef */
-                        emit_op(s, OP_nip1); /* drop enum_rec */
-                        emit_op(s, OP_nip1);
-                        emit_op(s, OP_nip1);
-#endif
                     } else {
                         if (js_parse_assign_expr(s))
                             return -1;
