@@ -373,6 +373,7 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
 {
     JSValue func_ret, ret2;
 
+ resume:
     func_ret = async_func_resume(ctx, s);
     if (s->is_completed) {
         if (JS_IsException(func_ret)) {
@@ -405,10 +406,10 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
                                      1, (JSValueConst *)&value, 0);
         JS_FreeValue(ctx, value);
         if (JS_IsException(promise))
-            goto fail;
+            goto resume_throw;
         if (js_async_function_resolve_create(ctx, s, resolving_funcs)) {
             JS_FreeValue(ctx, promise);
-            goto fail;
+            goto resume_throw;
         }
 
         /* Note: no need to create 'thrownawayCapability' as in
@@ -422,8 +423,14 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
         for(i = 0; i < 2; i++)
             JS_FreeValue(ctx, resolving_funcs[i]);
         if (res)
-            goto fail;
+            goto resume_throw;
     }
+    return;
+
+ resume_throw:
+    /* Await setup errors belong to the suspended async function. */
+    s->throw_flag = TRUE;
+    goto resume;
 }
 
 JSValue js_async_function_resolve_call(JSContext *ctx,
