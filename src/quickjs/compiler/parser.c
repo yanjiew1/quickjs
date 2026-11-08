@@ -7666,7 +7666,9 @@ static __exception int js_parse_export(JSParseState *s)
     case TOK_VAR:
     case TOK_LET:
     case TOK_CONST:
-        return js_parse_var(s, TRUE, tok, TRUE, -1);
+        if (js_parse_var(s, TRUE, tok, TRUE, -1))
+            return -1;
+        break;
     default:
         return js_parse_error(s, "invalid export syntax");
     }
