@@ -201,8 +201,9 @@ is needed when your code uses the @code{import} keyword or the
 find the name of the dynamically loaded modules.
 
 @item -M module_name[,cname]
-Add initialization code for an external C module. See the
-@code{c_module} example.
+Add initialization code for an external C module. See
+@file{examples/fib.c} and its @code{-M} invocation in
+@file{examples/meson.build}.
 
 @item -x
 Accepted for compatibility. Bytecode uses a fixed little-endian format, so
@@ -981,8 +982,9 @@ Examples are available in @file{src/quickjs-libc/std.c}.
 @subsection C Modules
 
 Native ES6 modules are supported and can be dynamically or statically
-linked. Look at the @file{test_bjson} and @file{bjson.so}
-examples. The standard library @file{src/quickjs-libc/std.c} is also a good example
+linked. Look at @file{tests/bjson.c} and @file{tests/test_bjson.js};
+the build creates their @file{bjson.so} module. The standard library
+@file{src/quickjs-libc/std.c} is also a good example
 of a native module.
 
 @subsection Memory handling
@@ -1288,11 +1290,11 @@ compiler.
 
 @code{qjsc} works by compiling scripts or modules and then serializing
 them to a binary format. A subset of this format (without functions or
-modules) can be used as binary JSON. The example @file{test_bjson.js}
+modules) can be used as binary JSON. The example @file{tests/test_bjson.js}
 shows how to use it.
 
 Warning: the binary JSON format may change without notice, so it
-should not be used to store persistent data. The @file{test_bjson.js}
+should not be used to store persistent data. The @file{tests/test_bjson.js}
 example is only used to test the binary object format functions.
 
 @section Runtime
