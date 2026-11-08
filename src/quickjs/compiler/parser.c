@@ -8118,7 +8118,6 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         *pfd = fd;
     s->cur_func = fd;
     fd->func_name = func_name;
-    /* XXX: test !fd->is_generator is always false */
     fd->has_prototype = (func_type == JS_PARSE_FUNC_STATEMENT ||
                          func_type == JS_PARSE_FUNC_VAR ||
                          func_type == JS_PARSE_FUNC_EXPR) &&
