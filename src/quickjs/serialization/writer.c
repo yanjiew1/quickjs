@@ -659,6 +659,10 @@ static int JS_WriteTypedArray(BCWriterState *s, JSValueConst obj)
     JSObject *p = JS_VALUE_GET_OBJ(obj);
     JSTypedArray *ta = p->u.typed_array;
 
+    if (typed_array_is_oob(p)) {
+        JS_ThrowTypeError(s->ctx, "cannot serialize an out-of-bounds typed array");
+        return -1;
+    }
     bc_put_u8(s, BC_TAG_TYPED_ARRAY);
     bc_put_u8(s, p->class_id - JS_CLASS_UINT8C_ARRAY);
     bc_put_leb128(s, ta->track_rab ? UINT32_MAX : p->u.array.count);
