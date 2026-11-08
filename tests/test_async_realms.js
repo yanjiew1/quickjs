@@ -159,6 +159,20 @@ export async function test_async_realms()
         check((await localNext.call(iterator)).value, 42,
               "borrowed async generator next uses its body realm");
 
+        const syncIterator = foreign.Function("return function*() { yield 1; }")()();
+        const syncNext = (function* () {})().next;
+        check(Object.getPrototypeOf(syncNext.call(syncIterator)),
+              foreign.Object.prototype, "yielded result uses the generator realm");
+        check(Object.getPrototypeOf(syncNext.call(syncIterator)),
+              Object.prototype, "completed result uses the caller realm");
+        const delegatedResult = { value: 9, done: false };
+        const delegate = { [Symbol.iterator]() {
+            return { next() { return delegatedResult; } };
+        } };
+        const delegating = foreign.Function("return function*(it) { yield* it; }")()(delegate);
+        check(syncNext.call(delegating), delegatedResult,
+              "yield* preserves the delegate result object");
+
         let resolve;
         const pending = new Promise(r => { resolve = r; });
         pending.constructor = foreign.Promise;
