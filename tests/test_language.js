@@ -101,6 +101,30 @@ function test_strict_directive_asi()
 
 test_strict_directive_asi();
 
+function test_destructured_parameter_redeclaration()
+{
+    for (const parameters of ["{a}", "[a]", "[a] = []", "...[a]",
+                              "{b: {a}}", "{[0]: a}"]) {
+        for (const declaration of ["let a;", "const a = 1;", "class a {}"])
+            for (const head of ["function f", "function* f", "async function f",
+                                "async function* f"]) {
+                assert_throws(SyntaxError, () =>
+                    Function(head + "(" + parameters + ") {" + declaration + "}"));
+            }
+        assert_throws(SyntaxError, () =>
+            Function("(" + parameters + ") => {let a;}"));
+        assert_throws(SyntaxError, () =>
+            Function("({m(" + parameters + ") {let a;}})"));
+
+        /* Body var declarations and a nested lexical scope may reuse names. */
+        Function("function f(" + parameters + ") {var a; {let a;}}");
+    }
+    Function("function f(a = class Inner {}) {let Inner;}");
+    Function("function f(a = 1) {let arguments;}");
+}
+
+test_destructured_parameter_redeclaration();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",
