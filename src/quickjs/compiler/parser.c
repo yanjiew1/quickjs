@@ -1260,8 +1260,11 @@ static int js_parse_get_pos(JSParseState *s, JSParsePos *sp)
 static __exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp)
 {
     s->buf_ptr = sp->ptr;
+    if (next_token(s))
+        return -1;
+    /* Tokenization starts at the token itself, after its leading trivia. */
     s->got_lf = sp->got_lf;
-    return next_token(s);
+    return 0;
 }
 
 /* return TRUE if a regexp literal is allowed after this token */
