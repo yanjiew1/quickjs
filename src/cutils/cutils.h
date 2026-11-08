@@ -368,6 +368,7 @@ static inline int dbuf_put_u32(DynBuf *s, uint32_t val)
     }
 }
 
+/* Format arguments must not point into s->buf, which may be reallocated. */
 int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
                                                       const char *fmt, ...);
 static inline void dbuf_free(DynBuf *s)
