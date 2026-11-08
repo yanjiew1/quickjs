@@ -4499,6 +4499,15 @@ function test_scope_limit()
 
 test_scope_limit();
 
+function test_destructured_argument_limit()
+{
+    /* Unnamed pattern parameters must obey the same 16-bit slot limit. */
+    assert_throws(InternalError, () =>
+        Function(Array(65535).fill("{}").join(","), ""));
+}
+
+test_destructured_argument_limit();
+
 // Negated Unicode sets use the static MayContainStrings property.
 for (const pattern of ["[^\\q{ab}--\\q{ab}]", "[^\\q{}--\\q{}]",
                        "[^\\q{ab}&&\\q{cd}]"]) {

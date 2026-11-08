@@ -807,6 +807,64 @@ static void test_module_invalid_table_counts(void)
     JS_FreeRuntime(rt);
 }
 
+/* Compilation can reject an allocation failure, or recover from an optional
+   shrinking realloc, but it must not return bytecode with a pending error. */
+static void test_compile_oom(void)
+{
+    static const char *const sources[] = {
+        "/a/;",
+        "(function ({}) {})",
+        "(function ([]) {})",
+        "(function ({x: {}}) {})",
+        "(function ({x = 1} = {}) { return x; })",
+    };
+    size_t i, step, calls;
+
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        calls = 0;
+        for (step = 0; step <= calls; step++) {
+            OOMTestAllocator allocator;
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSValue compiled;
+            void *padding;
+
+            assert(ctx);
+            padding = test_pool_padding(rt);
+            oom_test_begin(&allocator, step);
+            compiled = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                               "compiler-oom.js", JS_EVAL_FLAG_COMPILE_ONLY);
+            oom_test_end(&allocator);
+            if (!step) {
+                calls = allocator.calls;
+                assert(calls && calls < 256);
+            } else {
+                assert(allocator.failures == 1);
+            }
+            if (JS_IsException(compiled)) {
+                JSValue error = JS_GetException(ctx);
+                JSValue detail = JS_GetPropertyStr(ctx, error, "message");
+                const char *message = JS_ToCString(ctx, detail);
+
+                assert(step && JS_IsError(ctx, error) && message);
+                assert(!strcmp(message, "out of memory"));
+                JS_FreeCString(ctx, message);
+                JS_FreeValue(ctx, detail);
+                JS_FreeValue(ctx, error);
+                compiled = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                                   "compiler-oom.js", JS_EVAL_FLAG_COMPILE_ONLY);
+                assert(!JS_IsException(compiled));
+            }
+            assert(!JS_HasException(ctx));
+            JS_FreeValue(ctx, compiled);
+            test_pool_padding_free(rt, padding);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(!allocator.live);
+        }
+    }
+}
+
 static void test_module_read_oom(void)
 {
     static const char source[] =
@@ -1059,6 +1117,7 @@ int main(void)
     test_invalid_object_tag();
     test_rom_bytecode_endianness();
     test_module_read_oom();
+    test_compile_oom();
     test_failed_read_preserves_host_module();
     test_reference_read_oom(0);
     test_reference_read_oom(1);

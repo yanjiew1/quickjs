@@ -3345,6 +3345,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
 
     label_parse = new_label(s);
     label_assign = new_label(s);
+    if (label_parse < 0 || label_assign < 0)
+        return -1;
 
     start_addr = s->cur_func->byte_code.size;
     if (hasval) {
@@ -3798,6 +3800,11 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
             js_parse_error(s, "too complicated destructuring expression");
             return -1;
         }
+        /* Failed emission may leave no buffer to patch. */
+        if (dbuf_error(&s->cur_func->byte_code)) {
+            JS_ThrowOutOfMemory(s->ctx);
+            return -1;
+        }
         /* remove test and decrement label ref count */
         memset(s->cur_func->byte_code.buf + start_addr, OP_nop,
                assign_addr - start_addr);
@@ -3898,7 +3905,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
             /* the previous token is '/' or '/=', so no need to free */
             if (js_parse_regexp(s))
                 return -1;
-            ret = emit_push_const(s, s->token.u.regexp.body, 0);
+            if (emit_push_const(s, s->token.u.regexp.body, 0))
+                return -1;
             str = s->ctx->compile_regexp(s->ctx, s->token.u.regexp.body,
                                          s->token.u.regexp.flags);
             if (JS_IsException(str)) {
@@ -8218,6 +8226,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                 } else {
                     /* unnamed arg for destructuring */
                     idx = add_arg(ctx, fd, JS_ATOM_NULL);
+                    if (idx < 0)
+                        goto fail;
                     emit_op(s, OP_get_arg);
                     emit_u16(s, idx);
                 }
