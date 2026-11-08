@@ -965,7 +965,8 @@ static int match_identifier(const uint8_t *p, const char *s) {
    It recognizes a few punctuation tokens and contextual keyword boundaries
    for the parser, and import/export prefixes for JS_DetectModule().
    (*pp) is only set if TOK_IMPORT is returned for JS_DetectModule()
-   Whitespace and comments are skipped correctly.
+   Whitespace and comments follow the current Script/Module lexical goal.
+   at_line_start permits an HTML close comment before the first source token.
    Then the next token is analyzed, only for specific words.
    Return values:
    - '\n' if no_line_terminator and a line boundary is encountered
@@ -973,7 +974,8 @@ static int match_identifier(const uint8_t *p, const char *s) {
    - TOK_IDENT is returned for other identifiers and keywords
    - otherwise the next character or unicode codepoint is returned.
  */
-static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
+static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator,
+                             BOOL allow_html_comments, BOOL at_line_start)
 {
     const uint8_t *p;
     uint32_t c;
@@ -984,6 +986,7 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
         switch(c = *p++) {
         case '\r':
         case '\n':
+            at_line_start = TRUE;
             if (no_line_terminator)
                 return '\n';
             continue;
@@ -994,6 +997,7 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
             continue;
         case '/':
             if (*p == '/') {
+            skip_line_comment:
                 if (no_line_terminator)
                     return '\n';
                 while (*p && *p != '\r' && *p != '\n' &&
@@ -1004,11 +1008,13 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
             }
             if (*p == '*') {
                 while (*++p) {
-                    if ((*p == '\r' || *p == '\n') && no_line_terminator)
-                        return '\n';
-                    if (no_line_terminator && p[0] == 0xe2 && p[1] == 0x80 &&
-                        (p[2] == 0xa8 || p[2] == 0xa9))
-                        return '\n';
+                    if (*p == '\r' || *p == '\n' ||
+                        (p[0] == 0xe2 && p[1] == 0x80 &&
+                         (p[2] == 0xa8 || p[2] == 0xa9))) {
+                        if (no_line_terminator)
+                            return '\n';
+                        at_line_start = TRUE;
+                    }
                     if (*p == '*' && p[1] == '/') {
                         p += 2;
                         break;
@@ -1016,6 +1022,17 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
                 }
                 continue;
             }
+            break;
+        case '<':
+            if (allow_html_comments && p[0] == '!' &&
+                p[1] == '-' && p[2] == '-')
+                goto skip_line_comment;
+            break;
+        case '-':
+            /* Annex B permits a close comment only at a line boundary. */
+            if (allow_html_comments && at_line_start &&
+                p[0] == '-' && p[1] == '>')
+                goto skip_line_comment;
             break;
         case '=':
             if (*p == '>')
@@ -1050,8 +1067,11 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
         default:
             if (c >= 128) {
                 c = unicode_from_utf8(p - 1, UTF8_CHAR_LEN_MAX, &p);
-                if (no_line_terminator && (c == CP_PS || c == CP_LS))
-                    return '\n';
+                if (c == CP_PS || c == CP_LS) {
+                    if (no_line_terminator)
+                        return '\n';
+                    at_line_start = TRUE;
+                }
             }
             if (lre_is_space(c))
                 continue;
@@ -1066,7 +1086,7 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator)
 int peek_token(JSParseState *s, BOOL no_line_terminator)
 {
     const uint8_t *p = s->buf_ptr;
-    return simple_next_token(&p, no_line_terminator);
+    return simple_next_token(&p, no_line_terminator, s->allow_html_comments, FALSE);
 }
 
 void skip_shebang(const uint8_t **pp, const uint8_t *buf_end)
@@ -1111,9 +1131,9 @@ BOOL JS_DetectModule(const char *input, size_t input_len)
     int tok;
 
     skip_shebang(&p, p + input_len);
-    switch(simple_next_token(&p, FALSE)) {
+    switch(simple_next_token(&p, FALSE, TRUE, TRUE)) {
     case TOK_IMPORT:
-        tok = simple_next_token(&p, FALSE);
+        tok = simple_next_token(&p, FALSE, TRUE, FALSE);
         return (tok != '.' && tok != '(');
     case TOK_EXPORT:
         return TRUE;
