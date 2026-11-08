@@ -125,6 +125,24 @@ function test_destructured_parameter_redeclaration()
 
 test_destructured_parameter_redeclaration();
 
+function test_catch_binding_redeclaration()
+{
+    for (const parameter of ["a", "{a}", "[a]", "{b: {a}}", "[...a]"]) {
+        for (const declaration of ["let a;", "const a = 1;", "class a {}",
+                                   "function a() {}", "using a = null;"])
+            assert_throws(SyntaxError, () =>
+                Function("try {} catch (" + parameter + ") {" + declaration + "}"));
+        Function("try {} catch (" + parameter + ") {{let a;}}");
+        Function("try {} catch (" + parameter + ") {{function a() {}}}");
+    }
+    Function("try {} catch (a) {var a;}");
+    assert_throws(SyntaxError, () => Function("try {} catch ({a}) {var a;}"));
+    Function("try {} catch ({a}) {}");
+    Function("try {} catch {let a;}");
+}
+
+test_catch_binding_redeclaration();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",

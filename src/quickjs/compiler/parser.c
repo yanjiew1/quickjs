@@ -822,8 +822,6 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
                         goto redef_lex_error;
                     }
                     return idx;
-                } else if (fd->vars[idx].var_kind == JS_VAR_CATCH && (fd->vars[idx].scope_level + 2) == fd->scope_level) {
-                    goto redef_lex_error;
                 }
             } else {
                 if (fd->scope_level == fd->body_scope) {
@@ -6988,6 +6986,8 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             }
 
             if (s->token.val == TOK_CATCH) {
+                int catch_body_scope, idx;
+
                 if (next_token(s))
                     goto fail;
 
@@ -7052,8 +7052,28 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
                     goto fail;
 
                 set_eval_ret_undefined(s);
+                catch_body_scope = s->cur_func->scope_count;
                 if (js_parse_block(s))
                     goto fail;
+
+                /* Catch bound names cannot occur among the direct body's
+                   lexical declarations. This includes destructuring leaves;
+                   extra nested blocks may still shadow them. */
+                if (catch_body_scope < s->cur_func->scope_count) {
+                    for (idx = s->cur_func->scopes[catch_body_scope].first;
+                         idx >= 0; idx = s->cur_func->vars[idx].scope_next) {
+                        JSVarDef *vd = &s->cur_func->vars[idx];
+
+                        if (vd->scope_level != catch_body_scope)
+                            break;
+                        if (vd->is_lexical &&
+                            find_var_in_scope(s->cur_func, vd->var_name,
+                                              catch_scope_start) >= 0) {
+                            js_parse_error(s, "invalid redefinition of catch binding");
+                            goto fail;
+                        }
+                    }
+                }
 
                 pop_break_entry(s->cur_func);
                 pop_scope(s);  /* catch block */
