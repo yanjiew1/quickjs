@@ -7932,10 +7932,9 @@ static int js_parse_function_check_names(JSParseState *s, JSFunctionDef *fd,
             }
         }
     }
-    /* check async_generator case */
+    /* Strict code, non-simple parameters, methods and arrows require unique names. */
     if ((fd->js_mode & JS_MODE_STRICT)
     ||  !fd->has_simple_parameter_list
-    ||  (fd->func_type == JS_PARSE_FUNC_METHOD && fd->func_kind == JS_FUNC_ASYNC)
     ||  fd->func_type == JS_PARSE_FUNC_ARROW
     ||  fd->func_type == JS_PARSE_FUNC_METHOD) {
         for (idx = 0; idx < fd->arg_count; idx++) {
