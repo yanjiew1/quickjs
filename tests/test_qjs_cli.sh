@@ -84,6 +84,19 @@ check_success qjs-cli-std-ok --std script.js
 check_success qjs-cli-file-meta-ok --std -m module.js
 # Canonical main metadata must still refer to module.js through this alias.
 check_success qjs-cli-file-meta-ok --std -m entry.js
+cp module.js 'module#% space.js'
+check_success qjs-cli-file-meta-ok --std -m 'module#% space.js'
+# These two characters are valid POSIX filename bytes but invalid in Windows
+# filenames (including when a Windows executable runs under Wine).
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) ;;
+    *)
+        if [ -z "$qjs_runner" ]; then
+            cp module.js 'module:question?.js'
+            check_success qjs-cli-file-meta-ok --std -m 'module:question?.js'
+        fi
+        ;;
+esac
 check_success qjs-cli-virtual-meta-ok --std -m -e '
 if (typeof std.sprintf !== "function" || typeof os.getcwd !== "function" ||
     import.meta.url !== "file://<cmdline>" || import.meta.main !== true)
