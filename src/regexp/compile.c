@@ -63,6 +63,12 @@ static inline int cr_union_interval(CharRange *cr, uint32_t c1, uint32_t c2)
 #define REGISTER_COUNT_MAX 255
 #define TMP_BUF_SIZE 128
 
+typedef struct REDisjunction {
+    struct REDisjunction *parent;
+    uint64_t prior[4];
+    uint64_t current[4];
+} REDisjunction;
+
 typedef struct {
     DynBuf byte_code;
     const uint8_t *buf_ptr;
@@ -74,7 +80,7 @@ typedef struct {
     BOOL ignore_case;
     BOOL multi_line;
     BOOL dotall;
-    uint8_t group_name_scope;
+    REDisjunction *disjunction;
     int capture_count;
     int total_capture_count; /* -1 = not computed yet */
     int has_named_captures; /* -1 = don't know, 0 = no, 1 = yes */
@@ -1791,11 +1797,19 @@ static int find_group_name(REParseState *s, const char *name, BOOL emit_group_in
     return n;
 }
 
-static BOOL is_duplicate_group_name(REParseState *s, const char *name, int scope)
+static BOOL is_duplicate_group_name(REParseState *s, const char *name)
 {
     const char *p, *buf_end;
     size_t len, name_len;
-    int scope1;
+    uint64_t prior[4] = { 0 };
+    REDisjunction *scope;
+    int capture_index = 1;
+
+    for (scope = s->disjunction; scope; scope = scope->parent) {
+        int i;
+        for (i = 0; i < 4; i++)
+            prior[i] |= scope->prior[i];
+    }
 
     p = (char *)s->group_names.buf;
     if (!p)
@@ -1805,11 +1819,12 @@ static BOOL is_duplicate_group_name(REParseState *s, const char *name, int scope
     while (p < buf_end) {
         len = strlen(p);
         if (len == name_len && memcmp(name, p, name_len) == 0) {
-            scope1 = (uint8_t)p[len + 1];
-            if (scope == scope1)
+            if (!(prior[capture_index >> 6] &
+                  (UINT64_C(1) << (capture_index & 63))))
                 return TRUE;
         }
         p += len + LRE_GROUP_NAME_TRAILER_LEN;
+        capture_index++;
     }
     return FALSE;
 }
@@ -1997,16 +2012,19 @@ static int re_parse_term(REParseState *s, BOOL is_backward_dir)
                                         &p)) {
                     return re_parse_error(s, "invalid group name");
                 }
-                /* poor's man method to test duplicate group
-                   names. */
-                /* XXX: this method does not catch all the errors*/
-                if (is_duplicate_group_name(s, s->u.tmp_buf, s->group_name_scope)) {
+                if (is_duplicate_group_name(s, s->u.tmp_buf)) {
                     return re_parse_error(s, "duplicate group name");
                 }
                 /* group name with a trailing zero */
                 dbuf_put(&s->group_names, (uint8_t *)s->u.tmp_buf,
                          strlen(s->u.tmp_buf) + 1);
-                dbuf_putc(&s->group_names, s->group_name_scope);
+                dbuf_putc(&s->group_names, 0);
+                {
+                    REDisjunction *scope;
+                    int index = s->capture_count;
+                    for (scope = s->disjunction; scope; scope = scope->parent)
+                        scope->current[index >> 6] |= UINT64_C(1) << (index & 63);
+                }
                 s->has_named_captures = 1;
                 goto parse_capture;
             } else {
@@ -2420,13 +2438,15 @@ static int re_parse_alternative(REParseState *s, BOOL is_backward_dir)
 static int re_parse_disjunction(REParseState *s, BOOL is_backward_dir)
 {
     int start, len, pos;
+    REDisjunction scope = { .parent = s->disjunction };
 
     if (lre_check_stack_overflow(s->opaque, 0))
         return re_parse_error(s, "stack overflow");
 
+    s->disjunction = &scope;
     start = s->byte_code.size;
     if (re_parse_alternative(s, is_backward_dir))
-        return -1;
+        goto fail;
     while (*s->buf_ptr == '|') {
         s->buf_ptr++;
 
@@ -2434,25 +2454,38 @@ static int re_parse_disjunction(REParseState *s, BOOL is_backward_dir)
 
         /* insert a split before the first alternative */
         if (dbuf_insert(&s->byte_code, start, 5)) {
-            return re_parse_out_of_memory(s);
+            re_parse_out_of_memory(s);
+            goto fail;
         }
         s->byte_code.buf[start] = REOP_split_next_first;
         put_u32(s->byte_code.buf + start + 1, len + 5);
 
         pos = re_emit_op_u32(s, REOP_goto, 0);
 
-        s->group_name_scope++;
+        {
+            int i;
+            for (i = 0; i < 4; i++) {
+                scope.prior[i] |= scope.current[i];
+                scope.current[i] = 0;
+            }
+        }
 
         if (re_parse_alternative(s, is_backward_dir))
-            return -1;
+            goto fail;
 
         /* patch the goto */
         if (dbuf_error(&s->byte_code))
-            return re_parse_out_of_memory(s);
+            goto oom;
         len = s->byte_code.size - (pos + 4);
         put_u32(s->byte_code.buf + pos, len);
     }
+    s->disjunction = scope.parent;
     return 0;
+ oom:
+    re_parse_out_of_memory(s);
+ fail:
+    s->disjunction = scope.parent;
+    return -1;
 }
 
 /* Allocate the registers as a stack. The control flow is recursive so
