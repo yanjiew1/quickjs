@@ -1013,7 +1013,6 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, resolving_funcs[1]);
     return result_promise;
  fail:
-    //JS_FreeValue(ctx, next_method); // why not???
     JS_FreeValue(ctx, result_promise);
     result_promise = JS_EXCEPTION;
     goto done;
