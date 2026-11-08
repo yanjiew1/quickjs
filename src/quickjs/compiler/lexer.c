@@ -198,8 +198,6 @@ __exception int js_parse_string(JSParseState *s, int sep,
         if (c == '\\') {
             p_escape = p - 1;
             c = *p;
-            /* XXX: need a specific JSON case to avoid
-               accepting invalid escapes */
             switch(c) {
             case '\0':
                 if (p >= s->buf_end)
@@ -964,12 +962,13 @@ static int match_identifier(const uint8_t *p, const char *s) {
 }
 
 /* simple_next_token() is used to check for the next token in simple cases.
-   It is only used for ':' and '=>', 'let' or 'function' look-ahead.
+   It recognizes a few punctuation tokens and contextual keyword boundaries
+   for the parser, and import/export prefixes for JS_DetectModule().
    (*pp) is only set if TOK_IMPORT is returned for JS_DetectModule()
    Whitespace and comments are skipped correctly.
    Then the next token is analyzed, only for specific words.
    Return values:
-   - '\n' if !no_line_terminator
+   - '\n' if no_line_terminator and a line boundary is encountered
    - TOK_ARROW, TOK_IN, TOK_IMPORT, TOK_OF, TOK_EXPORT, TOK_FUNCTION
    - TOK_IDENT is returned for other identifiers and keywords
    - otherwise the next character or unicode codepoint is returned.
