@@ -59,6 +59,23 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_array_literal_separators()
+{
+    /* Holes and the large-array path still require commas between values. */
+    for (const literal of ["[,1 2]", "[1,,true false]", "[,1 ...[]]",
+                           "[" + "0,".repeat(32) + "1 2]"])
+        assert_throws(SyntaxError, () => Function("return " + literal));
+
+    const sparse = [,1,,2,];
+    assert(sparse.length, 4);
+    assert(0 in sparse, false);
+    assert(2 in sparse, false);
+    assert(sparse[3], 2);
+    assert(Function("return [" + "0,".repeat(32) + "1,]")().length, 33);
+}
+
+test_array_literal_separators();
+
 function test_catch_pattern_initializers()
 {
     /* CatchParameter has no outer Initializer; nested binding defaults remain valid. */
