@@ -756,13 +756,13 @@ static JSValue js_os_realpath(JSContext *ctx, JSValueConst this_val,
     if (!path)
         return JS_EXCEPTION;
     res = realpath(path, buf);
-    JS_FreeCString(ctx, path);
     if (!res) {
         buf[0] = '\0';
         err = errno;
     } else {
         err = 0;
     }
+    JS_FreeCString(ctx, path);
     return make_string_error(ctx, buf, err);
 }
 
