@@ -30,6 +30,7 @@
 #include "oom-allocator.h"
 #include "pool-padding.h"
 #include "../src/quickjs/internal/bytecode.h"
+#include "../src/quickjs/internal/bytecode-format.h"
 #include "../src/quickjs/internal/function.h"
 #include "../src/quickjs/internal/module.h"
 #include "../src/quickjs/internal/string.h"
@@ -1140,8 +1141,33 @@ static void test_empty_read_buffer(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_overflowing_object_atom_count(void)
+{
+    static const uint8_t input[] = {
+        BC_VERSION, 0x80, 0x80, 0x80, 0x80, 0x10, BC_TAG_NULL,
+    };
+    static const uint8_t max_value[] = { 0xff, 0xff, 0xff, 0xff, 0x0f };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue result;
+    uint32_t value;
+
+    assert(get_leb128(&value, max_value, max_value + sizeof(max_value)) == 5);
+    assert(value == UINT32_MAX);
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    /* The atom count is 2^32, which cannot fit in the encoded uint32_t. */
+    result = JS_ReadObject(ctx, input, sizeof(input), 0);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_overflowing_object_atom_count();
     test_empty_read_buffer();
     test_invalid_object_tag();
     test_rom_bytecode_endianness();

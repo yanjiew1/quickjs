@@ -165,6 +165,9 @@ int get_leb128(uint32_t *pval, const uint8_t *buf,
         if (unlikely(ptr >= buf_end))
             break;
         a = *ptr++;
+        /* The fifth byte has room for only four payload bits. */
+        if (unlikely(i == 4 && (a & 0xf0)))
+            break;
         v |= (a & 0x7f) << (i * 7);
         if (!(a & 0x80)) {
             *pval = v;
