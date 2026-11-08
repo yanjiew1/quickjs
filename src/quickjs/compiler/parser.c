@@ -6058,33 +6058,20 @@ static int is_let(JSParseState *s, int decl_mask)
     if (token_is_pseudo_keyword(s, JS_ATOM_let)) {
         JSParseBookmark pos;
         js_parse_save_bookmark(s, &pos);
-        for (;;) {
-            if (next_token(s)) {
-                res = -1;
-                break;
-            }
-            if (s->token.val == '[') {
-                /* let [ is a syntax restriction:
-                   it never introduces an ExpressionStatement */
+        if (next_token(s)) {
+            res = -1;
+        } else if (s->token.val == '[') {
+            /* let [ is a syntax restriction: it never starts an expression. */
+            res = TRUE;
+        } else if (s->token.val == '{' ||
+                   (s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved) ||
+                   s->token.val == TOK_LET || s->token.val == TOK_YIELD ||
+                   s->token.val == TOK_AWAIT) {
+            /* Check for possible ASI if not scanning for Declaration. */
+            /* XXX: should also check that `{` introduces a BindingPattern,
+               but Firefox does not and rejects eval("let=1;let\n{if(1)2;}") */
+            if (!s->got_lf || (decl_mask & DECL_MASK_OTHER))
                 res = TRUE;
-                break;
-            }
-            if (s->token.val == '{' ||
-                (s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved) ||
-                s->token.val == TOK_LET ||
-                s->token.val == TOK_YIELD ||
-                s->token.val == TOK_AWAIT) {
-                /* Check for possible ASI if not scanning for Declaration */
-                /* XXX: should also check that `{` introduces a BindingPattern,
-                   but Firefox does not and rejects eval("let=1;let\n{if(1)2;}") */
-                if (!s->got_lf ||
-                    (decl_mask & DECL_MASK_OTHER)) {
-                    res = TRUE;
-                    break;
-                }
-                break;
-            }
-            break;
         }
         if (js_parse_restore_bookmark(s, &pos)) {
             res = -1;
