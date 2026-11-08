@@ -107,6 +107,25 @@ function test_class_shorthand_arguments()
 
 test_class_shorthand_arguments();
 
+function test_sloppy_destructured_let_parameter()
+{
+    for (const parameters of ["{let = 1}", "[let] = [1]", "{let} = {let: 1}",
+                              '{["x"]: let} = {x: 1}',
+                              "{x: {let}} = {x: {let: 1}}", "{let}, x = 1"]) {
+        for (const kind of ["function", "function*", "async function", "async function*"])
+            Function("return " + kind + " (" + parameters + ") {return let;}");
+        Function("return (" + parameters + ") => let;");
+        Function("return async (" + parameters + ") => let;");
+        assert_throws(SyntaxError, () => Function(
+            '"use strict"; return function (' + parameters + ") {return let;}"));
+    }
+    assert(Function("return function ({let = 1}) {return let;}")()({}), 1);
+    assert(Function("return function ([let] = [2]) {return let;}")()(), 2);
+    assert_throws(SyntaxError, () => Function("let {let = 1} = {};"));
+}
+
+test_sloppy_destructured_let_parameter();
+
 function test_arrow_lookahead_asi_modes()
 {
     const wrap = body => "let target; [{target = " + body +

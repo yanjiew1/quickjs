@@ -3189,7 +3189,8 @@ static int js_unsupported_keyword(JSParseState *s, JSAtom atom)
                           JS_AtomGetStrRT(s->ctx->rt, buf, sizeof(buf), atom));
 }
 
-static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
+static __exception int js_define_var(JSParseState *s, JSAtom name, int tok,
+                                    BOOL is_arg)
 {
     JSFunctionDef *fd = s->cur_func;
     JSVarDefEnum var_def_type;
@@ -3201,7 +3202,9 @@ static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
     &&  (fd->js_mode & JS_MODE_STRICT)) {
         return js_parse_error(s, "invalid variable name in strict mode");
     }
-    if (name == JS_ATOM_let
+    /* Parameter expressions need lexical storage, but formal bindings are
+       not let declarations and may use the name let in sloppy code. */
+    if (!is_arg && name == JS_ATOM_let
     &&  (tok == TOK_LET || tok == TOK_CONST)) {
         return js_parse_error(s, "invalid lexical variable name");
     }
@@ -3593,7 +3596,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
             }
         set_val:
             if (tok) {
-                if (js_define_var(s, var_name, tok))
+                if (js_define_var(s, var_name, tok, is_arg))
                     goto var_error;
                 if (export_flag) {
                     if (!add_export_entry(s, s->cur_func->module, var_name, var_name,
@@ -3687,7 +3690,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                     var_name = js_parse_destructuring_var(s, tok, is_arg);
                     if (var_name == JS_ATOM_NULL)
                         goto var_error;
-                    if (js_define_var(s, var_name, tok))
+                    if (js_define_var(s, var_name, tok, is_arg))
                         goto var_error;
                     if (export_flag &&
                         !add_export_entry(s, s->cur_func->module,
@@ -5952,7 +5955,7 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             }
             if (next_token(s))
                 goto var_error;
-            if (js_define_var(s, name, tok))
+            if (js_define_var(s, name, tok, FALSE))
                 goto var_error;
             if (export_flag) {
                 if (!add_export_entry(s, s->cur_func->module, name, name,
@@ -6210,7 +6213,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
-            if (js_define_var(s, var_name, tok)) {
+            if (js_define_var(s, var_name, tok, FALSE)) {
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
@@ -7066,7 +7069,7 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
                     } else {
                         name = JS_DupAtom(ctx, s->token.u.ident.atom);
                         if (next_token(s)
-                        ||  js_define_var(s, name, TOK_CATCH) < 0) {
+                        ||  js_define_var(s, name, TOK_CATCH, FALSE) < 0) {
                             JS_FreeAtom(ctx, name);
                             goto fail;
                         }
