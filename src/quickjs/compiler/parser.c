@@ -120,6 +120,30 @@ static int js_parse_expect_semi(JSParseState *s)
     return next_token(s);
 }
 
+/* Tokens that cannot continue a completed expression across a newline.
+   Calls, computed access, tagged templates and binary operators can still
+   continue it; ++ and -- instead start a new prefix expression after LF. */
+static BOOL js_parse_is_asi_boundary(int tok)
+{
+    if (tok >= TOK_FIRST_KEYWORD && tok <= TOK_LAST_KEYWORD)
+        return tok != TOK_IN && tok != TOK_INSTANCEOF;
+    switch (tok) {
+    case '{':
+    case '!':
+    case '~':
+    case TOK_IDENT:
+    case TOK_PRIVATE_NAME:
+    case TOK_NUMBER:
+    case TOK_STRING:
+    case TOK_REGEXP:
+    case TOK_INC:
+    case TOK_DEC:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 static int js_parse_error_reserved_identifier(JSParseState *s)
 {
     char buf1[ATOM_GET_STR_BUF_SIZE];
@@ -1377,9 +1401,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
         JSParseSkipState *top;
         BOOL statement_end = FALSE, arrow_body_end = FALSE;
         BOOL async_paren_end = FALSE, async_parameter;
-        BOOL new_statement = s->token.val == '{' ||
-            s->token.val == TOK_FUNCTION || s->token.val == TOK_CLASS ||
-            token_is_pseudo_keyword(s, JS_ATOM_async);
+        BOOL new_statement = s->got_lf && js_parse_is_asi_boundary(s->token.val);
         BOOL member_name = s->token.val == TOK_IDENT ||
             s->token.val == TOK_PRIVATE_NAME || s->token.val == TOK_STRING ||
             s->token.val == TOK_NUMBER ||
@@ -1387,19 +1409,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
              s->token.val <= TOK_LAST_KEYWORD &&
              s->token.val != TOK_IN && s->token.val != TOK_INSTANCEOF);
         BOOL line_boundary = s->got_lf && !is_regexp_allowed(last_tok);
-        int flags, enclosing;
-
-        if (line_boundary && member_name) {
-            /* A completed field arrow may be followed by a new method or
-               field. '[' and templates can instead continue its body. */
-            enclosing = level - 1;
-            while (state[enclosing].kind == SKIP_ARROW_EXPR &&
-                   !state[enclosing].conditional_depth)
-                enclosing--;
-            if (state[enclosing].kind == SKIP_CLASS_BODY ||
-                state[enclosing].kind == SKIP_CLASS_DECL_BODY)
-                new_statement = TRUE;
-        }
+        int flags;
 
         /* A concise arrow body is an AssignmentExpression. Its enclosing
            delimiter or separator belongs to the surrounding lexical mode.
@@ -7845,56 +7855,8 @@ static __exception int js_parse_directives(JSParseState *s)
         case TOK_EOF:
             has_semi = TRUE;
             break;
-        case '{':
-        case '!':
-        case '~':
-        case TOK_NUMBER:
-        case TOK_STRING:
-        case TOK_TEMPLATE:
-        case TOK_IDENT:
-        case TOK_REGEXP:
-        case TOK_DEC:
-        case TOK_INC:
-        case TOK_NULL:
-        case TOK_FALSE:
-        case TOK_TRUE:
-        case TOK_IF:
-        case TOK_RETURN:
-        case TOK_VAR:
-        case TOK_THIS:
-        case TOK_DELETE:
-        case TOK_VOID:
-        case TOK_TYPEOF:
-        case TOK_NEW:
-        case TOK_DO:
-        case TOK_WHILE:
-        case TOK_FOR:
-        case TOK_SWITCH:
-        case TOK_THROW:
-        case TOK_TRY:
-        case TOK_FUNCTION:
-        case TOK_DEBUGGER:
-        case TOK_WITH:
-        case TOK_CLASS:
-        case TOK_CONST:
-        case TOK_ENUM:
-        case TOK_EXPORT:
-        case TOK_IMPORT:
-        case TOK_SUPER:
-        case TOK_INTERFACE:
-        case TOK_LET:
-        case TOK_PACKAGE:
-        case TOK_PRIVATE:
-        case TOK_PROTECTED:
-        case TOK_PUBLIC:
-        case TOK_STATIC:
-        case TOK_YIELD:
-        case TOK_AWAIT:
-            /* automatic insertion of ';' */
-            if (s->got_lf)
-                has_semi = TRUE;
-            break;
         default:
+            has_semi = s->got_lf && js_parse_is_asi_boundary(s->token.val);
             break;
         }
         if (!has_semi)

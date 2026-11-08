@@ -107,6 +107,32 @@ function test_class_shorthand_arguments()
 
 test_class_shorthand_arguments();
 
+function test_arrow_lookahead_asi_modes()
+{
+    const wrap = body => "let target; [{target = " + body +
+        "}] = [{}]; return target;";
+
+    for (const statement of ["void await / 2;", "!await / 2;", "~await / 2;",
+                             "typeof await / 2;", "await / 2;", "let y = await / 2;",
+                             "if (true) await / 2;", "while (false) await / 2;",
+                             "for (;false;) await / 2;", "return await / 2;",
+                             "++await;", "--await;"]) {
+        const fn = Function(wrap("function () { let await = 8; " +
+            "const f = async x => x\n" + statement + " return 42; }"))();
+        assert(fn(), statement.startsWith("return") ? 4 : 42);
+    }
+    /* The enclosing async mode must also be restored after a sync arrow. */
+    for (const statement of ["void await /}/;", "return await /}/.source;",
+                             "const y = await /}/;", "if (true) await /}/;"])
+        Function(wrap("async function () { const f = x => x\n" + statement + " }"));
+
+    for (const continuation of ["(await /}/)", "[await /}/]",
+                                "`text${await /}/}`", "+ await /}/"])
+        Function(wrap("function () { const f = async x => x\n" + continuation + "; }"));
+}
+
+test_arrow_lookahead_asi_modes();
+
 function test_hashbang_line_terminators()
 {
     for (const terminator of ["\n", "\r", "\u2028", "\u2029"]) {
@@ -142,6 +168,7 @@ function test_strict_directive_asi()
     /* A newline alone does not end a string expression that can continue. */
     Function('"use strict"\n+1; with ({}) {}');
     Function('"use strict"\n[0]; with ({}) {}');
+    assert_throws(TypeError, Function('"use strict"\n``; with ({}) {}'));
     Function('"use\\x20strict"\n{} with ({}) {}');
     assert_throws(SyntaxError, () =>
         Function("x = 1", '"use strict"\n{}'));
