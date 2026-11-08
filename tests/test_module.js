@@ -60,6 +60,62 @@ try {
 }
 assert(duplicateArrayExportError instanceof SyntaxError);
 
+async function test_import_redeclarations()
+{
+    const [directory, error] = os.getcwd();
+    assert(error, 0);
+    const prefix = directory + "/module-binding-" + os.getpid();
+    const dependency = prefix + "-dep.js";
+    let index = 0;
+
+    function write_module(path, source) {
+        const file = std.open(path, "w");
+        assert(file !== null);
+        file.puts(source);
+        file.close();
+    }
+
+    /* Generate short fixtures in the build directory so both source orders
+       and import forms can be checked without duplicating fixture files. */
+    write_module(dependency, "export default 1; export const value = 1;");
+    try {
+        for (const clause of ["bound", "{value as bound}", "* as bound"]) {
+            const head = "import " + clause + " from " + JSON.stringify(dependency) + ";";
+            for (const declaration of ["var bound;", "let bound;", "const bound = 1;",
+                                       "function bound() {}", "class bound {}",
+                                       "using bound = null;", "{var bound;}"]) {
+                for (const source of [head + declaration, declaration + head]) {
+                    const path = prefix + "-" + index++ + ".js";
+                    write_module(path, source);
+                    let failure;
+                    try {
+                        await import(path);
+                    } catch (e) {
+                        failure = e;
+                    } finally {
+                        assert(os.remove(path), 0);
+                    }
+                    assert(failure instanceof SyntaxError, true, source);
+                }
+            }
+            for (const declaration of ["{let bound;}", "function f() {var bound;}",
+                                       "for (let bound of []) {}"]) {
+                const path = prefix + "-" + index++ + ".js";
+                write_module(path, head + declaration);
+                try {
+                    await import(path);
+                } finally {
+                    assert(os.remove(path), 0);
+                }
+            }
+        }
+    } finally {
+        assert(os.remove(dependency), 0);
+    }
+}
+
+await test_import_redeclarations();
+
 assert(plainMetaModule.meta !== attributedMetaModule.meta);
 assert(plainMetaModule.readMeta() === plainMetaModule.meta);
 assert(attributedMetaModule.readMeta() === attributedMetaModule.meta);
