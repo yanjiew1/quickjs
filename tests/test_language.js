@@ -143,6 +143,31 @@ function test_catch_binding_redeclaration()
 
 test_catch_binding_redeclaration();
 
+function test_rest_pattern_parameters()
+{
+    const constructors = [Function,
+        Object.getPrototypeOf(function* () {}).constructor,
+        Object.getPrototypeOf(async function () {}).constructor,
+        Object.getPrototypeOf(async function* () {}).constructor];
+
+    for (const pattern of ["[a]", "{a}", "[]", "{}"]) {
+        for (const construct of constructors) {
+            assert(construct("..." + pattern, "").length, 0);
+            assert(construct("b, ..." + pattern, "").length, 1);
+            assert(construct("b = 0, ..." + pattern, "").length, 0);
+        }
+        assert(eval("(..." + pattern + ") => 0").length, 0);
+        assert(eval("async (..." + pattern + ") => 0").length, 0);
+        for (const source of ["({get value(...PATTERN) {}})",
+                              "class C {get value(...PATTERN) {}}",
+                              "class C {get #value(...PATTERN) {}}"])
+            assert_throws(SyntaxError, () =>
+                Function(source.replace("PATTERN", pattern)));
+    }
+}
+
+test_rest_pattern_parameters();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",
