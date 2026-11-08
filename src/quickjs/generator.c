@@ -373,6 +373,12 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
 {
     JSValue func_ret, ret2;
 
+    /* While suspended, the frame owns the function and its realm. The
+       completion path may free the frame, so derive the realm before it. */
+    if (!s->is_completed) {
+        JSObject *func = JS_VALUE_GET_OBJ(s->frame.cur_func);
+        ctx = func->u.func.function_bytecode->realm;
+    }
  resume:
     func_ret = async_func_resume(ctx, s);
     if (s->is_completed) {
@@ -466,6 +472,8 @@ JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
     JSValue promise;
     JSAsyncFunctionState *s;
 
+    ctx = JS_VALUE_GET_OBJ(func_obj)->u.func.function_bytecode->realm;
+
     s = async_func_init(ctx, func_obj, this_obj, argc, argv);
     if (!s)
         return JS_EXCEPTION;
@@ -481,6 +489,17 @@ JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
     async_func_free(ctx->rt, s);
 
     return promise;
+}
+
+JSContext *js_async_function_resolving_realm(JSValueConst val)
+{
+    JSAsyncFunctionState *s = JS_VALUE_GET_OBJ(val)->u.async_function_data;
+    JSObject *func;
+
+    if (!s || s->is_completed)
+        return NULL;
+    func = JS_VALUE_GET_OBJ(s->frame.cur_func);
+    return func->u.func.function_bytecode->realm;
 }
 
 /* AsyncGenerator */
@@ -808,7 +827,11 @@ static void js_async_generator_resume_next(JSContext *ctx,
                         s->state = JS_ASYNC_GENERATOR_STATE_SUSPENDED_YIELD;
                     break;
                 case FUNC_RET_AWAIT:
-                    ret = js_async_generator_await(ctx, s, value);
+                    {
+                        JSObject *func = JS_VALUE_GET_OBJ(s->func_state->frame.cur_func);
+                        JSContext *body_ctx = func->u.func.function_bytecode->realm;
+                        ret = js_async_generator_await(body_ctx, s, value);
+                    }
                     JS_FreeValue(ctx, value);
                     if (ret < 0) {
                         /* exception: throw it */

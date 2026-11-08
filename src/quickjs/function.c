@@ -431,6 +431,12 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
                 JSContext *realm = js_promise_resolving_function_realm(current);
                 return realm ? realm : ctx;
             }
+        case JS_CLASS_ASYNC_FUNCTION_RESOLVE:
+        case JS_CLASS_ASYNC_FUNCTION_REJECT:
+            {
+                JSContext *realm = js_async_function_resolving_realm(current);
+                return realm ? realm : ctx;
+            }
         case JS_CLASS_BYTECODE_FUNCTION:
         case JS_CLASS_GENERATOR_FUNCTION:
         case JS_CLASS_ASYNC_FUNCTION:

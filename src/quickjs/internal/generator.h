@@ -48,6 +48,7 @@ JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
 void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
 void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
                                     JS_MarkFunc *mark_func);
+JSContext *js_async_function_resolving_realm(JSValueConst val);
 JSValue js_async_function_resolve_call(JSContext *ctx,
                                        JSValueConst func_obj,
                                        JSValueConst this_obj, int argc,
