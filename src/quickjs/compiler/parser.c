@@ -7791,6 +7791,9 @@ static __exception int js_parse_directives(JSParseState *s)
         case TOK_EOF:
             has_semi = TRUE;
             break;
+        case '{':
+        case '!':
+        case '~':
         case TOK_NUMBER:
         case TOK_STRING:
         case TOK_TEMPLATE:
@@ -7806,6 +7809,7 @@ static __exception int js_parse_directives(JSParseState *s)
         case TOK_VAR:
         case TOK_THIS:
         case TOK_DELETE:
+        case TOK_VOID:
         case TOK_TYPEOF:
         case TOK_NEW:
         case TOK_DO:
@@ -7830,6 +7834,8 @@ static __exception int js_parse_directives(JSParseState *s)
         case TOK_PROTECTED:
         case TOK_PUBLIC:
         case TOK_STATIC:
+        case TOK_YIELD:
+        case TOK_AWAIT:
             /* automatic insertion of ';' */
             if (s->got_lf)
                 has_semi = TRUE;
