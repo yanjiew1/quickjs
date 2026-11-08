@@ -5871,6 +5871,49 @@ static __exception int js_parse_block(JSParseState *s)
     return 0;
 }
 
+/* The binding reference must be captured before evaluating the initializer,
+   including the legacy initializer allowed in a sloppy for-in var head. */
+static __exception int js_parse_var_initializer(JSParseState *s, JSAtom name,
+                                                int tok, int parse_flags,
+                                                int resource_operation)
+{
+    JSContext *ctx = s->ctx;
+    JSFunctionDef *fd = s->cur_func;
+    const uint8_t *source_ptr = s->token.ptr;
+
+    if (next_token(s))
+        return -1;
+    if (need_var_reference(s, tok)) {
+        int opcode, scope, label;
+        JSAtom ref_name;
+
+        emit_op(s, OP_scope_get_var);
+        emit_atom(s, name);
+        emit_u16(s, fd->scope_level);
+        if (get_lvalue(s, &opcode, &scope, &ref_name, &label, NULL, FALSE, '=') < 0)
+            return -1;
+        if (js_parse_assign_expr2(s, parse_flags)) {
+            JS_FreeAtom(ctx, ref_name);
+            return -1;
+        }
+        set_object_name(s, name);
+        emit_source_pos(s, source_ptr);
+        put_lvalue(s, opcode, scope, ref_name, label, PUT_LVALUE_NOKEEP, FALSE);
+    } else {
+        if (js_parse_assign_expr2(s, parse_flags))
+            return -1;
+        set_object_name(s, name);
+        emit_source_pos(s, source_ptr);
+        if (resource_operation >= 0)
+            emit_resource_registration(s, resource_operation);
+        emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
+                OP_scope_put_var_init : OP_scope_put_var);
+        emit_atom(s, name);
+        emit_u16(s, fd->scope_level);
+    }
+    return 0;
+}
+
 /* allowed parse_flags: PF_IN_ACCEPTED */
 static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
                                     BOOL export_flag, int resource_operation)
@@ -5900,39 +5943,9 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             }
 
             if (s->token.val == '=') {
-                const uint8_t *source_ptr = s->token.ptr;
-                if (next_token(s))
+                if (js_parse_var_initializer(s, name, tok, parse_flags,
+                                             resource_operation))
                     goto var_error;
-                if (need_var_reference(s, tok)) {
-                    /* Must make a reference for proper `with` semantics */
-                    int opcode, scope, label;
-                    JSAtom name1;
-
-                    emit_op(s, OP_scope_get_var);
-                    emit_atom(s, name);
-                    emit_u16(s, fd->scope_level);
-                    if (get_lvalue(s, &opcode, &scope, &name1, &label, NULL, FALSE, '=') < 0)
-                        goto var_error;
-                    if (js_parse_assign_expr2(s, parse_flags)) {
-                        JS_FreeAtom(ctx, name1);
-                        goto var_error;
-                    }
-                    set_object_name(s, name);
-                    emit_source_pos(s, source_ptr);
-                    put_lvalue(s, opcode, scope, name1, label,
-                               PUT_LVALUE_NOKEEP, FALSE);
-                } else {
-                    if (js_parse_assign_expr2(s, parse_flags))
-                        goto var_error;
-                    set_object_name(s, name);
-                    emit_source_pos(s, source_ptr);
-                    if (resource_operation >= 0)
-                        emit_resource_registration(s, resource_operation);
-                    emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
-                        OP_scope_put_var_init : OP_scope_put_var);
-                    emit_atom(s, name);
-                    emit_u16(s, fd->scope_level);
-                }
             } else {
                 if (tok == TOK_CONST) {
                     js_parse_error(s, "missing initializer for const variable");
@@ -6230,26 +6243,21 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     pos_expr = s->cur_func->byte_code.size;
     emit_label(s, label_expr);
     if (s->token.val == '=') {
-        const uint8_t *source_ptr = s->token.ptr;
         if (is_using) {
             JS_FreeAtom(ctx, var_name);
             return js_parse_error(s, "resource for-of binding cannot have an initializer");
         }
-        /* XXX: potential scoping issue if inside `with` statement */
         has_initializer = TRUE;
         /* parse and evaluate initializer prior to evaluating the
            object (only used with "for in" with a non lexical variable
            in non strict mode */
-        if (next_token(s) || js_parse_assign_expr2(s, 0)) {
-            JS_FreeAtom(ctx, var_name);
-            return -1;
-        }
-        set_object_name(s, var_name);
-        emit_source_pos(s, source_ptr);
         if (var_name != JS_ATOM_NULL) {
-            emit_op(s, OP_scope_put_var);
-            emit_atom(s, var_name);
-            emit_u16(s, fd->scope_level);
+            if (js_parse_var_initializer(s, var_name, tok, 0, -1)) {
+                JS_FreeAtom(ctx, var_name);
+                return -1;
+            }
+        } else if (next_token(s) || js_parse_assign_expr2(s, 0)) {
+            return -1;
         }
     }
     JS_FreeAtom(ctx, var_name);

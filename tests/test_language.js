@@ -188,6 +188,58 @@ function test_optional_private_delete()
 
 test_optional_private_delete();
 
+function test_for_in_initializer_reference()
+{
+    const object = {x: 1};
+
+    /* A with binding remains the destination after its property is deleted. */
+    function remove() {
+        var x = 0;
+        with (object) {
+            for (var x = (delete object.x, 2) in {}) {}
+        }
+        return x;
+    }
+    assert(remove(), 0);
+    assert(object.x, 2);
+
+    delete object.x;
+    function create() {
+        var x = 0;
+        with (object) {
+            for (var x = (object.x = 1, 2) in {}) {}
+        }
+        return x;
+    }
+    assert(create(), 2);
+    assert(object.x, 1);
+
+    let ran = false;
+    const proxy = new Proxy({}, {
+        has(target, key) {
+            if (key === "x")
+                throw 42;
+            return false;
+        }
+    });
+    function fail_before_initializer() {
+        with (proxy) {
+            for (var x = (ran = true, 1) in {}) {}
+        }
+    }
+    try {
+        fail_before_initializer();
+        assert(false);
+    } catch (error) {
+        assert(error, 42);
+    }
+    assert(ran, false);
+    for (var named = function () {} in {}) {}
+    assert(named.name, "named");
+}
+
+test_for_in_initializer_reference();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",
