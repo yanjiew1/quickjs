@@ -65,7 +65,7 @@ if get_option('examples')
     output: 'hello.c',
     command: [python, codegen, meson.project_source_root(), generator_qjsc, '@OUTPUT@'] + hello_flags,
   )
-  executable(
+  hello_exe = executable(
     'hello',
     hello_c,
     c_args: host_args,
@@ -92,7 +92,7 @@ if get_option('examples')
       'examples/hello_module.js',
     ],
   )
-  executable(
+  hello_module_exe = executable(
     'hello_module',
     hello_module_c,
     c_args: host_args,
@@ -117,11 +117,16 @@ if get_option('examples')
       'examples/test_fib.js',
     ],
   )
-  executable(
+  fib_exe = executable(
     'test_fib',
     [fib_c, 'fib.c'],
     c_args: host_args,
     include_directories: inc,
     dependencies: engine_dep,
   )
+  if get_option('tests')
+    test('example-hello', hello_exe, suite: ['repo', 'examples', 'integration'])
+    test('example-hello-module', hello_module_exe, suite: ['repo', 'examples', 'integration'])
+    test('example-fib', fib_exe, suite: ['repo', 'examples', 'integration'])
+  endif
 endif
