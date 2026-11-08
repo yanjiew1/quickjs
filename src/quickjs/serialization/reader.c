@@ -318,15 +318,14 @@ static JSString *JS_ReadString(BCReaderState *s)
         JS_ThrowInternalError(s->ctx, "string too long");
         return NULL;
     }
+    size = (size_t)len << is_wide_char;
+    if ((size_t)(s->buf_end - s->ptr) < size) {
+        bc_read_error_end(s);
+        return NULL;
+    }
     p = js_alloc_string(s->ctx, len, is_wide_char);
     if (!p) {
         s->error_state = -1;
-        return NULL;
-    }
-    size = (size_t)len << is_wide_char;
-    if ((s->buf_end - s->ptr) < size) {
-        bc_read_error_end(s);
-        js_free_string(s->ctx->rt, p);
         return NULL;
     }
     memcpy(p->u.str8, s->ptr, size);
@@ -454,6 +453,10 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
         /* zero case */
         bc_read_trace(s, "}\n");
         return __JS_NewShortBigInt(0);
+    }
+    if ((size_t)(s->buf_end - s->ptr) < len) {
+        bc_read_error_end(s);
+        goto fail;
     }
     p = js_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
     if (!p)

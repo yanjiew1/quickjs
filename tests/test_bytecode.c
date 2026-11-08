@@ -1165,8 +1165,52 @@ static void test_overflowing_object_atom_count(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_truncated_large_payload(void)
+{
+    static const uint8_t string_input[] = {
+        BC_VERSION, 0, BC_TAG_STRING, 0x80, 0x80, 0x08,
+    };
+    static const uint8_t bigint_input[] = {
+        BC_VERSION, 0, BC_TAG_BIG_INT, 0x80, 0x80, 0x04,
+    };
+    const struct {
+        const uint8_t *bytes;
+        size_t length;
+    } inputs[] = {
+        { string_input, sizeof(string_input) },
+        { bigint_input, sizeof(bigint_input) },
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSMemoryUsage usage;
+    size_t i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_ComputeMemoryUsage(rt, &usage);
+    JS_SetMemoryLimit(rt, usage.malloc_size + 4096);
+    for (i = 0; i < countof(inputs); i++) {
+        JSValue result, error, name;
+        const char *text;
+
+        result = JS_ReadObject(ctx, inputs[i].bytes, inputs[i].length, 0);
+        assert(JS_IsException(result));
+        error = JS_GetException(ctx);
+        name = JS_GetPropertyStr(ctx, error, "name");
+        text = JS_ToCString(ctx, name);
+        assert(text && !strcmp(text, "SyntaxError"));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, name);
+        JS_FreeValue(ctx, error);
+    }
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_truncated_large_payload();
     test_overflowing_object_atom_count();
     test_empty_read_buffer();
     test_invalid_object_tag();
