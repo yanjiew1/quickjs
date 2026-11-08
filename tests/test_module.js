@@ -91,6 +91,31 @@ async function test_import_redeclarations()
        and import forms can be checked without duplicating fixture files. */
     try {
         write_module(dependency, "export default 1; export const value = 1;");
+        for (const kind of ["var", "let", "const"]) {
+            for (const separator of [" ", "/* comment */", "; ", "\n", "/*\n*/"]) {
+                const path = prefix + "-" + index++ + ".js";
+                write_module(path, `export ${kind} x = 1${separator}export const y = 2;`);
+                let result, failure;
+                try {
+                    result = await import(path);
+                } catch (e) {
+                    failure = e;
+                } finally {
+                    assert(os.remove(path), 0);
+                }
+                if (separator === " " || separator === "/* comment */")
+                    assert(failure instanceof SyntaxError, true, kind);
+                else
+                    assert(result.y, 2, kind);
+            }
+            const path = prefix + "-" + index++ + ".js";
+            write_module(path, `export ${kind} x = 1`);
+            try {
+                assert((await import(path)).x, 1, kind);
+            } finally {
+                assert(os.remove(path), 0);
+            }
+        }
         for (const clause of ["bound", "{value as bound}", "* as bound"]) {
             const head = "import " + clause + " from " + JSON.stringify(dependency) + ";";
             for (const declaration of ["var bound;", "let bound;", "const bound = 1;",
