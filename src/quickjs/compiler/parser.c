@@ -4747,7 +4747,6 @@ static __exception int js_parse_expr_binary(JSParseState *s, int level,
         emit_atom(s, atom);
         emit_u16(s, s->cur_func->scope_level);
         JS_FreeAtom(s->ctx, atom);
-        return 0;
     } else {
         if (js_parse_expr_binary(s, level - 1, parse_flags))
             return -1;
