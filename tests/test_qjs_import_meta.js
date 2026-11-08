@@ -34,13 +34,18 @@ function assert(actual, expected)
 
 function fileURL(filename)
 {
-    /* The libc metadata helper preserves raw file names on Windows. */
-    if (os.platform !== "win32") {
-        const [canonical, error] = os.realpath(filename);
-        assert(error, 0);
-        filename = canonical;
-    }
-    return "file://" + filename;
+    const [canonical, error] = os.realpath(filename);
+    assert(error, 0);
+    filename = canonical.replace(/\\/g, "/");
+    const encodePath = path => encodeURIComponent(path)
+        .replace(/[!'()*]/g, ch => "%" + ch.charCodeAt(0).toString(16).toUpperCase())
+        .replace(/%2F/gi, "/");
+    if (os.platform === "win32" && /^[A-Za-z]:/.test(filename))
+        return "file:///" + filename.slice(0, 2) +
+               encodePath(filename.slice(2));
+    if (os.platform === "win32" && filename.startsWith("//"))
+        return "file://" + encodePath(filename.slice(2));
+    return "file://" + encodePath(filename);
 }
 
 assert(globalThis.std, std);

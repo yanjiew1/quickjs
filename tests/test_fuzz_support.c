@@ -106,6 +106,26 @@ static void check_long_import_meta(JSContext *ctx, int is_url)
     JS_FreeValue(ctx, module);
 }
 
+static void check_url_import_meta(JSContext *ctx, const char *filename)
+{
+    JSValue module, meta, url;
+    const char *text;
+
+    module = JS_Eval(ctx, "", 0, filename,
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(module));
+    assert(js_module_set_import_meta(ctx, module, 1, 0) == 0);
+    meta = JS_GetImportMeta(ctx, JS_VALUE_GET_PTR(module));
+    assert(!JS_IsException(meta));
+    url = JS_GetPropertyStr(ctx, meta, "url");
+    text = JS_ToCString(ctx, url);
+    assert(text && !strcmp(text, filename));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, url);
+    JS_FreeValue(ctx, meta);
+    JS_FreeValue(ctx, module);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -118,6 +138,8 @@ int main(void)
     test_one_input_init(rt, ctx);
     assert(!JS_HasException(ctx));
     check_virtual_import_meta(ctx);
+    check_url_import_meta(ctx, "https://example.test/mod.js");
+    check_url_import_meta(ctx, "custom:virtual");
     check_long_import_meta(ctx, 1);
     check_long_import_meta(ctx, 0);
     result = eval_source(ctx,

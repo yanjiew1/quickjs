@@ -26,6 +26,7 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <sys/stat.h>
 #if !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -100,6 +101,96 @@ static JSModuleDef *js_module_loader_so(JSContext *ctx,
 }
 #endif /* !_WIN32 */
 
+/* A module name may be an embedder URL or an existing filename containing
+   a colon. Prefer the file when both interpretations are possible. */
+static BOOL js_module_name_is_url(const char *name)
+{
+    const unsigned char *p = (const unsigned char *)name;
+    struct stat st;
+
+    if (!((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z')))
+        return FALSE;
+    for (p++; (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+               (*p >= '0' && *p <= '9') || *p == '+' || *p == '-' ||
+               *p == '.'; p++)
+        ;
+    if (*p != ':')
+        return FALSE;
+#ifdef _WIN32
+    if (p == (const unsigned char *)name + 1)
+        return FALSE; /* drive letter */
+#endif
+    return stat(name, &st) != 0;
+}
+
+/* File-backed modules use URL path bytes, not the raw filesystem spelling. */
+static char *js_module_file_url(JSContext *ctx, const char *filename)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    const unsigned char *p;
+    const char *prefix = "file://";
+    char *path, *url, *q;
+    size_t len, prefix_len;
+
+#ifdef _WIN32
+    path = _fullpath(NULL, filename, 0);
+#else
+    path = realpath(filename, NULL);
+#endif
+    if (!path) {
+        JS_ThrowTypeError(ctx, "realpath failure");
+        return NULL;
+    }
+    p = (const unsigned char *)path;
+#ifdef _WIN32
+    if (((p[0] >= 'A' && p[0] <= 'Z') ||
+         (p[0] >= 'a' && p[0] <= 'z')) && p[1] == ':')
+        prefix = "file:///";
+    else if (p[0] == '\\' && p[1] == '\\')
+        p += 2; /* UNC host follows file://. */
+#endif
+    prefix_len = strlen(prefix);
+    len = strlen((const char *)p);
+    if (len > (SIZE_MAX - prefix_len - 1) / 3) {
+        free(path);
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    url = js_malloc(ctx, prefix_len + len * 3 + 1);
+    if (!url) {
+        free(path);
+        return NULL;
+    }
+    q = url;
+    memcpy(q, prefix, prefix_len);
+    q += prefix_len;
+    while (*p) {
+        unsigned char c = *p++;
+
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+            (c >= '0' && c <= '9') || c == '-' || c == '.' ||
+            c == '_' || c == '~' || c == '/'
+#ifdef _WIN32
+            || c == '\\' ||
+            (c == ':' && prefix_len == 8 && q == url + prefix_len + 1)
+#endif
+            ) {
+#ifdef _WIN32
+            if (c == '\\')
+                c = '/';
+#endif
+            *q++ = c;
+        } else {
+            *q++ = '%';
+            *q++ = hex[c >> 4];
+            *q++ = hex[c & 15];
+        }
+    }
+    *q = 0;
+    free(path);
+    return url;
+}
+
 int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
                               JS_BOOL use_realpath, JS_BOOL is_main)
 {
@@ -119,21 +210,16 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     if (!module_name)
         return -1;
     url_text = module_name;
-    if (!strchr(module_name, ':')) {
+    if (use_realpath && !js_module_name_is_url(module_name)) {
+        allocated_url = js_module_file_url(ctx, module_name);
+        if (!allocated_url) {
+            JS_FreeCString(ctx, module_name);
+            return -1;
+        }
+        url_text = allocated_url;
+    } else if (!strchr(module_name, ':')) {
         strcpy(buf, "file://");
-#if !defined(_WIN32)
-        /* realpath() cannot be used with modules compiled with qjsc
-           because the corresponding module source code is not
-           necessarily present */
-        if (use_realpath) {
-            char *res = realpath(module_name, buf + strlen(buf));
-            if (!res) {
-                JS_ThrowTypeError(ctx, "realpath failure");
-                JS_FreeCString(ctx, module_name);
-                return -1;
-            }
-        } else
-#endif
+        /* Compiled or synthetic modules need not have a source file. */
         {
             size_t name_len = strlen(module_name);
 
@@ -151,10 +237,6 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
                 url_text = buf;
             }
         }
-#if !defined(_WIN32)
-        if (use_realpath)
-            url_text = buf;
-#endif
     }
 
     meta_obj = JS_GetImportMeta(ctx, m);
