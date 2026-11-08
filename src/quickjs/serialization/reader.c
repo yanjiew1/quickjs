@@ -69,6 +69,7 @@ static const char * const bc_tag_str[] = {
     "Date",
     "ObjectValue",
     "ObjectReference",
+    "ArrayHole",
 };
 #endif
 
@@ -920,6 +921,14 @@ static JSValue JS_ReadArray(BCReaderState *s, int tag)
     if (bc_get_leb128(s, &len))
         goto fail;
     for(i = 0; i < len; i++) {
+        if (s->ptr < s->buf_end && *s->ptr == BC_TAG_ARRAY_HOLE) {
+            s->ptr++;
+            if (is_template) {
+                JS_ThrowSyntaxError(ctx, "array hole in template object");
+                goto fail;
+            }
+            continue;
+        }
         val = JS_ReadObjectRec(s);
         if (JS_IsException(val))
             goto fail;
@@ -932,6 +941,9 @@ static JSValue JS_ReadArray(BCReaderState *s, int tag)
         if (ret < 0)
             goto fail;
     }
+    if (!is_template &&
+        JS_SetProperty(ctx, obj, JS_ATOM_length, JS_NewUint32(ctx, len)) < 0)
+        goto fail;
     if (is_template) {
         val = JS_ReadObjectRec(s);
         if (JS_IsException(val))
