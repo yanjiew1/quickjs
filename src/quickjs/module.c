@@ -402,8 +402,10 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
         goto fail;
     me = find_export_entry(m, name);
     JS_FreeAtom(ctx, name);
-    if (!me)
+    if (!me) {
+        JS_ThrowReferenceError(ctx, "module export '%s' is not defined", export_name);
         goto fail;
+    }
     set_value(ctx->rt, me->u.local.var_ref->pvalue, val);
     return 0;
  fail:
