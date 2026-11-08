@@ -59,6 +59,31 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_html_comment_lookahead()
+{
+    const comments = ["<!-- ignored\n", "\n--> ignored\n",
+                      "/*\n*/ --> ignored\n", "\u2028--> ignored\u2028",
+                      "\u2029--> ignored\u2029"];
+
+    for (const prefix of ["", "'use strict';"]) {
+        for (const comment of comments) {
+            assert(Function(prefix + "label " + comment +
+                            ": { break label; } return 1;")(), 1);
+            assert_throws(SyntaxError, () =>
+                Function(prefix + "for (async " + comment + "of []) {}"));
+            assert(Function(prefix + "class C { static " + comment +
+                            "(){return 1;} } return new C().static();")(), 1);
+            /* An HTML comment also separates an async modifier from its name. */
+            assert_throws(SyntaxError, () =>
+                Function(prefix + "({ async " + comment + "m() {} });"));
+        }
+    }
+    /* A same-line --> remains operators after a token, not a comment. */
+    assert(Function("let x = 2; return x --> 0;")(), true);
+}
+
+test_html_comment_lookahead();
+
 function test_private_brand_relational_chain()
 {
     class C {

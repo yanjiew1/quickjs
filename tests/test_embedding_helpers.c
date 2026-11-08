@@ -24,6 +24,44 @@
 #include <string.h>
 #include "quickjs.h"
 
+static void test_module_detection(JSContext *ctx)
+{
+    static const struct {
+        const char *source;
+        int is_module;
+    } cases[] = {
+        { "<!-- ignored\nexport {};", 1 },
+        { "--> ignored\nexport {};", 1 },
+        { " \t/**/ --> ignored\nimport 'm';", 1 },
+        { "/*\n*/ --> ignored\nexport {};", 1 },
+        { "\xe2\x80\xa8--> ignored\nexport {};", 1 },
+        { "import<!-- ignored\n('m');", 0 },
+        { "import\n--> ignored\n.meta;", 0 },
+        { "<!-- export {};", 0 },
+    };
+    static const char *const module_errors[] = {
+        "label <!-- ignored\n: {}",
+        "let x;\n--> ignored\nx;",
+    };
+    size_t i;
+
+    /* Detection uses Script trivia; actual Module parsing forbids HTML comments. */
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+        assert(JS_DetectModule(cases[i].source, strlen(cases[i].source)) ==
+               cases[i].is_module);
+    for (i = 0; i < sizeof(module_errors) / sizeof(module_errors[0]); i++) {
+        JSValue compiled = JS_Eval(ctx, module_errors[i], strlen(module_errors[i]),
+                                   "module-comments.js",
+                                   JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        JSValue error;
+
+        assert(JS_IsException(compiled));
+        error = JS_GetException(ctx);
+        assert(JS_IsError(ctx, error));
+        JS_FreeValue(ctx, error);
+    }
+}
+
 static JSValue eval(JSContext *ctx, const char *source)
 {
     JSValue value = JS_Eval(ctx, source, strlen(source), "<embedding-helpers>",
@@ -136,6 +174,7 @@ int main(void)
     assert(JS_GetGCThreshold(rt) == 123456789);
     JS_SetGCThreshold(rt, (size_t)-1);
     assert(JS_GetGCThreshold(rt) == (size_t)-1);
+    test_module_detection(ctx);
     test_class_names(ctx);
     test_to_number(ctx);
     JS_FreeContext(ctx);
