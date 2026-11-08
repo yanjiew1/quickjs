@@ -70,6 +70,37 @@ function test_hashbang_line_terminators()
 
 test_hashbang_line_terminators();
 
+function test_strict_directive_asi()
+{
+    const constructors = [Function,
+        Object.getPrototypeOf(function* () {}).constructor,
+        Object.getPrototypeOf(async function () {}).constructor,
+        Object.getPrototypeOf(async function* () {}).constructor];
+
+    for (const construct of constructors) {
+        for (const statement of ["{}", "void 0;", "!0;", "~0;"]) {
+            assert_throws(SyntaxError, () =>
+                construct('"use strict"\n' + statement + " with ({}) {}"));
+        }
+    }
+    for (const index of [1, 3]) {
+        assert_throws(SyntaxError, () =>
+            constructors[index]('"use strict"\nyield 0; with ({}) {}'));
+    }
+    for (const index of [2, 3]) {
+        assert_throws(SyntaxError, () =>
+            constructors[index]('"use strict"\nawait 0; with ({}) {}'));
+    }
+    /* A newline alone does not end a string expression that can continue. */
+    Function('"use strict"\n+1; with ({}) {}');
+    Function('"use strict"\n[0]; with ({}) {}');
+    Function('"use\\x20strict"\n{} with ({}) {}');
+    assert_throws(SyntaxError, () =>
+        Function("x = 1", '"use strict"\n{}'));
+}
+
+test_strict_directive_asi();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",
