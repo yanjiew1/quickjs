@@ -1307,6 +1307,13 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
     ctx->binary_object_count += 1;
     ctx->binary_object_size += buf_len;
 
+    /* An empty input may be represented by NULL; use a valid empty range
+       for the reader's pointer arithmetic. */
+    if (!buf_len)
+        buf = (const uint8_t *)"";
+    else if (!buf)
+        return JS_ThrowTypeError(ctx, "invalid binary object buffer");
+
     memset(s, 0, sizeof(*s));
     s->ctx = ctx;
     s->buf_start = buf;

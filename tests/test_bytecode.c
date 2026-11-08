@@ -1117,8 +1117,32 @@ static void test_invalid_object_tag(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_empty_read_buffer(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue result, error;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    result = JS_ReadObject(ctx, NULL, 0, 0);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    result = JS_ReadObject(ctx, NULL, 1, 0);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_empty_read_buffer();
     test_invalid_object_tag();
     test_rom_bytecode_endianness();
     test_module_read_oom();
