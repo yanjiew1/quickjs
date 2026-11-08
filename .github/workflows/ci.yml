@@ -1138,6 +1138,7 @@ jobs:
         for seed in seed module-seed; do
           python3 -c 'import re, pathlib, sys; s = pathlib.Path(sys.argv[1]).read_text(); m = re.search(r"const uint8_t \w+\[(\d+)\] = \{(.*?)\};", s, re.S); assert m; b = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m[2])); assert len(b) == int(m[1]); pathlib.Path(sys.argv[2]).write_bytes(b)' "build/fuzz-$seed.c" "build/fuzz-corpus/bytecode/$seed"
         done
+        printf '%s\n' 'new Intl.DateTimeFormat("en").format(0); Temporal.Now.instant();' > build/fuzz-corpus/js/features.js
         for target in eval compile; do
           timeout --kill-after=10s 30s "build/tools/build/fuzz_$target" \
             -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 "build/fuzz-corpus/js" \
