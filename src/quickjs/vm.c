@@ -1996,7 +1996,6 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
     return 0;
 
 exception:
-    JS_IteratorClose(ctx, enumobj, TRUE);
     JS_FreeValue(ctx, enumobj);
     JS_FreeValue(ctx, method);
     return -1;
