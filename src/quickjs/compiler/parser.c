@@ -1276,19 +1276,21 @@ static int __exception js_parse_property_name(JSParseState *s,
     return -1;
 }
 
-typedef struct JSParsePos {
+/* A source bookmark, not a snapshot of grammar or compiler state.
+   Restoration re-lexes the token in the current semantic context, including
+   strictness discovered by directive parsing. */
+typedef struct JSParseBookmark {
     BOOL got_lf;
     const uint8_t *ptr;
-} JSParsePos;
+} JSParseBookmark;
 
-static int js_parse_get_pos(JSParseState *s, JSParsePos *sp)
+static void js_parse_save_bookmark(JSParseState *s, JSParseBookmark *sp)
 {
     sp->ptr = s->token.ptr;
     sp->got_lf = s->got_lf;
-    return 0;
 }
 
-static __exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp)
+static __exception int js_parse_restore_bookmark(JSParseState *s, const JSParseBookmark *sp)
 {
     s->buf_ptr = sp->ptr;
     if (next_token(s))
@@ -1372,16 +1374,22 @@ static BOOL js_parse_skip_is_statement(int kind)
         kind == SKIP_FUNCTION_DECL_BODY || kind == SKIP_ARROW_BODY;
 }
 
-/* XXX: improve speed with early bailout */
-/* Keep enough syntactic context to distinguish regexp literals from division.
+/* Scan the current parenthesized, array or object region and return the next
+   token without consuming input. Return -1 on a non-speculative failure, or
+   '\n' when no_line_terminator forbids the line boundary before that token.
+   pbits collects outer semicolons/rest tokens and any assignment/computed-key
+   occurrences needed by parameter and destructuring prepasses.
+
+   This is lookahead, not syntax validation. Ignore provisional syntax errors;
+   the ordinary parser will diagnose them after restoring the source bookmark.
+   Keep enough syntactic context to distinguish regexp literals from division.
    In particular, function/class expressions end an expression, while their
-   declarations and statement blocks allow a new statement after '}'. The
-   ordinary parser remains responsible for validating the scanned syntax. */
-static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_terminator)
+   declarations and statement blocks allow a new statement after '}'. */
+static int js_parse_scan_delimited(JSParseState *s, int *pbits, BOOL no_line_terminator)
 {
     JSParseSkipState state_buf[256], *state = state_buf;
     int level = 0, state_size = countof(state_buf);
-    JSParsePos pos;
+    JSParseBookmark pos;
     int last_tok, previous_tok, tok = TOK_EOF;
     int c, tok_len, bits = 0;
     BOOL last_is_async = FALSE, last_is_accessor = FALSE, last_is_static = FALSE;
@@ -1392,7 +1400,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     state[level++] = (JSParseSkipState){ SKIP_ROOT,
         s->cur_func->func_kind << SKIP_FUNC_SHIFT, 0 };
 
-    js_parse_get_pos(s, &pos);
+    js_parse_save_bookmark(s, &pos);
     /* RegExp recognition is heuristic. Ignore provisional syntax errors,
        while retaining allocation and other non-syntax failures. */
     s->suppress_parse_errors = TRUE;
@@ -1799,11 +1807,28 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     if (pbits) {
         *pbits = bits;
     }
-    if (js_parse_seek_token(s, &pos))
+    if (js_parse_restore_bookmark(s, &pos))
         tok = -1;
     if (state != state_buf)
         js_free(s->ctx, state);
     return tok;
+}
+
+/* Both queries leave the opening parenthesis current and preserve failures. */
+static int js_parse_is_parenthesized_arrow(JSParseState *s)
+{
+    int tok = js_parse_scan_delimited(s, NULL, TRUE);
+
+    return tok == -1 ? -1 : tok == TOK_ARROW;
+}
+
+static int js_parse_has_parameter_expressions(JSParseState *s)
+{
+    int bits;
+
+    if (js_parse_scan_delimited(s, &bits, FALSE) == -1)
+        return -1;
+    return (bits & (SKIP_HAS_ASSIGNMENT | SKIP_HAS_COMPUTED_KEY)) != 0;
 }
 
 static void set_object_name(JSParseState *s, JSAtom name)
@@ -3338,7 +3363,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
 
     if (has_ellipsis < 0) {
         /* pre-parse destructuration target for spread detection */
-        if (js_parse_skip_parens_token(s, &skip_bits, FALSE) == -1)
+        if (js_parse_scan_delimited(s, &skip_bits, FALSE) == -1)
             return -1;
         has_ellipsis = skip_bits & SKIP_HAS_ELLIPSIS;
     }
@@ -3425,7 +3450,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
                     goto prop_error;
                 tok1 = 0;
                 if (s->token.val == '[' || s->token.val == '{') {
-                    tok1 = js_parse_skip_parens_token(s, &skip_bits, FALSE);
+                    tok1 = js_parse_scan_delimited(s, &skip_bits, FALSE);
                     if (tok1 == -1)
                         goto prop_error;
                 }
@@ -3675,7 +3700,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
             }
             tok1 = 0;
             if (s->token.val == '[' || s->token.val == '{') {
-                tok1 = js_parse_skip_parens_token(s, &skip_bits, FALSE);
+                tok1 = js_parse_scan_delimited(s, &skip_bits, FALSE);
                 if (tok1 == -1)
                     return -1;
             }
@@ -3794,7 +3819,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
         has_initializer = TRUE;
     } else {
         /* normally hasval is true except if
-           js_parse_skip_parens_token() was wrong in the parsing */
+           js_parse_scan_delimited() was wrong in the parsing */
         //        assert(hasval);
         if (!hasval) {
             js_parse_error(s, "too complicated destructuring expression");
@@ -5165,18 +5190,18 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         }
         return 0;
     } else if (s->token.val == '(') {
-        int tok = js_parse_skip_parens_token(s, NULL, TRUE);
-        if (tok == -1)
+        int is_arrow = js_parse_is_parenthesized_arrow(s);
+        if (is_arrow < 0)
             return -1;
-        if (tok == TOK_ARROW)
+        if (is_arrow)
             return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
                                           JS_FUNC_NORMAL, JS_ATOM_NULL,
                                           s->token.ptr, JS_PARSE_EXPORT_NONE,
                                           NULL, parse_flags & PF_IN_ACCEPTED, NULL);
     } else if (token_is_pseudo_keyword(s, JS_ATOM_async)) {
         const uint8_t *source_ptr;
-        int tok;
-        JSParsePos pos;
+        int tok, is_arrow;
+        JSParseBookmark pos;
 
         /* fast test */
         tok = peek_token(s, TRUE);
@@ -5184,25 +5209,25 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
             goto next;
 
         source_ptr = s->token.ptr;
-        js_parse_get_pos(s, &pos);
+        js_parse_save_bookmark(s, &pos);
         if (next_token(s))
             return -1;
         if (s->token.val == '(') {
-            tok = js_parse_skip_parens_token(s, NULL, TRUE);
-            if (tok == -1)
+            is_arrow = js_parse_is_parenthesized_arrow(s);
+            if (is_arrow < 0)
                 return -1;
         } else {
-            tok = (s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved &&
-                   peek_token(s, TRUE) == TOK_ARROW) ? TOK_ARROW : 0;
+            is_arrow = s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved &&
+                peek_token(s, TRUE) == TOK_ARROW;
         }
-        if (tok == TOK_ARROW) {
+        if (is_arrow) {
             return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
                                        JS_FUNC_ASYNC, JS_ATOM_NULL,
                                        source_ptr, JS_PARSE_EXPORT_NONE,
                                        NULL, parse_flags & PF_IN_ACCEPTED, NULL);
         } else {
             /* undo the token parsing */
-            if (js_parse_seek_token(s, &pos))
+            if (js_parse_restore_bookmark(s, &pos))
                 return -1;
         }
     } else if (s->token.val == TOK_IDENT &&
@@ -5212,7 +5237,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
                                        s->token.ptr, JS_PARSE_EXPORT_NONE,
                                        NULL, parse_flags & PF_IN_ACCEPTED, NULL);
     } else if (s->token.val == '{' || s->token.val == '[') {
-        int tok = js_parse_skip_parens_token(s, &skip_bits, FALSE);
+        int tok = js_parse_scan_delimited(s, &skip_bits, FALSE);
         if (tok == -1)
             return -1;
         if (tok == '=') {
@@ -6008,7 +6033,7 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             int skip_bits, tok1 = 0;
             if (resource_operation < 0 &&
                 (s->token.val == '[' || s->token.val == '{')) {
-                tok1 = js_parse_skip_parens_token(s, &skip_bits, FALSE);
+                tok1 = js_parse_scan_delimited(s, &skip_bits, FALSE);
                 if (tok1 == -1)
                     return -1;
             }
@@ -6047,8 +6072,8 @@ static int is_let(JSParseState *s, int decl_mask)
     int res = FALSE;
     
     if (token_is_pseudo_keyword(s, JS_ATOM_let)) {
-        JSParsePos pos;
-        js_parse_get_pos(s, &pos);
+        JSParseBookmark pos;
+        js_parse_save_bookmark(s, &pos);
         for (;;) {
             if (next_token(s)) {
                 res = -1;
@@ -6077,7 +6102,7 @@ static int is_let(JSParseState *s, int decl_mask)
             }
             break;
         }
-        if (js_parse_seek_token(s, &pos)) {
+        if (js_parse_restore_bookmark(s, &pos)) {
             res = -1;
         }
     }
@@ -6089,12 +6114,12 @@ static int is_let(JSParseState *s, int decl_mask)
    line terminator information; using[expr] remains an ordinary expression. */
 static int is_using_declaration(JSParseState *s, BOOL for_in_of)
 {
-    JSParsePos pos;
+    JSParseBookmark pos;
     int result = FALSE;
 
     if (!token_is_pseudo_keyword(s, JS_ATOM_using))
         return FALSE;
-    js_parse_get_pos(s, &pos);
+    js_parse_save_bookmark(s, &pos);
     if (next_token(s)) {
         result = -1;
     } else if (!s->got_lf &&
@@ -6103,25 +6128,25 @@ static int is_using_declaration(JSParseState *s, BOOL for_in_of)
                 s->token.val == TOK_YIELD || s->token.val == TOK_LET)) {
         result = TRUE;
     }
-    if (js_parse_seek_token(s, &pos))
+    if (js_parse_restore_bookmark(s, &pos))
         result = -1;
     return result;
 }
 
 static int is_await_using_declaration(JSParseState *s)
 {
-    JSParsePos pos;
+    JSParseBookmark pos;
     int result = FALSE;
 
     if (s->token.val != TOK_AWAIT)
         return FALSE;
-    js_parse_get_pos(s, &pos);
+    js_parse_save_bookmark(s, &pos);
     if (next_token(s)) {
         result = -1;
     } else if (!s->got_lf) {
         result = is_using_declaration(s, FALSE);
     }
-    if (js_parse_seek_token(s, &pos))
+    if (js_parse_restore_bookmark(s, &pos))
         result = -1;
     return result;
 }
@@ -6258,7 +6283,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         has_let_head = token_is_pseudo_keyword(s, JS_ATOM_let);
         tok1 = 0;
         if (s->token.val == '[' || s->token.val == '{') {
-            tok1 = js_parse_skip_parens_token(s, &skip_bits, FALSE);
+            tok1 = js_parse_scan_delimited(s, &skip_bits, FALSE);
             if (tok1 == -1)
                 return -1;
         }
@@ -6729,7 +6754,7 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
             bits = 0;
             is_async = FALSE;
             if (s->token.val == '(') {
-                if (js_parse_skip_parens_token(s, &bits, FALSE) == -1)
+                if (js_parse_scan_delimited(s, &bits, FALSE) == -1)
                     goto fail;
             } else if (s->token.val == TOK_AWAIT) {
                 if (!(s->cur_func->func_kind & JS_FUNC_ASYNC)) {
@@ -7862,13 +7887,13 @@ static __exception int js_parse_source_element(JSParseState *s)
 static __exception int js_parse_directives(JSParseState *s)
 {
     char str[20];
-    JSParsePos pos;
+    JSParseBookmark pos;
     BOOL has_semi;
 
     if (s->token.val != TOK_STRING)
         return 0;
 
-    js_parse_get_pos(s, &pos);
+    js_parse_save_bookmark(s, &pos);
 
     while(s->token.val == TOK_STRING) {
         /* Copy actual source string representation */
@@ -7900,7 +7925,7 @@ static __exception int js_parse_directives(JSParseState *s)
             s->cur_func->js_mode |= JS_MODE_STRICT;
         }
     }
-    return js_parse_seek_token(s, &pos);
+    return js_parse_restore_bookmark(s, &pos);
 }
 
 /* return TRUE if the keyword is forbidden only in strict mode */
@@ -8182,13 +8207,13 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         fd->defined_arg_count = 1;
     } else if (func_type != JS_PARSE_FUNC_CLASS_STATIC_INIT) {
         if (s->token.val == '(') {
-            int skip_bits;
+            int has_expressions = js_parse_has_parameter_expressions(s);
+
             /* Initializers and computed binding property names require
                a separate parameter environment. */
-            if (js_parse_skip_parens_token(s, &skip_bits, FALSE) == -1)
+            if (has_expressions < 0)
                 goto fail;
-            if (skip_bits & (SKIP_HAS_ASSIGNMENT | SKIP_HAS_COMPUTED_KEY))
-                fd->has_parameter_expressions = TRUE;
+            fd->has_parameter_expressions = has_expressions;
             if (next_token(s))
                 goto fail;
         } else {
