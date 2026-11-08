@@ -3402,6 +3402,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
         }
         while (s->token.val != '}') {
             int prop_type;
+            BOOL is_identifier_ref = TRUE;
+
             if (s->token.val == TOK_ELLIPSIS) {
                 if (!has_ellipsis) {
                     JS_ThrowInternalError(s->ctx, "unexpected ellipsis token");
@@ -3535,6 +3537,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
                         depth_lvalue = 0;
                     }
                 } else {
+                    /* Parentheses preserve assignability, but not IsIdentifierRef. */
+                    is_identifier_ref = s->token.val == TOK_IDENT;
                     if (js_parse_left_hand_side_expr(s))
                         goto prop_error;
                 lvalue1:
@@ -3656,7 +3660,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
                 emit_op(s, OP_drop);
                 if (js_parse_assign_expr(s))
                     goto var_error;
-                if (opcode == OP_scope_get_var || opcode == OP_get_ref_value)
+                if (is_identifier_ref &&
+                    (opcode == OP_scope_get_var || opcode == OP_get_ref_value))
                     set_object_name(s, var_name);
                 emit_label(s, label_hasval);
             }
@@ -3727,6 +3732,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
                                                   TRUE, export_flag) < 0)
                     return -1;
             } else {
+                BOOL is_identifier_ref = tok != 0 || s->token.val == TOK_IDENT;
+
                 var_name = JS_ATOM_NULL;
                 if (tok) {
                     var_name = js_parse_destructuring_var(s, binding_context);
@@ -3781,7 +3788,8 @@ static int js_parse_destructuring_element(JSParseState *s, int tok,
                     emit_op(s, OP_drop);
                     if (js_parse_assign_expr(s))
                         goto var_error;
-                    if (opcode == OP_scope_get_var || opcode == OP_get_ref_value)
+                    if (is_identifier_ref &&
+                        (opcode == OP_scope_get_var || opcode == OP_get_ref_value))
                         set_object_name(s, var_name);
                     emit_label(s, label_hasval);
                 }
