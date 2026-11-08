@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -2993,6 +2994,18 @@ char *get_opt_arg(const char *option, char *arg)
     return arg;
 }
 
+static int parse_cli_int(const char *value, int minimum, const char *name)
+{
+    char *end;
+    long parsed;
+
+    errno = 0;
+    parsed = strtol(value, &end, 10);
+    if (errno || end == value || *end || parsed < minimum || parsed > INT_MAX)
+        fatal(2, "invalid %s", name);
+    return (int)parsed;
+}
+
 int main(int argc, char **argv)
 {
     ThreadLocalStorage tls_s, *tls = &tls_s;
@@ -3077,7 +3090,8 @@ int main(int argc, char **argv)
         } else if (str_equal(arg, "-E")) {
             only_check_errors = TRUE;
         } else if (str_equal(arg, "-D")) {
-            slow_test_threshold = atoi(get_opt_arg(arg, argv[optind++]));
+            slow_test_threshold = parse_cli_int(get_opt_arg(arg, argv[optind++]),
+                                                0, "slow-test threshold");
         } else if (str_equal(arg, "--timing-log")) {
             timing_log_filename = get_opt_arg(arg, argv[optind++]);
         } else if (str_equal(arg, "--progress-log")) {
@@ -3183,9 +3197,9 @@ int main(int argc, char **argv)
         start_index = 0;
         stop_index = -1;
         if (optind < argc) {
-            start_index = atoi(argv[optind++]);
+            start_index = parse_cli_int(argv[optind++], 0, "start index");
             if (optind < argc) {
-                stop_index = atoi(argv[optind++]);
+                stop_index = parse_cli_int(argv[optind++], -1, "stop index");
             }
         }
         /* XXX: could reorder the report and the errors when nthreads > 1 */

@@ -107,6 +107,25 @@ for invalid_threads in -1 invalid 1025 999999999999999999999; do
     grep -Fq 'invalid thread count' "$test262_tmp/err"
 done
 
+for bad_number in invalid 999999999999999999999 -2; do
+    invoke_runner no -q -c "$test262_tmp/config" -D "$bad_number" \
+        -d "$test262_tmp/failure"
+    [ "$test262_status" -eq 2 ]
+    grep -Fq 'invalid slow-test threshold' "$test262_tmp/err"
+done
+for bad_number in 0x 999999999999999999999 10junk; do
+    invoke_runner no -q -c "$test262_tmp/config" -d "$test262_tmp/failure" \
+        "$bad_number"
+    [ "$test262_status" -eq 2 ]
+    grep -Fq 'invalid start index' "$test262_tmp/err"
+done
+for bad_number in invalid 999999999999999999999 -2; do
+    invoke_runner no -q -c "$test262_tmp/config" -d "$test262_tmp/failure" \
+        0 "$bad_number"
+    [ "$test262_status" -eq 2 ]
+    grep -Fq 'invalid stop index' "$test262_tmp/err"
+done
+
 # An unreadable input tree must not silently disappear from a larger run.
 invoke_runner yes -q -c "$test262_tmp/config" -d "$test262_tmp/missing" \
     -d "$test262_tmp/failure"
