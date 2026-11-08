@@ -413,16 +413,33 @@ int namelist_cmp(const char *a, const char *b)
         int ca = (unsigned char)*a++;
         int cb = (unsigned char)*b++;
         if (isdigit(ca) && isdigit(cb)) {
-            int na = ca - '0';
-            int nb = cb - '0';
-            while (isdigit(ca = (unsigned char)*a++))
-                na = na * 10 + ca - '0';
-            while (isdigit(cb = (unsigned char)*b++))
-                nb = nb * 10 + cb - '0';
-            if (na < nb)
-                return -1;
-            if (na > nb)
-                return +1;
+            const char *a_start = a - 1, *b_start = b - 1;
+            const char *a_digits, *b_digits;
+            size_t a_len, b_len;
+            int cmp;
+
+            while (isdigit((unsigned char)*a))
+                a++;
+            while (isdigit((unsigned char)*b))
+                b++;
+            a_digits = a_start;
+            b_digits = b_start;
+            while (a_digits < a && *a_digits == '0')
+                a_digits++;
+            while (b_digits < b && *b_digits == '0')
+                b_digits++;
+            a_len = a - a_digits;
+            b_len = b - b_digits;
+            if (a_len != b_len)
+                return a_len < b_len ? -1 : 1;
+            cmp = memcmp(a_digits, b_digits, a_len);
+            if (cmp)
+                return cmp;
+            /* Distinct names with the same numeric value remain distinct. */
+            if (a - a_start != b - b_start)
+                return a - a_start < b - b_start ? -1 : 1;
+            ca = (unsigned char)*a++;
+            cb = (unsigned char)*b++;
         }
         if (ca < cb)
             return -1;

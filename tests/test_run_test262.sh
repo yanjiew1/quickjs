@@ -884,3 +884,25 @@ with open(sys.argv[1]) as stream:
     rows = [json.loads(line) for line in stream]
 assert len(rows) == 1 and rows[0]['status'] == 'skipped'
 PYCODE
+
+# Numeric path ordering must not overflow or merge names with leading zeroes.
+mkdir "$test262_tmp/numeric-paths"
+for test262_name in case9 case0009 case999999999999999999999999999999; do
+    cat > "$test262_tmp/numeric-paths/$test262_name.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+JS
+done
+invoke_runner no -q -c "$test262_tmp/config" \
+    --timing-log "$test262_tmp/numeric-paths.jsonl" \
+    -d "$test262_tmp/numeric-paths"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/numeric-paths.jsonl" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    names = [json.loads(line)['file'].replace('\\', '/').rsplit('/', 1)[-1]
+             for line in stream]
+assert sorted(names) == ['case0009.js', 'case9.js',
+                         'case999999999999999999999999999999.js'], names
+PYCODE
