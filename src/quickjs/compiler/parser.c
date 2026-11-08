@@ -322,6 +322,22 @@ static int find_arg(JSFunctionDef *fd, JSAtom name)
     return -1;
 }
 
+static BOOL has_parameter_name(JSFunctionDef *fd, JSAtom name)
+{
+    int i;
+
+    if (find_arg(fd, name) >= 0)
+        return TRUE;
+    /* Destructured bindings live in vars, not in the anonymous arg slots.
+       Exclude names belonging to nested scopes in parameter expressions. */
+    for (i = 0; i < fd->parameter_var_count; i++) {
+        if (fd->vars[i].scope_level <= ARG_SCOPE_INDEX &&
+            fd->vars[i].var_name == name)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 /* Variable names and indices stay stable until bytecode creation. Scoped
    rows are removed when their final scope is assigned after insertion. */
 static uint32_t var_hash_bucket(JSAtom name, int size)
@@ -719,13 +735,8 @@ int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd)
             }
             scope = fd->scopes[scope].parent;
         }
-        /* Destructuring parameters also contribute formal bound names. */
-        for (i = 0; i < fd->var_count; i++) {
-            if (i < fd->parameter_var_count &&
-                fd->vars[i].scope_level <= ARG_SCOPE_INDEX &&
-                fd->vars[i].var_name == name)
-                applicable = FALSE;
-        }
+        if (has_parameter_name(fd, name))
+            applicable = FALSE;
         if (fd->is_eval) {
             for (i = 0; i < fd->closure_var_count; i++) {
                 JSClosureVar *cv = &fd->closure_var[i];
@@ -825,7 +836,7 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
         if (var_def_type != JS_VAR_DEF_FUNCTION_DECL &&
             var_def_type != JS_VAR_DEF_NEW_FUNCTION_DECL &&
             fd->scope_level == fd->body_scope &&
-            find_arg(fd, name) >= 0) {
+            has_parameter_name(fd, name)) {
             /* lexical variable redefines a parameter name */
             return js_parse_error(s, "invalid redefinition of parameter name");
         }
