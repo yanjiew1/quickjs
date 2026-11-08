@@ -44,6 +44,10 @@
 
 /* JS parser */
 
+/* An optional private reference is not assignable, but delete must still
+   recognize it through parentheses. No bytecode position is exposed. */
+#define LAST_OPCODE_PRIVATE_REF (-2)
+
 typedef struct JSStatementLabel {
     const struct JSStatementLabel *prev;
     JSAtom name;
@@ -4469,7 +4473,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
                 opcode = OP_get_array_el_opt_chain;
             fd->byte_code.buf[fd->last_opcode_pos] = opcode;
         } else {
-            fd->last_opcode_pos = -1;
+            fd->last_opcode_pos = opcode == OP_scope_get_private_field ?
+                LAST_OPCODE_PRIVATE_REF : -1;
         }
     }
     return 0;
@@ -4485,6 +4490,8 @@ static __exception int js_parse_delete(JSParseState *s)
         return -1;
     if (js_parse_unary(s, PF_POW_FORBIDDEN))
         return -1;
+    if (fd->last_opcode_pos == LAST_OPCODE_PRIVATE_REF)
+        return js_parse_error(s, "cannot delete a private class field");
     switch(opcode = get_prev_opcode(fd)) {
     case OP_get_field:
     case OP_get_field_opt_chain:

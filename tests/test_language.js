@@ -168,6 +168,26 @@ function test_rest_pattern_parameters()
 
 test_rest_pattern_parameters();
 
+function test_optional_private_delete()
+{
+    for (const expression of ["this?.#x", "(this?.#x)", "((this?.#x))",
+                              "this?.value.#x"]) {
+        assert_throws(SyntaxError, () =>
+            Function("class C {#x; m() {delete " + expression + ";}}"));
+        assert_throws(SyntaxError, () =>
+            Function("class C {#x; value = delete " + expression + ";}"));
+    }
+    for (const expression of ["(0, this?.#x)", "this?.#x.value",
+                              "this.#x?.value", "this?.#x()", "!this?.#x"]) {
+        Function("class C {#x; m() {delete " + expression + ";}}");
+    }
+    /* Keeping the private-reference marker must not permit optional writes. */
+    assert_throws(SyntaxError, () =>
+        Function("class C {#x; m() {this?.#x = 1;}}"));
+}
+
+test_optional_private_delete();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",

@@ -177,7 +177,7 @@ typedef struct JSFunctionDef {
     JSGlobalVar *global_vars;
 
     DynBuf byte_code;
-    int last_opcode_pos; /* -1 if no last opcode */
+    int last_opcode_pos; /* negative for no opcode or parser-only reference state */
     const uint8_t *last_opcode_source_ptr;
     BOOL use_short_opcodes; /* true if short opcodes are used in byte_code */
 
