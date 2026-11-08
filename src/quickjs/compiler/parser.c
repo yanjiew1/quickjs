@@ -5785,6 +5785,9 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
     BlockEnv *top;
     int i, scope_level;
 
+    /* A failed label allocation does not make the source target invalid. */
+    if (js_parse_check_emission(s->cur_func))
+        return -1;
     scope_level = s->cur_func->scope_level;
     top = s->cur_func->top_break;
     while (top != NULL) {
