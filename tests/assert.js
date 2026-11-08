@@ -60,7 +60,9 @@ export function assertArrayEquals(a, b)
 
     assert(a.length, b.length);
 
-    a.forEach((value, idx) => {
-        assert(b[idx], value);
-    });
+    for (let i = 0; i < a.length; i++) {
+        assert(Object.prototype.hasOwnProperty.call(a, i),
+               Object.prototype.hasOwnProperty.call(b, i));
+        assert(a[i], b[i]);
+    }
 }
