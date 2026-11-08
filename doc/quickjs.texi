@@ -815,8 +815,8 @@ to the timer.
 Cancel a timer.
 
 @item platform
-Return a string representing the platform: @code{"linux"}, @code{"darwin"},
-@code{"win32"} or @code{"js"}.
+Return a string representing the platform: @code{"linux"}, @code{"freebsd"},
+@code{"darwin"}, @code{"win32"} or @code{"js"}.
 
 @item Worker(module_filename)
 Constructor to create a new thread (worker) with an API close to the

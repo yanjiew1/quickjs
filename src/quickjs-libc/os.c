@@ -1386,6 +1386,8 @@ static JSValue js_os_dup2(JSContext *ctx, JSValueConst this_val,
 #define OS_PLATFORM "darwin"
 #elif defined(__EMSCRIPTEN__)
 #define OS_PLATFORM "js"
+#elif defined(__FreeBSD__)
+#define OS_PLATFORM "freebsd"
 #else
 #define OS_PLATFORM "linux"
 #endif

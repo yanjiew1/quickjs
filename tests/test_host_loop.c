@@ -169,6 +169,17 @@ int main(void)
                  JS_EVAL_TYPE_MODULE);
     assert(js_std_loop_once(ctx) >= 0);
     JS_FreeValue(ctx, value);
+#if defined(_WIN32)
+    assert(number(ctx, "os.platform === 'win32'") == 1);
+#elif defined(__APPLE__)
+    assert(number(ctx, "os.platform === 'darwin'") == 1);
+#elif defined(__EMSCRIPTEN__)
+    assert(number(ctx, "os.platform === 'js'") == 1);
+#elif defined(__FreeBSD__)
+    assert(number(ctx, "os.platform === 'freebsd'") == 1);
+#else
+    assert(number(ctx, "os.platform === 'linux'") == 1);
+#endif
     run(ctx, "var ticks = 0; os.setTimeout(() => ticks++, 0);"
              "os.setTimeout(() => ticks++, 0)");
     assert(js_std_poll_io(ctx, 0) == 1 && number(ctx, "ticks") == 1);
