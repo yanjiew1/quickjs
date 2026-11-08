@@ -7116,7 +7116,7 @@ static __exception int js_parse_labelled_statement(JSParseState *s, int decl_mas
                                follow catch, rather than declaration, name rules. */
                             if (js_parse_destructuring_element(s, TOK_LET,
                                                               JS_BINDING_CATCH,
-                                                              TRUE, -1, TRUE, FALSE) < 0)
+                                                              TRUE, -1, FALSE, FALSE) < 0)
                                 goto fail;
                         } else {
                             js_parse_error(s, "identifier expected");

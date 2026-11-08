@@ -59,6 +59,29 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_catch_pattern_initializers()
+{
+    /* CatchParameter has no outer Initializer; nested binding defaults remain valid. */
+    for (const prefix of ["", "'use strict';"]) {
+        for (const parameter of ["x = 1", "{} = {}", "{x} = {}", "[x] = []"])
+            assert_throws(SyntaxError, () =>
+                Function(prefix + "try {} catch (" + parameter + ") {}"));
+    }
+    try {
+        throw {};
+    } catch ({x = 3, nested: [y] = [4]}) {
+        assert(x, 3);
+        assert(y, 4);
+    }
+    try {
+        throw [];
+    } catch ([x = 5]) {
+        assert(x, 5);
+    }
+}
+
+test_catch_pattern_initializers();
+
 function test_html_comment_lookahead()
 {
     const comments = ["<!-- ignored\n", "\n--> ignored\n",
