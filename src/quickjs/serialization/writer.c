@@ -557,9 +557,13 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
                 goto fail;
         }
         for(i = p->u.array.count; i < len; i++) {
-            ret = JS_WriteObjectRec(s, JS_UNDEFINED);
-            if (ret)
-                goto fail;
+            if (is_template) {
+                ret = JS_WriteObjectRec(s, JS_UNDEFINED);
+                if (ret)
+                    goto fail;
+            } else {
+                bc_put_u8(s, BC_TAG_ARRAY_HOLE);
+            }
         }
     } else {
         for(i = 0; i < len; i++) {
@@ -578,9 +582,13 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
                 if (ret)
                     goto fail;
             } else {
-                ret = JS_WriteObjectRec(s, JS_UNDEFINED);
-                if (ret)
-                    goto fail;
+                if (is_template) {
+                    ret = JS_WriteObjectRec(s, JS_UNDEFINED);
+                    if (ret)
+                        goto fail;
+                } else {
+                    bc_put_u8(s, BC_TAG_ARRAY_HOLE);
+                }
             }
         }
     }

@@ -274,9 +274,29 @@ function bjson_test_tracking_typed_array()
     assert(tracking.length, 4);
 }
 
+function bjson_test_array_holes()
+{
+    for (const references of [false, true]) {
+        for (const original of [[1, , 3], [undefined], new Array(5), [, ,]]) {
+            const encoded = bjson.write(original, references);
+            const copy = bjson.read(encoded, 0, encoded.byteLength, references);
+
+            assert(copy.length, original.length);
+            for (let i = 0; i < original.length; i++) {
+                assert(Object.prototype.hasOwnProperty.call(copy, i),
+                       Object.prototype.hasOwnProperty.call(original, i));
+                if (i in original)
+                    assert(copy[i], original[i]);
+            }
+        }
+    }
+}
+
 function bjson_test_all()
 {
     var obj;
+
+    bjson_test_array_holes();
 
     bjson_test({x:1, y:2, if:3});
 

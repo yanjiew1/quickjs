@@ -45,9 +45,10 @@ typedef enum BCTagEnum {
     BC_TAG_DATE,
     BC_TAG_OBJECT_VALUE,
     BC_TAG_OBJECT_REFERENCE,
+    BC_TAG_ARRAY_HOLE, /* valid only as an ordinary array element */
 } BCTagEnum;
 
-#define BC_VERSION 49
+#define BC_VERSION 50
 
 
 #endif
