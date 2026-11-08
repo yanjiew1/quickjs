@@ -609,6 +609,8 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
         m = rt->u.module_loader_func(ctx, cname, rt->module_loader_opaque);
     }
     ctx->module_load_request = request.previous;
+    if (!m && !JS_HasException(ctx))
+        JS_ThrowReferenceError(ctx, "could not load module '%s'", cname);
     /* A host may return one module for unequal requests. Retain the first
        attributed request without requiring a fresh module from the host. */
     if (m && JS_IsObject(attributes) && JS_IsUndefined(m->attributes))
