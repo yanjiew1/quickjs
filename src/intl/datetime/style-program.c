@@ -60,8 +60,33 @@ QJSIntlStatus qjs_intl_date_style_preferred_record(const QJSIntlDateStyleData *d
     if (!data || !out || preferred >= data->alternate_count || fallback >= data->alternate_count)
         return QJS_INTL_INVALID_ARGUMENT;
     status = qjs_intl_date_style_record_at(data, locale, calendar, family, width, field, preferred, out);
-    if (!status && (out->state != QJS_INTL_DATE_STYLE_VALUE || !out->text.length) && preferred != fallback)
-        status = qjs_intl_date_style_record_at(data, locale, calendar, family, width, field, fallback, out);
+    if (!status && preferred != fallback) {
+        QJSIntlDateStyleRecord normal;
+        status = qjs_intl_date_style_record_at(data, locale, calendar, family, width, field, fallback, &normal);
+        if (!status && (out->state != QJS_INTL_DATE_STYLE_VALUE || !out->text.length)) {
+            *out = normal;
+        } else if (!status && normal.state == QJS_INTL_DATE_STYLE_VALUE && normal.text.length) {
+            uint32_t current = locale;
+            /* A parent alternate must not replace a more specific regional
+               pattern, such as the en-GB 24-hour clock with en's 12-hour one. */
+            while (current != UINT32_MAX) {
+                QJSIntlBytes tag;
+                uint32_t parent;
+                status = qjs_intl_data_locale(&data->data, current, &tag, &parent);
+                if (status)
+                    break;
+                if (tag.length == out->origin_locale.length &&
+                    !memcmp(tag.data, out->origin_locale.data, tag.length))
+                    break;
+                if (tag.length == normal.origin_locale.length &&
+                    !memcmp(tag.data, normal.origin_locale.data, tag.length)) {
+                    *out = normal;
+                    break;
+                }
+                current = parent;
+            }
+        }
+    }
     return status;
 }
 
