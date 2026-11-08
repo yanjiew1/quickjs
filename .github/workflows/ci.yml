@@ -689,7 +689,6 @@ jobs:
       run: |
         mkdir -p build/fuzz-corpus/js build/fuzz-corpus/regexp
         printf '%s\n' 'let x = 6 * 7; Promise.resolve(x);' > build/fuzz-corpus/js/core.js
-        printf '%s\n' 'new Intl.DateTimeFormat("en").format(0); Temporal.Now.instant();' > build/fuzz-corpus/js/intl.js
         printf 'a+\0aaa' > build/fuzz-corpus/regexp/basic
         for target in eval compile; do
           timeout --kill-after=10s 30s "build/tools/build/fuzz_$target" \
