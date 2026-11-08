@@ -83,6 +83,62 @@ static int test_os_close(int fd)
 #undef close
 #endif
 
+#ifndef _WIN32
+static int clobber_free_errno;
+static int clobber_free_count;
+
+static void errno_clobber_free(JSMallocState *ms, void *ptr)
+{
+    BOOL had_ptr = ptr != NULL;
+
+    oom_test_free(ms, ptr);
+    if (clobber_free_errno && had_ptr) {
+        clobber_free_count++;
+        errno = EDOM;
+    }
+}
+
+static void test_realpath_preserves_errno(void)
+{
+    const JSMallocFunctions funcs = {
+        oom_test_malloc, errno_clobber_free, oom_test_realloc, test_raw_usable_size,
+    };
+    OOMTestAllocator allocator = { 0 };
+    JSRuntime *rt = JS_NewRuntime2(&funcs, &allocator);
+    JSContext *ctx;
+    JSValue path, result, error;
+    char name[2048], resolved[PATH_MAX];
+    int32_t code, expected_error;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    memset(name, 'x', sizeof(name));
+    memcpy(name, "/__qjs_missing_\xc3\xa9__/", sizeof("/__qjs_missing_\xc3\xa9__/") - 1);
+    name[sizeof(name) - 1] = '\0';
+    assert(!realpath(name, resolved));
+    expected_error = errno;
+    assert(expected_error != EDOM);
+    path = JS_NewString(ctx, name);
+    assert(!JS_IsException(path));
+    clobber_free_count = 0;
+    clobber_free_errno = 1;
+    result = js_os_realpath(ctx, JS_UNDEFINED, 1, &path);
+    clobber_free_errno = 0;
+    assert(!JS_IsException(result));
+    assert(clobber_free_count > 0);
+    error = JS_GetPropertyUint32(ctx, result, 1);
+    assert(JS_ToInt32(ctx, &code, error) == 0);
+    assert(code == expected_error);
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, path);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(!allocator.live);
+}
+#endif
+
 /* Exercise the example's real private initializer and module entry point. */
 #define js_init_module point_example_module
 #include "../examples/point.c"
@@ -965,6 +1021,9 @@ static void test_helper_initialization_failures(void)
 
 int main(void)
 {
+#ifndef _WIN32
+    test_realpath_preserves_errno();
+#endif
     test_helper_initialization_failures();
     test_file_wrapper_failure(TRUE, FALSE);
     test_file_wrapper_failure(TRUE, TRUE);
