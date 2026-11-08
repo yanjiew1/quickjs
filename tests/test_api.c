@@ -5189,6 +5189,41 @@ static void test_module_resolution_retry(void)
     JS_FreeRuntime(rt);
 }
 
+static int missing_module_export_init(JSContext *ctx, JSModuleDef *module)
+{
+    return JS_SetModuleExport(ctx, module, "missing", JS_NewInt32(ctx, 1));
+}
+
+static void test_missing_module_export_exception(void)
+{
+    static const char source[] = "import 'missing-export-test';";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *module;
+    JSValue result, error;
+
+    assert(rt && ctx);
+    module = JS_NewCModule(ctx, "missing-export-test", missing_module_export_init);
+    assert(module && JS_AddModuleExport(ctx, module, "value") == 0);
+    assert(JS_LinkModule(ctx, JS_MKPTR(JS_TAG_MODULE, module)) == 0);
+    assert(JS_SetModuleExport(ctx, module, "missing", JS_NewInt32(ctx, 1)) < 0);
+    assert(JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+
+    result = JS_Eval(ctx, source, sizeof(source) - 1, "module-test",
+                     JS_EVAL_TYPE_MODULE);
+    assert(!JS_IsException(result));
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+    error = JS_PromiseResult(ctx, result);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_module_link_without_evaluation(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -5276,6 +5311,7 @@ int main(int argc, char **argv)
     } tests[] = {
         { "reentrant-gc-finalizer", test_reentrant_gc_finalizer },
         { "module-link-without-evaluation", test_module_link_without_evaluation },
+        { "missing-module-export-exception", test_missing_module_export_exception },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
         { "fast-array-growth-oom", test_fast_array_growth_oom },
