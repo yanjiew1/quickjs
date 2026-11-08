@@ -21,13 +21,7 @@
  * THE SOFTWARE.
  */
 
-/*---
-negative:
-  phase: resolution
-  type: SyntaxError
----*/
-// FIXME(bnoordhuis) shouldn't throw SyntaxError but that's still better
-// than segfaulting, see https://github.com/quickjs-ng/quickjs/issues/567
+/* Both modules must resolve and execute despite the cyclic namespace import. */
 import {assert} from "./assert.js"
 import {f} from "./fixture_cyclic_import.js"
 export {f}
