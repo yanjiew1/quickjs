@@ -2152,6 +2152,42 @@ function test_spread()
     reads = 0;
     assert(Array.of(...source).toString(), "9");
     assert(reads, 1);
+
+    for (const stage of ["next", "done", "value"]) {
+        for (const spread of [
+            it => [...it],
+            it => Array.of(...it),
+            it => new (class {})(...it),
+        ]) {
+            const error = {};
+            let closed = false;
+            let calls = 0;
+            const iterable = {
+                [Symbol.iterator]() {
+                    return {
+                        next() {
+                            if (calls++ === 0)
+                                return { value: 1, done: false };
+                            if (stage === "next")
+                                throw error;
+                            return {
+                                get done() {
+                                    if (stage === "done") throw error;
+                                    return false;
+                                },
+                                get value() { throw error; },
+                            };
+                        },
+                        return() { closed = true; return {}; },
+                    };
+                },
+            };
+            let caught;
+            try { spread(iterable); } catch (e) { caught = e; }
+            assert(caught, error);
+            assert(closed, false);
+        }
+    }
 }
 
 function test_function_length()
