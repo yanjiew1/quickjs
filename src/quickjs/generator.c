@@ -263,7 +263,10 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
                 /* return (value, done) object */
                 *pdone = 2;
             } else {
-                *pdone = FALSE;
+                JSObject *func = JS_VALUE_GET_OBJ(sf->cur_func);
+                JSContext *body_ctx = func->u.func.function_bytecode->realm;
+                ret = js_create_iterator_result(body_ctx, ret, FALSE);
+                *pdone = 2;
             }
         }
         break;
