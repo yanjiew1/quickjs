@@ -274,6 +274,30 @@ function bjson_test_tracking_typed_array()
     assert(tracking.length, 4);
 }
 
+function bjson_test_out_of_bounds_typed_array()
+{
+    for (const references of [false, true]) {
+        const buffer = new ArrayBuffer(4, { maxByteLength: 8 });
+        const fixed = new Uint8Array(buffer, 0, 4);
+        const tracking = new Uint8Array(buffer, 2);
+
+        buffer.resize(1);
+        for (const view of [fixed, tracking]) {
+            let error;
+            try { bjson.write(view, references); }
+            catch (e) { error = e; }
+            assert(error instanceof TypeError);
+        }
+        buffer.resize(4);
+        for (const view of [fixed, tracking]) {
+            const encoded = bjson.write(view, references);
+            const copy = bjson.read(encoded, 0, encoded.byteLength, references);
+            assert(copy.length, view.length);
+            assert(copy.byteOffset, view.byteOffset);
+        }
+    }
+}
+
 function bjson_test_array_holes()
 {
     for (const references of [false, true]) {
@@ -296,6 +320,7 @@ function bjson_test_all()
 {
     var obj;
 
+    bjson_test_out_of_bounds_typed_array();
     bjson_test_array_holes();
 
     bjson_test({x:1, y:2, if:3});
