@@ -983,7 +983,8 @@ Examples are available in @file{src/quickjs-libc/std.c}.
 
 Native ES6 modules are supported and can be dynamically or statically
 linked. Look at @file{tests/bjson.c} and @file{tests/test_bjson.js};
-the build creates their @file{bjson.so} module. The standard library
+on platforms with shared-module support, the test build creates their
+@file{bjson.so} module. The standard library
 @file{src/quickjs-libc/std.c} is also a good example
 of a native module.
 
