@@ -8190,9 +8190,11 @@ static __exception int js_parse_function_decl2(JSParseState *s,
             int idx, has_initializer;
 
             if (s->token.val == TOK_ELLIPSIS) {
-                if (func_type == JS_PARSE_FUNC_SETTER)
+                if (func_type == JS_PARSE_FUNC_GETTER ||
+                    func_type == JS_PARSE_FUNC_SETTER)
                     goto fail_accessor;
                 fd->has_simple_parameter_list = FALSE;
+                has_opt_arg = TRUE;
                 rest = TRUE;
                 if (next_token(s))
                     goto fail;
@@ -8245,7 +8247,6 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                     emit_op(s, OP_put_arg);
                     emit_u16(s, idx);
                     fd->has_simple_parameter_list = FALSE;
-                    has_opt_arg = TRUE;
                 } else if (s->token.val == '=') {
                     int label;
 
