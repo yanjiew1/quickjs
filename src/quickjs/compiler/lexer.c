@@ -971,8 +971,9 @@ static int match_identifier(const uint8_t *p, const char *s) {
    - TOK_IDENT is returned for other identifiers and keywords
    - otherwise the next character or unicode codepoint is returned.
  */
-static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator,
-                             BOOL allow_html_comments, BOOL at_line_start)
+static int simple_next_token(const uint8_t **pp, const uint8_t *buf_end,
+                             BOOL no_line_terminator, BOOL allow_html_comments,
+                             BOOL at_line_start)
 {
     const uint8_t *p;
     uint32_t c;
@@ -980,6 +981,8 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator,
     /* skip spaces and comments */
     p = *pp;
     for (;;) {
+        if (p >= buf_end)
+            return 0;
         switch(c = *p++) {
         case '\r':
         case '\n':
@@ -997,14 +1000,14 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator,
             skip_line_comment:
                 if (no_line_terminator)
                     return '\n';
-                while (*p && *p != '\r' && *p != '\n' &&
+                while (p < buf_end && *p != '\r' && *p != '\n' &&
                        !(p[0] == 0xe2 && p[1] == 0x80 &&
                          (p[2] == 0xa8 || p[2] == 0xa9)))
                     p++;
                 continue;
             }
             if (*p == '*') {
-                while (*++p) {
+                while (++p < buf_end) {
                     if (*p == '\r' || *p == '\n' ||
                         (p[0] == 0xe2 && p[1] == 0x80 &&
                          (p[2] == 0xa8 || p[2] == 0xa9))) {
@@ -1083,7 +1086,8 @@ static int simple_next_token(const uint8_t **pp, BOOL no_line_terminator,
 int peek_token(JSParseState *s, BOOL no_line_terminator)
 {
     const uint8_t *p = s->buf_ptr;
-    return simple_next_token(&p, no_line_terminator, s->allow_html_comments, FALSE);
+    return simple_next_token(&p, s->buf_end, no_line_terminator,
+                             s->allow_html_comments, FALSE);
 }
 
 void skip_shebang(const uint8_t **pp, const uint8_t *buf_end)
@@ -1125,12 +1129,13 @@ void skip_shebang(const uint8_t **pp, const uint8_t *buf_end)
 BOOL JS_DetectModule(const char *input, size_t input_len)
 {
     const uint8_t *p = (const uint8_t *)input;
+    const uint8_t *buf_end = p + input_len;
     int tok;
 
-    skip_shebang(&p, p + input_len);
-    switch(simple_next_token(&p, FALSE, TRUE, TRUE)) {
+    skip_shebang(&p, buf_end);
+    switch(simple_next_token(&p, buf_end, FALSE, TRUE, TRUE)) {
     case TOK_IMPORT:
-        tok = simple_next_token(&p, FALSE, TRUE, FALSE);
+        tok = simple_next_token(&p, buf_end, FALSE, TRUE, FALSE);
         return (tok != '.' && tok != '(');
     case TOK_EXPORT:
         return TRUE;

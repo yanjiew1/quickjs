@@ -43,8 +43,10 @@ static void test_module_detection(JSContext *ctx)
         "label <!-- ignored\n: {}",
         "let x;\n--> ignored\nx;",
     };
+    static const char nul_comment[] = "/*\0*/ export {};";
     size_t i;
 
+    assert(JS_DetectModule(nul_comment, sizeof(nul_comment) - 1));
     /* Detection uses Script trivia; actual Module parsing forbids HTML comments. */
     for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
         assert(JS_DetectModule(cases[i].source, strlen(cases[i].source)) ==

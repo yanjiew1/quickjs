@@ -59,6 +59,16 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_comment_nul_lookahead()
+{
+    for (const comment of ["/*\0*/", "//\0 ignored\n", "<!--\0 ignored\n"]) {
+        Function("label " + comment + ": { break label; }");
+        assert_throws(SyntaxError, () => Function("for (async " + comment + " of []) {}"));
+    }
+}
+
+test_comment_nul_lookahead();
+
 function test_class_initializer_lookahead()
 {
     /* A field's await identifier must not select the enclosing async RegExp goal. */
