@@ -59,6 +59,17 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_hashbang_line_terminators()
+{
+    for (const terminator of ["\n", "\r", "\u2028", "\u2029"]) {
+        /* The HTML close comment starts on the line after the hashbang. */
+        assert(eval("#! comment" + terminator + "--> comment\n42"), 42);
+        assert(eval("#! comment" + terminator + "42"), 42);
+    }
+}
+
+test_hashbang_line_terminators();
+
 function test_arrow_for_in_grammar()
 {
     for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",

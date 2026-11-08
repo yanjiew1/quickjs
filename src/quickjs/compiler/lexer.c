@@ -1081,11 +1081,16 @@ void skip_shebang(const uint8_t **pp, const uint8_t *buf_end)
             if (*p == '\n' || *p == '\r') {
                 break;
             } else if (*p >= 0x80) {
-                c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
+                const uint8_t *p_next;
+
+                c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p_next);
                 if (c == CP_LS || c == CP_PS) {
+                    /* Leave the terminator for the lexer, just as for CR/LF. */
                     break;
                 } else if (c == -1) {
                     p++; /* skip invalid UTF-8 */
+                } else {
+                    p = p_next;
                 }
             } else {
                 p++;
