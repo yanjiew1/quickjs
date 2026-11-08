@@ -2513,6 +2513,11 @@ function test_regexp_source_line_terminators()
 function test_regexp()
 {
     var a, str;
+    assert(new RegExp("(?<x>a)|(?<x>b)").test("a"));
+    assert(new RegExp("(?:(?<x>a)|(?<x>b))+").test("ab"));
+    assert(new RegExp("(?<x>a)" + "|".repeat(256) + "(?<x>b)").test("b"));
+    assert_throws(SyntaxError, () => new RegExp("(?:(?<x>a)|b)(?<x>c)"));
+    assert_throws(SyntaxError, () => new RegExp("(?=(?<x>a)|b)(?<x>c)"));
     str = "abbbbbc";
     a = /(b+)c/.exec(str);
     assert(a[0], "bbbbbc");
