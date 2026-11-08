@@ -112,6 +112,7 @@ struct JSModuleDef {
     JSModuleInitFunc *init_func; /* only used for C modules */
     BOOL has_tla : 8; /* true if func_obj contains await */
     BOOL resolved : 8;
+    BOOL resolution_active : 8;
     BOOL func_created : 8;
     JSModuleStatus status : 8;
     /* temp use during js_module_link() & js_module_evaluate() */

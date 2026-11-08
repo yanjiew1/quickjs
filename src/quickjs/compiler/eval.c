@@ -50,12 +50,11 @@ static JSValue JS_EvalFunctionInternal(JSContext *ctx, JSValue fun_obj,
         ret_val = JS_CallFree(ctx, fun_obj, this_obj, 0, NULL);
     } else if (tag == JS_TAG_MODULE) {
         JSModuleDef *m;
+        int err;
         m = JS_VALUE_GET_PTR(fun_obj);
-        /* the module refcount should be >= 2 */
+        err = JS_LinkModule(ctx, fun_obj);
         JS_FreeValue(ctx, fun_obj);
-        if (js_create_module_function(ctx, m) < 0)
-            goto fail;
-        if (js_link_module(ctx, m) < 0)
+        if (err < 0)
             goto fail;
         ret_val = js_evaluate_module(ctx, m);
         if (JS_IsException(ret_val)) {

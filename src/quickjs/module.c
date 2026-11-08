@@ -1124,6 +1124,7 @@ static int js_resolve_module1(JSContext *ctx, JSModuleDef *m)
     }
 #endif
     m->resolved = TRUE;
+    m->resolution_active = TRUE;
     JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
     m->resolution_next = ctx->resolving_modules;
     ctx->resolving_modules = m;
@@ -1134,14 +1135,18 @@ static int js_resolve_module1(JSContext *ctx, JSModuleDef *m)
                                                   rme->module_name,
                                                   rme->attributes);
         if (!m1)
-            return -1;
+            goto fail;
         rme->module = m1;
         /* already done in js_host_resolve_imported_module() except if
            the module was loaded with JS_EvalBinary() */
         if (js_resolve_module(ctx, m1) < 0)
-            return -1;
+            goto fail;
     }
+    m->resolution_active = FALSE;
     return 0;
+ fail:
+    m->resolution_active = FALSE;
+    return -1;
 }
 
 /* Keep new nodes alive across loader callbacks. Nested calls have a
@@ -1283,11 +1288,23 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
     }
 #endif
 
-    if (m->status == JS_MODULE_STATUS_LINKING ||
-        m->status == JS_MODULE_STATUS_LINKED ||
+    if (m->status == JS_MODULE_STATUS_LINKING) {
+        for (m1 = *pstack_top; m1; m1 = m1->stack_prev) {
+            if (m1 == m)
+                return index;
+        }
+        JS_ThrowTypeError(ctx, "module is already being linked");
+        return -1;
+    }
+    if (m->status == JS_MODULE_STATUS_LINKED ||
         m->status == JS_MODULE_STATUS_EVALUATING_ASYNC ||
         m->status == JS_MODULE_STATUS_EVALUATED)
         return index;
+
+    if (m->status == JS_MODULE_STATUS_EVALUATING) {
+        JS_ThrowTypeError(ctx, "module is already being evaluated");
+        return -1;
+    }
 
     assert(m->status == JS_MODULE_STATUS_UNLINKED);
     m->status = JS_MODULE_STATUS_LINKING;
@@ -1857,9 +1874,18 @@ int JS_LinkModule(JSContext *ctx, JSValueConst obj)
         JS_ThrowTypeError(ctx, "module expected");
         return -1;
     }
+    m = JS_VALUE_GET_PTR(obj);
+    if (m->resolution_active) {
+        JS_ThrowTypeError(ctx, "module is already being resolved");
+        return -1;
+    }
+    if (m->status == JS_MODULE_STATUS_LINKING ||
+        m->status == JS_MODULE_STATUS_EVALUATING) {
+        JS_ThrowTypeError(ctx, "module is already being linked or evaluated");
+        return -1;
+    }
     if (JS_ResolveModule(ctx, obj) < 0)
         return -1;
-    m = JS_VALUE_GET_PTR(obj);
     if (js_create_module_function(ctx, m) < 0)
         return -1;
     return js_link_module(ctx, m);

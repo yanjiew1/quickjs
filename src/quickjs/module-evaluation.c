@@ -353,8 +353,15 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
         }
     }
     if (m->status == JS_MODULE_STATUS_EVALUATING) {
-        *pvalue = JS_UNDEFINED;
-        return index;
+        for (m1 = *pstack_top; m1; m1 = m1->stack_prev) {
+            if (m1 == m) {
+                *pvalue = JS_UNDEFINED;
+                return index;
+            }
+        }
+        JS_ThrowTypeError(ctx, "module is already being evaluated");
+        *pvalue = JS_GetException(ctx);
+        return -1;
     }
     assert(m->status == JS_MODULE_STATUS_LINKED);
 
