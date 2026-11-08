@@ -84,6 +84,35 @@ async function test_class_strict_region_async()
 
 await test_class_strict_region_async();
 
+async function test_await_promise_resolve_error()
+{
+    const error = {};
+    const value = Promise.resolve(0);
+    let finalized = false;
+
+    Object.defineProperty(value, "constructor", { get() { throw error; } });
+    async function caught() {
+        try {
+            await value;
+        } catch (e) {
+            assert(e, error);
+            return await Promise.resolve(42);
+        } finally {
+            finalized = true;
+        }
+    }
+    assert(await caught(), 42);
+    assert(finalized, true);
+    try {
+        await (async () => { await value; })();
+        throw Error("await should reject");
+    } catch (e) {
+        assert(e, error);
+    }
+}
+
+await test_await_promise_resolve_error();
+
 async function test_function_constructor_binding()
 {
     const constructors = [Function, (function*() {}).constructor,

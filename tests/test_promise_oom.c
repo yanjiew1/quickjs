@@ -920,6 +920,38 @@ static void test_async_function_return_oom(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_await_setup_oom(void)
+{
+    static const char source[] =
+        "var awaitCaught = false;"
+        "(async function() { try { await armAssimilationOOM(); }"
+        " catch (e) { awaitCaught = true; } })()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, promise, caught;
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "armAssimilationOOM",
+               JS_NewCFunction(ctx, arm_assimilation_oom, "armAssimilationOOM", 0)) > 0);
+    assimilation_padding = NULL;
+    assimilation_armed = 0;
+    promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                      "<await-setup-oom>", JS_EVAL_TYPE_GLOBAL);
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    assert(assimilation_armed && !JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    caught = JS_GetPropertyStr(ctx, global, "awaitCaught");
+    assert(JS_ToBool(ctx, caught) == 1);
+    JS_FreeValue(ctx, caught);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, global);
+    test_pool_padding_free(rt, assimilation_padding);
+    assimilation_padding = NULL;
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_async_generator_result_oom(void)
 {
     static const char source[] =
@@ -993,6 +1025,7 @@ int main(void)
     test_race_interrupt_does_not_settle();
     test_custom_combinator_resolve_throw();
     test_async_function_return_oom();
+    test_await_setup_oom();
     test_async_generator_result_oom();
     assert(rt);
     ctx = JS_NewContext(rt);
