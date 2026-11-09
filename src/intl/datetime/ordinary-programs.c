@@ -348,22 +348,6 @@ static QJSIntlStatus plain_clock(Build *build, unsigned int wanted)
     return add(build, &record);
 }
 
-static QJSIntlStatus fractional_pattern(Build *build, const QJSIntlDatePattern *base,
-                                        size_t digits, QJSIntlDatePattern *out)
-{
-    QJSIntlDatePatternToken tokens[3] = {{{0}, 0, 0}, {build->decimal, 0, 0}, {{0}, digits, 'S'}};
-    QJSIntlDatePattern replacement = {0};
-    size_t i;
-    for (i = 0; i < base->count; i++)
-        if (base->tokens[i].symbol == 's')
-            break;
-    if (i == base->count)
-        return QJS_INTL_DATA_ERROR;
-    tokens[0] = base->tokens[i];
-    replacement.tokens = tokens;
-    replacement.count = 3;
-    return qjs_intl_date_pattern_replace(&build->result.allocator, base, 's', &replacement, out);
-}
 
 static QJSIntlStatus fraction(Build *build, size_t base)
 {
@@ -377,11 +361,11 @@ static QJSIntlStatus fraction(Build *build, size_t base)
         record.single.components.values[QJS_INTL_DATETIME_FRACTION] = digits;
         record.construction = QJS_INTL_DATE_ORDINARY_FRACTION;
         record.fraction_decimal = build->decimal;
-        status = fractional_pattern(build, &build->result.records[base].single.normal.pattern,
-                                     digits, &record.single.normal.pattern);
+        status = qjs_intl_date_pattern_fraction(&build->result.allocator, &build->result.records[base].single.normal.pattern,
+                                     build->decimal, digits, &record.single.normal.pattern);
         if (!status && build->result.records[base].single.twelve.pattern.count)
-            status = fractional_pattern(build, &build->result.records[base].single.twelve.pattern,
-                                         digits, &record.single.twelve.pattern);
+            status = qjs_intl_date_pattern_fraction(&build->result.allocator, &build->result.records[base].single.twelve.pattern,
+                                         build->decimal, digits, &record.single.twelve.pattern);
         if (status) {
             qjs_intl_date_single_programs_clear(&record.single);
             return status;
