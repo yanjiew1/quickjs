@@ -268,7 +268,6 @@ static JSValue to_plain(JSContext *ctx, JSValueConst item,
     QJSTemporalOverflow overflow;
     QJSTemporalParsedISO parsed;
     JSTemporalFields fields;
-    JSValue calendar_string;
     const char *text;
     size_t length;
     int error, copied = 0;
@@ -327,15 +326,11 @@ static JSValue to_plain(JSContext *ctx, JSValueConst item,
         return JS_ThrowRangeError(ctx, "invalid Temporal civil string");
     }
     value.datetime = parsed.datetime;
-    calendar_string = parsed.calendar ?
-        JS_NewStringLen(ctx, parsed.calendar, parsed.calendar_length) :
-        JS_NewString(ctx, "iso8601");
+    error = qjs_calendar_from_identifier(&value.calendar,
+                parsed.calendar ? parsed.calendar : "iso8601",
+                parsed.calendar ? parsed.calendar_length : 7);
     JS_FreeCString(ctx, text);
-    if (JS_IsException(calendar_string))
-        return JS_EXCEPTION;
-    error = canonicalize_calendar(ctx, calendar_string, &value.calendar);
-    JS_FreeValue(ctx, calendar_string);
-    if (error || get_overflow(ctx, options, &overflow))
+    if (js_temporal_calendar_error(ctx, error) || get_overflow(ctx, options, &overflow))
         return JS_EXCEPTION;
     if (kind == PLAIN_MONTH_DAY &&
         value.calendar == QJS_CAL_ISO8601) {
