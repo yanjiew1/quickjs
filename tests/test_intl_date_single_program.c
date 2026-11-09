@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include "../src/intl/datetime/single-program.h"
+#include "../src/intl/datetime/skeleton-match.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -300,61 +301,82 @@ static void skeleton_widths(void)
     assert(closest < qjs_intl_date_skeleton_distance(bytes("yMMddBhmzzzz"), &request, QJS_INTL_DATE_H12, widths));
 }
 
-static void whole_skeleton_aliases(void)
+static void skeleton_selection(void)
 {
-    QJSIntlDateSourceCandidate records[4] = {0};
+    QJSIntlDateSourceCandidate records[2] = {0};
     QJSIntlDateSourceCandidates pool = {0};
-    QJSIntlDateTimeComponents request = {{0}};
-    unsigned char widths[5];
-    size_t i;
-
+    QJSIntlDateTimeComponents request = {{0}}, basis;
+    size_t selected;
     pool.records = records;
-    pool.count = 4;
-    for (i = 0; i < pool.count; i++) {
-        records[i].source.text = bytes("M/d/y");
+    pool.count = 2;
+    records[0].source.code = bytes("yMd");
+    records[1].source.code = bytes("yMdd");
+    /* Identical rendered fields retain distinct source-key identities. */
+    for (size_t i = 0; i < 2; i++) {
         records[i].info.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
         records[i].info.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
         records[i].info.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
     }
-    records[0].source.code = bytes("yMd");
-    records[1].source.code = bytes("yyMMdd");
-    records[2].source.code = bytes("yMMdQ");
-    records[3].source.code = bytes("yMMd");
-    records[3].source.text = bytes("different pattern");
-    request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
-    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
-    request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
-    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
-    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 1);
-
-    pool.count = 2;
-    records[0].source.code = bytes("yyyyyyyyyyyyyyyyyyyyyyyMd");
-    records[1].source.code = bytes("yMMdQ");
-    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
-    assert(widths[0] == 23 && widths[1] == 1);
-    records[1].source.code = bytes("MMd");
-    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
-    assert(widths[0] == 23 && widths[1] == 1);
-
-    pool.count = 4;
-    records[0].source.code = bytes("yMd");
-    records[1].source.code = bytes("yMdd");
-    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+    request = records[0].info.components;
     request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_TWO_DIGIT;
-    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
-    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 2);
-
-    pool.count = 2;
-    records[0].source.code = bytes("yMdHm");
-    records[1].source.code = bytes("yMMddhm");
-    records[0].info.components.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
-    records[0].info.components.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
-    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 0, &selected, &basis));
+    assert(selected == 1);
+    records[0].source.code = bytes("Md");
+    records[1].source.code = bytes("yM");
+    records[0].info.components.values[QJS_INTL_DATETIME_YEAR] = 0;
+    records[1].info.components.values[QJS_INTL_DATETIME_DAY] = 0;
     request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 0, &selected, &basis));
+    assert(selected == SIZE_MAX);
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 1, &selected, &basis));
+    assert(selected == 1 && !basis.values[QJS_INTL_DATETIME_DAY]); /* Year outranks day. */
+    records[1].source.code = bytes("yMH");
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 1, &selected, &basis));
+    assert(selected == 0); /* An extra hour does not satisfy date fields. */
+    memset(records, 0, sizeof(records));
+    records[0].source.code = bytes("GyM");
+    records[0].info.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    records[0].info.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+    records[0].info.components.values[QJS_INTL_DATETIME_ERA] = QJS_INTL_DATETIME_SHORT;
+    records[1].source.code = bytes("Md");
+    records[1].info.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+    records[1].info.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_DAY] = 0;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 1, &selected, &basis));
+    assert(selected == 0 && basis.values[QJS_INTL_DATETIME_ERA]);
+    records[1].source.code = bytes("y");
+    records[1].info.components = (QJSIntlDateTimeComponents){{0}};
+    records[1].info.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 1, &selected, &basis));
+    assert(selected == 1 && !basis.values[QJS_INTL_DATETIME_ERA]);
+    memset(records, 0, sizeof(records));
+    records[0].source.code = bytes("U");
+    records[1].source.code = bytes("r");
+    records[0].info.year_kinds = QJS_INTL_DATE_YEAR_CYCLIC;
+    records[1].info.year_kinds = QJS_INTL_DATE_YEAR_RELATED;
+    for (size_t i = 0; i < 2; i++)
+        records[i].info.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_DAY] = 0;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H23, 1, &selected, &basis));
+    assert(selected == 1); /* Prefer a related numeric year to a cyclic name. */
+
+    memset(records, 0, sizeof(records));
+    memset(&request, 0, sizeof(request));
+    records[0].source.code = bytes("hm");
+    records[1].source.code = bytes("Bhm");
+    for (size_t i = 0; i < 2; i++) {
+        records[i].info.hour_symbol = 'h';
+        records[i].info.period_symbol = i ? 'B' : 'a';
+        records[i].info.components.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
+        records[i].info.components.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_TWO_DIGIT;
+    }
+    records[1].info.components.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_SHORT;
     request.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
     request.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
-    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H12, widths);
-    assert(widths[1] == 2 && widths[2] == 2);
+    request.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_LONG;
+    assert(!qjs_intl_date_skeleton_select(&pool, &request, QJS_INTL_DATE_H12, 0, &selected, &basis));
+    assert(selected == 1); /* Prefer B despite its width mismatch to implicit a. */
+
 }
 
 int main(void)
@@ -567,7 +589,7 @@ int main(void)
     textual_date_widths(&b);
     fraction_widths(&b);
     skeleton_widths();
-    whole_skeleton_aliases();
+    skeleton_selection();
     assert(!input.live && !output.live);
     return 0;
 }
