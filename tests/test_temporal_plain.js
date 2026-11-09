@@ -111,3 +111,13 @@ for (let ctor of [Temporal.PlainDate, Temporal.PlainDateTime,
     assert(!(ctor.from(sub) instanceof Sub));
     same(sub.toString(), sub.toJSON());
 }
+
+// Invalid calendar annotations are rejected before reading overflow options.
+for (const Type of [Temporal.PlainDate, Temporal.PlainDateTime,
+                    Temporal.PlainYearMonth, Temporal.PlainMonthDay]) {
+    let read = false;
+    throws(RangeError, () => Type.from('2024-01-01[u-ca=foobar]', {
+        get overflow() { read = true; return 'constrain'; },
+    }));
+    same(read, false);
+}
