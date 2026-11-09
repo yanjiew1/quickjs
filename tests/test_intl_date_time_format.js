@@ -665,3 +665,40 @@ if (scriptArgs[1] === 'native' && scriptArgs[2] === 'native') {
             delete String.prototype[Symbol.split];
     }
 }
+
+// A missing seconds-only skeleton still inserts fractions with the locale's
+// decimal separator; it must not append a second labeled calendar field.
+for (const digits of [1, 2, 3]) {
+    const formatter = new DTF('en', {...utc, second: 'numeric', fractionalSecondDigits: digits});
+    const parts = formatter.formatToParts(123);
+    assert(parts.map(part => part.value).join(''), '0.' + '123'.slice(0, digits));
+    assert(parts.find(part => part.type === 'fractionalSecond').value, '123'.slice(0, digits));
+}
+
+// Day periods belong to a twelve-hour clock. A twenty-four-hour request keeps
+// its clock fields without synthesizing an appended period.
+for (const hourCycle of ['h23', 'h24']) {
+    const formatter = new DTF('en', {...utc, hourCycle, hour: 'numeric', dayPeriod: 'long'});
+    assert(formatter.resolvedOptions().dayPeriod, undefined);
+    assert(formatter.formatToParts(0).some(part => part.type === 'dayPeriod'), false);
+}
+for (const extra of [{minute: '2-digit'}, {fractionalSecondDigits: 2}]) {
+    const formatter = new DTF('en', {...utc, dayPeriod: 'long', ...extra});
+    const parts = formatter.formatToParts(123);
+    assert(parts.some(part => part.type === 'dayPeriod'));
+    assert(parts.map(part => part.value).join(''), formatter.format(123));
+}
+
+// Calendars with no era representation keep their usable date fields when
+// an era is requested, rather than failing the complete formatter.
+for (const calendar of ['chinese', 'dangi']) {
+    if (!Intl.supportedValuesOf('calendar').includes(calendar))
+        continue;
+    const formatter = new DTF('en', {...utc, calendar, era: 'long'});
+    assert(formatter.resolvedOptions().era, undefined);
+    assert(formatter.formatToParts(0).some(part => part.type === 'era'), false);
+    assert(typeof formatter.format(0), 'string');
+    const clock = new DTF('en', {...utc, calendar, era: 'long', hour: 'numeric'});
+    assert(clock.formatToParts(0).some(part => part.type === 'hour'));
+    assert(clock.formatToParts(0).some(part => part.type === 'era'), false);
+}

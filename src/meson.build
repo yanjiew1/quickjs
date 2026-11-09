@@ -200,6 +200,7 @@ if intl_enabled
     'intl/datetime/pattern-info.c',
     'intl/datetime/period-spacing.c',
     'intl/datetime/program-adapt.c',
+    'intl/datetime/skeleton-match.c',
     'intl/datetime/single-program.c',
     'intl/datetime/ordinary-programs.c',
     'intl/datetime/date-clock-programs.c',
