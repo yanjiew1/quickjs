@@ -234,6 +234,53 @@ assert(styled.hour, undefined);
 const numericIso = new DTF('en', {...utc, calendar: 'iso8601'});
 assert(numericIso.resolvedOptions().month, '2-digit');
 assert(numericIso.formatToParts(Date.UTC(2024, 8, 1)).find(part => part.type === 'month').value, '09');
+
+// Best fit carries the requested numeric date widths into single values and
+// ranges, including when the date is composed with a clock.
+for (const clock of [{}, {hour: 'numeric', hourCycle: 'h12'}, {hour: 'numeric', hourCycle: 'h23'}]) {
+    for (const year of ['numeric', '2-digit']) {
+        const formatter = new DTF('en-US', {...utc, year, month: '2-digit', day: '2-digit', ...clock});
+        const resolved = formatter.resolvedOptions();
+        assert(resolved.month, '2-digit');
+        assert(resolved.day, '2-digit');
+        const parts = formatter.formatToParts(0);
+        assert(parts.find(part => part.type === 'month').value, '01');
+        assert(parts.find(part => part.type === 'day').value, '01');
+        assert(parts.find(part => part.type === 'year').value, year === '2-digit' ? '70' : '1970');
+        const range = formatter.formatRangeToParts(0, Date.UTC(1970, 1, 2));
+        assert(range.map(part => part.value).join(''), formatter.formatRange(0, Date.UTC(1970, 1, 2)));
+        for (const part of range)
+            if (part.type === 'month' || part.type === 'day')
+                assert(part.value.length, 2);
+    }
+}
+
+if (DTF.supportedLocalesOf(['ja-JP']).length) {
+    const japanese = new DTF('ja-JP-u-ca-japanese', {...utc, month: 'numeric', day: 'numeric'});
+    if (japanese.resolvedOptions().calendar === 'japanese') {
+        const parts = japanese.formatToParts(0);
+        assert(parts.some(part => part.type === 'era' || part.type === 'year'), false);
+    }
+}
+if (scriptArgs[1] === 'native' && DTF.supportedLocalesOf(['ja-JP']).length) {
+    // Distinct available-format keys can have equal projected components.
+    assert(new DTF('ja-JP', {...utc, month: 'numeric', day: 'numeric'}).format(0), '1/1');
+    assert(new DTF('ja-JP', {...utc, year: 'numeric', month: 'long'}).format(0), '1970年1月');
+}
+for (const [calendar, month, era] of [
+    ['gregory', 'January', 'Anno Domini'],
+    ['hebrew', 'Tevet', 'AM'],
+    ['japanese', 'January', 'Shōwa'],
+]) {
+    const formatter = new DTF('en-US', {...utc, calendar, year: 'numeric', month: 'long',
+                                       day: 'numeric', weekday: 'long', era: 'long'});
+    if (formatter.resolvedOptions().calendar !== calendar)
+        continue;
+    const parts = formatter.formatToParts(0);
+    assert(parts.find(part => part.type === 'weekday').value, 'Thursday');
+    assert(parts.find(part => part.type === 'month').value, month);
+    assert(parts.find(part => part.type === 'era').value, era);
+}
 const basicIso = new DTF('en', {...utc, calendar: 'iso8601', formatMatcher: 'basic'});
 assert(basicIso.resolvedOptions().month, 'short');
 const textIso = new DTF('en', {...utc, calendar: 'iso8601', month: 'short'});
