@@ -237,6 +237,16 @@ assert(mixed.resolvedOptions().weekday, undefined);
 assert(mixed.formatToParts(1719835200123).some(part => part.type === 'weekday'), false);
 assert(mixed.formatToParts(1719835200123).find(part => part.type === 'fractionalSecond').value, '12');
 
+// A seconds-only source skeleton may satisfy a fractional request, but the
+// selected pattern must then gain the localized decimal and requested S run.
+for (const digits of [1, 2, 3]) {
+    const formatter = new DTF('en', {...utc, hour: '2-digit', minute: 'numeric',
+        second: 'numeric', fractionalSecondDigits: digits, hourCycle: 'h12'});
+    const parts = formatter.formatToParts(123);
+    assert(parts.find(part => part.type === 'hour').value, '12');
+    assert(parts.find(part => part.type === 'fractionalSecond').value, '123'.slice(0, digits));
+}
+
 // Root ISO patterns intentionally pad numeric month/day. Native best fit keeps
 // that source override rather than choosing a named month to reduce width cost.
 const numericIso = new DTF('en', {...utc, calendar: 'iso8601'});
