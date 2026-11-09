@@ -48,6 +48,7 @@ def pack(blocked=False, padded=False, partial_connectors=False, month_hints=Fals
         # yMMMd sorts first, but yMd deliberately requests a numeric month
         # through the same textual pattern. Different raw text is not an alias.
         patterns += (('yMMMd', 'd MMM y'), ('yMd', 'd MMM y'),
+                     ('yMMMdd', 'd MMM y'), ('yyMd', 'y/M/d'), ('yyMdd', 'y/M/d'),
                      ('yMMMMdd', 'dd MMMM y'), ('yMdd', 'MMMM dd, y'),
                      ('yMMMdHm', 'd MMM y HH:mm'), ('yMdHm', 'd MMM y HH:mm'),
                      ('yMMMdhm', 'd MMM y h:mm a'),
