@@ -1893,10 +1893,10 @@ exception:
 }
 
 static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
+                             int argc, JSValueConst *argv, int copy)
 {
     struct array_sort_context asc = { ctx, 0, 0, argv[0] };
-    JSValue obj = JS_UNDEFINED;
+    JSValue obj = JS_UNDEFINED, result = JS_UNDEFINED;
     ValueSlot *array = NULL;
     size_t array_size = 0, pos = 0, n = 0;
     int64_t i, len, undefined_count = 0;
@@ -1911,6 +1911,14 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
+    /* toSorted creates its result before reading elements, but collects
+       directly into the sorting list instead of filling and rereading it. */
+    if (copy) {
+        result = js_allocate_fast_array(ctx, len);
+        if (JS_IsException(result))
+            goto exception;
+    }
+
     /* XXX: should special case fast arrays */
     for (i = 0; i < len; i++) {
         if (pos >= array_size) {
@@ -1924,7 +1932,13 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
             array = new_array;
             array_size = new_size;
         }
-        present = JS_TryGetPropertyInt64(ctx, obj, i, &array[pos].val);
+        if (copy) {
+            /* Read through holes; sort instead skips absent properties. */
+            array[pos].val = JS_GetPropertyInt64(ctx, obj, i);
+            present = JS_IsException(array[pos].val) ? -1 : 1;
+        } else {
+            present = JS_TryGetPropertyInt64(ctx, obj, i, &array[pos].val);
+        }
         if (present < 0)
             goto exception;
         if (present == 0)
@@ -1940,6 +1954,23 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
     rqsort(array, pos, sizeof(*array), js_array_cmp_generic, &asc);
     if (asc.exception)
         goto exception;
+
+    if (copy) {
+        JSValue *values = JS_VALUE_GET_OBJ(result)->u.array.u.values;
+
+        /* The fresh result is dense and initialized to undefined. Transfer
+           the sorted values once, leaving undefined entries at the end.
+           Direct stores also bypass inherited setters, as CreateDataProperty
+           requires. No user code runs while this buffer is borrowed. */
+        for (n = 0; n < pos; n++) {
+            if (array[n].str)
+                JS_FreeValue(ctx, JS_MKPTR(JS_TAG_STRING, array[n].str));
+            values[n] = array[n].val;
+        }
+        js_free(ctx, array);
+        JS_FreeValue(ctx, obj);
+        return result;
+    }
 
     /* XXX: should special case fast arrays */
     while (n < pos) {
@@ -1970,65 +2001,9 @@ exception:
     }
     js_free(ctx, array);
 fail:
+    JS_FreeValue(ctx, result);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
-}
-
-// Note: a.toSorted() is a.slice().sort() with the twist that a.slice()
-// leaves holes in sparse arrays intact whereas a.toSorted() replaces them
-// with undefined, thus in effect creating a dense array.
-// Does not use Array[@@species], always returns a base Array.
-static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    JSValue arr, obj, ret, *arrp, *pval;
-    JSObject *p;
-    int64_t i, len;
-    uint32_t count32;
-    int ok;
-
-    ok = JS_IsUndefined(argv[0]) || JS_IsFunction(ctx, argv[0]);
-    if (!ok)
-        return JS_ThrowTypeError(ctx, "not a function");
-
-    ret = JS_EXCEPTION;
-    arr = JS_UNDEFINED;
-    obj = JS_ToObject(ctx, this_val);
-    if (js_get_length64(ctx, &len, obj))
-        goto exception;
-
-    arr = js_allocate_fast_array(ctx, len);
-    if (JS_IsException(arr))
-        goto exception;
-
-    if (len > 0) {
-        p = JS_VALUE_GET_OBJ(arr);
-        i = 0;
-        pval = p->u.array.u.values;
-        if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
-            for (; i < len; i++, pval++)
-                *pval = JS_DupValue(ctx, arrp[i]);
-        } else {
-            for (; i < len; i++, pval++) {
-                *pval = JS_GetPropertyInt64(ctx, obj, i);
-                if (JS_IsException(*pval))
-                    goto exception;
-            }
-        }
-    }
-
-    ret = js_array_sort(ctx, arr, argc, argv);
-    if (JS_IsException(ret))
-        goto exception;
-    JS_FreeValue(ctx, ret);
-
-    ret = arr;
-    arr = JS_UNDEFINED;
-
-exception:
-    JS_FreeValue(ctx, arr);
-    JS_FreeValue(ctx, obj);
-    return ret;
 }
 
 
@@ -2212,8 +2187,8 @@ const JSCFunctionListEntry js_array_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("unshift", 1, js_array_push, 1 ),
     JS_CFUNC_DEF("reverse", 0, js_array_reverse ),
     JS_CFUNC_DEF("toReversed", 0, js_array_toReversed ),
-    JS_CFUNC_DEF("sort", 1, js_array_sort ),
-    JS_CFUNC_DEF("toSorted", 1, js_array_toSorted ),
+    JS_CFUNC_MAGIC_DEF("sort", 1, js_array_sort, 0 ),
+    JS_CFUNC_MAGIC_DEF("toSorted", 1, js_array_sort, 1 ),
     JS_CFUNC_DEF("slice", 2, js_array_slice ),
     JS_CFUNC_DEF("splice", 2, js_array_splice ),
     JS_CFUNC_DEF("toSpliced", 2, js_array_toSpliced ),
