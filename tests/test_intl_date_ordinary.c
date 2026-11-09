@@ -498,12 +498,14 @@ static void date_clocks(const QJSIntlAllocator *allocator,
     qjs_intl_date_pattern_clear(allocator, &source[0]);
 }
 
-static void month_hints(const QJSIntlDateOrdinaryPrograms *programs)
+static void month_hints(const QJSIntlDateOrdinaryPrograms *programs,
+                        const QJSIntlDateSourceCandidates *pool)
 {
     const unsigned int date_fields = (1U << QJS_INTL_DATETIME_YEAR) |
                                      (1U << QJS_INTL_DATETIME_MONTH) | (1U << QJS_INTL_DATETIME_DAY);
     const unsigned int aliases = QJS_INTL_DATE_MONTH_SOURCE_NUMERIC | QJS_INTL_DATE_MONTH_SOURCE_TEXT;
     unsigned int short_seen = 0, long_seen = 0, combined = 0, fractional = 0, appended = 0, paired = 0;
+    unsigned int alias_composed = 0;
     size_t i, variant;
     for (i = 0; i < programs->count; i++) {
         const QJSIntlDateOrdinaryProgram *record = &programs->records[i];
@@ -526,6 +528,29 @@ static void month_hints(const QJSIntlDateOrdinaryPrograms *programs)
         if (record->first == SIZE_MAX || !fields->values[QJS_INTL_DATETIME_MONTH])
             continue;
         const QJSIntlDateOrdinaryProgram *parent = &programs->records[record->first];
+        if (record->construction == QJS_INTL_DATE_ORDINARY_COMBINE &&
+            parent->single.components.values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_NUMERIC &&
+            !parent->single.components.values[QJS_INTL_DATETIME_ERA] &&
+            parent->single.normal.source_index != SIZE_MAX) {
+            QJSIntlDateTimeComponents request = *fields;
+            const QJSIntlDateSourceCandidate *source = &pool->records[parent->single.normal.source_index];
+            unsigned char widths[5];
+            size_t token;
+
+            request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_TWO_DIGIT;
+            request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_TWO_DIGIT;
+            for (variant = 0; variant < 2; variant++) {
+                const QJSIntlDatePattern *pattern = variant ? &record->single.twelve.pattern :
+                                                              &record->single.normal.pattern;
+                qjs_intl_date_best_alias(pool, source, &request,
+                                         variant ? QJS_INTL_DATE_H12 : QJS_INTL_DATE_H23, widths);
+                assert(widths[2] == 2);
+                for (token = 0; token < pattern->count && pattern->tokens[token].symbol != 'd'; token++)
+                    continue;
+                assert(token < pattern->count && pattern->tokens[token].width == 1);
+            }
+            alias_composed++;
+        }
         for (variant = 0; variant < 2; variant++)
             assert(record->source_month_kinds[variant] == parent->source_month_kinds[
                 parent->single.components.values[QJS_INTL_DATETIME_HOUR] ? variant : 0]);
@@ -533,7 +558,7 @@ static void month_hints(const QJSIntlDateOrdinaryPrograms *programs)
         fractional += record->construction == QJS_INTL_DATE_ORDINARY_FRACTION;
         appended += record->construction == QJS_INTL_DATE_ORDINARY_APPEND;
     }
-    assert(short_seen == 1 && long_seen == 1 && paired == 1 && combined && fractional && appended);
+    assert(short_seen == 1 && long_seen == 1 && paired == 1 && combined && fractional && appended && alias_composed);
 }
 
 static void period_hints(const QJSIntlDateOrdinaryPrograms *programs)
@@ -605,7 +630,7 @@ static void run(const QJSIntlAllocator *allocator, const uint8_t *raw, size_t le
         calls = state->calls;
         verify(&programs);
         if (fixture_kind == 2) {
-            month_hints(&programs);
+            month_hints(&programs, &pool);
             period_hints(&programs);
         }
         else if (fixture_kind == 1)
