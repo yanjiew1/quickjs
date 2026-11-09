@@ -22,7 +22,6 @@
 #ifndef QJS_INTL_DATETIME_PROGRAM_ADAPT_H
 #define QJS_INTL_DATETIME_PROGRAM_ADAPT_H
 #include "pattern-info.h"
-#include "source-candidate.h"
 
 enum {
     QJS_INTL_DATE_ADAPT_HOUR_WIDTH = 1,
@@ -39,22 +38,6 @@ enum {
     QJS_INTL_DATE_ADAPT_ERA_WIDTH = 2048,
     QJS_INTL_DATE_ADAPT_WEEKDAY_WIDTH = 4096
 };
-
-enum {
-    QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH = 255,
-    QJS_INTL_DATE_SKELETON_UNMATCHED = 10000
-};
-
-/* Year, month, day, era and weekday skeleton widths; zero means absent. */
-void qjs_intl_date_skeleton_widths(QJSIntlBytes skeleton, unsigned char widths[5]);
-/* Distance considers the complete key, including unrequested fields. */
-int qjs_intl_date_skeleton_distance(QJSIntlBytes skeleton, const QJSIntlDateTimeComponents *request,
-                                    QJSIntlDateHourCycle cycle, unsigned char widths[5]);
-/* Compare whole skeletons only when they select the same source text. */
-int qjs_intl_date_best_alias(const QJSIntlDateSourceCandidates *pool,
-                             const QJSIntlDateSourceCandidate *selected,
-                             const QJSIntlDateTimeComponents *request,
-                             QJSIntlDateHourCycle cycle, unsigned char widths[5]);
 
 /* Copy an admitted ordinary program to an exact component vector. Permit only
    explicitly allowed numeric date and HOUR/MINUTE/SECOND width changes, plus the requested
