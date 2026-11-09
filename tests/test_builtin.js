@@ -551,6 +551,89 @@ function test_array_copy_reads()
     check("toSorted", [], ["a", "b"], ["0", "1"]);
 }
 
+function test_array_to_sorted_collection()
+{
+    const reads = [];
+    const first = { key: 1, id: "first" };
+    const second = { key: 1, id: "second" };
+    const target = { 0: first, 2: second, length: 4 };
+    const source = new Proxy(target, {
+        has() { throw Error("toSorted must read through holes"); },
+        get(target, key, receiver) {
+            reads.push(key);
+            return Reflect.get(target, key, receiver);
+        },
+    });
+    let comparisons = 0;
+    const sorted = Array.prototype.toSorted.call(source, (a, b) => {
+        // All source reads precede comparison; undefined never reaches it.
+        assert(reads.join(","), "length,0,1,2,3");
+        assert(a !== undefined && b !== undefined, true);
+        comparisons++;
+        delete target[0];
+        delete target[2];
+        target.length = 0;
+        return a.key - b.key;
+    });
+    assert(comparisons > 0, true);
+    assert(sorted.length, 4);
+    assert(sorted[0] === first, true);
+    assert(sorted[1] === second, true); // Equal keys retain source order.
+    assert(sorted[2], undefined);
+    assert(sorted[3], undefined);
+    for (let i = 0; i < sorted.length; i++) {
+        const descriptor = Object.getOwnPropertyDescriptor(sorted, i);
+        assert(descriptor !== undefined, true);
+        assert(descriptor.writable && descriptor.enumerable && descriptor.configurable, true);
+    }
+
+    // Comparator validation must happen before even reading the length.
+    assert_throws(TypeError, () => Array.prototype.toSorted.call({
+        get length() { throw Error("unexpected length read"); },
+    }, null));
+
+    const sentinel = {};
+    let caught = false;
+    try {
+        Array.prototype.toSorted.call({
+            0: first,
+            get 1() { throw sentinel; },
+            get 2() { throw Error("read after abrupt completion"); },
+            length: 3,
+        }, () => { throw Error("comparison before collection finished"); });
+    } catch (error) {
+        caught = true;
+        assert(error === sentinel, true);
+    }
+    assert(caught, true);
+
+    const values = [3, 1, 2];
+    Object.defineProperty(values, "constructor", {
+        get() { throw Error("toSorted must not use Array species"); },
+    });
+    const copy = values.toSorted((a, b) => a - b);
+    assert(Object.getPrototypeOf(copy) === Array.prototype, true);
+    assert(copy.join(","), "1,2,3");
+    assert(values.join(","), "3,1,2");
+
+    // Fresh result properties must bypass even setters installed by a callback.
+    let writes = 0;
+    let result;
+    try {
+        result = [2, 1].toSorted((a, b) => {
+            Object.defineProperty(Array.prototype, "0", {
+                configurable: true,
+                set() { writes++; },
+            });
+            return a - b;
+        });
+    } finally {
+        delete Array.prototype[0];
+    }
+    assert(writes, 0);
+    assert(result.join(","), "1,2");
+}
+
 function test_array_find_receiver()
 {
     for (const [method, expected] of [
@@ -6238,6 +6321,7 @@ test_string_match_all_order();
 test_reflect_construct_order();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
+test_array_to_sorted_collection();
 test_array_copy_reads();
 test_array_find_receiver();
 test_array_search_length_snapshot();
