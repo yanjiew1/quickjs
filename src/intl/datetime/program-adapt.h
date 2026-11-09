@@ -72,4 +72,7 @@ QJSIntlStatus qjs_intl_date_program_adapt(const QJSIntlAllocator *allocator,
                                         const QJSIntlDateTimeComponents *components,
                                         unsigned int allowed_widths, unsigned int twelve,
                                         QJSIntlDatePattern *out, unsigned int *adaptations);
+QJSIntlStatus qjs_intl_date_pattern_fraction(const QJSIntlAllocator *allocator,
+                                             const QJSIntlDatePattern *base, QJSIntlBytes decimal,
+                                             size_t digits, QJSIntlDatePattern *out);
 #endif
