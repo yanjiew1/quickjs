@@ -129,6 +129,7 @@ tests/test_atomics.js
 tests/test_bigint.js
 tests/test_bjson.js
 tests/test_builtin.js
+tests/test_failed_native_module.js
 tests/test_closure.js
 tests/test_cyclic_import.js
 tests/test_date_parse_boundaries.js
