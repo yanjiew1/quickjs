@@ -90,7 +90,7 @@ static void test_allocator_frees(void)
 
 int main(void)
 {
-    static const uint8_t input[] = { 'a', 0, 'a' };
+    static const uint8_t input[] = { 'a', 0, 0, 'a' };
     static const uint8_t missing_delimiter[] = { 'a' };
 
     assert(fuzz_regexp_timeout_input(input, sizeof(input)) == 0);

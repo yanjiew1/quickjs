@@ -692,17 +692,25 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
-          -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
+          -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined
     - name: Compile selected build
       id: compile
       run: |
-        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" fuzz_eval fuzz_compile fuzz_regexp 2>&1 | tee build/compile.log
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" qjsc fuzz_eval fuzz_compile fuzz_regexp fuzz_bytecode fuzz_json 2>&1 | tee build/compile.log
     - name: Run bounded fuzzer smoke tests
       if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
       run: |
-        mkdir -p build/fuzz-corpus/js build/fuzz-corpus/regexp
+        mkdir -p build/fuzz-corpus/js build/fuzz-corpus/regexp build/fuzz-corpus/bytecode build/fuzz-corpus/json
         printf '%s\n' 'let x = 6 * 7; Promise.resolve(x);' > build/fuzz-corpus/js/core.js
-        printf 'a+\0aaa' > build/fuzz-corpus/regexp/basic
+        printf '%s\n' 'export const x = 1; export default function () { return x; }' > build/fuzz-corpus/js/module.js
+        printf '%s\n' 'new RegExp("[a-z]", "iu").test("A")' > build/fuzz-corpus/js/regexp.js
+        printf 'a+\0\0aaa' > build/fuzz-corpus/regexp/basic
+        printf '%s\n' '{"key":[1,true,null,"text"]}' > build/fuzz-corpus/json/object
+        build/qjsc -c -o build/fuzz-seed.c build/fuzz-corpus/js/core.js
+        build/qjsc -c -m -o build/fuzz-module-seed.c build/fuzz-corpus/js/module.js
+        for seed in seed module-seed; do
+          python3 -c 'import re, pathlib, sys; s = pathlib.Path(sys.argv[1]).read_text(); m = re.search(r"const uint8_t \w+\[(\d+)\] = \{(.*?)\};", s, re.S); assert m; b = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m[2])); assert len(b) == int(m[1]); pathlib.Path(sys.argv[2]).write_bytes(b)' "build/fuzz-$seed.c" "build/fuzz-corpus/bytecode/$seed"
+        done
         for target in eval compile; do
           timeout --kill-after=10s 30s "build/tools/build/fuzz_$target" \
             -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 "build/fuzz-corpus/js" \
@@ -711,6 +719,12 @@ jobs:
         timeout --kill-after=10s 30s build/tools/build/fuzz_regexp \
           -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 build/fuzz-corpus/regexp \
           2>&1 | tee build/fuzz-regexp.log
+        timeout --kill-after=10s 30s build/tools/build/fuzz_bytecode \
+          -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 build/fuzz-corpus/bytecode \
+          2>&1 | tee build/fuzz-bytecode.log
+        timeout --kill-after=10s 30s build/tools/build/fuzz_json \
+          -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 build/fuzz-corpus/json \
+          2>&1 | tee build/fuzz-json.log
     - name: Record source and runner identity
       if: always()
       run: |
