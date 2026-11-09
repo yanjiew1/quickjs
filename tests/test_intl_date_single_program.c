@@ -230,6 +230,20 @@ static void textual_date_widths(const QJSIntlAllocator *allocator)
     qjs_intl_date_pattern_clear(allocator, &source);
 }
 
+static void fraction_widths(const QJSIntlAllocator *allocator)
+{
+    QJSIntlDatePattern source, adapted;
+    size_t i;
+
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("HH:mm:ss.SSS"), &source));
+    assert(!qjs_intl_date_pattern_fraction(allocator, &source, bytes("."), 1, &adapted));
+    for (i = 0; i < adapted.count && adapted.tokens[i].symbol != 'S'; i++)
+        continue;
+    assert(i < adapted.count && adapted.tokens[i].width == 1);
+    qjs_intl_date_pattern_clear(allocator, &adapted);
+    qjs_intl_date_pattern_clear(allocator, &source);
+}
+
 static void skeleton_widths(void)
 {
     unsigned char widths[5];
@@ -254,6 +268,11 @@ static void skeleton_widths(void)
     assert(widths[0] == QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH);
     qjs_intl_date_skeleton_widths((QJSIntlBytes){0}, widths);
     assert(!widths[0] && !widths[1] && !widths[2] && !widths[3] && !widths[4]);
+
+    /* A textual month remains closer to another text width than to digits. */
+    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_SHORT;
+    closest = qjs_intl_date_skeleton_distance(bytes("MMMMM"), &request, QJS_INTL_DATE_H23, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("MM"), &request, QJS_INTL_DATE_H23, widths));
 
     /* Widths from different keys cannot be combined into a nonexistent key. */
     request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
@@ -546,6 +565,7 @@ int main(void)
     period_widths(&b);
     numeric_date_widths(&b);
     textual_date_widths(&b);
+    fraction_widths(&b);
     skeleton_widths();
     whole_skeleton_aliases();
     assert(!input.live && !output.live);
