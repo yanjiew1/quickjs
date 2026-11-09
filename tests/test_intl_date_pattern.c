@@ -76,6 +76,39 @@ static void rejected(const QJSIntlAllocator *allocator, QJSIntlBytes text)
     assert(empty(&pattern) && !state->live && state->calls == calls);
 }
 
+static void append_items(const QJSIntlAllocator *allocator)
+{
+    QJSIntlDatePattern base, field, result;
+    Allocation *state = allocator->opaque;
+    size_t i, names = 0;
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("MM/dd"), &base));
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("y"), &field));
+    assert(!qjs_intl_date_pattern_append(allocator, bytes("{0} ({2}: {1})"),
+                                         bytes("year '{0}'"), &base, &field, &result));
+    for (i = 0; i < result.count; i++) {
+        assert(result.tokens[i].symbol != '0' && result.tokens[i].symbol != '1');
+        if (!result.tokens[i].symbol && equal(result.tokens[i].literal, " (year '{0}': "))
+            names++;
+    }
+    assert(names == 1); /* Label braces/apostrophes remain ordinary text. */
+    qjs_intl_date_pattern_clear(allocator, &result);
+    assert(qjs_intl_date_pattern_append(allocator, bytes("{0} ({2}: {1})"),
+               (QJSIntlBytes){0}, &base, &field, &result) == QJS_INTL_UNSUPPORTED);
+    assert(empty(&result));
+    assert(qjs_intl_date_pattern_append(allocator, bytes("{0}{0}{1}"),
+               bytes("year"), &base, &field, &result) == QJS_INTL_DATA_ERROR);
+    assert(qjs_intl_date_pattern_append(allocator, bytes("{0}{2}{1}"),
+               (QJSIntlBytes){NULL, 1}, &base, &field, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(empty(&result));
+    state->fail_at = state->calls + 1;
+    assert(qjs_intl_date_pattern_append(allocator, bytes("{1} {0}"),
+               (QJSIntlBytes){0}, &base, &field, &result) == QJS_INTL_NO_MEMORY);
+    assert(empty(&result));
+    state->fail_at = 0;
+    qjs_intl_date_pattern_clear(allocator, &base);
+    qjs_intl_date_pattern_clear(allocator, &field);
+}
+
 int main(void)
 {
     static const char symbols[] = "GyYuUrQqMLlwWdDFgEecabBhHKkmsSAzZOvVXx";
@@ -158,6 +191,7 @@ int main(void)
     assert(qjs_intl_date_pattern_compile(&allocator, (QJSIntlBytes){NULL, 1}, &pattern) == QJS_INTL_INVALID_ARGUMENT && empty(&pattern));
     assert(qjs_intl_date_pattern_compile(&allocator, bytes(""), &pattern) == QJS_INTL_INVALID_ARGUMENT && empty(&pattern));
     assert(qjs_intl_date_pattern_compile(&allocator, bytes("y"), NULL) == QJS_INTL_INVALID_ARGUMENT);
+    append_items(&allocator);
     assert(!state.live);
     return 0;
 }
