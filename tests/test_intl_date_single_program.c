@@ -166,6 +166,178 @@ static void period_widths(const QJSIntlAllocator *allocator)
     }
 }
 
+static void numeric_date_widths(const QJSIntlAllocator *allocator)
+{
+    static const char *const patterns[] = {"y/M/d", "r/M/d", "y/MMM/d"};
+    const unsigned int allowed = QJS_INTL_DATE_ADAPT_YEAR_WIDTH |
+        QJS_INTL_DATE_ADAPT_MONTH_WIDTH | QJS_INTL_DATE_ADAPT_DAY_WIDTH;
+    QJSIntlDatePattern source, result;
+    QJSIntlDatePatternInfo info;
+    QJSIntlDateTimeComponents wanted;
+    unsigned int changes;
+    size_t i;
+
+    for (i = 0; i < sizeof(patterns) / sizeof(*patterns); i++) {
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes(patterns[i]), &source));
+        assert(!qjs_intl_date_pattern_info(&source, &info));
+        wanted = info.components;
+        wanted.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_TWO_DIGIT;
+        wanted.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
+        wanted.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_TWO_DIGIT;
+        if (i) {
+            assert(qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                   allowed, 0, &result, &changes) == QJS_INTL_UNSUPPORTED);
+        } else {
+            assert(!qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                                                allowed, 0, &result, &changes));
+            assert(changes == allowed);
+            assert(!qjs_intl_date_pattern_info(&result, &info));
+            assert(info.components.values[QJS_INTL_DATETIME_YEAR] == QJS_INTL_DATETIME_TWO_DIGIT);
+            assert(info.components.values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_TWO_DIGIT);
+            assert(info.components.values[QJS_INTL_DATETIME_DAY] == QJS_INTL_DATETIME_TWO_DIGIT);
+            qjs_intl_date_pattern_clear(allocator, &result);
+        }
+        qjs_intl_date_pattern_clear(allocator, &source);
+    }
+}
+
+static void textual_date_widths(const QJSIntlAllocator *allocator)
+{
+    QJSIntlDatePattern source, result;
+    QJSIntlDatePatternInfo info;
+    QJSIntlDateTimeComponents wanted;
+    const unsigned int allowed = QJS_INTL_DATE_ADAPT_MONTH_WIDTH |
+        QJS_INTL_DATE_ADAPT_ERA_WIDTH | QJS_INTL_DATE_ADAPT_WEEKDAY_WIDTH;
+    unsigned int changes;
+
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("G y MMM d E"), &source));
+    assert(!qjs_intl_date_pattern_info(&source, &info));
+    wanted = info.components;
+    wanted.values[QJS_INTL_DATETIME_ERA] = QJS_INTL_DATETIME_LONG;
+    wanted.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_LONG;
+    wanted.values[QJS_INTL_DATETIME_WEEKDAY] = QJS_INTL_DATETIME_NARROW;
+    assert(!qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                                        allowed, 0, &result, &changes));
+    assert(changes == allowed);
+    assert(!qjs_intl_date_pattern_info(&result, &info));
+    assert(info.components.values[QJS_INTL_DATETIME_ERA] == QJS_INTL_DATETIME_LONG);
+    assert(info.components.values[QJS_INTL_DATETIME_MONTH] == QJS_INTL_DATETIME_LONG);
+    assert(info.components.values[QJS_INTL_DATETIME_WEEKDAY] == QJS_INTL_DATETIME_NARROW);
+    qjs_intl_date_pattern_clear(allocator, &result);
+    wanted.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+    assert(qjs_intl_date_program_adapt(allocator, &source, &wanted,
+                                       allowed, 0, &result, &changes) == QJS_INTL_UNSUPPORTED);
+    qjs_intl_date_pattern_clear(allocator, &source);
+}
+
+static void skeleton_widths(void)
+{
+    unsigned char widths[5];
+    QJSIntlDateTimeComponents request = {{0}};
+    int closest;
+
+    qjs_intl_date_skeleton_widths(bytes("yyMMdd"), widths);
+    assert(widths[0] == 2 && widths[1] == 2 && widths[2] == 2);
+    qjs_intl_date_skeleton_widths(bytes("yyyyyyMd"), widths);
+    assert(widths[0] == 6 && widths[1] == 1 && widths[2] == 1);
+    qjs_intl_date_skeleton_widths(bytes("GyMd"), widths);
+    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 1 && widths[3] == 1);
+    qjs_intl_date_skeleton_widths(bytes("YMd"), widths);
+    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 1);
+    qjs_intl_date_skeleton_widths(bytes("YwMd"), widths);
+    assert(widths[0] == 0 && widths[1] == 1 && widths[2] == 1);
+    qjs_intl_date_skeleton_widths(bytes("Yd"), widths);
+    assert(widths[0] == 0 && widths[2] == 1);
+    qjs_intl_date_skeleton_widths(bytes("rrUMd"), widths);
+    assert(widths[0] == QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH);
+    qjs_intl_date_skeleton_widths(bytes("UMd"), widths);
+    assert(widths[0] == QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH);
+    qjs_intl_date_skeleton_widths((QJSIntlBytes){0}, widths);
+    assert(!widths[0] && !widths[1] && !widths[2] && !widths[3] && !widths[4]);
+
+    /* Widths from different keys cannot be combined into a nonexistent key. */
+    request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
+    request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    closest = qjs_intl_date_skeleton_distance(bytes("yMd"), &request, QJS_INTL_DATE_H23, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yyMMdd"), &request, QJS_INTL_DATE_H23, widths));
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yMdQ"), &request, QJS_INTL_DATE_H23, widths));
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yMdA"), &request, QJS_INTL_DATE_H23, widths));
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yYwMd"), &request, QJS_INTL_DATE_H23, widths));
+    request.values[QJS_INTL_DATETIME_YEAR] = 0;
+    closest = qjs_intl_date_skeleton_distance(bytes("Md"), &request, QJS_INTL_DATE_H23, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("rMd"), &request, QJS_INTL_DATE_H23, widths));
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("Mda"), &request, QJS_INTL_DATE_H23, widths));
+    request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
+    closest = qjs_intl_date_skeleton_distance(bytes("yMMddh"), &request, QJS_INTL_DATE_H12, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yMdH"), &request, QJS_INTL_DATE_H12, widths));
+    request.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_ZONE] = QJS_INTL_DATETIME_ZONE_LONG;
+    closest = qjs_intl_date_skeleton_distance(bytes("yMMddhmzzzz"), &request, QJS_INTL_DATE_H12, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yMdhmz"), &request, QJS_INTL_DATE_H12, widths));
+    request.values[QJS_INTL_DATETIME_DAY_PERIOD] = QJS_INTL_DATETIME_LONG;
+    closest = qjs_intl_date_skeleton_distance(bytes("yMMddBBBBhmzzzz"), &request, QJS_INTL_DATE_H12, widths);
+    assert(closest < qjs_intl_date_skeleton_distance(bytes("yMMddBhmzzzz"), &request, QJS_INTL_DATE_H12, widths));
+}
+
+static void whole_skeleton_aliases(void)
+{
+    QJSIntlDateSourceCandidate records[4] = {0};
+    QJSIntlDateSourceCandidates pool = {0};
+    QJSIntlDateTimeComponents request = {{0}};
+    unsigned char widths[5];
+    size_t i;
+
+    pool.records = records;
+    pool.count = 4;
+    for (i = 0; i < pool.count; i++) {
+        records[i].source.text = bytes("M/d/y");
+        records[i].info.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+        records[i].info.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+        records[i].info.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    }
+    records[0].source.code = bytes("yMd");
+    records[1].source.code = bytes("yyMMdd");
+    records[2].source.code = bytes("yMMdQ");
+    records[3].source.code = bytes("yMMd");
+    records[3].source.text = bytes("different pattern");
+    request.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
+    request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
+    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 1);
+
+    pool.count = 2;
+    records[0].source.code = bytes("yyyyyyyyyyyyyyyyyyyyyyyMd");
+    records[1].source.code = bytes("yMMdQ");
+    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
+    assert(widths[0] == 23 && widths[1] == 1);
+    records[1].source.code = bytes("MMd");
+    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
+    assert(widths[0] == 23 && widths[1] == 1);
+
+    pool.count = 4;
+    records[0].source.code = bytes("yMd");
+    records[1].source.code = bytes("yMdd");
+    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_TWO_DIGIT;
+    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H23, widths);
+    assert(widths[0] == 1 && widths[1] == 1 && widths[2] == 2);
+
+    pool.count = 2;
+    records[0].source.code = bytes("yMdHm");
+    records[1].source.code = bytes("yMMddhm");
+    records[0].info.components.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
+    records[0].info.components.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_TWO_DIGIT;
+    request.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_HOUR] = QJS_INTL_DATETIME_NUMERIC;
+    request.values[QJS_INTL_DATETIME_MINUTE] = QJS_INTL_DATETIME_NUMERIC;
+    qjs_intl_date_best_alias(&pool, &records[0], &request, QJS_INTL_DATE_H12, widths);
+    assert(widths[1] == 2 && widths[2] == 2);
+}
+
 int main(void)
 {
     static const char *const english[] = {("h:mm\xe2\x80\xaf" "a"), "HH:mm", "h:mm a"};
@@ -372,6 +544,10 @@ int main(void)
     qjs_intl_date_single_programs_clear(&programs);
     qjs_intl_date_single_programs_clear(NULL);
     period_widths(&b);
+    numeric_date_widths(&b);
+    textual_date_widths(&b);
+    skeleton_widths();
+    whole_skeleton_aliases();
     assert(!input.live && !output.live);
     return 0;
 }
