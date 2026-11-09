@@ -110,9 +110,9 @@ if get_option('fuzzing')
     dependencies: host_deps,
     build_by_default: false,
   )
-  foreach name : ['eval', 'compile', 'regexp']
+  foreach name : ['eval', 'compile', 'regexp', 'bytecode', 'json']
     sources = files('../../fuzz/fuzz_' + name + '.c')
-    if name != 'regexp'
+    if name == 'eval' or name == 'compile'
       sources += files('../../fuzz/fuzz_common.c')
     endif
     executable(

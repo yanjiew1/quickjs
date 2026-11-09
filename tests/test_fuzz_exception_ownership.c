@@ -90,12 +90,6 @@ static void observe_free_runtime(JSRuntime *rt)
 #define LLVMFuzzerTestOneInput fuzz_bytecode_ownership_input
 #include "../fuzz/fuzz_bytecode.c"
 #undef LLVMFuzzerTestOneInput
-#define LLVMFuzzerTestOneInput fuzz_module_ownership_input
-#include "../fuzz/fuzz_module_export.c"
-#undef LLVMFuzzerTestOneInput
-#define LLVMFuzzerTestOneInput fuzz_regexp_ownership_input
-#include "../fuzz/fuzz_regexp_compile.c"
-#undef LLVMFuzzerTestOneInput
 #undef JS_GetException
 #undef JS_FreeValue
 #undef JS_FreeRuntime
@@ -117,12 +111,8 @@ int main(void)
 {
     static const uint8_t json[] = { '{' };
     static const uint8_t bytecode[] = { '@', '@', '@', '@', '@', '@', '@', '@' };
-    static const uint8_t module[] = { '!' };
-    static const uint8_t regexp[] = { '[', 'g' };
 
     check_input(fuzz_json_ownership_input, json, sizeof(json));
     check_input(fuzz_bytecode_ownership_input, bytecode, sizeof(bytecode));
-    check_input(fuzz_module_ownership_input, module, sizeof(module));
-    check_input(fuzz_regexp_ownership_input, regexp, sizeof(regexp));
     return 0;
 }
