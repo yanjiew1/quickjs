@@ -94,5 +94,11 @@ QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
 QJSIntlStatus qjs_intl_date_pattern_replace(const QJSIntlAllocator *allocator,
                                           const QJSIntlDatePattern *pattern, unsigned int symbol,
                                           const QJSIntlDatePattern *replacement, QJSIntlDatePattern *out);
+/* Expand appendItems {0}=base, {1}=field and optional {2}=literal field label.
+   Own copied output; input labels and apostrophes are never LDML-parsed. */
+QJSIntlStatus qjs_intl_date_pattern_append(const QJSIntlAllocator *allocator,
+                                         QJSIntlBytes layout, QJSIntlBytes label,
+                                         const QJSIntlDatePattern *base,
+                                         const QJSIntlDatePattern *field, QJSIntlDatePattern *out);
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern);
 #endif
