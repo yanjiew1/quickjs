@@ -79,8 +79,13 @@ JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
     m->private_value = JS_UNDEFINED;
     m->attributes = JS_UNDEFINED;
     if (ctx->module_load_request &&
-        ctx->module_load_request->module_name == name)
+        ctx->module_load_request->module_name == name) {
         m->attributes = JS_DupValue(ctx, ctx->module_load_request->attributes);
+        m->load_request = ctx->module_load_request;
+        m->load_next = m->load_request->created;
+        m->load_request->created = m;
+        JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+    }
     list_add_tail(&m->link, &ctx->loaded_modules);
     return m;
 }
@@ -367,10 +372,26 @@ JSModuleDef *JS_NewCModule2(JSContext *ctx, const char *name_str,
                             JSValueConst attributes)
 {
     JSModuleDef *m;
+    JSModuleLoadRequest *request = ctx->module_load_request;
+    int matches = 1;
+
+    if (request && !JS_IsUndefined(attributes)) {
+        JSAtom name = JS_NewAtom(ctx, name_str);
+        if (name == JS_ATOM_NULL)
+            return NULL;
+        if (name == request->module_name)
+            matches = js_module_attributes_equal(ctx, request->attributes,
+                                                 attributes);
+        JS_FreeAtom(ctx, name);
+        if (matches < 0)
+            return NULL;
+    }
 
     m = JS_NewCModule(ctx, name_str, func);
     if (!m || JS_IsUndefined(attributes))
         return m;
+    if (!matches)
+        m->load_request = NULL;
     JS_FreeValue(ctx, m->attributes);
     m->attributes = JS_DupValue(ctx, attributes);
     return m;
@@ -599,6 +620,7 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
         return NULL;
     }
     request.previous = ctx->module_load_request;
+    request.created = NULL;
     request.module_name = JS_DupAtom(ctx, module_name);
     request.attributes = JS_DupValue(ctx, attributes);
     JS_FreeAtom(ctx, module_name);
@@ -611,6 +633,47 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     ctx->module_load_request = request.previous;
     if (!m && !JS_HasException(ctx))
         JS_ThrowReferenceError(ctx, "could not load module '%s'", cname);
+    {
+        JSModuleDef *created, *next;
+        JSValue exception = JS_UNDEFINED;
+        BOOL has_exception = FALSE;
+        BOOL uncatchable = FALSE;
+
+        if (m)
+            JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        if (!m && JS_HasException(ctx)) {
+            has_exception = TRUE;
+            uncatchable = rt->current_exception_is_uncatchable;
+            exception = JS_GetException(ctx);
+        }
+        /* Each entry is retained even if it was detached and reinserted. */
+        for (created = request.created; created; created = next) {
+            next = created->load_next;
+            created->load_next = NULL;
+            if (created->load_request != &request) {
+                JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, created));
+                continue;
+            }
+            created->load_request = NULL;
+            if (!m && created->link.next) {
+                list_del(&created->link);
+                created->link.prev = created->link.next = NULL;
+                JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, created));
+            }
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, created));
+        }
+        if (m) {
+            if (!m->link.next) {
+                JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+                list_add_tail(&m->link, &ctx->loaded_modules);
+            }
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        }
+        if (has_exception) {
+            JS_Throw(ctx, exception);
+            rt->current_exception_is_uncatchable = uncatchable;
+        }
+    }
     /* A host may return one module for unequal requests. Retain the first
        attributed request without requiring a fresh module from the host. */
     if (m && JS_IsObject(attributes) && JS_IsUndefined(m->attributes))
