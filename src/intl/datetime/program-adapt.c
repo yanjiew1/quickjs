@@ -103,6 +103,9 @@ int qjs_intl_date_skeleton_distance(QJSIntlBytes skeleton, const QJSIntlDateTime
         }
         if (i >= 3 && source_width && source_width < 3)
             source_width = 3;
+        /* Numeric/text month changes outweigh all within-kind width changes. */
+        if (i == 1 && wanted && source_width && ((width <= 2) != (source_width <= 2)))
+            distance += 100;
         if (wanted && source_width)
             distance += source_width > width ? source_width - width : width - source_width;
         else if (!wanted && source_width)
@@ -351,4 +354,30 @@ QJSIntlStatus qjs_intl_date_program_adapt(const QJSIntlAllocator *allocator,
     *out = result;
     *adaptations = changed;
     return QJS_INTL_OK;
+}
+
+/* Add the requested subsecond run using the selected numbering system. */
+QJSIntlStatus qjs_intl_date_pattern_fraction(const QJSIntlAllocator *allocator,
+                                             const QJSIntlDatePattern *base, QJSIntlBytes decimal,
+                                             size_t digits, QJSIntlDatePattern *out)
+{
+    QJSIntlDatePatternToken tokens[3] = {{{0}, 0, 0}, {decimal, 0, 0}, {{0}, digits, 'S'}};
+    QJSIntlDatePattern replacement = {0};
+    size_t i;
+    for (i = 0; i < base->count; i++) {
+        if (base->tokens[i].symbol == 'S') {
+            replacement.tokens = &tokens[2];
+            replacement.count = 1;
+            return qjs_intl_date_pattern_replace(allocator, base, 'S', &replacement, out);
+        }
+    }
+    for (i = 0; i < base->count; i++)
+        if (base->tokens[i].symbol == 's')
+            break;
+    if (i == base->count)
+        return QJS_INTL_DATA_ERROR;
+    tokens[0] = base->tokens[i];
+    replacement.tokens = tokens;
+    replacement.count = 3;
+    return qjs_intl_date_pattern_replace(allocator, base, 's', &replacement, out);
 }
