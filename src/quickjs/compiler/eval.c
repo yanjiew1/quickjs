@@ -189,8 +189,14 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
     return ret_val;
  fail1:
     /* XXX: should free all the unresolved dependencies */
-    if (m)
-        JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+    if (m) {
+        /* Release the list owner even when another reference retains m. */
+        if (m->link.next) {
+            list_del(&m->link);
+            m->link.prev = m->link.next = NULL;
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        }
+    }
     return JS_EXCEPTION;
 }
 

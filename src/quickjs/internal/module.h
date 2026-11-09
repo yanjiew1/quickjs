@@ -34,6 +34,7 @@ typedef struct JSParseState JSParseState;
 /* A synchronous host loader owns this scoped request until it returns. */
 typedef struct JSModuleLoadRequest {
     struct JSModuleLoadRequest *previous;
+    JSModuleDef *created;
     JSAtom module_name;
     JSValue attributes;
 } JSModuleLoadRequest;
@@ -89,6 +90,8 @@ struct JSModuleDef {
     JSAtom module_name;
     JSModuleDef *resolution_next; /* temporary owned transaction chain */
     JSModuleDef *creation_next; /* temporary function-creation cleanup chain */
+    JSModuleDef *load_next; /* request-owned reference, valid during loading */
+    JSModuleLoadRequest *load_request;
     struct list_head link;
 
     JSReqModuleEntry *req_module_entries;

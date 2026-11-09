@@ -1406,7 +1406,8 @@ JS_EXTERN JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
    enumerable string key/value pairs and do not mutate after creation.
    An explicit object supersedes the active loader request. Undefined uses
    the same active-request inheritance as JS_NewCModule; outside a loader
-   request it creates a module with no attributes. */
+   request it creates a module with no attributes. During a matching loader
+   request, comparing explicit attributes may access their properties and fail. */
 JS_EXTERN JSModuleDef *JS_NewCModule2(JSContext *ctx, const char *name_str,
                                       JSModuleInitFunc *func,
                                       JSValueConst attributes);

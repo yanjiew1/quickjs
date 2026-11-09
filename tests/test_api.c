@@ -5322,6 +5322,441 @@ static JSModuleDef *silent_module_loader(JSContext *ctx, const char *name,
     return NULL;
 }
 
+typedef struct FailedModuleLoadState {
+    int outer_calls;
+    int nested_calls;
+    int throw_undefined;
+} FailedModuleLoadState;
+
+static JSModuleDef *failed_module_loader(JSContext *ctx, const char *name,
+                                         void *opaque)
+{
+    FailedModuleLoadState *state = opaque;
+    JSModuleDef *module;
+
+    if (!strcmp(name, "nested-success")) {
+        state->nested_calls++;
+        return JS_NewCModule(ctx, name, retry_native_init);
+    }
+    assert(!strcmp(name, "failed-load"));
+    state->outer_calls++;
+    if (state->outer_calls == 1) {
+        JSValue attributes = JS_NewObject(ctx);
+        assert(!JS_IsException(attributes));
+        assert(JS_SetPropertyStr(ctx, attributes, "type",
+                                 JS_NewString(ctx, "json")) >= 0);
+        assert(JS_NewCModule2(ctx, name, retry_native_init, attributes));
+        JS_FreeValue(ctx, attributes);
+    }
+    {
+        /* An empty object has the same identity as an unattributed request. */
+        JSValue attributes = JS_NewObject(ctx);
+        assert(!JS_IsException(attributes));
+        module = JS_NewCModule2(ctx, name, retry_native_init, attributes);
+        JS_FreeValue(ctx, attributes);
+    }
+    assert(module);
+    if (state->outer_calls == 1) {
+        JSValue nested = JS_LoadModule(ctx, "", "nested-success");
+        assert(!JS_IsException(nested));
+        JS_FreeValue(ctx, nested);
+        JS_Throw(ctx, state->throw_undefined ? JS_UNDEFINED : JS_NewInt32(ctx, 42));
+        return NULL;
+    }
+    return module;
+}
+
+static void test_failed_module_loader_retry(void)
+{
+    int throw_undefined;
+
+    for (throw_undefined = 0; throw_undefined < 2; throw_undefined++) {
+        FailedModuleLoadState state = { .throw_undefined = throw_undefined };
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue promise, reason;
+        int32_t number;
+
+        assert(rt && ctx);
+        JS_SetModuleLoaderFunc(rt, NULL, failed_module_loader, &state);
+        promise = JS_LoadModule(ctx, "", "failed-load");
+        assert(!JS_IsException(promise));
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+        reason = JS_PromiseResult(ctx, promise);
+        if (throw_undefined)
+            assert(JS_IsUndefined(reason));
+        else
+            assert(JS_ToInt32(ctx, &number, reason) == 0 && number == 42);
+        JS_FreeValue(ctx, reason);
+        JS_FreeValue(ctx, promise);
+
+        promise = JS_LoadModule(ctx, "", "failed-load");
+        assert(!JS_IsException(promise));
+        assert(JS_PromiseState(ctx, promise) != JS_PROMISE_REJECTED);
+        assert(state.outer_calls == 2);
+        JS_FreeValue(ctx, promise);
+        promise = JS_LoadModule(ctx, "", "nested-success");
+        assert(!JS_IsException(promise));
+        assert(state.nested_calls == 1);
+        JS_FreeValue(ctx, promise);
+        {
+            static const char source[] =
+                "import('failed-load', {with: {type: 'json'}})";
+            int jobs = 0;
+            promise = JS_Eval(ctx, source, sizeof(source) - 1,
+                              "load-attributes", JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(promise));
+            while (JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING &&
+                   JS_IsJobPending(rt)) {
+                assert(++jobs < 32);
+                assert(JS_ExecutePendingJob(rt, NULL) > 0);
+            }
+            assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+            assert(state.outer_calls == 2);
+            JS_FreeValue(ctx, promise);
+        }
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
+static JSModuleDef *failed_module_attributes_loader(JSContext *ctx,
+                                                     const char *name,
+                                                     void *opaque)
+{
+    int *calls = opaque;
+    JSValue attributes;
+    JSModuleDef *module;
+    static const char source[] =
+        "new Proxy({}, {ownKeys() { throw 99; }})";
+
+    if ((*calls)++ != 0)
+        return JS_NewCModule(ctx, name, retry_native_init);
+    attributes = JS_Eval(ctx, source, sizeof(source) - 1,
+                         "load-attribute-error", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(attributes));
+    module = JS_NewCModule2(ctx, name, retry_native_init, attributes);
+    JS_FreeValue(ctx, attributes);
+    assert(!module && JS_HasException(ctx));
+    return NULL;
+}
+
+static void test_failed_module_loader_attributes(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, reason;
+    int32_t number;
+    int calls = 0;
+
+    assert(rt && ctx);
+    JS_SetModuleLoaderFunc(rt, NULL, failed_module_attributes_loader, &calls);
+    promise = JS_LoadModule(ctx, "", "attribute-error");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_ToInt32(ctx, &number, reason) == 0 && number == 99);
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    promise = JS_LoadModule(ctx, "", "attribute-error");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) != JS_PROMISE_REJECTED);
+    assert(calls == 2);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+typedef struct ReinsertedModuleState {
+    const uint8_t *data;
+    size_t length;
+    int calls;
+    int return_detached;
+} ReinsertedModuleState;
+
+static JSModuleDef *reinserted_module_loader(JSContext *ctx, const char *name,
+                                             void *opaque)
+{
+    ReinsertedModuleState *state = opaque;
+    JSValue compiled;
+
+    if (!strcmp(name, "reinserted-dep")) {
+        if (state->calls++ == 1) {
+            JS_ThrowInternalError(ctx, "temporary dependency failure");
+            return NULL;
+        }
+        return JS_NewCModule(ctx, name, retry_native_init);
+    }
+    assert(!strcmp(name, "reinserted-root"));
+    if (state->calls++ != 0)
+        return JS_NewCModule(ctx, name, retry_native_init);
+    compiled = JS_ReadObject(ctx, state->data, state->length, JS_READ_OBJ_BYTECODE);
+    assert(!JS_IsException(compiled));
+    assert(JS_ResolveModule(ctx, compiled) < 0);
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    JS_RunGC(JS_GetRuntime(ctx));
+    if (state->return_detached) {
+        JSModuleDef *module = JS_VALUE_GET_PTR(compiled);
+        JS_FreeValue(ctx, compiled);
+        return module;
+    }
+    assert(JS_ResolveModule(ctx, compiled) == 0);
+    JS_FreeValue(ctx, compiled);
+    JS_Throw(ctx, JS_NewInt32(ctx, 17));
+    return NULL;
+}
+
+static void test_failed_module_loader_reinsertion(void)
+{
+    static const char source[] = "import 'reinserted-dep';";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, reason, compiled;
+    ReinsertedModuleState state = {0};
+    uint8_t *serialized, *copy;
+    int32_t number;
+
+    assert(rt && ctx);
+    assert(JS_NewCModule(ctx, "reinserted-dep", retry_native_init));
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "reinserted-root",
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    serialized = JS_WriteObject(ctx, &state.length, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(serialized);
+    copy = malloc(state.length);
+    assert(copy);
+    memcpy(copy, serialized, state.length);
+    js_free(ctx, serialized);
+    JS_FreeValue(ctx, compiled);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    rt = JS_NewRuntime();
+    ctx = JS_NewContext(rt);
+    assert(rt && ctx);
+    state.data = copy;
+    JS_SetModuleLoaderFunc(rt, NULL, reinserted_module_loader, &state);
+    promise = JS_LoadModule(ctx, "", "reinserted-root");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_ToInt32(ctx, &number, reason) == 0 && number == 17);
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    assert(state.calls == 3);
+    promise = JS_LoadModule(ctx, "", "reinserted-root");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) != JS_PROMISE_REJECTED);
+    assert(state.calls == 4);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+
+    /* A successful loader may return the same temporarily detached module. */
+    rt = JS_NewRuntime();
+    ctx = JS_NewContext(rt);
+    assert(rt && ctx);
+    state.calls = 0;
+    state.return_detached = 1;
+    JS_SetModuleLoaderFunc(rt, NULL, reinserted_module_loader, &state);
+    promise = JS_LoadModule(ctx, "", "reinserted-root");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) != JS_PROMISE_REJECTED);
+    assert(state.calls == 3);
+    JS_FreeValue(ctx, promise);
+    promise = JS_LoadModule(ctx, "", "reinserted-root");
+    assert(!JS_IsException(promise));
+    assert(state.calls == 3);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    free(copy);
+}
+
+typedef struct FailedModuleOOMState {
+    int calls;
+    int failed_after_creation;
+} FailedModuleOOMState;
+
+static JSModuleDef *failed_module_oom_loader(JSContext *ctx, const char *name,
+                                             void *opaque)
+{
+    FailedModuleOOMState *state = opaque;
+    JSModuleDef *module;
+    JSValue value;
+
+    state->calls++;
+    module = JS_NewCModule(ctx, name, retry_native_init);
+    if (!module)
+        return NULL;
+    value = JS_NewString(ctx, "module allocation failure regression test");
+    if (JS_IsException(value)) {
+        state->failed_after_creation = 1;
+        return NULL;
+    }
+    JS_FreeValue(ctx, value);
+    return module;
+}
+
+static void test_failed_module_loader_oom(void)
+{
+    size_t step, calls = 0;
+    int covered = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        FailedModuleOOMState state = {0};
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue promise;
+        void *padding;
+        int before;
+
+        assert(ctx);
+        JS_SetModuleLoaderFunc(rt, NULL, failed_module_oom_loader, &state);
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        promise = JS_LoadModule(ctx, "", "failed-oom");
+        oom_test_end(&allocator);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 128);
+        }
+        if (state.failed_after_creation && !JS_IsException(promise)) {
+            JSValue reason;
+            assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+            reason = JS_PromiseResult(ctx, promise);
+            assert(JS_IsError(ctx, reason));
+            JS_FreeValue(ctx, reason);
+        }
+        if (JS_IsException(promise))
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        else
+            JS_FreeValue(ctx, promise);
+        before = state.calls;
+        promise = JS_LoadModule(ctx, "", "failed-oom");
+        assert(!JS_IsException(promise));
+        if (state.failed_after_creation) {
+            covered++;
+            assert(state.calls == before + 1);
+        }
+        JS_FreeValue(ctx, promise);
+        test_pool_padding_free(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    assert(covered > 0);
+}
+
+static JSModuleDef *failed_module_syntax_loader(JSContext *ctx,
+                                                 const char *name, void *opaque)
+{
+    int *calls = opaque;
+    static const char source[] = "export const = ;";
+    JSValue result;
+
+    if ((*calls)++ != 0)
+        return JS_NewCModule(ctx, name, retry_native_init);
+    result = JS_Eval(ctx, source, sizeof(source) - 1, name,
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(JS_IsException(result));
+    return NULL;
+}
+
+static void test_failed_module_loader_syntax(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise;
+    int calls = 0;
+
+    assert(rt && ctx);
+    JS_SetModuleLoaderFunc(rt, NULL, failed_module_syntax_loader, &calls);
+    promise = JS_LoadModule(ctx, "", "syntax-module");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    JS_FreeValue(ctx, promise);
+    promise = JS_LoadModule(ctx, "", "syntax-module");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) != JS_PROMISE_REJECTED);
+    assert(calls == 2);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+typedef struct FailedModuleFinalizerState {
+    JSContext *ctx;
+    int finalized;
+    int nested_calls;
+} FailedModuleFinalizerState;
+
+static JSClassID failed_module_finalizer_class;
+
+static void failed_module_finalizer(JSRuntime *rt, JSValue object)
+{
+    FailedModuleFinalizerState *state = JS_GetOpaque(object, failed_module_finalizer_class);
+    JSValue promise;
+
+    (void)rt;
+    state->finalized++;
+    promise = JS_LoadModule(state->ctx, "", "finalizer-nested");
+    assert(!JS_IsException(promise));
+    JS_FreeValue(state->ctx, promise);
+    JS_Throw(state->ctx, JS_NewInt32(state->ctx, 13));
+}
+
+static JSModuleDef *failed_module_finalizer_loader(JSContext *ctx,
+                                                    const char *name, void *opaque)
+{
+    FailedModuleFinalizerState *state = opaque;
+    JSModuleDef *module;
+    JSValue object;
+
+    if (!strcmp(name, "finalizer-nested")) {
+        state->nested_calls++;
+        return JS_NewCModule(ctx, name, retry_native_init);
+    }
+    assert(!strcmp(name, "finalizer-failure"));
+    module = JS_NewCModule(ctx, name, retry_native_init);
+    assert(module);
+    object = JS_NewObjectClass(ctx, failed_module_finalizer_class);
+    assert(!JS_IsException(object));
+    JS_SetOpaque(object, state);
+    assert(JS_SetModulePrivateValue(ctx, module, object) == 0);
+    JS_Throw(ctx, JS_NewInt32(ctx, 42));
+    return NULL;
+}
+
+static void test_failed_module_loader_finalizer(void)
+{
+    static const JSClassDef class_def = {
+        "failed-module-finalizer", .finalizer = failed_module_finalizer,
+    };
+    FailedModuleFinalizerState state = {0};
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue promise, reason;
+    int32_t number;
+
+    assert(rt && ctx);
+    state.ctx = ctx;
+    JS_NewClassID(&failed_module_finalizer_class);
+    assert(JS_NewClass(rt, failed_module_finalizer_class, &class_def) == 0);
+    JS_SetModuleLoaderFunc(rt, NULL, failed_module_finalizer_loader, &state);
+    promise = JS_LoadModule(ctx, "", "finalizer-failure");
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    reason = JS_PromiseResult(ctx, promise);
+    assert(JS_ToInt32(ctx, &number, reason) == 0 && number == 42);
+    assert(state.finalized == 1 && state.nested_calls == 1);
+    JS_FreeValue(ctx, reason);
+    JS_FreeValue(ctx, promise);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_silent_module_loader(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -5522,6 +5957,12 @@ int main(int argc, char **argv)
         { "module-link-without-evaluation", test_module_link_without_evaluation },
         { "missing-module-export-exception", test_missing_module_export_exception },
         { "silent-module-loader", test_silent_module_loader },
+        { "failed-module-loader-retry", test_failed_module_loader_retry },
+        { "failed-module-loader-attributes", test_failed_module_loader_attributes },
+        { "failed-module-loader-reinsertion", test_failed_module_loader_reinsertion },
+        { "failed-module-loader-oom", test_failed_module_loader_oom },
+        { "failed-module-loader-syntax", test_failed_module_loader_syntax },
+        { "failed-module-loader-finalizer", test_failed_module_loader_finalizer },
         { "nested-module-resolution-failure", test_nested_module_resolution_failure },
         { "module-resolution-retry", test_module_resolution_retry },
         { "reentrant-module-evaluation", test_reentrant_module_evaluation },
