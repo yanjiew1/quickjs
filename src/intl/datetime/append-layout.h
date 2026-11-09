@@ -38,4 +38,7 @@ typedef struct QJSIntlDateAppendLayout {
    policy beyond the source template itself. */
 QJSIntlStatus qjs_intl_date_append_layout(const QJSIntlDateAvailableSources *sources,
                                          QJSIntlBytes key, QJSIntlDateAppendLayout *out);
+/* Raw appendItems templates may also contain a localized field-label {2}. */
+QJSIntlStatus qjs_intl_date_append_source(const QJSIntlDateAvailableSources *sources,
+                                         QJSIntlBytes key, QJSIntlBytes *out);
 #endif
