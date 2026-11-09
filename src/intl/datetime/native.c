@@ -78,6 +78,7 @@ typedef struct DateRecord {
     QJSIntlDateTimeComponents components;
     QJSIntlDateRangeLayout range_layout; /* Own proven date/clock operands. */
     unsigned int period_spacing; /* Source-proved ASCII suffix adjacency. */
+    unsigned int adapted_date_widths;
     const QJSIntlDateIntervalSet *intervals; /* Borrows a formatter-owned set. */
 } DateRecord;
 
@@ -741,6 +742,7 @@ typedef struct DateCandidate {
     const QJSIntlDateClockProgram *mixed;
     unsigned int source_hour_width, source_month_kinds, source_period_widths;
     const QJSIntlDateOrdinaryProgram *ordinary;
+    const QJSIntlDateSourceCandidate *raw;
 } DateCandidate;
 
 static QJSIntlStatus candidate_spacing(const QJSIntlDateTimeFormatter *formatter, const Programs *programs,
@@ -750,6 +752,12 @@ static QJSIntlStatus candidate_spacing(const QJSIntlDateTimeFormatter *formatter
     size_t depth;
     if (!qjs_intl_date_period_ascii_mask(&out->pattern, 7))
         return QJS_INTL_OK;
+    if (!ordinary && !source->mixed && source->raw) {
+        unsigned int proof = qjs_intl_date_period_ascii_source(source->raw->source.text,
+                                                               source->raw->source.alt);
+        out->period_spacing = qjs_intl_date_period_ascii_mask(&out->pattern, proof);
+        return QJS_INTL_OK;
+    }
     if (source->mixed) {
         if (source->mixed->clock_index >= programs->ordinary.count)
             return QJS_INTL_DATA_ERROR;
@@ -794,6 +802,8 @@ typedef struct DateMatch {
     int score;
     unsigned int extensions;
     int period; /* Effective BestFit width, zero when the source is unchanged. */
+    unsigned int date_widths;
+    int skeleton_distance, actual_score;
     QJSIntlDateNameAdmission admission;
 } DateMatch;
 
@@ -835,7 +845,42 @@ static QJSIntlStatus period_adaptation(const QJSIntlDateTimeFormatter *formatter
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
+static QJSIntlStatus date_width_available(const QJSIntlDateTimeFormatter *formatter,
+                                          const DateCandidate *source, size_t field, size_t width,
+                                          QJSIntlDateNameAdmission *admission, int *available)
+{
+    const QJSIntlDatePattern *pattern = record_pattern(formatter, source->components,
+                                                       source->normal, source->twelve);
+    QJSIntlDatePattern view = {0};
+    QJSIntlDatePatternToken token;
+    QJSIntlStatus status;
+    size_t i;
+
+    *available = 1;
+    if (field == QJS_INTL_DATETIME_YEAR || field == QJS_INTL_DATETIME_DAY)
+        return QJS_INTL_OK;
+    for (i = 0; i < pattern->count; i++) {
+        unsigned int symbol = pattern->tokens[i].symbol;
+        if ((field == QJS_INTL_DATETIME_MONTH && (symbol == 'M' || symbol == 'L')) ||
+            (field == QJS_INTL_DATETIME_ERA && symbol == 'G') ||
+            (field == QJS_INTL_DATETIME_WEEKDAY && (symbol == 'E' || symbol == 'e' || symbol == 'c'))) {
+            token = pattern->tokens[i];
+            token.width = width;
+            view.tokens = &token;
+            view.count = 1;
+            status = qjs_intl_date_names_admit(&view, formatter->calendar,
+                                               &formatter->format.text, admission);
+            if (status == QJS_INTL_UNSUPPORTED) {
+                *available = 0;
+                return QJS_INTL_OK;
+            }
+            return status;
+        }
+    }
+    return QJS_INTL_DATA_ERROR;
+}
+
+static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                      const QJSIntlDateTimeComponents *request,
                                      const DateCandidate *source, const DateExtensions *append,
                                      unsigned int extensions, DateMatch *match)
@@ -843,12 +888,97 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
     QJSIntlDateTimeComponents extended;
     const QJSIntlDateTimeComponents *candidate = source->components;
     unsigned int fields = 0;
-    int score, period;
+    int score, period, distance = INT_MAX, actual_score = INT_MIN;
+    unsigned int date_widths = 0, month_kinds = source->source_month_kinds;
+    QJSIntlDateTimeComponents projected, skeleton_request;
+    unsigned char widths[5];
     QJSIntlStatus status = period_adaptation(formatter, request, source, &match->admission, &period);
     if (status)
         return status;
+    if (source->raw) {
+        static const size_t fields[] = {QJS_INTL_DATETIME_YEAR, QJS_INTL_DATETIME_MONTH,
+            QJS_INTL_DATETIME_DAY, QJS_INTL_DATETIME_ERA, QJS_INTL_DATETIME_WEEKDAY};
+        static const unsigned int flags[] = {QJS_INTL_DATE_ADAPT_YEAR_WIDTH,
+            QJS_INTL_DATE_ADAPT_MONTH_WIDTH, QJS_INTL_DATE_ADAPT_DAY_WIDTH,
+            QJS_INTL_DATE_ADAPT_ERA_WIDTH, QJS_INTL_DATE_ADAPT_WEEKDAY_WIDTH};
+        size_t i;
+        skeleton_request = *request;
+        if (extensions & APPEND_ERA)
+            skeleton_request.values[QJS_INTL_DATETIME_ERA] = 0;
+        if (extensions & APPEND_ZONE)
+            skeleton_request.values[QJS_INTL_DATETIME_ZONE] = 0;
+        if (source->ordinary)
+            distance = qjs_intl_date_best_alias(&programs->pool, source->raw, &skeleton_request,
+                                                formatter->options.hour_cycle, widths);
+        else
+            distance = qjs_intl_date_skeleton_distance(source->raw->source.code, &skeleton_request,
+                                                       formatter->options.hour_cycle, widths);
+        if (distance >= QJS_INTL_DATE_SKELETON_UNMATCHED) {
+            if (!source->ordinary)
+                return QJS_INTL_OK;
+            /* Keep the existing pattern, but do not use an unmatched key as
+               evidence for changing a field width. */
+            memset(widths, 0, sizeof(widths));
+            distance = INT_MAX;
+            month_kinds = 0;
+        }
+        projected = *source->components;
+        candidate = &projected;
+        if (widths[1])
+            month_kinds = widths[1] <= 2 ? QJS_INTL_DATE_MONTH_SOURCE_NUMERIC :
+                                           QJS_INTL_DATE_MONTH_SOURCE_TEXT;
+        for (i = 0; i < 5; i++) {
+            static const size_t date_fields[] = {QJS_INTL_DATETIME_YEAR, QJS_INTL_DATETIME_MONTH,
+                QJS_INTL_DATETIME_DAY, QJS_INTL_DATETIME_ERA, QJS_INTL_DATETIME_WEEKDAY};
+            int wanted = request->values[date_fields[i]];
+            int width = wanted == QJS_INTL_DATETIME_TWO_DIGIT ? 2 :
+                        wanted == QJS_INTL_DATETIME_SHORT ? 3 :
+                        wanted == QJS_INTL_DATETIME_LONG ? 4 :
+                        wanted == QJS_INTL_DATETIME_NARROW ? 5 : 1;
+            int source_width = widths[i];
+            int exact;
+            if (widths[i] == QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH)
+                continue;
+            if (i >= 3 && source_width && source_width < 3)
+                source_width = 3;
+            exact = wanted && source_width == width;
+            if (wanted && exact && projected.values[date_fields[i]])
+                projected.values[date_fields[i]] = wanted;
+        }
+        status = qjs_intl_datetime_basic_score(request, source->components, &actual_score);
+        if (status)
+            return status;
+        for (i = 0; i < 5; i++) {
+            int wanted = request->values[fields[i]];
+            int current = source->components->values[fields[i]];
+            size_t width = wanted == QJS_INTL_DATETIME_TWO_DIGIT ? 2 :
+                           wanted == QJS_INTL_DATETIME_SHORT ? 3 :
+                           wanted == QJS_INTL_DATETIME_LONG ? 4 :
+                           wanted == QJS_INTL_DATETIME_NARROW ? 5 : 1;
+            size_t source_width = widths[i];
+            int available;
+            if (i >= 3 && source_width && source_width < 3)
+                source_width = 3;
+            if (!source_width || source_width == QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH ||
+                source_width == width || !wanted || !current || current == wanted ||
+                (i == 1 && ((source_width <= 2) != (current <= QJS_INTL_DATETIME_NUMERIC) ||
+                            (wanted <= QJS_INTL_DATETIME_NUMERIC) != (current <= QJS_INTL_DATETIME_NUMERIC))) ||
+                ((i == 0 || i == 2) &&
+                 (wanted > QJS_INTL_DATETIME_NUMERIC || current > QJS_INTL_DATETIME_NUMERIC)) ||
+                (i == 0 && source->raw->info.year_kinds != QJS_INTL_DATE_YEAR_CALENDAR))
+                continue;
+            status = date_width_available(formatter, source, fields[i], width,
+                                          &match->admission, &available);
+            if (status)
+                return status;
+            if (!available)
+                continue;
+            date_widths |= flags[i];
+            projected.values[fields[i]] = wanted;
+        }
+    }
     if (extensions || period) {
-        fields = qjs_intl_datetime_component_mask(candidate);
+        fields = qjs_intl_datetime_component_mask(source->components);
         extended = *candidate;
         candidate = &extended;
     }
@@ -857,19 +987,19 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
     if (extensions & APPEND_ERA) {
         /* A whole ordinary clock has no retained date operand. Do not guess
            where its date ends; mixed records retain the actual source inputs. */
-        if (!append->have_era || candidate->values[QJS_INTL_DATETIME_ERA] ||
+        if (!append->have_era || source->components->values[QJS_INTL_DATETIME_ERA] ||
             !(fields & DATE_FIELDS) || ((fields & TIME_FIELDS) && !source->mixed))
             return QJS_INTL_OK;
         extended.values[QJS_INTL_DATETIME_ERA] = append->era;
     }
     if (extensions & APPEND_ZONE) {
-        if (candidate->values[QJS_INTL_DATETIME_ZONE] ||
+        if (source->components->values[QJS_INTL_DATETIME_ZONE] ||
             ((fields & TIME_FIELDS) ? !append->have_clock_zone :
              !(fields & DATE_FIELDS) || !append->have_date_zone))
             return QJS_INTL_OK;
         extended.values[QJS_INTL_DATETIME_ZONE] = append->zone;
     }
-    status = match_score(formatter, request, candidate, source->source_month_kinds, &score);
+    status = match_score(formatter, request, candidate, month_kinds, &score);
     /* Best fit may retain the selected hour family's genuine source padding.
        Prefer it over stripping a two-digit source to satisfy a numeric request
        (the ordinary width mismatch costs six). Basic and explicit two-digit
@@ -879,11 +1009,17 @@ static QJSIntlStatus consider_record(const QJSIntlDateTimeFormatter *formatter,
         candidate->values[QJS_INTL_DATETIME_HOUR] == QJS_INTL_DATETIME_NUMERIC &&
         source->source_hour_width == QJS_INTL_DATETIME_TWO_DIGIT)
         score -= 7;
-    if (!status && score > match->score) {
+    if (!status && (score > match->score ||
+                    (score == match->score && distance < match->skeleton_distance) ||
+                    (score == match->score && distance == match->skeleton_distance &&
+                     extensions == match->extensions && actual_score > match->actual_score))) {
         match->score = score;
         match->source = *source;
         match->extensions = extensions;
         match->period = period;
+        match->date_widths = date_widths;
+        match->skeleton_distance = distance;
+        match->actual_score = actual_score;
     }
     return status;
 }
@@ -903,19 +1039,39 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
                                     twelve && single->components.values[QJS_INTL_DATETIME_HOUR]],
                                 programs->ordinary.records[i].source_period_widths[
                                     twelve && single->components.values[QJS_INTL_DATETIME_HOUR]],
-                                &programs->ordinary.records[i]};
+                                &programs->ordinary.records[i], NULL};
+        if (formatter->options.best_fit &&
+            (qjs_intl_datetime_component_mask(source.components) & DATE_FIELDS)) {
+            const QJSIntlDateOrdinaryProgram *date = source.ordinary;
+            size_t depth;
+            for (depth = 0; depth < programs->ordinary.count; depth++) {
+                size_t index = twelve && date->single.components.values[QJS_INTL_DATETIME_HOUR] ?
+                               date->single.twelve.source_index : date->single.normal.source_index;
+                if (index != SIZE_MAX) {
+                    if (index >= programs->pool.count)
+                        return QJS_INTL_DATA_ERROR;
+                    source.raw = &programs->pool.records[index];
+                    break;
+                }
+                if (date->first == SIZE_MAX)
+                    break;
+                if (date->first >= programs->ordinary.count)
+                    return QJS_INTL_DATA_ERROR;
+                date = &programs->ordinary.records[date->first];
+            }
+        }
         if (!programs->admitted[i])
             continue;
-        status = consider_record(formatter, request, &source, append, extensions, match);
+        status = consider_record(formatter, programs, request, &source, append, extensions, match);
         if (status)
             return status;
     }
     for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
         const QJSIntlDateStyleSource *date = &programs->dates[i].style;
-        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, 0, 0, NULL};
+        DateCandidate source = {&date->info.components, &date->pattern, NULL, NULL, 0, 0, 0, NULL, NULL};
         if (!date->pattern.count)
             continue;
-        status = consider_record(formatter, request, &source, append, extensions, match);
+        status = consider_record(formatter, programs, request, &source, append, extensions, match);
         if (status)
             return status;
     }
@@ -923,10 +1079,32 @@ static QJSIntlStatus score_records(const QJSIntlDateTimeFormatter *formatter, co
         const QJSIntlDateClockProgram *record = &programs->mixed.records[i];
         DateCandidate source = {&record->components, &record->normal, &record->twelve, record,
                                 record->source_hour_width[twelve], 0,
-                                programs->ordinary.records[record->clock_index].source_period_widths[twelve], NULL};
-        status = consider_record(formatter, request, &source, append, extensions, match);
+                                programs->ordinary.records[record->clock_index].source_period_widths[twelve], NULL, NULL};
+        status = consider_record(formatter, programs, request, &source, append, extensions, match);
         if (status)
             return status;
+    }
+    if (formatter->options.best_fit) {
+        for (i = 0; i < programs->pool.count; i++) {
+            const QJSIntlDateSourceCandidate *raw = &programs->pool.records[i];
+            unsigned int hour = raw->info.hour_symbol;
+            int is_twelve = hour == 'h' || hour == 'K';
+            DateCandidate source;
+            /* The grouped source selector already preserves cyclic-only
+               fallback and prefers a related numeric year when both exist. */
+            if (raw->info.year_kinds == QJS_INTL_DATE_YEAR_CYCLIC ||
+                (!hour && raw->info.period_symbol == 'a') ||
+                (hour && (is_twelve != twelve ||
+                 (is_twelve && !raw->info.period_symbol) ||
+                 (!is_twelve && raw->info.period_symbol == 'a'))))
+                continue;
+            source = (DateCandidate){&raw->info.components, &raw->pattern, &raw->pattern, NULL,
+                                     raw->info.components.values[QJS_INTL_DATETIME_HOUR],
+                                     0, 0, NULL, raw};
+            status = consider_record(formatter, programs, request, &source, append, extensions, match);
+            if (status)
+                return status;
+        }
     }
     return QJS_INTL_OK;
 }
@@ -1107,7 +1285,7 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
     static const struct { unsigned int symbol; size_t width; } zone_tokens[] = {
         {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
     };
-    DateMatch match = {.score = INT_MIN};
+    DateMatch match = {.score = INT_MIN, .skeleton_distance = INT_MAX, .actual_score = INT_MIN};
     DateExtensions append = {0};
     QJSIntlDatePatternToken era_token = {0}, zone_token = {0};
     QJSIntlStatus status;
@@ -1181,6 +1359,30 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
             qjs_intl_date_pattern_clear(&formatter->allocator, &out->pattern);
             out->pattern = adapted;
             out->components = components;
+        }
+    }
+    if (!status && match.date_widths) {
+        QJSIntlDatePattern adapted = {0};
+        QJSIntlDateTimeComponents components = out->components;
+        unsigned int adaptations;
+        if (match.date_widths & QJS_INTL_DATE_ADAPT_YEAR_WIDTH)
+            components.values[QJS_INTL_DATETIME_YEAR] = request->values[QJS_INTL_DATETIME_YEAR];
+        if (match.date_widths & QJS_INTL_DATE_ADAPT_MONTH_WIDTH)
+            components.values[QJS_INTL_DATETIME_MONTH] = request->values[QJS_INTL_DATETIME_MONTH];
+        if (match.date_widths & QJS_INTL_DATE_ADAPT_DAY_WIDTH)
+            components.values[QJS_INTL_DATETIME_DAY] = request->values[QJS_INTL_DATETIME_DAY];
+        if (match.date_widths & QJS_INTL_DATE_ADAPT_ERA_WIDTH)
+            components.values[QJS_INTL_DATETIME_ERA] = request->values[QJS_INTL_DATETIME_ERA];
+        if (match.date_widths & QJS_INTL_DATE_ADAPT_WEEKDAY_WIDTH)
+            components.values[QJS_INTL_DATETIME_WEEKDAY] = request->values[QJS_INTL_DATETIME_WEEKDAY];
+        status = qjs_intl_date_program_adapt(&formatter->allocator, &out->pattern,
+                     &components, match.date_widths, formatter->options.hour_cycle <= QJS_INTL_DATE_H12,
+                     &adapted, &adaptations);
+        if (!status) {
+            qjs_intl_date_pattern_clear(&formatter->allocator, &out->pattern);
+            out->pattern = adapted;
+            out->components = components;
+            out->adapted_date_widths = match.date_widths;
         }
     }
     if (!status)
@@ -1612,12 +1814,13 @@ QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatte
     if (status)
         return status;
     for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++) {
-        if (!formatter->records[i].pattern.count)
+        if (!formatter->records[i].pattern.count || formatter->records[i].adapted_date_widths)
             continue;
         /* Several value kinds select the same ordinary program. Their zone
            interpretation differs at rendering, not during interval matching. */
         for (j = 0; j < i; j++)
-            if (formatter->records[i].period_spacing == formatter->records[j].period_spacing &&
+            if (!formatter->records[j].adapted_date_widths &&
+                formatter->records[i].period_spacing == formatter->records[j].period_spacing &&
                 same_pattern(&formatter->records[i].pattern, &formatter->records[j].pattern))
                 break;
         owners[i] = j < i ? owners[j] : i;
@@ -1635,7 +1838,7 @@ QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatte
     for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++) {
         formatter->interval_sets[i] = sets[i];
         memset(&sets[i], 0, sizeof(sets[i]));
-        if (formatter->records[i].pattern.count)
+        if (formatter->records[i].pattern.count && !formatter->records[i].adapted_date_widths)
             formatter->records[i].intervals = &formatter->interval_sets[owners[i]];
     }
     formatter->intervals_prepared = 1;
