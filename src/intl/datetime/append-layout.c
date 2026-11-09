@@ -22,7 +22,7 @@
 #include "append-layout.h"
 #include <string.h>
 
-QJSIntlStatus qjs_intl_date_append_layout(const QJSIntlDateAvailableSources *sources,
+static QJSIntlStatus lookup(const QJSIntlDateAvailableSources *sources,
                                          QJSIntlBytes key, QJSIntlDateAppendLayout *out)
 {
     size_t i;
@@ -48,10 +48,33 @@ QJSIntlStatus qjs_intl_date_append_layout(const QJSIntlDateAvailableSources *sou
             continue;
         if (result.entry.blocked || !result.entry.text.length)
             return QJS_INTL_UNSUPPORTED;
-        status = qjs_intl_pair_pattern_parse(result.entry.text, &result.pattern);
-        if (!status)
-            *out = result;
-        return status;
+        *out = result;
+        return QJS_INTL_OK;
     }
     return QJS_INTL_UNSUPPORTED;
+}
+
+QJSIntlStatus qjs_intl_date_append_source(const QJSIntlDateAvailableSources *sources,
+                                         QJSIntlBytes key, QJSIntlBytes *out)
+{
+    QJSIntlDateAppendLayout source;
+    QJSIntlStatus status;
+    if (!out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    memset(out, 0, sizeof(*out));
+    status = lookup(sources, key, &source);
+    if (!status)
+        *out = source.entry.text;
+    return status;
+}
+
+QJSIntlStatus qjs_intl_date_append_layout(const QJSIntlDateAvailableSources *sources,
+                                         QJSIntlBytes key, QJSIntlDateAppendLayout *out)
+{
+    QJSIntlStatus status = lookup(sources, key, out);
+    if (!status)
+        status = qjs_intl_pair_pattern_parse(out->entry.text, &out->pattern);
+    if (status && out)
+        memset(out, 0, sizeof(*out));
+    return status;
 }

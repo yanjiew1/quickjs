@@ -372,6 +372,55 @@ QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
     return qjs_intl_date_pattern_combine(allocator, &connector, first, second, out);
 }
 
+/* Append-item text is literal, including apostrophes. Insert labels as tokens
+   so braces or quoting characters inside translated labels are never parsed. */
+QJSIntlStatus qjs_intl_date_pattern_append(const QJSIntlAllocator *allocator,
+                                         QJSIntlBytes layout, QJSIntlBytes label,
+                                         const QJSIntlDatePattern *base,
+                                         const QJSIntlDatePattern *field, QJSIntlDatePattern *out)
+{
+    QJSIntlDatePatternToken tokens[7];
+    QJSIntlDatePattern connector = {0};
+    unsigned int seen = 0;
+    size_t i = 0, start = 0;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || (!layout.data && layout.length) || (!label.data && label.length) ||
+        layout.length > PTRDIFF_MAX || label.length > PTRDIFF_MAX)
+        return QJS_INTL_INVALID_ARGUMENT;
+    connector.tokens = tokens;
+    while (i < layout.length) {
+        if (layout.data[i] == '}')
+            return QJS_INTL_DATA_ERROR;
+        if (layout.data[i] != '{') {
+            i++;
+            continue;
+        }
+        if (i + 2 >= layout.length || layout.data[i + 2] != '}' ||
+            layout.data[i + 1] < '0' || layout.data[i + 1] > '2')
+            return QJS_INTL_DATA_ERROR;
+        unsigned int slot = layout.data[i + 1] - '0';
+        if (seen & (1U << slot))
+            return QJS_INTL_DATA_ERROR;
+        seen |= 1U << slot;
+        if (i > start)
+            tokens[connector.count++] = (QJSIntlDatePatternToken){{layout.data + start, i - start}, 0, 0};
+        if (slot < 2)
+            tokens[connector.count++] = (QJSIntlDatePatternToken){{0}, 0, '0' + slot};
+        else if (label.length)
+            tokens[connector.count++] = (QJSIntlDatePatternToken){label, 0, 0};
+        else
+            return QJS_INTL_UNSUPPORTED;
+        i += 3;
+        start = i;
+    }
+    if ((seen & 3) != 3)
+        return QJS_INTL_UNSUPPORTED;
+    if (i > start)
+        tokens[connector.count++] = (QJSIntlDatePatternToken){{layout.data + start, i - start}, 0, 0};
+    return qjs_intl_date_pattern_combine(allocator, &connector, base, field, out);
+}
+
 QJSIntlStatus qjs_intl_date_pattern_replace(const QJSIntlAllocator *allocator,
                                           const QJSIntlDatePattern *pattern, unsigned int symbol,
                                           const QJSIntlDatePattern *replacement, QJSIntlDatePattern *out)
