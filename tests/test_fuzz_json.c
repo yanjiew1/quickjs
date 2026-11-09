@@ -22,50 +22,47 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "quickjs.h"
-#include "quickjs-libc.h"
 
-static const char *expected_direct_script;
-static int direct_calls;
+static const uint8_t *expected_input;
+static size_t expected_length;
+static int parse_calls;
 
-static JSValue inspect_json_eval(JSContext *ctx, const char *input,
-                                 size_t length, const char *filename,
-                                 int flags)
+static JSValue inspect_json_parse(JSContext *ctx, const char *input,
+                                  size_t length, const char *filename)
 {
-    if (strcmp(filename, "<json-direct>") == 0) {
-        assert(length == strlen(expected_direct_script));
-        assert(memcmp(input, expected_direct_script, length + 1) == 0);
-        direct_calls++;
-    }
-    return JS_Eval(ctx, input, length, filename, flags);
+    assert(length == expected_length);
+    assert(memcmp(input, expected_input, length) == 0);
+    assert(input[length] == '\0');
+    parse_calls++;
+    return JS_ParseJSON(ctx, input, length, filename);
 }
 
-#define JS_Eval inspect_json_eval
+#define JS_ParseJSON inspect_json_parse
 #define LLVMFuzzerTestOneInput fuzz_json_test_one_input
 #include "../fuzz/fuzz_json.c"
 #undef LLVMFuzzerTestOneInput
-#undef JS_Eval
+#undef JS_ParseJSON
 
-static void check_json_input(const char *input, const char *expected)
+static void check_json_input(const uint8_t *input, size_t length)
 {
-    int previous = direct_calls;
-
-    expected_direct_script = expected;
-    assert(fuzz_json_test_one_input((const uint8_t *)input,
-                                    strlen(input)) == 0);
-    assert(direct_calls == previous + 1);
+    int previous = parse_calls;
+    expected_input = input;
+    expected_length = length;
+    assert(fuzz_json_test_one_input(input, length) == 0);
+    assert(parse_calls == previous + 1);
 }
 
 int main(void)
 {
-    /* Reuse the actual harness stack with long then short inputs. */
-    check_json_input("1111111111111111111111111111111111111111111111111111111111111111",
-                     "JSON.parse('1111111111111111111111111111111111111111111111111111111111111111');");
-    check_json_input("1", "JSON.parse('1');");
-    check_json_input("\"a'b\"", "JSON.parse('\"a\\'b\"');");
+    static const uint8_t embedded_nul[] = {'1', 0, '2'};
+    static const uint8_t quoted[] = "\"a'b\"";
+
+    check_json_input((const uint8_t *)"", 0);
+    check_json_input(quoted, sizeof(quoted) - 1);
+    check_json_input(embedded_nul, sizeof(embedded_nul));
     return 0;
 }

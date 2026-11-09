@@ -12,7 +12,10 @@ This can be extended with sanitizer support to improve efficacy:
   meson compile -C build-fuzz-asan
 
 
-Currently, there are three fuzzing targets defined: fuzz_eval, fuzz_compile and fuzz_regexp.
+The fuzzing targets are fuzz_eval, fuzz_compile, fuzz_regexp, fuzz_bytecode
+and fuzz_json. The JSON target parses arbitrary input and serializes results.
+The bytecode target reads arbitrary serialized objects but never executes them.
+The RegExp target expects a pattern, a NUL delimiter, one flags byte, and a subject.
 The above build command will produce an executable binary for each of them, which can be
 simply executed as:
 

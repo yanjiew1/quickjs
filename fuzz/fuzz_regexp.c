@@ -57,7 +57,7 @@ int lre_check_timeout(void *opaque)
  }
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    int len, ret, i;
+    int len, ret, i, flags = 0;
     uint8_t *bc;
     char error_msg[64];
     const uint8_t *input;
@@ -66,24 +66,28 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
     nbinterrupts = 0;
 
-    //Splits buffer into 2 sub buffers delimited by null character
+    // Split the pattern from a flags byte and the subject.
     for (i = 0; i < size; i++) {
         if (data[i] == 0) {
             size1 = i;
             break;
         }
     }
-    if (size1 == size) {
-        //missing delimiter
+    if (size1 == size || size1 + 1 == size) {
+        // Missing delimiter or flags byte.
         return 0;
     }
+    flags = data[size1 + 1] & (LRE_FLAG_IGNORECASE | LRE_FLAG_MULTILINE |
+                               LRE_FLAG_DOTALL | LRE_FLAG_UNICODE);
+    if (data[size1 + 1] & 0x80)
+        flags = (flags & ~LRE_FLAG_UNICODE) | LRE_FLAG_UNICODE_SETS;
     bc = lre_compile(&len, error_msg, sizeof(error_msg), (const char *) data,
-                     size1, 0, NULL);
+                     size1, flags, NULL);
     if (!bc) {
         return 0;
     }
-    input = data + size1 + 1;
-    ret = lre_exec(capture, bc, input, 0, size - (size1 + 1), 0, NULL);
+    input = data + size1 + 2;
+    ret = lre_exec(capture, bc, input, 0, size - (size1 + 2), 0, NULL);
     if (ret == 1) {
         lre_get_capture_count(bc);
     }
