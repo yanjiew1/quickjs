@@ -22,6 +22,7 @@
 #ifndef QJS_INTL_DATETIME_PROGRAM_ADAPT_H
 #define QJS_INTL_DATETIME_PROGRAM_ADAPT_H
 #include "pattern-info.h"
+#include "source-candidate.h"
 
 enum {
     QJS_INTL_DATE_ADAPT_HOUR_WIDTH = 1,
@@ -31,13 +32,36 @@ enum {
     QJS_INTL_DATE_ADAPT_ZONE_APPEND = 16,
     QJS_INTL_DATE_ADAPT_ZONE_EXTRACT = 32,
     QJS_INTL_DATE_ADAPT_PERIOD_LAYOUT = 64,
-    QJS_INTL_DATE_ADAPT_PERIOD_WIDTH = 128
+    QJS_INTL_DATE_ADAPT_PERIOD_WIDTH = 128,
+    QJS_INTL_DATE_ADAPT_YEAR_WIDTH = 256,
+    QJS_INTL_DATE_ADAPT_MONTH_WIDTH = 512,
+    QJS_INTL_DATE_ADAPT_DAY_WIDTH = 1024,
+    QJS_INTL_DATE_ADAPT_ERA_WIDTH = 2048,
+    QJS_INTL_DATE_ADAPT_WEEKDAY_WIDTH = 4096
 };
 
+enum {
+    QJS_INTL_DATE_NONCALENDAR_YEAR_WIDTH = 255,
+    QJS_INTL_DATE_SKELETON_UNMATCHED = 10000
+};
+
+/* Year, month, day, era and weekday skeleton widths; zero means absent. */
+void qjs_intl_date_skeleton_widths(QJSIntlBytes skeleton, unsigned char widths[5]);
+/* Distance considers the complete key, including unrequested fields. */
+int qjs_intl_date_skeleton_distance(QJSIntlBytes skeleton, const QJSIntlDateTimeComponents *request,
+                                    QJSIntlDateHourCycle cycle, unsigned char widths[5]);
+/* Compare whole skeletons only when they select the same source text. */
+int qjs_intl_date_best_alias(const QJSIntlDateSourceCandidates *pool,
+                             const QJSIntlDateSourceCandidate *selected,
+                             const QJSIntlDateTimeComponents *request,
+                             QJSIntlDateHourCycle cycle, unsigned char widths[5]);
+
 /* Copy an admitted ordinary program to an exact component vector. Permit only
-   explicitly allowed HOUR/MINUTE/SECOND numeric-width changes, plus the requested
+   explicitly allowed numeric date and HOUR/MINUTE/SECOND width changes, plus the requested
    hour family (twelve is 0/1). PERIOD_WIDTH additionally permits textual b/B
    width changes; the caller must prove source policy and name availability.
+   Month changes stay within numeric or textual widths; era and weekday changes
+   are textual. Related and cyclic years are unchanged.
    Other component differences are UNSUPPORTED. Preserve year kinds, period
    symbol, other nonnumeric fields and literals. Reproject before
    returning; h11/h24 presentation remains with the renderer. Own copied storage,
