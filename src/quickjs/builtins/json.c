@@ -994,14 +994,12 @@ static JSValue js_json_rawJSON(JSContext *ctx, JSValueConst this_val,
     if (p->len == 0 ||
         !is_valid_raw_json_char(string_get(p, 0)) ||
         !is_valid_raw_json_char(string_get(p, p->len - 1))) {
-        goto syntax_error;
-    }
-    res = js_json_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&str);
-    if (JS_IsException(res)) {
-    syntax_error:
         JS_ThrowSyntaxError(ctx, "invalid rawJSON string");
         goto fail;
     }
+    res = js_json_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&str);
+    if (JS_IsException(res))
+        goto fail;
     JS_FreeValue(ctx, res);
     
     obj = JS_NewObjectProtoClass(ctx, JS_NULL, JS_CLASS_RAWJSON);
