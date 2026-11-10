@@ -391,6 +391,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
     bc_set_flags(&flags, &idx, b->arguments_allowed, 1);
     bc_set_flags(&flags, &idx, b->has_debug, 1);
     bc_set_flags(&flags, &idx, b->is_direct_or_indirect_eval, 1);
+    bc_set_flags(&flags, &idx, b->has_origin, 1);
     assert(idx <= 16);
     bc_put_u16(s, flags);
     bc_put_u8(s, b->js_mode);
@@ -443,6 +444,8 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
     if (JS_WriteFunctionBytecode(s, b->byte_code_buf, b->byte_code_len))
         goto fail;
 
+    if (b->has_origin && !b->has_debug && bc_put_atom(s, b->debug.filename))
+        goto fail;
     if (b->has_debug) {
         if (bc_put_atom(s, b->debug.filename))
             goto fail;

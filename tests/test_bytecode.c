@@ -169,7 +169,7 @@ static void test_rom_bytecode_endianness(void)
     JS_SetStripInfo(rt, JS_STRIP_DEBUG);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "rom.js",
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "",
                        JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
