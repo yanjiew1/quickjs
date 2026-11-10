@@ -486,6 +486,7 @@ js_tests = {
   'module': ['-m', 'tests/test_module.js'],
   'module-names': ['-m', 'tests/test_module_names.js'],
   'builtin': ['--std', 'tests/test_builtin.js'],
+  'uint8array-encoding': ['-m', 'tests/test_uint8array_encoding.js'],
   'unicode-property-grammar': ['tests/test_unicode_property_grammar.js'],
   'date-parse-boundaries': ['tests/test_date_parse_boundaries.js'],
   'date-setter-snapshot': ['tests/test_date_setter_snapshot.js'],
