@@ -435,6 +435,7 @@ static int parse_alphabet_option(JSContext *ctx, JSValueConst options)
 {
     JSValue val;
     const char *str;
+    size_t len;
     int ret;
 
     if (JS_IsUndefined(options))
@@ -451,14 +452,14 @@ static int parse_alphabet_option(JSContext *ctx, JSValueConst options)
         return -1;
     }
 
-    str = JS_ToCString(ctx, val);
+    str = JS_ToCStringLen(ctx, &len, val);
     JS_FreeValue(ctx, val);
     if (!str)
         return -1;
 
-    if (!strcmp(str, "base64"))
+    if (len == sizeof("base64") - 1 && !memcmp(str, "base64", len))
         ret = B64_ALPHABET_BASE64;
-    else if (!strcmp(str, "base64url"))
+    else if (len == sizeof("base64url") - 1 && !memcmp(str, "base64url", len))
         ret = B64_ALPHABET_BASE64URL;
     else {
         JS_ThrowTypeError(ctx, "invalid alphabet");
@@ -473,6 +474,7 @@ static int parse_last_chunk_option(JSContext *ctx, JSValueConst options)
 {
     JSValue val;
     const char *str;
+    size_t len;
     int ret;
 
     if (JS_IsUndefined(options))
@@ -489,16 +491,17 @@ static int parse_last_chunk_option(JSContext *ctx, JSValueConst options)
         return -1;
     }
 
-    str = JS_ToCString(ctx, val);
+    str = JS_ToCStringLen(ctx, &len, val);
     JS_FreeValue(ctx, val);
     if (!str)
         return -1;
 
-    if (!strcmp(str, "loose"))
+    if (len == sizeof("loose") - 1 && !memcmp(str, "loose", len))
         ret = B64_LAST_LOOSE;
-    else if (!strcmp(str, "strict"))
+    else if (len == sizeof("strict") - 1 && !memcmp(str, "strict", len))
         ret = B64_LAST_STRICT;
-    else if (!strcmp(str, "stop-before-partial"))
+    else if (len == sizeof("stop-before-partial") - 1 &&
+             !memcmp(str, "stop-before-partial", len))
         ret = B64_LAST_STOP_BEFORE_PARTIAL;
     else {
         JS_ThrowTypeError(ctx, "invalid lastChunkHandling option");
