@@ -291,6 +291,39 @@ static double time_clip(double t) {
         return NAN;
 }
 
+/* Resolve a wall-clock time using the offset before a forward transition,
+   or the earlier instant when a backward transition repeats that time. */
+static double local_time_to_utc(double wall_time)
+{
+    int64_t wall, before_offset, after_offset;
+    double before, after;
+    BOOL before_valid, after_valid;
+
+    /* An offset cannot bring a value this far outside TimeClip's range
+       back into it. Keep the casts and one-day probes within int64_t. */
+    if (wall_time < -8.64e15 - 172800000 ||
+        wall_time > 8.64e15 + 172800000)
+        return NAN;
+
+    wall = (int64_t)wall_time;
+    before_offset = get_timezone_offset_ms(wall - 86400000);
+    after_offset = get_timezone_offset_ms(wall + 86400000);
+    before = wall_time + before_offset;
+    if (before_offset == after_offset)
+        return before;
+
+    after = wall_time + after_offset;
+    before_valid = get_timezone_offset_ms((int64_t)before) == before_offset;
+    after_valid = get_timezone_offset_ms((int64_t)after) == after_offset;
+    if (before_valid && after_valid)
+        return fmin(before, after);
+    if (before_valid)
+        return before;
+    if (after_valid)
+        return after;
+    return fmax(before, after);
+}
+
 /* The spec mandates the use of 'double' and it specifies the order
    of the operations */
 static double make_date_fields(double fields[minimum_length(7)], int is_local) {
@@ -343,10 +376,8 @@ static double make_date_fields(double fields[minimum_length(7)], int is_local) {
         return NAN;
 
     /* adjust for local time */
-    if (is_local) {
-        int64_t ti = tv < INT64_MIN ? INT64_MIN : tv >= 0x1p63 ? INT64_MAX : (int64_t)tv;
-        tv += get_timezone_offset_ms(ti);
-    }
+    if (is_local)
+        tv = local_time_to_utc(tv);
     return tv;
 }
 

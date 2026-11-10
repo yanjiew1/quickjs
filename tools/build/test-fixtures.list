@@ -135,6 +135,7 @@ tests/test_closure.js
 tests/test_cyclic_import.js
 tests/test_date_parse_boundaries.js
 tests/test_date_local_offset.js
+tests/test_date_local_transition.js
 tests/test_date_setter_snapshot.js
 tests/test_disposal_realms.js
 tests/test_gsab_worker.js
