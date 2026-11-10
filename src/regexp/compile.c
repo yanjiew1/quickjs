@@ -964,8 +964,6 @@ static int parse_unicode_property(REParseState *s, REStringList *cr,
 
     /* the ordering of case folding and inversion  differs with
        unicode_sets. 'unicode_sets' ordering is more consistent */
-    /* XXX: the spec seems incorrect, we do it as the other engines
-       seem to do it. */
     if (s->ignore_case && s->unicode_sets) {
         if (re_string_list_canonicalize(s, cr, s->is_unicode)) {
             re_string_list_free(cr);
