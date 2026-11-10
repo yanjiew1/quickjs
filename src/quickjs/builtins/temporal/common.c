@@ -30,6 +30,31 @@
 #include "../../internal/default-time-zone.h"
 #include "../../../temporal/clock.h"
 
+int js_temporal_regulate_time(JSContext *ctx, const double fields[6],
+                             QJSTemporalOverflow overflow,
+                             QJSTemporalISOTime *result)
+{
+    static const int maximum[] = { 23, 59, 59, 999, 999, 999 };
+    int32_t values[6];
+    int i;
+
+    for (i = 0; i < 6; i++) {
+        double value = fields[i];
+
+        if (value < 0 || value > maximum[i]) {
+            if (overflow == QJS_TEMPORAL_OVERFLOW_REJECT) {
+                JS_ThrowRangeError(ctx, "invalid Temporal clock field");
+                return -1;
+            }
+            value = value < 0 ? 0 : maximum[i];
+        }
+        values[i] = (int32_t)value;
+    }
+    *result = (QJSTemporalISOTime){ values[0], values[1], values[2],
+                                    values[3], values[4], values[5] };
+    return 0;
+}
+
 int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result)
 {
     int error = js_default_time_zone_get(ctx, result);
