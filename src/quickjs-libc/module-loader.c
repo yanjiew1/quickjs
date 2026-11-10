@@ -92,12 +92,15 @@ static JSModuleDef *js_module_loader_so(JSContext *ctx,
         if (!JS_HasException(ctx))
             JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error",
                                    module_name);
-    fail:
-        if (hd)
-            dlclose(hd);
+        /* Initializers can publish callbacks or objects with native
+           finalizers. Their code must remain loaded during rollback. */
         return NULL;
     }
     return m;
+fail:
+    if (hd)
+        dlclose(hd);
+    return NULL;
 }
 #endif /* !_WIN32 */
 

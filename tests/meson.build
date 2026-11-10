@@ -53,6 +53,16 @@ if shared_modules
     dependencies: host_deps,
     override_options: ['b_lundef=false'],
   )
+  failed_native_module = shared_module(
+    'failed-native-module',
+    'fixture_failed_native_module.c',
+    name_prefix: '',
+    name_suffix: 'so',
+    c_args: host_args + ['-DJS_SHARED_LIBRARY'],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_lundef=false'],
+  )
 endif
 
 # Public consumers reuse the selected shared engine after its LTO link. Their
@@ -504,6 +514,7 @@ endif
 if shared_modules
   js_tests += {
     'bjson': ['tests/test_bjson.js'],
+    'failed-native-module': ['-m', 'tests/test_failed_native_module.js'],
     'point-module': ['examples/test_point.js'],
   }
 endif
@@ -511,6 +522,8 @@ foreach name, args : js_tests
   js_test_deps = [fixtures]
   if name == 'bjson'
     js_test_deps += bjson_module
+  elif name == 'failed-native-module'
+    js_test_deps += failed_native_module
   elif name == 'point-module'
     js_test_deps += point_module
   endif
