@@ -773,7 +773,8 @@ foreach name, args : js_tests
   )
 endforeach
 
-if host_machine.system() in ['linux', 'freebsd', 'darwin']
+# Minimal and host-offset Temporal builds do not have historical named-zone rules.
+if host_machine.system() in ['linux', 'freebsd', 'darwin'] and (not calendar_enabled or native_timezones)
   test(
     'date-local-offset',
     qjs,
