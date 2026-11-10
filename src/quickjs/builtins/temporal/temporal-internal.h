@@ -92,6 +92,9 @@ int js_temporal_get_fractional_digits(JSContext *ctx, JSValueConst options,
                                      int *result);
 int js_temporal_to_integer(JSContext *ctx, JSValueConst value,
                            double *result);
+int js_temporal_regulate_time(JSContext *ctx, const double fields[6],
+                             QJSTemporalOverflow overflow,
+                             QJSTemporalISOTime *result);
 /* Return 1 / 0 for the standard Boolean result, or -1 with exception. */
 int js_temporal_is_partial_object(JSContext *ctx, JSValueConst value);
 int js_temporal_validate_increment(JSContext *ctx, uint32_t increment,

@@ -162,29 +162,6 @@ static int get_overflow(JSContext *ctx, JSValueConst options,
     return 0;
 }
 
-static int regulate_time(JSContext *ctx, const double values[6],
-                           QJSTemporalOverflow overflow,
-                           QJSTemporalISOTime *result)
-{
-    const int maxima[] = { 23, 59, 59, 999, 999, 999 };
-    int32_t out[6];
-    int i;
-    for (i = 0; i < 6; i++) {
-        double value = values[i];
-        if (overflow == QJS_TEMPORAL_OVERFLOW_CONSTRAIN) {
-            if (value < 0) value = 0;
-            if (value > maxima[i]) value = maxima[i];
-        } else if (value < 0 || value > maxima[i]) {
-            JS_ThrowRangeError(ctx, "invalid Temporal clock field");
-            return -1;
-        }
-        out[i] = (int32_t)value;
-    }
-    *result = (QJSTemporalISOTime){ out[0], out[1], out[2], out[3],
-                                  out[4], out[5] };
-    return 0;
-}
-
 static unsigned date_field_names(int kind)
 {
     return kind == PLAIN_YEAR_MONTH ?
@@ -229,7 +206,8 @@ static int resolve_fields(JSContext *ctx, int kind,
         return -1;
     result->datetime.time = (QJSTemporalISOTime){ 0, 0, 0, 0, 0, 0 };
     if (kind == PLAIN_DATETIME &&
-        regulate_time(ctx, fields->time, overflow, &result->datetime.time))
+        js_temporal_regulate_time(ctx, fields->time, overflow,
+                                 &result->datetime.time))
         return -1;
     result->calendar = calendar;
     return 0;
@@ -415,7 +393,7 @@ static JSValue plain_constructor(JSContext *ctx, JSValueConst new_target,
         (int32_t)date[0], (int32_t)date[1], (int32_t)date[2] };
     if (!qjs_iso_date_is_valid(value.datetime.date))
         return JS_ThrowRangeError(ctx, "invalid Temporal ISO date");
-    if (regulate_time(ctx, time, QJS_TEMPORAL_OVERFLOW_REJECT,
+    if (js_temporal_regulate_time(ctx, time, QJS_TEMPORAL_OVERFLOW_REJECT,
                        &value.datetime.time))
         return JS_EXCEPTION;
     return create_plain(ctx, new_target, kind, value);
