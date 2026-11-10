@@ -70,8 +70,9 @@ void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
         JS_FreeContext(b->realm);
 
     JS_FreeAtomRT(rt, b->func_name);
-    if (b->has_debug) {
+    if (b->has_debug || b->has_origin)
         JS_FreeAtomRT(rt, b->debug.filename);
+    if (b->has_debug) {
         js_free_rt(rt, b->debug.pc2line_buf);
         js_free_rt(rt, b->debug.source);
     }
