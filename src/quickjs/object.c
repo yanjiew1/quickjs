@@ -2937,15 +2937,26 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
 /* return -1 if exception */
 int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len)
 {
-    uint32_t new_size;
-    size_t slack;
+    size_t old_size, new_size, max_count, slack;
     JSValue *new_array_prop;
-    /* XXX: potential arithmetic overflow */
-    new_size = max_int(new_len, p->u.array.u1.size * 3 / 2);
+    old_size = p->u.array.u1.size;
+    max_count = SIZE_MAX / sizeof(*new_array_prop);
+    if (max_count > UINT32_MAX)
+        max_count = UINT32_MAX;
+    new_size = old_size + old_size / 2;
+    if (new_size < new_len)
+        new_size = new_len;
+    if (new_size > max_count) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
     new_array_prop = js_realloc2(ctx, p->u.array.u.values, sizeof(JSValue) * new_size, &slack);
     if (!new_array_prop)
         return -1;
-    new_size += slack / sizeof(*new_array_prop);
+    slack /= sizeof(*new_array_prop);
+    if (slack > max_count - new_size)
+        slack = max_count - new_size;
+    new_size += slack;
     p->u.array.u.values = new_array_prop;
     p->u.array.u1.size = new_size;
     return 0;
