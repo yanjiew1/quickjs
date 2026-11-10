@@ -21,6 +21,25 @@
 #include "pattern.h"
 #include <string.h>
 
+int qjs_intl_date_pattern_equal(const QJSIntlDatePattern *a,
+                                const QJSIntlDatePattern *b)
+{
+    size_t i;
+
+    if (a->count != b->count)
+        return 0;
+    for (i = 0; i < a->count; i++) {
+        const QJSIntlDatePatternToken *x = &a->tokens[i], *y = &b->tokens[i];
+
+        if (x->symbol != y->symbol || x->width != y->width ||
+            x->literal.length != y->literal.length ||
+            (x->literal.length &&
+             memcmp(x->literal.data, y->literal.data, x->literal.length)))
+            return 0;
+    }
+    return 1;
+}
+
 typedef struct Scan {
     QJSIntlDatePatternToken *tokens;
     char *text;
