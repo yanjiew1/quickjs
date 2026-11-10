@@ -506,6 +506,22 @@ static void test_proxy_construct_method_cleanup(JSContext *ctx)
     JS_FreeValue(ctx, global);
 }
 
+static void test_fast_array_size_overflow(JSContext *ctx)
+{
+    static const char source[] =
+        "Array.prototype.toReversed.call({length: 2 ** 29})";
+    JSValue result;
+
+    if (sizeof(size_t) != 4)
+        return;
+    /* On 32-bit JSValue builds, the element count fits in an array length,
+       while its allocation size does not fit in size_t. */
+    result = JS_Eval(ctx, source, sizeof(source) - 1, "array-size.js",
+                     JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsException(result));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -525,6 +541,7 @@ int main(void)
     test_property_enum_size_overflow(ctx);
     test_deep_bound_function_realm(ctx);
     test_proxy_construct_method_cleanup(ctx);
+    test_fast_array_size_overflow(ctx);
     test_bound_function_properties_oom();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
