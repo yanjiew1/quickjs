@@ -120,7 +120,7 @@ jobs:
         run: |
           docker exec quickjs-qemu apk upgrade --no-cache
           docker exec quickjs-qemu cat /etc/alpine-release
-          docker exec quickjs-qemu apk add --no-cache git patch meson ninja gcc libc-dev python3
+          docker exec quickjs-qemu apk add --no-cache git patch meson ninja gcc libc-dev python3 tzdata
       - name: Configure
         run: docker exec quickjs-qemu meson setup build
       - name: Compile
