@@ -43,6 +43,10 @@ typedef struct QJSIntlDatePattern {
     QJSIntlDateIntervalOrder order;
 } QJSIntlDatePattern;
 
+/* Compare compiled tokens, including their literal bytes and source widths. */
+int qjs_intl_date_pattern_equal(const QJSIntlDatePattern *a,
+                                const QJSIntlDatePattern *b);
+
 /* Copy all decoded scalar UTF-8 literal bytes into one owned allocation.
    Literal tokens have symbol/width zero and nonempty coalesced text. Fields
    retain the original symbol and full positive run length, with empty text.
