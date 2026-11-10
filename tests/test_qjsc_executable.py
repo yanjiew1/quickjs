@@ -201,6 +201,18 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert b"qjsc-stripped-import-meta-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
 
+    # Dynamic import still needs the original source location after -s.
+    dependency.write_text('export const answer = 42;\n')
+    source.write_text("import('./dependency.js').then(m => print(m.answer));\n")
+    compiled = subprocess.run([qjsc, '-s', '-o', str(executable), str(source)],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=30)
+    assert compiled.returncode == 0, compiled.stderr
+    completed = subprocess.run([str(executable)], cwd='/', stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, timeout=30)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == b'42', (completed.stdout, completed.stderr)
+
     # Supply argv[0] separately so this also covers hosts with short path limits.
     source.write_text('print(42);\n')
     compiler = arguments[0]

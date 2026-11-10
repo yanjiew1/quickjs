@@ -92,6 +92,8 @@ static void compute_bytecode_size(JSFunctionBytecode *b, JSMemoryUsage_helper *h
             hp->js_func_pc2line_count += 1;
             hp->js_func_pc2line_size += b->debug.pc2line_len;
         }
+    } else if (b->has_origin) {
+        js_func_size += JS_FUNCTION_ORIGIN_SIZE - offsetof(JSFunctionBytecode, debug);
     }
     hp->js_func_size += js_func_size;
     hp->js_func_count += 1;

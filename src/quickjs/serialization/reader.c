@@ -542,6 +542,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     bc.arguments_allowed = bc_get_flags(v16, &idx, 1);
     bc.has_debug = bc_get_flags(v16, &idx, 1);
     bc.is_direct_or_indirect_eval = bc_get_flags(v16, &idx, 1);
+    bc.has_origin = bc_get_flags(v16, &idx, 1);
     bc.read_only_bytecode = s->is_rom_data;
     if (bc_get_u8(s, &v8))
         goto fail;
@@ -575,6 +576,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
 
     if (bc.has_debug) {
         function_size = sizeof(*b);
+    } else if (bc.has_origin) {
+        function_size = JS_FUNCTION_ORIGIN_SIZE;
     } else {
         function_size = offsetof(JSFunctionBytecode, debug);
     }
@@ -679,6 +682,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
             goto fail;
         bc_read_trace(s, "}\n");
     }
+    if (b->has_origin && !b->has_debug && bc_get_atom(s, &b->debug.filename))
+        goto fail;
     if (b->has_debug) {
         /* read optional debug information */
         bc_read_trace(s, "debug {\n");
