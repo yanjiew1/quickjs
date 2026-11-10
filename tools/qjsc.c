@@ -681,7 +681,31 @@ static int output_executable(const char *out_filename, const char *cfilename,
     if (p) {
         *p = '\0';
     } else {
-        pstrcpy(exe_dir, sizeof(exe_dir), ".");
+        const char *path = getenv("PATH");
+        BOOL found = FALSE;
+
+        while (path && *path) {
+            const char *end = strchr(path, ':');
+            size_t len = end ? (size_t)(end - path) : strlen(path);
+
+            ret = snprintf(buf, sizeof(buf), "%.*s%s%s", (int)len, path,
+                           len ? "/" : "", exename);
+            if (ret >= 0 && (size_t)ret < sizeof(buf) && access(buf, X_OK) == 0) {
+                if (len >= sizeof(exe_dir))
+                    goto path_too_long;
+                if (len) {
+                    memcpy(exe_dir, path, len);
+                    exe_dir[len] = '\0';
+                } else {
+                    pstrcpy(exe_dir, sizeof(exe_dir), ".");
+                }
+                found = TRUE;
+                break;
+            }
+            path = end ? end + 1 : NULL;
+        }
+        if (!found)
+            pstrcpy(exe_dir, sizeof(exe_dir), ".");
     }
 
     /* if 'quickjs.h' is present at the same path as the executable, we
@@ -757,10 +781,10 @@ static int output_executable(const char *out_filename, const char *cfilename,
     *arg++ = "none";
 #ifdef CONFIG_SHARED_LIBRARY
     /* Keep installed generated programs able to find the selected shared engine. */
-    ret = snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
-    if (ret < 0 || (size_t)ret >= sizeof(buf))
-        goto path_too_long;
-    *arg++ = buf;
+    *arg++ = "-Xlinker";
+    *arg++ = "-rpath";
+    *arg++ = "-Xlinker";
+    *arg++ = lib_dir;
 #endif
 #ifndef CONFIG_LIBRARY_SUFFIX
 #define CONFIG_LIBRARY_SUFFIX ".a"
