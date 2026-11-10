@@ -239,6 +239,9 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
             int i;
             h = 1;
             for(i = p->len - 1; i >= 0; i--) {
+#if JS_LIMB_BITS == 64
+                h = h * 263 + (uint32_t)(p->tab[i] >> 32);
+#endif
                 h = h * 263 + p->tab[i];
             }
             /* the final step is necessary otherwise h mod n only
