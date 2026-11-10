@@ -106,7 +106,6 @@ static JSValue js_symbol_get_description(JSContext *ctx, JSValueConst this_val)
 const JSCFunctionListEntry js_symbol_proto_funcs[] = {
     JS_CFUNC_DEF("toString", 0, js_symbol_toString ),
     JS_CFUNC_DEF("valueOf", 0, js_symbol_valueOf ),
-    // XXX: should have writable: false
     JS_CFUNC_DEF("[Symbol.toPrimitive]", 1, js_symbol_valueOf ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Symbol", JS_PROP_CONFIGURABLE ),
     JS_CGETSET_DEF("description", js_symbol_get_description, NULL ),
