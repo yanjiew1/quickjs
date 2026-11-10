@@ -556,6 +556,18 @@ foreach name, args : js_tests
     timeout: name == 'os-exec-wait-error' ? 5 : 120,
   )
 endforeach
+
+if host_machine.system() in ['linux', 'freebsd', 'darwin']
+  test(
+    'date-local-offset',
+    qjs,
+    args: ['tests/test_date_local_offset.js'],
+    suite: ['repo', 'javascript', 'integration'],
+    env: ['TZ=Europe/Paris'],
+    workdir: test_workdir,
+    depends: fixtures,
+  )
+endif
 test(
   'wait-async-agents',
   run_test262,

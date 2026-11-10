@@ -36,14 +36,14 @@
 
 /* Date */
 
-/* OS dependent. d = argv[0] is in ms from 1970. Return the difference
-   between UTC time and local time 'd' in minutes */
-static int getTimezoneOffset(int64_t time)
+/* Return UTC minus local time in milliseconds at the given UTC instant. */
+static int64_t get_timezone_offset_ms(int64_t time)
 {
     time_t ti;
-    int res;
+    int64_t res;
 
-    time /= 1000; /* convert to seconds */
+    /* A negative millisecond remainder belongs to the preceding second. */
+    time = time / 1000 - (time % 1000 < 0);
     if (sizeof(time_t) == 4) {
         /* on 32-bit systems, we need to clamp the time value to the
            range of `time_t`. This is better than truncating values to
@@ -76,6 +76,7 @@ static int getTimezoneOffset(int64_t time)
             js_host_environment_unlock();
             return 0;
         }
+        tm->tm_isdst = -1;
         gm_ti = mktime(tm);
 
         tm = localtime(&ti);
@@ -85,7 +86,7 @@ static int getTimezoneOffset(int64_t time)
         }
         loc_ti = mktime(tm);
 
-        res = (gm_ti - loc_ti) / 60;
+        res = (int64_t)difftime(gm_ti, loc_ti);
     }
 #else
     {
@@ -94,11 +95,11 @@ static int getTimezoneOffset(int64_t time)
             js_host_environment_unlock();
             return 0;
         }
-        res = -tm.tm_gmtoff / 60;
+        res = -(int64_t)tm.tm_gmtoff;
     }
 #endif
     js_host_environment_unlock();
-    return res;
+    return res * 1000;
 }
 
 #if 0
@@ -112,7 +113,7 @@ static JSValue js___date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val
     if (isnan(dd))
         return __JS_NewFloat64(ctx, dd);
     else
-        return JS_NewInt32(ctx, getTimezoneOffset((int64_t)dd));
+        return JS_NewFloat64(ctx, get_timezone_offset_ms((int64_t)dd) / 60000.0);
 }
 
 static JSValue js_get_prototype_from_ctor(JSContext *ctx, JSValueConst ctor,
@@ -226,7 +227,7 @@ static int get_date_fields_from_time(double dval,
                                      double fields[minimum_length(9)],
                                      int is_local, int force)
 {
-    int64_t d, days, wd, y, i, md, h, m, s, ms, tz = 0;
+    int64_t d, days, wd, y, i, md, h, m, s, ms, tz_ms = 0;
 
     if (isnan(dval)) {
         if (!force)
@@ -235,8 +236,8 @@ static int get_date_fields_from_time(double dval,
     } else {
         d = dval;     /* assuming -8.64e15 <= dval <= -8.64e15 */
         if (is_local) {
-            tz = -getTimezoneOffset(d);
-            d += tz * 60000;
+            tz_ms = -get_timezone_offset_ms(d);
+            d += tz_ms;
         }
     }
 
@@ -268,7 +269,7 @@ static int get_date_fields_from_time(double dval,
     fields[5] = s;
     fields[6] = ms;
     fields[7] = wd;
-    fields[8] = tz;
+    fields[8] = tz_ms / 60000.0;
     return TRUE;
 }
 
@@ -344,7 +345,7 @@ static double make_date_fields(double fields[minimum_length(7)], int is_local) {
     /* adjust for local time */
     if (is_local) {
         int64_t ti = tv < INT64_MIN ? INT64_MIN : tv >= 0x1p63 ? INT64_MAX : (int64_t)tv;
-        tv += getTimezoneOffset(ti) * 60000;
+        tv += get_timezone_offset_ms(ti);
     }
     return tv;
 }
@@ -1170,7 +1171,7 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
         return JS_NAN;
     else
         /* assuming -8.64e15 <= v <= -8.64e15 */
-        return JS_NewInt64(ctx, getTimezoneOffset((int64_t)trunc(v)));
+        return JS_NewFloat64(ctx, get_timezone_offset_ms((int64_t)trunc(v)) / 60000.0);
 }
 
 static JSValue js_date_getTime(JSContext *ctx, JSValueConst this_val,
