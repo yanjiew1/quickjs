@@ -99,6 +99,7 @@ native_test_names = [
   'test_typed_array',
   'test_allocator',
   'test_object',
+  'test_map_hash',
   'test_iterator',
   'test_allocator_policy',
   'test_json_stringify_oom',
