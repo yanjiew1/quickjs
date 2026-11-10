@@ -24,21 +24,6 @@
 #include "../common/range-compose.h"
 #include <string.h>
 
-static int same(const QJSIntlDatePattern *a, const QJSIntlDatePattern *b)
-{
-    size_t i;
-    if (a->count != b->count)
-        return 0;
-    for (i = 0; i < a->count; i++) {
-        const QJSIntlDatePatternToken *x = &a->tokens[i], *y = &b->tokens[i];
-        if (x->symbol != y->symbol || x->width != y->width ||
-            x->literal.length != y->literal.length ||
-            (x->literal.length && memcmp(x->literal.data, y->literal.data, x->literal.length)))
-            return 0;
-    }
-    return 1;
-}
-
 void qjs_intl_date_range_layout_clear(QJSIntlDateRangeLayout *layout)
 {
     if (!layout)
@@ -87,7 +72,7 @@ QJSIntlStatus qjs_intl_date_range_layout_open(const QJSIntlAllocator *allocator,
         }
     }
     status = qjs_intl_date_pattern_combine(allocator, &result.connector, clock, date, &combined);
-    if (!status && !same(&combined, ordinary))
+    if (!status && !qjs_intl_date_pattern_equal(&combined, ordinary))
         status = QJS_INTL_UNSUPPORTED;
     if (!status)
         status = qjs_intl_date_pattern_copy(allocator, date, &result.date);

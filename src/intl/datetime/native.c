@@ -2013,19 +2013,6 @@ done:
     return status;
 }
 
-static int same_pattern(const QJSIntlDatePattern *a, const QJSIntlDatePattern *b)
-{
-    size_t i;
-    if (a->count != b->count)
-        return 0;
-    for (i = 0; i < a->count; i++) {
-        const QJSIntlDatePatternToken *x = &a->tokens[i], *y = &b->tokens[i];
-        if (x->symbol != y->symbol || x->width != y->width || !equal(x->literal, y->literal))
-            return 0;
-    }
-    return 1;
-}
-
 QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatter *formatter)
 {
     QJSIntlDateIntervalSet sets[QJS_INTL_DATE_VALUE_KIND_COUNT] = {0};
@@ -2050,7 +2037,8 @@ QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatte
         for (j = 0; j < i; j++)
             if (!formatter->records[j].interval_pattern_changed &&
                 formatter->records[i].period_spacing == formatter->records[j].period_spacing &&
-                same_pattern(&formatter->records[i].pattern, &formatter->records[j].pattern))
+                qjs_intl_date_pattern_equal(&formatter->records[i].pattern,
+                                            &formatter->records[j].pattern))
                 break;
         owners[i] = j < i ? owners[j] : i;
         if (j < i)
