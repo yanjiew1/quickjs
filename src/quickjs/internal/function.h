@@ -113,6 +113,7 @@ typedef struct JSFunctionBytecode {
     uint8_t super_allowed : 1;
     uint8_t arguments_allowed : 1;
     uint8_t has_debug : 1;
+    uint8_t has_origin : 1; /* filename retained without debug information */
     uint8_t read_only_bytecode : 1;
     uint8_t is_direct_or_indirect_eval : 1; /* used by JS_GetScriptOrModuleName() */
     /* XXX: 10 bits available */
@@ -140,6 +141,11 @@ typedef struct JSFunctionBytecode {
         char *source;
     } debug;
 } JSFunctionBytecode;
+
+/* Keep the constant pool pointer-aligned when only the origin atom is stored. */
+#define JS_FUNCTION_ORIGIN_SIZE \
+    ((offsetof(JSFunctionBytecode, debug) + sizeof(JSAtom) + sizeof(void *) - 1) & \
+     ~(sizeof(void *) - 1))
 
 typedef struct JSBoundFunction {
     JSValue func_obj;

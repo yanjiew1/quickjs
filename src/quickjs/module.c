@@ -1603,7 +1603,7 @@ JSAtom JS_GetScriptOrModuleName(JSContext *ctx, int n_stack_levels)
             return JS_ATOM_NULL;
         b = p->u.func.function_bytecode;
         if (!b->is_direct_or_indirect_eval) {
-            if (!b->has_debug)
+            if (!b->has_debug && !b->has_origin)
                 return JS_ATOM_NULL;
             return JS_DupAtom(ctx, b->debug.filename);
         } else {

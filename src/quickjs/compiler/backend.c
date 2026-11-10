@@ -3870,11 +3870,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     if (compute_stack_size(ctx, fd, &stack_size) < 0)
         goto fail;
 
-    if (fd->strip_debug) {
-        function_size = offsetof(JSFunctionBytecode, debug);
-    } else {
-        function_size = sizeof(*b);
-    }
+    function_size = fd->strip_debug ? JS_FUNCTION_ORIGIN_SIZE : sizeof(*b);
     cpool_offset = function_size;
     function_size += fd->cpool_count * sizeof(*fd->cpool);
     vardefs_offset = function_size;
@@ -3955,7 +3951,8 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     b->stack_size = stack_size;
 
     if (fd->strip_debug) {
-        JS_FreeAtom(ctx, fd->filename);
+        b->has_origin = 1;
+        b->debug.filename = fd->filename;
         dbuf_free(&fd->pc2line);    // probably useless
     } else {
         /* XXX: source and pc2line info should be packed at the end of the
