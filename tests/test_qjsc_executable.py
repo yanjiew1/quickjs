@@ -62,12 +62,40 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert libraries == [library_name], libraries
     if any(arg.startswith("-fsanitize=") for arg in expected_flags):
         assert "-fno-omit-frame-pointer" in arguments, compiled.stdout
-    source.unlink()
     completed = subprocess.run([str(executable)], cwd=str(scratch),
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert completed.returncode == 0, (completed.returncode, completed.stderr)
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
+
+    # A bare argv[0] must still locate the build tree's headers and library.
+    path_env = os.environ.copy()
+    path_env['PATH'] = str(Path(qjsc).parent) + os.pathsep + path_env.get('PATH', '')
+    path_output = scratch / 'check-path'
+    compiled = subprocess.run(['qjsc', '-o', str(path_output), str(source)],
+                              executable=qjsc, env=path_env, cwd=str(scratch),
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=30)
+    assert compiled.returncode == 0, compiled.stderr
+    completed = subprocess.run([str(path_output)], stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, timeout=30)
+    assert completed.returncode == 0, completed.stderr
+
+    if library_name.endswith(('.so', '.dylib')) and os.name != 'nt':
+        # -Wl,-rpath,<dir> splits a comma in <dir> into linker arguments.
+        comma_dir = scratch / 'build,with-comma'
+        comma_dir.symlink_to(Path(qjsc).parent, target_is_directory=True)
+        comma_output = scratch / 'check-comma'
+        compiled = subprocess.run([str(comma_dir / Path(qjsc).name), '-o',
+                                   str(comma_output), str(source)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  timeout=30)
+        assert compiled.returncode == 0, compiled.stderr
+        completed = subprocess.run([str(comma_output)], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, timeout=30)
+        assert completed.returncode == 0, completed.stderr
+
+    source.unlink()
 
     if os.name != 'nt' and Path('/tmp').is_dir():
         # Seed the old PID-derived name in the child before it execs qjsc.
