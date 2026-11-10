@@ -86,35 +86,6 @@ static void js_temporal_time_copy_fields(double *fields,
     fields[5] = time.nanosecond;
 }
 
-static int js_temporal_time_regulate(JSContext *ctx,
-                                     QJSTemporalISOTime *result,
-                                     const double *fields, int overflow)
-{
-    static const int maximum[] = { 23, 59, 59, 999, 999, 999 };
-    int32_t values[6];
-    double value;
-    int i;
-
-    for (i = 0; i < 6; i++) {
-        value = fields[i];
-        if (value < 0 || value > maximum[i]) {
-            if (overflow) {
-                JS_ThrowRangeError(ctx, "Temporal.PlainTime field out of range");
-                return -1;
-            }
-            value = value < 0 ? 0 : maximum[i];
-        }
-        values[i] = (int32_t)value;
-    }
-    result->hour = values[0];
-    result->minute = values[1];
-    result->second = values[2];
-    result->millisecond = values[3];
-    result->microsecond = values[4];
-    result->nanosecond = values[5];
-    return 0;
-}
-
 /* In a partial record existing values are already in fields. The six
    Gets and conversions occur in alphabetical property order. */
 static int js_temporal_to_time_fields(JSContext *ctx, JSValueConst object,
@@ -177,7 +148,7 @@ JSValue js_temporal_to_plain_time(JSContext *ctx, JSValueConst value,
         } else {
             if (js_temporal_to_time_fields(ctx, value, fields) ||
                 js_temporal_time_get_overflow(ctx, options, &overflow) ||
-                js_temporal_time_regulate(ctx, &result, fields, overflow))
+                js_temporal_regulate_time(ctx, fields, overflow, &result))
                 return JS_EXCEPTION;
             return js_temporal_create_plain_time(ctx, JS_UNDEFINED, result);
         }
@@ -215,7 +186,8 @@ static JSValue js_temporal_plain_time_constructor(JSContext *ctx,
             js_temporal_to_integer(ctx, argv[i], &fields[i]))
             return JS_EXCEPTION;
     }
-    if (js_temporal_time_regulate(ctx, &time, fields, 1))
+    if (js_temporal_regulate_time(ctx, fields,
+                                  QJS_TEMPORAL_OVERFLOW_REJECT, &time))
         return JS_EXCEPTION;
     return js_temporal_create_plain_time(ctx, new_target, time);
 }
@@ -286,7 +258,7 @@ static JSValue js_temporal_plain_time_with(JSContext *ctx,
     if (js_temporal_to_time_fields(ctx, argv[0], fields) ||
         js_temporal_time_get_overflow(ctx, argc > 1 ? argv[1] : JS_UNDEFINED,
                                        &overflow) ||
-        js_temporal_time_regulate(ctx, &result, fields, overflow))
+        js_temporal_regulate_time(ctx, fields, overflow, &result))
         return JS_EXCEPTION;
     return js_temporal_create_plain_time(ctx, JS_UNDEFINED, result);
 }
