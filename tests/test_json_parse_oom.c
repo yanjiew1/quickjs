@@ -21,6 +21,7 @@
  */
 #include <assert.h>
 #include "quickjs.h"
+#include "oom-allocator.h"
 
 static int test_define_property_value(JSContext *ctx, JSValueConst obj,
                                       JSAtom prop, JSValue val, int flags);
@@ -47,6 +48,42 @@ static JSValue identity_reviver(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
     return JS_DupValue(ctx, argv[1]);
+}
+
+static void test_raw_json_oom(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue text, result, error, name;
+    const char *name_str;
+    char input[1003];
+
+    assert(ctx);
+    input[0] = '"';
+    memset(input + 1, 'a', 1000);
+    input[1001] = '"';
+    input[1002] = '\0';
+    text = JS_NewString(ctx, input);
+    assert(!JS_IsException(text));
+
+    /* Fail inside the parser, after rawJSON's preliminary syntax check. */
+    oom_test_begin(&allocator, 1);
+    result = js_json_rawJSON(ctx, JS_UNDEFINED, 1, (JSValueConst *)&text);
+    oom_test_end(&allocator);
+    assert(JS_IsException(result) && allocator.failures == 1);
+    error = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, error, "name");
+    name_str = JS_ToCString(ctx, name);
+    assert(name_str && !strcmp(name_str, "InternalError"));
+    JS_FreeCString(ctx, name_str);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, error);
+
+    JS_FreeValue(ctx, text);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
 }
 
 int main(void)
@@ -76,5 +113,6 @@ int main(void)
     JS_FreeValue(ctx, text);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+    test_raw_json_oom();
     return 0;
 }
