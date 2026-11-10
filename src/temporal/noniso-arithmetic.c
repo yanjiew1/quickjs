@@ -168,8 +168,8 @@ static int count_units(QJSCalendarId calendar, int sign,
     int64_t low = 0, high = upper;
     int error, passed;
 
-    /* Equivalent to the specification's monotone incremental search, bounded
-       logarithmically even when the dates are hundreds of millennia apart. */
+    /* The calendar date-until operation has implementation-defined arithmetic.
+       Binary search bounds the number of additions for distant dates. */
     while (low < high) {
         int64_t middle = low + (high - low + 1) / 2;
 
