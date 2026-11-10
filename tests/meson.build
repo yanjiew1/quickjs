@@ -567,6 +567,15 @@ if host_machine.system() in ['linux', 'freebsd', 'darwin']
     workdir: test_workdir,
     depends: fixtures,
   )
+  test(
+    'date-local-transition',
+    qjs,
+    args: ['tests/test_date_local_transition.js'],
+    suite: ['repo', 'javascript', 'integration'],
+    env: ['TZ=America/New_York'],
+    workdir: test_workdir,
+    depends: fixtures,
+  )
 endif
 test(
   'wait-async-agents',
