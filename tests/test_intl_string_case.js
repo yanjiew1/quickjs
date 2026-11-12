@@ -49,6 +49,19 @@ for (const [input, output] of [
     ["i\u0301\u0307", "I\u0301\u0307"], ["i\u034f\u0307", "I\u034f\u0307"]
 ])
     assert(input.toLocaleUpperCase("lt"), output);
+
+/* Greek uppercase tailoring keeps the distinction between accented vowels,
+   standalone disjunctive eta, and the diaeresis needed after an accent. */
+for (const locale of ["el", "el-GR"]) {
+    for (const [input, output] of [
+        ["ά", "Α"], ["άυλος", "ΑΫΛΟΣ"], ["ή", "Ή"], ["ήτα", "ΗΤΑ"],
+        ["μάι", "ΜΑΪ"], ["ᾄ", "ΑΙ"], ["a\u0301", "A\u0301"],
+        ["η\u0301", "Η\u0301"], ["ά\u0345ι", "ΑΙΙ"],
+        ["ά\ud800ι", "Α\ud800Ι"], ["ά\0ι", "Α\0Ι"],
+    ])
+        assert(input.toLocaleUpperCase(locale), output);
+    assert("ΟΣ".toLocaleLowerCase(locale), "ος");
+}
 // Soft_Dotted includes supplementary letters; UTF-16 halves are not characters.
 assert("\u{1d422}\u0307".toLocaleUpperCase("lt"), "\u{1d422}".toUpperCase());
 for (const locale of ["lt", "tr", "az", "und"]) {
