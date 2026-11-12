@@ -1577,16 +1577,14 @@ int js_link_module(JSContext *ctx, JSModuleDef *m)
     return 0;
 }
 
-/* return JS_ATOM_NULL if the name cannot be found. Only works with
-   not striped bytecode functions. */
+/* Return JS_ATOM_NULL if no source name was retained. */
 JSAtom JS_GetScriptOrModuleName(JSContext *ctx, int n_stack_levels)
 {
     JSStackFrame *sf;
     JSFunctionBytecode *b;
     JSObject *p;
-    /* XXX: currently we just use the filename of the englobing
-       function from the debug info. May need to add a ScriptOrModule
-       info in JSFunctionBytecode. */
+    /* The filename is retained in debug information or as an origin
+       when stripped bytecode needs it for dynamic imports. */
     sf = ctx->rt->current_stack_frame;
     if (!sf)
         return JS_ATOM_NULL;
