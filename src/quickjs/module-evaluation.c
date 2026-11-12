@@ -115,18 +115,15 @@ static void js_dump_module(JSRuntime *rt, const char *str, JSModuleDef *m)
 }
 #endif
 
-static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst this_val,
-                                                  int argc, JSValueConst *argv, int magic, JSValue *func_data)
+static void js_async_module_reject_parents(JSContext *ctx, JSModuleDef *module,
+                                           JSValueConst error, BOOL uncatchable)
 {
-    JSModuleDef *module = JS_VALUE_GET_PTR(func_data[0]);
-    JSValueConst error = argv[0];
-
 #ifdef DUMP_MODULE_EXEC
     js_dump_module(ctx->rt, __func__, module);
 #endif
     if (module->status == JS_MODULE_STATUS_EVALUATED) {
         assert(module->eval_has_exception);
-        return JS_UNDEFINED;
+        return;
     }
 
     /* Evaluation DFS has finished. Reuse its temporary link and cursor for
@@ -141,11 +138,12 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
             assert(!module->eval_has_exception);
             assert(module->async_evaluation);
             module->eval_has_exception = TRUE;
+            module->eval_exception_uncatchable = uncatchable;
             module->eval_exception = JS_DupValue(ctx, error);
             module->status = JS_MODULE_STATUS_EVALUATED;
             module->async_evaluation = FALSE;
 
-            if (!JS_IsUndefined(module->promise)) {
+            if (!uncatchable && !JS_IsUndefined(module->promise)) {
                 JSValue ret_val;
 
                 assert(module->cycle_root == module);
@@ -169,6 +167,19 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
         }
         module = next;
     }
+}
+
+void js_async_module_terminate(JSContext *ctx, JSModuleDef *m)
+{
+    js_async_module_reject_parents(ctx, m, ctx->rt->current_exception, TRUE);
+}
+
+static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst this_val,
+                                                  int argc, JSValueConst *argv, int magic, JSValue *func_data)
+{
+    JSModuleDef *module = JS_VALUE_GET_PTR(func_data[0]);
+
+    js_async_module_reject_parents(ctx, module, argv[0], FALSE);
     return JS_UNDEFINED;
 }
 
@@ -227,6 +238,8 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
             assert(m->eval_has_exception);
         } else if (m->has_tla) {
             if (js_execute_async_module(ctx, m) < 0) {
+                if (ctx->rt->current_exception_is_uncatchable)
+                    goto terminate;
                 JSValue error = JS_GetException(ctx);
                 JSValue m_obj = JS_NewModuleValue(m);
 
@@ -239,6 +252,11 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
         } else {
             JSValue error;
             if (js_execute_sync_module(ctx, m, &error) < 0) {
+                if (ctx->rt->current_exception_is_uncatchable) {
+                    JS_Throw(ctx, error);
+                    ctx->rt->current_exception_is_uncatchable = TRUE;
+                    goto terminate;
+                }
                 JSValue m_obj = JS_NewModuleValue(m);
                 js_async_module_execution_rejected(ctx, JS_UNDEFINED,
                                                    1, (JSValueConst *)&error, 0,
@@ -253,6 +271,15 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
     }
     js_free(ctx, exec_list->tab);
     return JS_UNDEFINED;
+
+ terminate:
+    for (; i < exec_list->count; i++) {
+        JSModuleDef *m = exec_list->tab[i];
+        if (m->status == JS_MODULE_STATUS_EVALUATING_ASYNC)
+            js_async_module_terminate(ctx, m);
+    }
+    js_free(ctx, exec_list->tab);
+    return JS_EXCEPTION;
 }
 
 static int js_execute_async_module(JSContext *ctx, JSModuleDef *m)
@@ -346,6 +373,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
         m->status == JS_MODULE_STATUS_EVALUATED) {
         if (m->eval_has_exception) {
             *pvalue = JS_DupValue(ctx, m->eval_exception);
+            ctx->rt->current_exception_is_uncatchable = m->eval_exception_uncatchable;
             return -1;
         } else {
             *pvalue = JS_UNDEFINED;
@@ -392,6 +420,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
                    m1->status == JS_MODULE_STATUS_EVALUATED);
             if (m1->eval_has_exception) {
                 *pvalue = JS_DupValue(ctx, m1->eval_exception);
+                ctx->rt->current_exception_is_uncatchable = m1->eval_exception_uncatchable;
                 return -1;
             }
         }
@@ -462,6 +491,11 @@ JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
         m->status == JS_MODULE_STATUS_EVALUATED) {
         m = m->cycle_root;
     }
+    if (m->eval_has_exception && m->eval_exception_uncatchable) {
+        JS_Throw(ctx, JS_DupValue(ctx, m->eval_exception));
+        ctx->rt->current_exception_is_uncatchable = TRUE;
+        return JS_EXCEPTION;
+    }
     /* a promise may be created only on the cycle_root of a cycle */
     if (!JS_IsUndefined(m->promise))
         return JS_DupValue(ctx, m->promise);
@@ -473,14 +507,21 @@ JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
 
     stack_top = NULL;
     if (js_inner_module_evaluation(ctx, m, 0, &stack_top, &result) < 0) {
+        BOOL uncatchable = ctx->rt->current_exception_is_uncatchable;
         while (stack_top != NULL) {
             m1 = stack_top;
             assert(m1->status == JS_MODULE_STATUS_EVALUATING);
             m1->status = JS_MODULE_STATUS_EVALUATED;
             m1->eval_has_exception = TRUE;
+            m1->eval_exception_uncatchable = uncatchable;
             m1->eval_exception = JS_DupValue(ctx, result);
             m1->cycle_root = m; /* spec bug: should be present */
             stack_top = m1->stack_prev;
+        }
+        if (uncatchable) {
+            JS_Throw(ctx, result);
+            ctx->rt->current_exception_is_uncatchable = TRUE;
+            return JS_EXCEPTION;
         }
         JS_FreeValue(ctx, result);
         assert(m->status == JS_MODULE_STATUS_EVALUATED);

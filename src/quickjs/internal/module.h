@@ -136,6 +136,7 @@ struct JSModuleDef {
     /* true if evaluation yielded an exception. It is saved in
        eval_exception */
     BOOL eval_has_exception : 8;
+    BOOL eval_exception_uncatchable : 8;
     JSValue eval_exception;
     JSValue meta_obj; /* for import.meta */
     JSValue private_value; /* private value for C modules */
@@ -173,6 +174,7 @@ int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 int js_create_module_function(JSContext *ctx, JSModuleDef *m);
 int js_link_module(JSContext *ctx, JSModuleDef *m);
 JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+void js_async_module_terminate(JSContext *ctx, JSModuleDef *m);
 
 JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
                                 JSAtom local_name, JSAtom export_name,

@@ -1703,6 +1703,8 @@ static int JS_LoadModuleInternal(JSContext *ctx, const char *basename,
     evaluate_promise = JS_EvalFunction(ctx, func_obj);
     if (JS_IsException(evaluate_promise)) {
     fail:
+        if (ctx->rt->current_exception_is_uncatchable)
+            return -1;
         err = JS_GetException(ctx);
         ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                       1, (JSValueConst *)&err);
@@ -1794,6 +1796,10 @@ static JSValue js_dynamic_import_job(JSContext *ctx,
     JS_FreeCString(ctx, basename);
     return status < 0 ? JS_EXCEPTION : JS_UNDEFINED;
  exception:
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeCString(ctx, basename);
+        return JS_EXCEPTION;
+    }
     err = JS_GetException(ctx);
     ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                    1, (JSValueConst *)&err);
@@ -1898,6 +1904,11 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
     return promise;
  exception:
     JS_FreeValue(ctx, attributes_obj);
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, promise);
+        promise = JS_EXCEPTION;
+        goto done;
+    }
     err = JS_GetException(ctx);
     ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED,
                    1, (JSValueConst *)&err);

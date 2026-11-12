@@ -159,6 +159,18 @@ static void test_uncatchable_cleanup(void)
         "const s = new AsyncDisposableStack(); s.defer(async () => preserve()); s.disposeAsync();",
         "const s = new AsyncDisposableStack(); s.defer(() => ({ get then() { preserve(); } })); s.disposeAsync();",
         "const s = new AsyncDisposableStack(); s.defer(() => ({ then() { preserve(); } })); s.disposeAsync();",
+        "try { (async function* () { preserve(); })().next(); } catch (e) { caught = true; }",
+        "(async function* () { await 0; preserve(); })().next().catch(() => caught = true);",
+        "try { const s = new DisposableStack(); s.defer(() =>"
+        " (async function* () { preserve(); })().next()); s.dispose(); }"
+        " catch (e) { caught = true; }",
+        "globalThis.g = (async function* () {})(); g.return(1); g.next();"
+        "Object.defineProperty(Object.prototype, 'then', { configurable: true,"
+        " get() { preserve(); } });",
+        "(async function* () { let x = 17; globalThis.retained = () => x;"
+        " await { get then() { preserve(); } }; })().next();",
+        "(async function () { let x = 19; globalThis.retained = () => x;"
+        " await { get then() { preserve(); } }; })();",
     };
     unsigned int i;
 
@@ -184,6 +196,23 @@ static void test_uncatchable_cleanup(void)
         assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
         JS_FreeValue(ctx, error);
         JS_SetUncatchableException(ctx, 0);
+        if (i == sizeof(sources) / sizeof(sources[0]) - 3) {
+            const char *source = "delete Object.prototype.then; g.next()";
+
+            value = JS_Eval(ctx, source, strlen(source), "<generator-after-abort>",
+                            JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(value) && JS_PromiseState(ctx, value) == JS_PROMISE_FULFILLED);
+            JS_FreeValue(ctx, value);
+        }
+        if (i >= sizeof(sources) / sizeof(sources[0]) - 2) {
+            int expected = i == sizeof(sources) / sizeof(sources[0]) - 1 ? 19 : 17;
+
+            value = JS_Eval(ctx, "retained()", 10, "<retained>", JS_EVAL_TYPE_GLOBAL);
+            assert(JS_VALUE_GET_TAG(value) == JS_TAG_INT &&
+                   JS_VALUE_GET_INT(value) == expected);
+            JS_FreeValue(ctx, value);
+            JS_RunGC(rt);
+        }
         value = JS_GetPropertyStr(ctx, global, "caught");
         assert(JS_ToBool(ctx, value) == 0);
         JS_FreeValue(ctx, value);
@@ -192,6 +221,129 @@ static void test_uncatchable_cleanup(void)
         JS_FreeValue(ctx, value);
         JS_FreeValue(ctx, global);
         JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
+static void test_uncatchable_module(void)
+{
+    static const char * const sources[] = {
+        "preserve();",
+        "preserve(); await 0;",
+        "await 0; preserve();",
+    };
+    unsigned int i, attempt;
+
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt), *job_ctx;
+        JSValue global = JS_GetGlobalObject(ctx), module, value, error;
+        int status;
+
+        assert(JS_SetPropertyStr(ctx, global, "preserve",
+               JS_NewCFunction(ctx, preserve_uncatchable, "preserve", 0)) >= 0);
+        module = JS_Eval(ctx, sources[i], strlen(sources[i]), "termination-module",
+                         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(module));
+        assert(JS_ResolveModule(ctx, module) == 0);
+        for (attempt = 0; attempt < 2; attempt++) {
+            value = JS_EvalFunction(ctx, JS_DupValue(ctx, module));
+            if (!JS_IsException(value)) {
+                JS_FreeValue(ctx, value);
+                while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0) {}
+                assert(status < 0);
+            }
+            error = JS_GetException(ctx);
+            assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
+            JS_FreeValue(ctx, error);
+            JS_SetUncatchableException(ctx, 0);
+        }
+        JS_FreeValue(ctx, module);
+        JS_FreeValue(ctx, global);
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
+        JS_FreeRuntime(rt);
+    }
+}
+
+static JSModuleDef *termination_module_loader(JSContext *ctx, const char *name,
+                                               void *opaque)
+{
+    const char *source = opaque;
+    JSValue module;
+    JSModuleDef *result;
+
+    assert(!strcmp(name, "child"));
+    module = JS_Eval(ctx, source, strlen(source), name,
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(module))
+        return NULL;
+    result = JS_VALUE_GET_PTR(module);
+    JS_FreeValue(ctx, module);
+    return result;
+}
+
+static void test_uncatchable_module_graph(void)
+{
+    static const char * const child_sources[] = {
+        "await 0; preserve();",
+        "import 'entry'; await 0; preserve();",
+    };
+    const char *entry_source = "import 'child'; globalThis.executed = true;";
+    unsigned int i, attempt;
+
+    for (i = 0; i < sizeof(child_sources) / sizeof(child_sources[0]); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt), *job_ctx;
+        JSValue global = JS_GetGlobalObject(ctx), module, value, error;
+        int status;
+
+        JS_SetModuleLoaderFunc(rt, NULL, termination_module_loader,
+                               (void *)child_sources[i]);
+        assert(JS_SetPropertyStr(ctx, global, "executed", JS_FALSE) >= 0);
+        assert(JS_SetPropertyStr(ctx, global, "preserve",
+               JS_NewCFunction(ctx, preserve_uncatchable, "preserve", 0)) >= 0);
+        module = JS_Eval(ctx, entry_source, strlen(entry_source), "entry",
+                         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(module) && JS_ResolveModule(ctx, module) == 0);
+        for (attempt = 0; attempt < 2; attempt++) {
+            value = JS_EvalFunction(ctx, JS_DupValue(ctx, module));
+            if (!JS_IsException(value)) {
+                JS_FreeValue(ctx, value);
+                while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0) {}
+                assert(status < 0);
+            }
+            error = JS_GetException(ctx);
+            assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
+            JS_FreeValue(ctx, error);
+            JS_SetUncatchableException(ctx, 0);
+        }
+        value = JS_LoadModule(ctx, "", "child");
+        assert(JS_IsException(value));
+        error = JS_GetException(ctx);
+        assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
+        JS_FreeValue(ctx, error);
+        JS_SetUncatchableException(ctx, 0);
+        {
+            const char *source = "import('child').catch(() => executed = true);";
+            value = JS_Eval(ctx, source, strlen(source), "dynamic-import-test",
+                            JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(value));
+            JS_FreeValue(ctx, value);
+            while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0) {}
+            assert(status < 0);
+            error = JS_GetException(ctx);
+            assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
+            JS_FreeValue(ctx, error);
+            JS_SetUncatchableException(ctx, 0);
+        }
+        value = JS_GetPropertyStr(ctx, global, "executed");
+        assert(JS_ToBool(ctx, value) == 0);
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, module);
+        JS_FreeValue(ctx, global);
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
         JS_FreeRuntime(rt);
     }
 }
@@ -417,6 +569,8 @@ int main(void)
     test_realms_and_pending_exception();
     test_exception_flags_and_raw_context();
     test_uncatchable_cleanup();
+    test_uncatchable_module();
+    test_uncatchable_module_graph();
     test_allocation_failures();
     return 0;
 }

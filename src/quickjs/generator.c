@@ -31,6 +31,7 @@
 #include "internal/generator.h"
 #include "internal/vm.h"
 #include "internal/iterator.h"
+#include "internal/module.h"
 #include "builtins/promise.h"
 
 /* JSAsyncFunctionState (used by generator and async functions) */
@@ -439,8 +440,13 @@ static int js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
     return 0;
 
  resume_throw:
-    if (ctx->rt->current_exception_is_uncatchable)
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JSObject *func = JS_VALUE_GET_OBJ(s->frame.cur_func);
+        close_var_refs(ctx->rt, func->u.func.function_bytecode, &s->frame);
+        s->is_completed = TRUE;
+        async_func_free_frame(ctx->rt, s);
         return -1;
+    }
     /* Await setup errors belong to the suspended async function. */
     s->throw_flag = TRUE;
     goto resume;
@@ -454,6 +460,9 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
 {
     JSObject *p = JS_VALUE_GET_OBJ(func_obj);
     JSAsyncFunctionState *s = p->u.async_function_data;
+    JSValue module_value = JS_UNDEFINED;
+    JSObject *func = JS_VALUE_GET_OBJ(s->frame.cur_func);
+    JSModuleDef *module = func->u.func.function_bytecode->module;
     BOOL is_reject = p->class_id - JS_CLASS_ASYNC_FUNCTION_RESOLVE;
     JSValueConst arg;
 
@@ -468,7 +477,19 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
         /* return value of await */
         s->frame.cur_sp[-1] = JS_DupValue(ctx, arg);
     }
-    return js_async_function_resume(ctx, s) < 0 ? JS_EXCEPTION : JS_UNDEFINED;
+    /* Nested async functions also carry module metadata; only the module's
+       own top-level function owns its evaluation state. */
+    if (module && JS_IsObject(module->func_obj) &&
+        JS_VALUE_GET_OBJ(module->func_obj) == func)
+        module_value = JS_NewModuleValue(module);
+    if (js_async_function_resume(ctx, s) < 0) {
+        if (!JS_IsUndefined(module_value))
+            js_async_module_terminate(ctx, module);
+        JS_FreeValue(ctx, module_value);
+        return JS_EXCEPTION;
+    }
+    JS_FreeValue(ctx, module_value);
+    return JS_UNDEFINED;
 }
 
 JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
@@ -542,20 +563,27 @@ typedef struct JSAsyncGeneratorData {
     struct list_head queue; /* list of JSAsyncGeneratorRequest.link */
 } JSAsyncGeneratorData;
 
-static void js_async_generator_free(JSRuntime *rt,
-                                    JSAsyncGeneratorData *s)
+static void js_async_generator_clear_queue(JSRuntime *rt,
+                                           JSAsyncGeneratorData *s)
 {
     struct list_head *el, *el1;
     JSAsyncGeneratorRequest *req;
 
     list_for_each_safe(el, el1, &s->queue) {
         req = list_entry(el, JSAsyncGeneratorRequest, link);
+        list_del(&req->link);
         JS_FreeValueRT(rt, req->result);
         JS_FreeValueRT(rt, req->promise);
         JS_FreeValueRT(rt, req->resolving_funcs[0]);
         JS_FreeValueRT(rt, req->resolving_funcs[1]);
         js_free_rt(rt, req);
     }
+}
+
+static void js_async_generator_free(JSRuntime *rt,
+                                    JSAsyncGeneratorData *s)
+{
+    js_async_generator_clear_queue(rt, s);
     if (s->func_state)
         async_func_free(rt, s->func_state);
     js_free_rt(rt, s);
@@ -663,7 +691,8 @@ static void js_async_generator_resolve_or_reject(JSContext *ctx,
     list_del(&next->link);
     ret = JS_Call(ctx, next->resolving_funcs[is_reject], JS_UNDEFINED, 1,
                   &result);
-    if (!is_reject && JS_IsException(ret)) {
+    if (!is_reject && JS_IsException(ret) &&
+        !ctx->rt->current_exception_is_uncatchable) {
         error = JS_GetException(ctx);
         ret = JS_Call(ctx, next->resolving_funcs[1], JS_UNDEFINED, 1,
                       (JSValueConst *)&error);
@@ -687,6 +716,8 @@ static void js_async_generator_resolve(JSContext *ctx,
 
     result = js_create_iterator_result(ctx, JS_DupValue(ctx, value), done);
     is_reject = JS_IsException(result);
+    if (is_reject && ctx->rt->current_exception_is_uncatchable)
+        return;
     if (is_reject)
         result = JS_GetException(ctx);
     js_async_generator_resolve_or_reject(ctx, s, result, is_reject);
@@ -709,6 +740,20 @@ static void js_async_generator_complete(JSRuntime *rt,
     s->state = JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE;
     if (func_state)
         async_func_free(rt, func_state);
+}
+
+static void js_async_generator_terminate(JSRuntime *rt,
+                                         JSAsyncGeneratorData *s)
+{
+    JSAsyncFunctionState *func_state = s->func_state;
+
+    if (func_state && !func_state->is_completed) {
+        JSObject *func = JS_VALUE_GET_OBJ(func_state->frame.cur_func);
+        close_var_refs(rt, func->u.func.function_bytecode, &func_state->frame);
+    }
+    js_async_generator_complete(rt, s);
+    js_async_generator_clear_queue(rt, s);
+    s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
 }
 
 static int js_async_generator_completed_return(JSContext *ctx,
@@ -742,8 +787,8 @@ static int js_async_generator_completed_return(JSContext *ctx,
     return res;
 }
 
-static void js_async_generator_resume_next(JSContext *ctx,
-                                           JSAsyncGeneratorData *s)
+static int js_async_generator_resume_next(JSContext *ctx,
+                                          JSAsyncGeneratorData *s)
 {
     JSAsyncGeneratorRequest *next;
     JSValue func_ret, value;
@@ -776,6 +821,8 @@ static void js_async_generator_resume_next(JSContext *ctx,
                 s->state = JS_ASYNC_GENERATOR_STATE_AWAITING_RETURN;
                 if (js_async_generator_completed_return(ctx, s, next->result) == 0)
                     goto done;
+                if (ctx->rt->current_exception_is_uncatchable)
+                    goto terminate;
                 /* No continuation owns this failed await. Resume draining
                    before rejecting so reentrant requests stay queued. */
                 s->state = JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE;
@@ -806,6 +853,9 @@ static void js_async_generator_resume_next(JSContext *ctx,
             s->state = JS_ASYNC_GENERATOR_STATE_EXECUTING;
         resume_exec:
             func_ret = async_func_resume(ctx, s->func_state);
+            if (JS_IsException(func_ret) &&
+                ctx->rt->current_exception_is_uncatchable)
+                goto terminate;
             if (s->func_state->is_completed) {
                 if (JS_IsException(func_ret)) {
                     value = JS_GetException(ctx);
@@ -844,6 +894,8 @@ static void js_async_generator_resume_next(JSContext *ctx,
                     }
                     JS_FreeValue(ctx, value);
                     if (ret < 0) {
+                        if (ctx->rt->current_exception_is_uncatchable)
+                            goto terminate;
                         /* exception: throw it */
                         s->func_state->throw_flag = TRUE;
                         goto resume_exec;
@@ -857,10 +909,17 @@ static void js_async_generator_resume_next(JSContext *ctx,
         default:
             abort();
         }
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto terminate;
     }
     if (s->state == JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE)
         s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
- done: ;
+ done:
+    return 0;
+
+ terminate:
+    js_async_generator_terminate(ctx->rt, s);
+    return -1;
 }
 
 static JSValue js_async_generator_resolve_function(JSContext *ctx,
@@ -884,7 +943,12 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
         } else {
             js_async_generator_resolve(ctx, s, arg, TRUE);
         }
-        js_async_generator_resume_next(ctx, s);
+        if (ctx->rt->current_exception_is_uncatchable) {
+            js_async_generator_terminate(ctx->rt, s);
+            return JS_EXCEPTION;
+        }
+        if (js_async_generator_resume_next(ctx, s) < 0)
+            return JS_EXCEPTION;
     } else if (s->state == JS_ASYNC_GENERATOR_STATE_EXECUTING) {
         /* restart function execution after await() */
         s->func_state->throw_flag = is_reject;
@@ -894,7 +958,8 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
             /* return value of await */
             s->func_state->frame.cur_sp[-1] = JS_DupValue(ctx, arg);
         }
-        js_async_generator_resume_next(ctx, s);
+        if (js_async_generator_resume_next(ctx, s) < 0)
+            return JS_EXCEPTION;
     }
     return JS_UNDEFINED;
 }
@@ -936,7 +1001,10 @@ JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
        draining belong to the current loop, after the request being settled. */
     if (s->state != JS_ASYNC_GENERATOR_STATE_EXECUTING &&
         s->state != JS_ASYNC_GENERATOR_STATE_DRAINING_QUEUE) {
-        js_async_generator_resume_next(ctx, s);
+        if (js_async_generator_resume_next(ctx, s) < 0) {
+            JS_FreeValue(ctx, promise);
+            return JS_EXCEPTION;
+        }
     }
     return promise;
  fail:
