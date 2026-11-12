@@ -363,11 +363,12 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
     uint8_t *buf;
     size_t buf_len;
     long lret;
+    int saved_errno;
 
     f = fopen(filename, "rb");
     if (!f)
         return NULL;
-    if (fseek(f, 0, SEEK_END) < 0)
+    if (fseek(f, 0, SEEK_END) != 0)
         goto fail;
     lret = ftell(f);
     if (lret < 0)
@@ -378,7 +379,7 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
         goto fail;
     }
     buf_len = lret;
-    if (fseek(f, 0, SEEK_SET) < 0)
+    if (fseek(f, 0, SEEK_SET) != 0)
         goto fail;
     if (ctx)
         buf = js_malloc(ctx, buf_len + 1);
@@ -387,13 +388,15 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
     if (!buf)
         goto fail;
     if (fread(buf, 1, buf_len, f) != buf_len) {
-        errno = EIO;
         if (ctx)
             js_free(ctx, buf);
         else
             free(buf);
+        errno = EIO;
     fail:
+        saved_errno = errno;
         fclose(f);
+        errno = saved_errno;
         return NULL;
     }
     buf[buf_len] = '\0';
