@@ -28,7 +28,8 @@ static void test_method(JSRuntime *rt, OOMTestAllocator *allocator,
                         const char *name, const char *tag)
 {
     static const uint16_t units[] = {
-        'I', 0x323, 0x307, 'J', 0x301, 'i', 0x323, 0x307, 0xcc, 0xd801, 0xdc28
+        'I', 0x323, 0x307, 'J', 0x301, 'i', 0x323, 0x307, 0xcc,
+        0x3ac, 0x3c5, 0x301, 0xd801, 0xdc28
     };
     JSContext *ctx = JS_NewContextRaw(rt);
     JSValue global, constructor, prototype, method, input, locale, expected, result;
@@ -108,6 +109,7 @@ int main(void)
     test_method(rt, &allocator, "toLocaleUpperCase", "tr");
     test_method(rt, &allocator, "toLocaleLowerCase", "lt");
     test_method(rt, &allocator, "toLocaleUpperCase", "lt");
+    test_method(rt, &allocator, "toLocaleUpperCase", "el");
     JS_FreeRuntime(rt);
     assert(!allocator.live);
 #endif
