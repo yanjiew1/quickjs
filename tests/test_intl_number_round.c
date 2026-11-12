@@ -180,11 +180,11 @@ static void test_modes(const QJSIntlAllocator *allocator)
         check(allocator, &settings, "150", positive, 2, 0);
         check(allocator, &settings, "-150", negative, 2, 1);
     }
-    /* ComputeExponent probes abs(x), before the final signed rounding. */
+    /* Carry selection must use the same signed rounding as the final value. */
     settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
-    check(allocator, &settings, "-9.99", "0", 1, 1);
+    check(allocator, &settings, "-9.99", "9", 0, 1);
     settings.digits.rounding_mode = QJS_INTL_ROUND_FLOOR;
-    check(allocator, &settings, "-9.99", "10", 0, 1);
+    check(allocator, &settings, "-9.99", "1", 1, 1);
     settings.digits.rounding_mode = QJS_INTL_ROUND_HALF_EXPAND;
     check_value(allocator, &settings, (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_ZERO, {0}}, "0",
                 0, 1);
@@ -213,13 +213,13 @@ static void test_threshold_metadata(const QJSIntlAllocator *allocator)
     settings.digits.maximum_fraction_digits = 0;
     settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
     assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
-    assert(rounded.notation_magnitude == 3 && rounded.exponent == 3);
-    assert(rounded.kind == QJS_INTL_NEGATIVE_ZERO);
+    assert(rounded.notation_magnitude == 2 && !rounded.exponent);
+    assert(rounded.kind == QJS_INTL_FINITE && !strcmp(rounded.number.text, "999"));
     qjs_intl_number_round_clear(allocator, &rounded);
     settings.digits.rounding_mode = QJS_INTL_ROUND_FLOOR;
     assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
-    assert(rounded.notation_magnitude == 2 && !rounded.exponent);
-    assert(!strcmp(rounded.number.text, "1000"));
+    assert(rounded.notation_magnitude == 3 && rounded.exponent == 3);
+    assert(!strcmp(rounded.number.text, "1"));
     qjs_intl_number_round_clear(allocator, &rounded);
     input = value("12345");
     assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
