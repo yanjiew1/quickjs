@@ -48,9 +48,9 @@ typedef struct QJSIntlRoundedNumber {
 } QJSIntlRoundedNumber;
 
 /* PartitionNumberPattern and ComputeExponent/ForMagnitude over exact values.
-   ComputeExponent probes the positive magnitude, then actual signed rounding
-   applies to the original value at the final scale. This distinction matters
-   for directed rounding. Preserve negative zero, including rounded zero.
+   Preserve the sign in the exponent carry probe, working around the draft
+   ComputeExponent sign loss for directed rounding (see intl-native-notes.md).
+   Preserve negative zero, including rounded zero.
 
    Borrow inputs unchanged; fresh, disjoint output required. Errors reset it;
    clear using the creating malloc/free allocator. No binary floating point,

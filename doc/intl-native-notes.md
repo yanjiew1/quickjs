@@ -112,6 +112,25 @@ Converting only the plural argument through a shortest public Number string
 can make `1.0005` display `1` with the word `days`. This is an interpretation of
 the stale caller, not an adopted editorial correction.
 
+### Signed rounding during exponent selection
+
+The native formatter preserves the original sign in the exponent carry probe.
+This intentionally differs from the literal `ComputeExponent` algorithm in
+ECMA-402 `3691634ebc1794f2af74cb26e59824b21090c3ad`, reviewed on
+2026-11-12 (Asia/Taipei). That algorithm probes the absolute value, although
+`ceil`/`floor` and their half variants depend on the original sign. For example,
+scientific notation with zero fraction digits and `ceil` probes `+9.1` as `10`,
+selects exponent 1, then rounds the actual `-0.91` to negative zero. Native
+instead produces `-9E0`, matching Node 24.22.1. Magnitude calculations still
+use the absolute value; only rounding preserves the sign. Engineering and
+compact carry selection follow the same policy.
+
+This is a documented workaround for a suspected specification defect, not an
+adopted specification correction. See
+[ComputeExponent](https://tc39.es/ecma402/#sec-computeexponent),
+[FormatNumericToString](https://tc39.es/ecma402/#sec-formatnumerictostring), and
+[GetUnsignedRoundingMode](https://tc39.es/ecma402/#sec-getunsignedroundingmode).
+
 ### Number notation and exponent localization
 
 Scientific/engineering notation scales before rounding. Native emits the

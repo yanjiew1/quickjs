@@ -514,9 +514,9 @@ static void test_compact(const QJSIntlAllocator *allocator, const QJSIntlNumberS
     settings.digits.maximum_fraction_digits = 0;
     settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
     settings.compact_long = 0;
-    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-0K");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-999");
     settings.digits.rounding_mode = QJS_INTL_ROUND_FLOOR;
-    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-1000");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-1K");
     settings.digits = options().digits;
     if (TEST_INTL_PROFILE) {
         size_t fr = find(tags, count, "fr"), vec = find(tags, count, "vec");
@@ -1264,7 +1264,7 @@ static void test_compact_currency_names(const QJSIntlAllocator *allocator,
     check(allocator, service, en, (QJSIntlBytes){0}, &settings,
           (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-∞ US dollars");
     settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
-    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-0K US dollars");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-999 US dollars");
     settings.digits.rounding_mode = QJS_INTL_ROUND_HALF_EXPAND;
     settings.digits.minimum_fraction_digits = settings.digits.maximum_fraction_digits = 2;
     check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1200"), "1.20K US dollars");
