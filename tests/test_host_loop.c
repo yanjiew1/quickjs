@@ -109,6 +109,83 @@ static JSContext *worker_context(JSRuntime *rt)
     return ctx;
 }
 
+static JSValue terminate_await(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
+{
+    JS_Throw(ctx, JS_NewInt32(ctx, 42));
+    JS_SetUncatchableException(ctx, 1);
+    return JS_EXCEPTION;
+}
+
+static JSValue await_error_job(JSContext *ctx, int argc, JSValueConst *argv)
+{
+    return JS_Throw(ctx, JS_NewInt32(ctx, 42));
+}
+
+static void test_await_errors(void)
+{
+    static const char * const sources[] = {
+        "await 0; terminate();",
+        "await (async () => { await 0; terminate(); })();",
+        "await (async () => { await 0; terminate(); })().then(x => x);",
+        "await Promise.resolve().then(() => terminate());",
+        "await (async () => { await 0; throw 42; })();",
+        "await Promise.resolve().then(() => { throw 42; });",
+    };
+    unsigned int i;
+
+    /* Host termination must reach the caller even when an awaited child's
+       Promise stays pending. Ordinary rejection must retain its reason too. */
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue global = JS_GetGlobalObject(ctx), value;
+
+        js_std_init_handlers(rt);
+        assert(JS_SetPropertyStr(ctx, global, "terminate",
+               JS_NewCFunction(ctx, terminate_await, "terminate", 0)) >= 0);
+        value = eval(ctx, sources[i], JS_EVAL_TYPE_MODULE);
+        value = js_std_await(ctx, value);
+        assert(JS_IsException(value));
+        value = JS_GetException(ctx);
+        assert(JS_VALUE_GET_TAG(value) == JS_TAG_INT && JS_VALUE_GET_INT(value) == 42);
+        JS_FreeValue(ctx, value);
+        JS_SetUncatchableException(ctx, 0);
+        JS_FreeValue(ctx, global);
+        js_std_free_handlers(rt);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+
+    /* A raw host-job error also stops waiting. Later jobs remain queued for
+       the embedder to handle, rather than running before the error returns. */
+    {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue promise, funcs[2], value;
+
+        js_std_init_handlers(rt);
+        run(ctx, "var order = []");
+        promise = JS_NewPromiseCapability(ctx, funcs);
+        assert(!JS_IsException(promise));
+        assert(JS_EnqueueJob(ctx, await_error_job, 0, NULL) == 0);
+        assert(JS_EnqueueJob(ctx, job, 0, NULL) == 0);
+        value = js_std_await(ctx, promise);
+        assert(JS_IsException(value));
+        value = JS_GetException(ctx);
+        assert(JS_VALUE_GET_TAG(value) == JS_TAG_INT && JS_VALUE_GET_INT(value) == 42);
+        JS_FreeValue(ctx, value);
+        assert(number(ctx, "order.length") == 0);
+        assert(js_std_loop_once(ctx) == 1);
+        assert(number(ctx, "order.length") == 1);
+        JS_FreeValue(ctx, funcs[0]);
+        JS_FreeValue(ctx, funcs[1]);
+        js_std_free_handlers(rt);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -117,6 +194,8 @@ int main(void)
     char missing_worker_source[256];
     double start;
     int ret;
+
+    test_await_errors();
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
@@ -207,9 +286,21 @@ int main(void)
              "os.setTimeout(() => ticks++, 0)");
     js_std_loop(ctx);
     assert(number(ctx, "ticks") == 3 && !JS_HasException(ctx));
-    run(ctx, "os.setTimeout(() => { throw 'legacy await callback' }, 0)");
-    value = eval(ctx, "os.sleepAsync(1)", JS_EVAL_TYPE_GLOBAL);
-    value = js_std_await(ctx, value);
+    run(ctx, "os.setTimeout(() => { throw 'await callback failure' }, 0)");
+    promise = eval(ctx, "os.sleepAsync(1)", JS_EVAL_TYPE_GLOBAL);
+    value = js_std_await(ctx, JS_DupValue(ctx, promise));
+    assert(JS_IsException(value));
+    value = JS_GetException(ctx);
+    {
+        const char *message = JS_ToCString(ctx, value);
+
+        assert(message && !strcmp(message, "await callback failure"));
+        JS_FreeCString(ctx, message);
+    }
+    JS_FreeValue(ctx, value);
+    /* The host can explicitly resume waiting after handling an ordinary
+       callback error; the remaining timer was not cancelled. */
+    value = js_std_await(ctx, promise);
     assert(!JS_IsException(value) && !JS_HasException(ctx));
     JS_FreeValue(ctx, value);
 

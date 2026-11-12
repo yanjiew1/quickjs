@@ -1120,6 +1120,14 @@ Signals alone do not keep an otherwise idle loop alive. Call these functions on
 the runtime's owner thread. The existing @code{js_std_loop()} remains the
 blocking command-line loop, including rejection reporting.
 
+@code{js_std_await(ctx, obj)} consumes @code{obj} and waits for its result while
+running jobs and host callbacks. Rejection or an exception from any job,
+callback or polling operation stops the wait and returns @code{JS_EXCEPTION}
+with the original exception pending, without printing it. This includes failures
+unrelated to @code{obj}. Host termination does not guarantee settlement or
+restartability of interrupted asynchronous operations; clearing the exception
+does not resume an aborted function.
+
 @subsection Worker runtime factories
 
 Worker embedders can install @code{js_std_set_worker_new_runtime_func()}

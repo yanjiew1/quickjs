@@ -432,9 +432,9 @@ void js_std_loop(JSContext *ctx)
     }
 }
 
-/* Wait for a promise and execute pending jobs while waiting for
-   it. Return the promise result or JS_EXCEPTION in case of promise
-   rejection. */
+/* Consume obj, waiting for its result while running jobs and host callbacks.
+   Return JS_EXCEPTION on rejection or any job/poll failure, preserving the
+   pending exception for the caller instead of printing it and continuing. */
 JSValue js_std_await(JSContext *ctx, JSValue obj)
 {
     JSValue ret;
@@ -454,15 +454,15 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
             int err;
             err = JS_ExecutePendingJob(JS_GetRuntime(ctx), NULL);
             if (err < 0) {
-                js_std_dump_error(ctx);
+                ret = JS_EXCEPTION;
+                JS_FreeValue(ctx, obj);
+                break;
             }
             if (err == 0) {
                 JS_ClearKeptObjects(JS_GetRuntime(ctx));
                 js_std_promise_rejection_check(ctx);
                 err = js_std_poll(ctx, -1);
-                if (err == -3)
-                    js_std_dump_error(ctx);
-                if (err == -2) {
+                if (err < -1) {
                     ret = JS_EXCEPTION;
                     JS_FreeValue(ctx, obj);
                     break;
