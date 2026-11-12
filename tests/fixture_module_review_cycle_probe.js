@@ -27,6 +27,15 @@ const ownKeys = Reflect.ownKeys(namespace);
 const ownNames = Object.getOwnPropertyNames(namespace);
 const proxyOwnKeys = Reflect.ownKeys(new Proxy(namespace, {}));
 let keysError, entriesError, forInError;
+const defineErrors = [];
+for (const descriptor of [{}, { value: 42 }, { writable: true },
+                          { configurable: true }]) {
+    try {
+        Reflect.defineProperty(namespace, "2", descriptor);
+    } catch (e) {
+        defineErrors.push(e);
+    }
+}
 try {
     Object.keys(namespace);
 } catch (e) {
@@ -43,4 +52,4 @@ try {
     forInError = e;
 }
 export const snapshot = { ownKeys, ownNames, proxyOwnKeys,
-                          keysError, entriesError, forInError };
+                          keysError, entriesError, forInError, defineErrors };

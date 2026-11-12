@@ -5048,3 +5048,17 @@ function test_lookahead_restricted_asi()
 }
 
 test_lookahead_restricted_asi();
+
+function test_nonwritable_global_reference_descriptor()
+{
+    (0, eval)("var readonly_global_reference_test = 1;");
+    assert(Reflect.defineProperty(globalThis, "readonly_global_reference_test",
+                                  { configurable: false, writable: false }), true);
+    assert(Reflect.defineProperty(globalThis, "readonly_global_reference_test",
+                                  { value: 2 }), false);
+    assert(Reflect.defineProperty(globalThis, "readonly_global_reference_test",
+                                  { value: 1 }), true);
+    assert(globalThis.readonly_global_reference_test, 1);
+}
+
+test_nonwritable_global_reference_descriptor();

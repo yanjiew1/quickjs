@@ -3866,6 +3866,13 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
  redo_prop_update:
     prs = find_own_property(&pr, p, prop);
     if (prs) {
+        /* Namespace [[DefineOwnProperty]] first reads the live binding. */
+        if (unlikely(p->class_id == JS_CLASS_MODULE_NS &&
+                     (prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF &&
+                     JS_IsUninitialized(*pr->u.var_ref->pvalue))) {
+            JS_ThrowReferenceErrorUninitialized(ctx, prop);
+            return -1;
+        }
         /* the range of the Array length property is always tested before */
         if ((prs->flags & JS_PROP_LENGTH) && (flags & JS_PROP_HAS_VALUE)) {
             uint32_t array_length;
@@ -3980,9 +3987,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                         prs->flags &= ~(JS_PROP_TMASK | JS_PROP_WRITABLE);
                         pr->u.value = JS_UNDEFINED;
                     }
-                } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
-                    /* Note: JS_PROP_VARREF is always writable */
-                } else {
+                } else if ((prs->flags & JS_PROP_TMASK) != JS_PROP_VARREF) {
                     if ((prs->flags & (JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0 &&
                         (flags & JS_PROP_HAS_VALUE)) {
                         if (!js_same_value(val, pr->u.value)) {
@@ -3994,10 +3999,8 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                 }
                 if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
                     if (flags & JS_PROP_HAS_VALUE) {
-                        if (p->class_id == JS_CLASS_MODULE_NS) {
-                            /* JS_PROP_WRITABLE is always true for variable
-                               references, but they are write protected in module name
-                               spaces. */
+                        if (p->class_id == JS_CLASS_MODULE_NS ||
+                            (prs->flags & (JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0) {
                             if (!js_same_value(val, *pr->u.var_ref->pvalue))
                                 goto not_configurable;
                         } else {

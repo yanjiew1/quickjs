@@ -39,6 +39,9 @@ function test_namespace_cycle_and_proxy_keys()
     assert(snapshot.keysError instanceof ReferenceError, true);
     assert(snapshot.entriesError instanceof ReferenceError, true);
     assert(snapshot.forInError instanceof ReferenceError, true);
+    assert(snapshot.defineErrors.length, 4);
+    for (const error of snapshot.defineErrors)
+        assert(error instanceof ReferenceError, true);
     checkKeys(Reflect.ownKeys(namespace), expected);
     checkKeys(Object.keys(namespace), expected.slice(0, 3));
 
