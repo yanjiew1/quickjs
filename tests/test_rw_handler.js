@@ -77,4 +77,15 @@ function test_rw_handlers(n)
     }
 }
 
+for (const setHandler of [os.setReadHandler, os.setWriteHandler]) {
+    let error;
+    try {
+        setHandler(-1, () => {});
+    } catch (e) {
+        error = e;
+    }
+    assert(error instanceof RangeError);
+    setHandler(-1, null);
+}
+
 test_rw_handlers(100);

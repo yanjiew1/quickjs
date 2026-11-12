@@ -162,6 +162,8 @@ JSValue js_os_setReadHandler(JSContext *ctx, JSValueConst this_val,
     } else {
         if (!JS_IsFunction(ctx, func))
             return JS_ThrowTypeError(ctx, "not a function");
+        if (fd < 0)
+            return JS_ThrowRangeError(ctx, "invalid file descriptor");
 #ifdef _WIN32
         if (fd != 0 || magic != 0 || _get_osfhandle(fd) == -1)
             return JS_ThrowTypeError(ctx, "unsupported Windows I/O handler");
