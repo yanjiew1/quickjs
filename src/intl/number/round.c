@@ -85,15 +85,13 @@ static QJSIntlStatus exponent_for_magnitude(const QJSIntlNumberRounding *options
 static QJSIntlStatus format_scaled(const QJSIntlAllocator *allocator,
                                    const QJSIntlNumberRounding *options,
                                    const QJSIntlDecimal *decimal, int64_t input_exponent,
-                                   int32_t exponent, int positive, QJSIntlDecimalResult *out)
+                                   int32_t exponent, QJSIntlDecimalResult *out)
 {
     QJSIntlDecimal scaled = *decimal;
     int64_t shifted = input_exponent - exponent;
     if (shifted < -QJS_INTL_DECIMAL_EXPONENT_LIMIT || shifted > QJS_INTL_DECIMAL_EXPONENT_LIMIT)
         return QJS_INTL_OVERFLOW;
     scaled.exponent = (int32_t)shifted;
-    if (positive)
-        scaled.negative = 0;
     return qjs_intl_decimal_format_numeric(allocator, &scaled, &options->digits, out);
 }
 
@@ -130,7 +128,10 @@ QJSIntlStatus qjs_intl_number_round(const QJSIntlAllocator *allocator,
         status = exponent_for_magnitude(options, magnitude, &exponent);
         if (status)
             goto done;
-        status = format_scaled(allocator, options, &input, input_exponent, exponent, 1, &probe);
+        /* Spec workaround: ComputeExponent discards the sign before probing.
+           Directed rounding needs the original sign to predict the final carry;
+           magnitude arithmetic below still uses unsigned decimal digits. */
+        status = format_scaled(allocator, options, &input, input_exponent, exponent, &probe);
         if (status)
             goto done;
         if (!zero(&probe.rounded) &&
@@ -139,15 +140,15 @@ QJSIntlStatus qjs_intl_number_round(const QJSIntlAllocator *allocator,
             status = exponent_for_magnitude(options, magnitude + 1, &exponent);
             if (status)
                 goto done;
-        } else if (!input.negative) {
-            /* The successful positive probe is also the final result; avoid
+        } else {
+            /* The successful signed probe is also the final result; avoid
                rounding and allocating the identical value a second time. */
             result.number = probe;
             memset(&probe, 0, sizeof(probe));
             goto publish;
         }
     }
-    status = format_scaled(allocator, options, &input, input_exponent, exponent, 0, &result.number);
+    status = format_scaled(allocator, options, &input, input_exponent, exponent, &result.number);
     if (status)
         goto done;
 publish:
