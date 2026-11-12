@@ -5081,3 +5081,39 @@ function test_restore_global_reference_writable()
 }
 
 test_restore_global_reference_writable();
+
+function test_global_accessor_to_data()
+{
+    function read() { return converted_global_accessor; }
+    function write(value) { converted_global_accessor = value; }
+    function write_strict(value) { "use strict"; converted_global_accessor = value; }
+
+    for (const writable of [undefined, false, true]) {
+        Object.defineProperty(globalThis, "converted_global_accessor", {
+            get() { return 1; }, configurable: true
+        });
+        assert(read(), 1);
+
+        /* Converting an accessor must default writable to false, even when
+           the global binding uses an existing variable reference. */
+        const descriptor = { value: 2 };
+        if (writable !== undefined)
+            descriptor.writable = writable;
+        Object.defineProperty(globalThis, "converted_global_accessor", descriptor);
+        assert(Object.getOwnPropertyDescriptor(globalThis,
+                                               "converted_global_accessor").writable,
+               writable === true);
+        assert(read(), 2);
+        assert(Reflect.set(globalThis, "converted_global_accessor", 3), writable === true);
+        write(4);
+        assert(read(), writable === true ? 4 : 2);
+        if (writable === true)
+            write_strict(5);
+        else
+            assert_throws(TypeError, () => write_strict(5));
+        assert(read(), writable === true ? 5 : 2);
+        delete globalThis.converted_global_accessor;
+    }
+}
+
+test_global_accessor_to_data();

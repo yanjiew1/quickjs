@@ -3980,8 +3980,10 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                     if (pr->u.getset.setter)
                         JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.setter));
                     if (var_ref) {
-                        prs->flags = (prs->flags & ~JS_PROP_TMASK) |
-                            JS_PROP_VARREF | JS_PROP_WRITABLE;
+                        prs->flags = (prs->flags &
+                                      ~(JS_PROP_TMASK | JS_PROP_WRITABLE)) |
+                            JS_PROP_VARREF;
+                        var_ref->is_const = TRUE;
                         pr->u.var_ref = var_ref;
                     } else {
                         prs->flags &= ~(JS_PROP_TMASK | JS_PROP_WRITABLE);
