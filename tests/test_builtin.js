@@ -7369,3 +7369,70 @@ function test_freeze_disappearing_property()
 }
 
 test_freeze_disappearing_property();
+
+function test_json_reviver_proxy_length()
+{
+    const sentinel = {};
+    const seen = [];
+    try {
+        JSON.parse('{"a":0,"b":[]}', function (key, value) {
+            if (key === "a") {
+                this.b = new Proxy([], {
+                    get(target, property) {
+                        seen.push(property);
+                        if (property === "length") return 2 ** 32;
+                        if (property === "0") throw sentinel;
+                        return Reflect.get(target, property);
+                    },
+                });
+            }
+            return value;
+        });
+        throw Error("expected indexed access");
+    } catch (error) {
+        assert(error === sentinel);
+    }
+    assert(seen.join(","), "length,0");
+
+    JSON.parse('{"a":0,"b":[]}', function (key, value) {
+        if (key === "a") {
+            this.b = new Proxy([], {
+                get(target, property) {
+                    if (property === "length") return -1;
+                    if (property === "0") throw sentinel;
+                    return Reflect.get(target, property);
+                },
+            });
+        }
+        return value;
+    });
+}
+
+test_json_reviver_proxy_length();
+
+function test_regexp_replace_result_length()
+{
+    const sentinel = {};
+    const regexp = /a/;
+    regexp.exec = () => ({
+        length: 2 ** 32,
+        0: "a",
+        get 1() { throw sentinel; },
+        index: 0,
+    });
+    try {
+        regexp[Symbol.replace]("a", "x");
+        throw Error("expected capture access");
+    } catch (error) {
+        assert(error === sentinel);
+    }
+    regexp.exec = () => ({
+        length: -1,
+        0: "a",
+        get 1() { throw sentinel; },
+        index: 0,
+    });
+    assert(regexp[Symbol.replace]("a", "x"), "x");
+}
+
+test_regexp_replace_result_length();

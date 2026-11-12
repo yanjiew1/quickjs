@@ -811,7 +811,8 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
     JSValue val, new_el, name_val, res, context;
     JSValueConst args[3];
     int ret, is_array;
-    uint32_t i, len = 0;
+    uint32_t len = 0;
+    int64_t i, array_len = 0;
     JSAtom prop;
     JSPropertyEnum *atoms = NULL;
 
@@ -850,16 +851,16 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
         if (is_array < 0)
             goto fail;
         if (is_array) {
-            if (js_get_length32(ctx, &len, val))
+            if (js_get_length64(ctx, &array_len, val))
                 goto fail;
         } else {
             ret = JS_GetOwnPropertyNamesInternal(ctx, &atoms, &len, JS_VALUE_GET_OBJ(val), JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
             if (ret < 0)
                 goto fail;
         }
-        for(i = 0; i < len; i++) {
+        for(i = 0; i < (is_array ? array_len : len); i++) {
             if (is_array) {
-                prop = JS_NewAtomUInt32(ctx, i);
+                prop = JS_NewAtomInt64(ctx, i);
                 if (prop == JS_ATOM_NULL)
                     goto fail;
             } else {

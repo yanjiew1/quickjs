@@ -1393,9 +1393,8 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
     JSString *p, *sp;
     StringBuffer b_s, *b = &b_s;
     ValueBuffer v_b, *results = &v_b;
-    int nextSourcePosition, n, j, functionalReplace, is_global, fullUnicode;
-    uint32_t nCaptures;
-    int64_t position;
+    int nextSourcePosition, j, functionalReplace, is_global, fullUnicode;
+    int64_t n, nCaptures, position;
 
     if (!JS_IsObject(rx))
         return JS_ThrowTypeErrorNotAnObject(ctx);
@@ -1476,7 +1475,7 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
     for(j = 0; j < results->len; j++) {
         JSValueConst result;
         result = results->arr[j];
-        if (js_get_length32(ctx, &nCaptures, result) < 0)
+        if (js_get_length64(ctx, &nCaptures, result) < 0)
             goto exception;
         JS_FreeValue(ctx, matched);
         matched = JS_ToStringFree(ctx, JS_GetPropertyInt64(ctx, result, 0));
