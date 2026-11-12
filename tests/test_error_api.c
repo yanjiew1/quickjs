@@ -154,6 +154,10 @@ static void test_uncatchable_cleanup(void)
         "try { new Promise(() => preserve()); } catch (e) { caught = true; }",
         "try { Promise.all({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
         "try { Promise.race({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
+        "Object.defineProperty(Array.prototype, 'then', { get() { preserve(); } });"
+        "Promise.all([1]).catch(() => caught = true);",
+        "Object.defineProperty(Array.prototype, 'then', { get() { preserve(); } });"
+        "Promise.allSettled([1]).catch(() => caught = true);",
         "try { Array.fromAsync({ get length() { preserve(); } }); } catch(e) { caught = true; }",
         "try { class A extends Array {} Object.defineProperty(A.prototype, 'then',"
         " { get() { preserve(); } }); Array.fromAsync.call(A, []); }"

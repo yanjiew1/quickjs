@@ -704,9 +704,12 @@ static __exception int remainingElementsCount_add(JSContext *ctx,
 static JSValue js_promise_all_reject_error(JSContext *ctx,
                                            JSValueConst resolve_element_env)
 {
-    JSValue error = JS_GetException(ctx);
-    JSValue reject = JS_GetPropertyUint32(ctx, resolve_element_env, 1);
-    JSValue ret;
+    JSValue error, reject, ret;
+
+    if (ctx->rt->current_exception_is_uncatchable)
+        return JS_EXCEPTION;
+    error = JS_GetException(ctx);
+    reject = JS_GetPropertyUint32(ctx, resolve_element_env, 1);
 
     if (JS_IsException(reject)) {
         JS_FreeValue(ctx, error);
