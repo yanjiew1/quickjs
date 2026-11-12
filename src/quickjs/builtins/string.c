@@ -1410,7 +1410,7 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
 static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val,
                                            int argc, JSValueConst *argv, int to_lower)
 {
-    static const QJSIntlBytes available[] = {{"az", 2}, {"lt", 2}, {"tr", 2}};
+    static const QJSIntlBytes available[] = {{"az", 2}, {"el", 2}, {"lt", 2}, {"tr", 2}};
     JSIntlLocaleList requested;
     QJSIntlLocaleMatch match;
     QJSIntlBytes first;
@@ -1439,10 +1439,17 @@ static JSValue js_string_toLocaleLowerCase(JSContext *ctx, JSValueConst this_val
         js_intl_locale_list_clear(ctx->rt, &requested);
         goto done;
     }
-    if (match.found)
-        locale = match.available_index == 1 ? UNICODE_CASE_LITHUANIAN : UNICODE_CASE_TURKIC;
+    if (match.found) {
+        static const UnicodeCaseLocale locales[] = {
+            UNICODE_CASE_TURKIC, UNICODE_CASE_GREEK,
+            UNICODE_CASE_LITHUANIAN, UNICODE_CASE_TURKIC,
+        };
+        locale = locales[match.available_index];
+    }
     js_intl_locale_list_clear(ctx->rt, &requested);
-    if (locale == UNICODE_CASE_DEFAULT || JS_VALUE_GET_STRING(string)->len == 0) {
+    if (locale == UNICODE_CASE_DEFAULT ||
+        (locale == UNICODE_CASE_GREEK && to_lower) ||
+        JS_VALUE_GET_STRING(string)->len == 0) {
         result = js_string_toLowerCase(ctx, string, 0, NULL, to_lower);
         goto done;
     }
