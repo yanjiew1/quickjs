@@ -110,9 +110,20 @@ static void js_array_from_async_finish(JSContext *ctx,
     ret = JS_Call(ctx, func, JS_UNDEFINED, 1, (JSValueConst *)&value);
     JS_FreeValue(ctx, func);
     JS_FreeValue(ctx, value);
-    if (JS_IsException(ret))
+    if (JS_IsException(ret) && !ctx->rt->current_exception_is_uncatchable)
         JS_FreeValue(ctx, JS_GetException(ctx));
     JS_FreeValue(ctx, ret);
+}
+
+static void js_array_from_async_abort(JSContext *ctx, JSArrayFromAsyncState *s)
+{
+    int i;
+
+    s->phase = ARRAY_FROM_ASYNC_DONE;
+    for (i = 0; i < ARRAY_FROM_ASYNC_VALUE_COUNT; i++) {
+        JS_FreeValue(ctx, s->values[i]);
+        s->values[i] = JS_UNDEFINED;
+    }
 }
 
 static void js_array_from_async_fail(JSContext *ctx, JSValueConst owner,
@@ -160,6 +171,10 @@ static void js_array_from_async_await(JSContext *ctx, JSValueConst owner,
     if (!ret)
         return;
  fail:
+    if (ctx->rt->current_exception_is_uncatchable) {
+        js_array_from_async_abort(ctx, s);
+        return;
+    }
     if (phase == ARRAY_FROM_ASYNC_WAIT_CLOSE) {
         JS_FreeValue(ctx, JS_GetException(ctx));
         js_array_from_async_finish(ctx, s, TRUE);
@@ -175,6 +190,10 @@ static void js_array_from_async_fail(JSContext *ctx, JSValueConst owner,
     JSArrayFromAsyncState *s = JS_GetOpaque(owner, JS_CLASS_ARRAY_FROM_ASYNC);
     JSValue method, ret;
 
+    if (ctx->rt->current_exception_is_uncatchable) {
+        js_array_from_async_abort(ctx, s);
+        return;
+    }
     s->values[ARRAY_FROM_ASYNC_ERROR] = JS_GetException(ctx);
     if (!close_iterator || !s->iterable) {
         js_array_from_async_finish(ctx, s, TRUE);
@@ -198,6 +217,10 @@ static void js_array_from_async_fail(JSContext *ctx, JSValueConst owner,
     js_array_from_async_await(ctx, owner, ret, ARRAY_FROM_ASYNC_WAIT_CLOSE);
     return;
  close_failed:
+    if (ctx->rt->current_exception_is_uncatchable) {
+        js_array_from_async_abort(ctx, s);
+        return;
+    }
     /* AsyncIteratorClose preserves the original throw, including undefined. */
     JS_FreeValue(ctx, JS_GetException(ctx));
     js_array_from_async_finish(ctx, s, TRUE);
@@ -304,13 +327,13 @@ static JSValue js_array_from_async_resume(JSContext *ctx, JSValueConst this_val,
         return JS_UNDEFINED;
     if (s->phase == ARRAY_FROM_ASYNC_WAIT_CLOSE) {
         js_array_from_async_finish(ctx, s, TRUE);
-        return JS_UNDEFINED;
+        return ctx->rt->current_exception_is_uncatchable ? JS_EXCEPTION : JS_UNDEFINED;
     }
     if (magic) {
         JS_Throw(ctx, JS_DupValue(ctx, argv[0]));
         js_array_from_async_fail(ctx, owner,
                                  s->phase == ARRAY_FROM_ASYNC_WAIT_MAP);
-        return JS_UNDEFINED;
+        return ctx->rt->current_exception_is_uncatchable ? JS_EXCEPTION : JS_UNDEFINED;
     }
     switch(s->phase) {
     case ARRAY_FROM_ASYNC_WAIT_NEXT:
@@ -340,10 +363,10 @@ static JSValue js_array_from_async_resume(JSContext *ctx, JSValueConst this_val,
     default:
         break;
     }
-    return JS_UNDEFINED;
+    return ctx->rt->current_exception_is_uncatchable ? JS_EXCEPTION : JS_UNDEFINED;
  fail:
     js_array_from_async_fail(ctx, owner, FALSE);
-    return JS_UNDEFINED;
+    return ctx->rt->current_exception_is_uncatchable ? JS_EXCEPTION : JS_UNDEFINED;
 }
 
 static JSValue js_array_from_async_get_method(JSContext *ctx, JSValueConst obj,
@@ -453,18 +476,36 @@ static JSValue js_array_from_async(JSContext *ctx, JSValueConst this_val,
     s->values[ARRAY_FROM_ASYNC_ARRAY] = value;
     js_array_from_async_step(ctx, owner);
     JS_FreeValue(ctx, owner);
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     return promise;
  fail:
     js_array_from_async_fail(ctx, owner, FALSE);
     JS_FreeValue(ctx, owner);
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     return promise;
  reject_without_state:
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, resolving_funcs[0]);
+        JS_FreeValue(ctx, resolving_funcs[1]);
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     value = JS_GetException(ctx);
     ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED, 1,
                    (JSValueConst *)&value);
     JS_FreeValue(ctx, value);
     JS_FreeValue(ctx, resolving_funcs[0]);
     JS_FreeValue(ctx, resolving_funcs[1]);
+    if (JS_IsException(ret) && ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     if (JS_IsException(ret))
         JS_FreeValue(ctx, JS_GetException(ctx));
     JS_FreeValue(ctx, ret);

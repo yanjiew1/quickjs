@@ -188,12 +188,24 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
                 JS_IteratorClose(ctx, s->sync_iter, TRUE);
             }
         reject:
+            if (ctx->rt->current_exception_is_uncatchable) {
+                JS_FreeValue(ctx, resolving_funcs[0]);
+                JS_FreeValue(ctx, resolving_funcs[1]);
+                JS_FreeValue(ctx, promise);
+                return JS_EXCEPTION;
+            }
             err = JS_GetException(ctx);
             is_reject = 1;
         done_resolve:
             res2 = JS_Call(ctx, resolving_funcs[is_reject], JS_UNDEFINED,
                            1, (JSValueConst *)&err);
             JS_FreeValue(ctx, err);
+            if (JS_IsException(res2) && ctx->rt->current_exception_is_uncatchable) {
+                JS_FreeValue(ctx, resolving_funcs[0]);
+                JS_FreeValue(ctx, resolving_funcs[1]);
+                JS_FreeValue(ctx, promise);
+                return JS_EXCEPTION;
+            }
             JS_FreeValue(ctx, res2);
             JS_FreeValue(ctx, resolving_funcs[0]);
             JS_FreeValue(ctx, resolving_funcs[1]);

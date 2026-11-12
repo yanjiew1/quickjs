@@ -154,6 +154,17 @@ static void test_uncatchable_cleanup(void)
         "try { new Promise(() => preserve()); } catch (e) { caught = true; }",
         "try { Promise.all({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
         "try { Promise.race({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
+        "try { Array.fromAsync({ get length() { preserve(); } }); } catch(e) { caught = true; }",
+        "try { class A extends Array {} Object.defineProperty(A.prototype, 'then',"
+        " { get() { preserve(); } }); Array.fromAsync.call(A, []); }"
+        " catch(e) { caught = true; }",
+        "Array.fromAsync([1], () => preserve()).catch(() => caught = true);",
+        "Array.fromAsync({ [Symbol.asyncIterator]() { return this; },"
+        " next() { return { done: false, value: 1 }; },"
+        " get return() { preserve(); } }, () => { throw 1; }).catch(() => caught = true);",
+        "(async () => { try { for await (const x of { [Symbol.iterator]() { return this; },"
+        " next() { preserve(); }, return() { closed = true; return {}; } }) {} }"
+        " catch(e) { caught = true; } })();",
         "const s = new AsyncDisposableStack(); s.defer(() => preserve());"
         "s.defer(() => Promise.resolve()); s.disposeAsync().catch(() => caught = true);",
         "const s = new AsyncDisposableStack(); s.defer(async () => preserve()); s.disposeAsync();",
