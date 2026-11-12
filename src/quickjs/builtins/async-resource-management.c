@@ -118,9 +118,9 @@ static JSValue js_async_disposable_stack_move(JSContext *ctx,
     return object;
 }
 
-static void js_async_dispose_drain(JSContext *ctx, JSValueConst value,
-                                   JSAsyncDisposableStackData *stack,
-                                   JSValueConst input, BOOL is_throw);
+static int js_async_dispose_drain(JSContext *ctx, JSValueConst value,
+                                  JSAsyncDisposableStackData *stack,
+                                  JSValueConst input, BOOL is_throw);
 
 static void js_async_dispose_finish(JSContext *ctx,
                                     JSAsyncDisposableStackData *stack,
@@ -151,7 +151,10 @@ static JSValue js_async_dispose_resume(JSContext *ctx, JSValueConst this_val,
     /* Await resumes the first disposeAsync invocation context. */
     ctx = stack->realm;
     stack->waiting = FALSE;
-    js_async_dispose_drain(ctx, data[0], stack, argv[0], reject);
+    if (js_async_dispose_drain(ctx, data[0], stack, argv[0], reject) < 0) {
+        js_async_dispose_release_realm(stack);
+        return JS_EXCEPTION;
+    }
     if (!stack->active)
         js_async_dispose_release_realm(stack);
     return JS_UNDEFINED;
@@ -188,9 +191,9 @@ static int js_async_dispose_await(JSContext *ctx, JSValueConst value,
     return status;
 }
 
-static void js_async_dispose_drain(JSContext *ctx, JSValueConst value,
-                                   JSAsyncDisposableStackData *stack,
-                                   JSValueConst input, BOOL is_throw)
+static int js_async_dispose_drain(JSContext *ctx, JSValueConst value,
+                                  JSAsyncDisposableStackData *stack,
+                                  JSValueConst input, BOOL is_throw)
 {
     JSValue failure = JS_UNDEFINED;
 
@@ -202,20 +205,32 @@ static void js_async_dispose_drain(JSContext *ctx, JSValueConst value,
         JS_FreeValue(ctx, failure);
         failure = JS_UNDEFINED;
         if (status <= 0) {
+            if (status < 0 && ctx->rt->current_exception_is_uncatchable)
+                goto terminate;
             if (status < 0)
                 failure = JS_GetException(ctx);
             js_async_dispose_finish(ctx, stack, failure, status < 0);
             JS_FreeValue(ctx, failure);
-            return;
+            return 0;
         }
         status = js_async_dispose_await(ctx, value, stack, result);
         JS_FreeValue(ctx, result);
         if (status == 0)
-            return;
+            return 0;
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto terminate;
         failure = JS_GetException(ctx);
         input = failure;
         is_throw = TRUE;
     }
+ terminate:
+    stack->active = FALSE;
+    stack->waiting = FALSE;
+    JS_FreeValue(ctx, stack->resolving_funcs[0]);
+    JS_FreeValue(ctx, stack->resolving_funcs[1]);
+    stack->resolving_funcs[0] = JS_UNDEFINED;
+    stack->resolving_funcs[1] = JS_UNDEFINED;
+    return -1;
 }
 
 static JSValue js_async_disposable_stack_dispose(JSContext *ctx,
@@ -244,7 +259,11 @@ static JSValue js_async_disposable_stack_dispose(JSContext *ctx,
     stack->resolving_funcs[0] = funcs[0];
     stack->resolving_funcs[1] = funcs[1];
     stack->active = TRUE;
-    js_async_dispose_drain(ctx, value, stack, JS_UNDEFINED, FALSE);
+    if (js_async_dispose_drain(ctx, value, stack, JS_UNDEFINED, FALSE) < 0) {
+        js_async_dispose_release_realm(stack);
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
     if (!stack->active)
         js_async_dispose_release_realm(stack);
     return promise;

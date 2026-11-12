@@ -94,6 +94,11 @@ static JSValue js_async_iterator_proto_async_dispose(JSContext *ctx,
     goto done;
 
  reject:
+    if (ctx->rt->current_exception_is_uncatchable) {
+        JS_FreeValue(ctx, promise);
+        promise = JS_EXCEPTION;
+        goto done;
+    }
     result = JS_GetException(ctx);
     reject = TRUE;
  settle:

@@ -166,6 +166,12 @@ static JSValue js_async_dispose_sync_wrapper(JSContext *ctx,
     result = JS_Call(ctx, data[0], value, 0, NULL);
     reject = JS_IsException(result);
     if (reject) {
+        if (ctx->rt->current_exception_is_uncatchable) {
+            JS_FreeValue(ctx, funcs[0]);
+            JS_FreeValue(ctx, funcs[1]);
+            JS_FreeValue(ctx, promise);
+            return JS_EXCEPTION;
+        }
         result = JS_GetException(ctx);
     } else {
         JS_FreeValue(ctx, result);
@@ -356,6 +362,15 @@ int js_dispose_resources_step(JSContext *ctx,
         result = js_disposable_resource_call(ctx, resource);
         js_disposable_resource_free(ctx->rt, resource);
         if (JS_IsException(result)) {
+            if (ctx->rt->current_exception_is_uncatchable) {
+                list->done = TRUE;
+                js_disposable_resource_chain_free(ctx->rt, list->active);
+                list->active = NULL;
+                JS_FreeValue(ctx, list->error);
+                list->error = JS_UNDEFINED;
+                list->has_error = FALSE;
+                return -1;
+            }
             js_disposable_resource_add_error(ctx, &list->error,
                                               &list->has_error,
                                               JS_GetException(ctx));

@@ -156,6 +156,8 @@ static JSValue promise_reaction_job(JSContext *ctx, int argc,
     }
     is_reject = JS_IsException(res);
     if (is_reject) {
+        if (ctx->rt->current_exception_is_uncatchable)
+            return JS_EXCEPTION;
         res = JS_GetException(ctx);
         /* An interrupt can fail before the handler runs. Only a catchable
            failure of a native resolver can be its assimilation enqueue OOM. */
@@ -244,10 +246,13 @@ static JSValue js_promise_resolve_thenable_job(JSContext *ctx,
     }
     res = JS_Call(ctx, then, thenable, 2, (JSValueConst *)args);
     if (JS_IsException(res)) {
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto done;
         JSValue error = JS_GetException(ctx);
         res = JS_Call(ctx, args[1], JS_UNDEFINED, 1, (JSValueConst *)&error);
         JS_FreeValue(ctx, error);
     }
+ done:
     JS_FreeValue(ctx, args[0]);
     JS_FreeValue(ctx, args[1]);
     return res;
@@ -378,6 +383,8 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     if (JS_IsException(then)) {
         JSValue error;
     fail_reject:
+        if (ctx->rt->current_exception_is_uncatchable)
+            return JS_EXCEPTION;
         error = JS_GetException(ctx);
         ret = fulfill_or_reject_promise(ctx, s->promise, error, TRUE);
         JS_FreeValue(ctx, error);
@@ -485,6 +492,8 @@ static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
     ret = JS_Call(ctx, executor, JS_UNDEFINED, 2, (JSValueConst *)args);
     if (JS_IsException(ret)) {
         JSValue ret2, error;
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto fail1;
         error = JS_GetException(ctx);
         ret2 = JS_Call(ctx, args[1], JS_UNDEFINED, 1, (JSValueConst *)&error);
         JS_FreeValue(ctx, error);
@@ -657,6 +666,8 @@ static JSValue js_promise_try(JSContext *ctx, JSValueConst this_val,
         return JS_ThrowTypeErrorNotAnObject(ctx);
     ret = JS_Call(ctx, argv[0], JS_UNDEFINED, argc - 1, argv + 1);
     if (JS_IsException(ret)) {
+        if (ctx->rt->current_exception_is_uncatchable)
+            return JS_EXCEPTION;
         is_reject = 1;
         ret = JS_GetException(ctx);
     } else {
@@ -824,6 +835,8 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(iter)) {
         JSValue error;
     fail_reject:
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto fail;
         error = JS_GetException(ctx);
         ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED, 1,
                        (JSValueConst *)&error);
@@ -973,6 +986,8 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(iter)) {
         JSValue error;
     fail_reject:
+        if (ctx->rt->current_exception_is_uncatchable)
+            goto fail;
         error = JS_GetException(ctx);
         ret = JS_Call(ctx, resolving_funcs[1], JS_UNDEFINED, 1,
                        (JSValueConst *)&error);

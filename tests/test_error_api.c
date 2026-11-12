@@ -132,6 +132,70 @@ static JSValue make_internal(JSContext *ctx, JSValueConst this_val,
     return JS_NewInternalError(ctx, "catchable");
 }
 
+static void test_uncatchable_cleanup(void)
+{
+    static const char * const sources[] = {
+        "try { [1].values().forEach(() => preserve()); } catch (e) { caught = true; }",
+        "try { for (const x of { [Symbol.iterator]() { return this; },"
+        " next() { return { value: 1, done: false }; },"
+        " return() { preserve(); } }) { throw 1; } } catch (e) { caught = true; }",
+        "try { for (const x of { [Symbol.iterator]() { return this; },"
+        " next() { return { value: 1, done: false }; },"
+        " get return() { preserve(); } }) { throw 1; } } catch (e) { caught = true; }",
+        "try { const s = new DisposableStack(); s.defer(() => closed = true);"
+        " s.defer(() => preserve()); s.dispose(); } catch (e) { caught = true; }",
+        "try { const s = new AsyncDisposableStack(); s.defer(() => closed = true);"
+        " s.defer(() => preserve()); s.disposeAsync(); } catch (e) { caught = true; }",
+        "try { const s = new AsyncDisposableStack();"
+        " s.use({ [Symbol.dispose]() { preserve(); } }); s.disposeAsync(); }"
+        " catch (e) { caught = true; }",
+        "Promise.resolve().then(() => preserve()).catch(() => caught = true);",
+        "try { Promise.try(() => preserve()); } catch (e) { caught = true; }",
+        "try { new Promise(() => preserve()); } catch (e) { caught = true; }",
+        "try { Promise.all({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
+        "try { Promise.race({ [Symbol.iterator]() { preserve(); } }); } catch (e) { caught = true; }",
+        "const s = new AsyncDisposableStack(); s.defer(() => preserve());"
+        "s.defer(() => Promise.resolve()); s.disposeAsync().catch(() => caught = true);",
+        "const s = new AsyncDisposableStack(); s.defer(async () => preserve()); s.disposeAsync();",
+        "const s = new AsyncDisposableStack(); s.defer(() => ({ get then() { preserve(); } })); s.disposeAsync();",
+        "const s = new AsyncDisposableStack(); s.defer(() => ({ then() { preserve(); } })); s.disposeAsync();",
+    };
+    unsigned int i;
+
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx = JS_NewContext(rt), *job_ctx;
+        JSValue global = JS_GetGlobalObject(ctx), result, value, error;
+        int status = 0;
+
+        assert(rt && ctx);
+        assert(JS_SetPropertyStr(ctx, global, "caught", JS_FALSE) >= 0);
+        assert(JS_SetPropertyStr(ctx, global, "closed", JS_FALSE) >= 0);
+        assert(JS_SetPropertyStr(ctx, global, "preserve",
+               JS_NewCFunction(ctx, preserve_uncatchable, "preserve", 0)) >= 0);
+        result = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                         "<uncatchable-cleanup>", JS_EVAL_TYPE_GLOBAL);
+        if (!JS_IsException(result)) {
+            JS_FreeValue(ctx, result);
+            while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0) {}
+            assert(status < 0);
+        }
+        error = JS_GetException(ctx);
+        assert(JS_VALUE_GET_TAG(error) == JS_TAG_INT && JS_VALUE_GET_INT(error) == 42);
+        JS_FreeValue(ctx, error);
+        JS_SetUncatchableException(ctx, 0);
+        value = JS_GetPropertyStr(ctx, global, "caught");
+        assert(JS_ToBool(ctx, value) == 0);
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, global, "closed");
+        assert(JS_ToBool(ctx, value) == 0);
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, global);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 static void test_exception_flags_and_raw_context(void)
 {
     const char *source = "globalThis.caught = false;"
@@ -352,6 +416,7 @@ int main(void)
     test_constructor_property_failure(1);
     test_realms_and_pending_exception();
     test_exception_flags_and_raw_context();
+    test_uncatchable_cleanup();
     test_allocation_failures();
     return 0;
 }

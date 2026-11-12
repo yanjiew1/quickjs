@@ -372,7 +372,7 @@ static int js_async_function_resolve_create(JSContext *ctx,
     return 0;
 }
 
-static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
+static int js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
 {
     JSValue func_ret, ret2;
 
@@ -388,6 +388,8 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
         if (JS_IsException(func_ret)) {
             JSValue error;
         fail:
+            if (ctx->rt->current_exception_is_uncatchable)
+                return -1;
             error = JS_GetException(ctx);
             ret2 = JS_Call(ctx, s->resolving_funcs[1], JS_UNDEFINED,
                            1, (JSValueConst *)&error);
@@ -434,9 +436,11 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
         if (res)
             goto resume_throw;
     }
-    return;
+    return 0;
 
  resume_throw:
+    if (ctx->rt->current_exception_is_uncatchable)
+        return -1;
     /* Await setup errors belong to the suspended async function. */
     s->throw_flag = TRUE;
     goto resume;
@@ -464,8 +468,7 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
         /* return value of await */
         s->frame.cur_sp[-1] = JS_DupValue(ctx, arg);
     }
-    js_async_function_resume(ctx, s);
-    return JS_UNDEFINED;
+    return js_async_function_resume(ctx, s) < 0 ? JS_EXCEPTION : JS_UNDEFINED;
 }
 
 JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
@@ -487,7 +490,11 @@ JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
         return JS_EXCEPTION;
     }
 
-    js_async_function_resume(ctx, s);
+    if (js_async_function_resume(ctx, s) < 0) {
+        async_func_free(ctx->rt, s);
+        JS_FreeValue(ctx, promise);
+        return JS_EXCEPTION;
+    }
 
     async_func_free(ctx->rt, s);
 

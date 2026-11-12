@@ -125,6 +125,8 @@ int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
     int res;
 
     if (is_exception_pending) {
+        if (ctx->rt->current_exception_is_uncatchable)
+            return -1;
         ex_obj = ctx->rt->current_exception;
         ctx->rt->current_exception = JS_UNINITIALIZED;
         res = -1;
@@ -152,7 +154,10 @@ int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
     JS_FreeValue(ctx, ret);
  done:
     if (is_exception_pending) {
-        JS_Throw(ctx, ex_obj);
+        if (ctx->rt->current_exception_is_uncatchable)
+            JS_FreeValue(ctx, ex_obj);
+        else
+            JS_Throw(ctx, ex_obj);
     }
     return res;
 }
