@@ -86,6 +86,36 @@ for (const [notation, cases] of [
     }
 }
 
+// The exponent carry probe must preserve the sign for directed rounding.
+// These cases straddle both scientific and thousand-based notation thresholds.
+for (const [roundingMode, positiveCarry, negativeCarry] of [
+    ['ceil', true, false], ['floor', false, true],
+    ['expand', true, true], ['trunc', false, false],
+    ['halfCeil', true, false], ['halfFloor', false, true],
+    ['halfExpand', true, true], ['halfTrunc', false, false],
+    ['halfEven', true, true],
+]) {
+    for (const [notation, input, ordinary, carry] of [
+        ['scientific', 9.5, '9E0', '1E1'],
+        ['engineering', 999.5, '999E0', '1E3'],
+        ['compact', 999.5, '999', '1K'],
+    ]) {
+        const f = new NumberFormat('en', {notation, maximumFractionDigits: 0, roundingMode});
+        assert(f.format(input), positiveCarry ? carry : ordinary);
+        assert(f.format(-input), '-' + (negativeCarry ? carry : ordinary));
+        assert(f.formatToParts(-input).map(p => p.value).join(''), f.format(-input));
+    }
+}
+const signedScientific = new NumberFormat('en', {
+    notation: 'scientific', maximumFractionDigits: 0, roundingMode: 'ceil',
+});
+assert(signedScientific.format(-9.1), '-9E0');
+assert(signedScientific.format('-0.091'), '-9E-2');
+assert(signedScientific.format(-91n), '-9E1');
+assert(signedScientific.format(-0), '-0E0');
+assert(signedScientific.formatRangeToParts(-9.1, -8.1)
+    .map(p => p.value).join(''), signedScientific.formatRange(-9.1, -8.1));
+
 assert(new NumberFormat('en', {notation: 'compact'}).format(1234), '1.2K');
 assert(new NumberFormat('en', {maximumFractionDigits: 0, roundingMode: 'ceil'}).format(1.1), '2');
 assert(new NumberFormat('en', {minimumFractionDigits: 2, trailingZeroDisplay: 'stripIfInteger'}).format(1), '1');
