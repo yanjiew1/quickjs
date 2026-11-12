@@ -26,7 +26,8 @@
 typedef enum UnicodeCaseLocale {
     UNICODE_CASE_DEFAULT,
     UNICODE_CASE_TURKIC,
-    UNICODE_CASE_LITHUANIAN
+    UNICODE_CASE_LITHUANIAN,
+    UNICODE_CASE_GREEK
 } UnicodeCaseLocale;
 
 /* Append native-endian UTF-16 units to an initialized buffer. Preserve lone
