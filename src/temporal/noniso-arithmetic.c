@@ -126,7 +126,7 @@ static int surpasses(QJSCalendarId calendar, int sign,
         return 0;
     }
     /* Compare the original month code before constraining a missing leap
-       month in the target year, as NonISODateSurpasses requires. */
+       month in the target year, so the search preserves month-code order. */
     if ((year > to.year && sign > 0) || (year < to.year && sign < 0)) {
         *result = 1;
         return 0;
