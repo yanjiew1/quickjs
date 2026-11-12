@@ -4009,24 +4009,26 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                                       JS_DupValue(ctx, val));
                         }
                     }
-                    if ((flags & (JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE)) == JS_PROP_HAS_WRITABLE) {
+                    if (p->class_id == JS_CLASS_GLOBAL_OBJECT &&
+                        (flags & JS_PROP_HAS_WRITABLE)) {
+                        if (js_update_property_flags(ctx, p, &prs,
+                                (prs->flags & ~JS_PROP_WRITABLE) |
+                                (flags & JS_PROP_WRITABLE)))
+                            return -1;
+                        pr->u.var_ref->is_const = !(flags & JS_PROP_WRITABLE);
+                    } else if ((flags & (JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE)) == JS_PROP_HAS_WRITABLE) {
                         JSValue val1;
                         if (p->class_id == JS_CLASS_MODULE_NS) {
                             return JS_ThrowTypeErrorOrFalse(ctx, flags, "module namespace properties have writable = false");
                         }
                         if (js_shape_prepare_update(ctx, p, &prs))
                             return -1;
-                        if (p->class_id == JS_CLASS_GLOBAL_OBJECT) {
-                            pr->u.var_ref->is_const = TRUE; /* mark as read-only */
-                            prs->flags &= ~JS_PROP_WRITABLE;
-                        } else {
-                            /* if writable is set to false, no longer a
-                               reference (for mapped arguments) */
-                            val1 = JS_DupValue(ctx, *pr->u.var_ref->pvalue);
-                            free_var_ref(ctx->rt, pr->u.var_ref);
-                            pr->u.value = val1;
-                            prs->flags &= ~(JS_PROP_TMASK | JS_PROP_WRITABLE);
-                        }
+                        /* if writable is set to false, no longer a
+                           reference (for mapped arguments) */
+                        val1 = JS_DupValue(ctx, *pr->u.var_ref->pvalue);
+                        free_var_ref(ctx->rt, pr->u.var_ref);
+                        pr->u.value = val1;
+                        prs->flags &= ~(JS_PROP_TMASK | JS_PROP_WRITABLE);
                     }
                 } else if (prs->flags & JS_PROP_LENGTH) {
                     if (flags & JS_PROP_HAS_VALUE) {

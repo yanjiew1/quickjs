@@ -5062,3 +5062,22 @@ function test_nonwritable_global_reference_descriptor()
 }
 
 test_nonwritable_global_reference_descriptor();
+
+function test_restore_global_reference_writable()
+{
+    const name = "restored_global_reference";
+    Object.defineProperty(globalThis, name, {
+        value: 1, configurable: true, writable: true
+    });
+    Object.defineProperty(globalThis, name, { writable: false });
+    assert(Reflect.set(globalThis, name, 2), false);
+    Object.defineProperty(globalThis, name, { writable: true });
+    assert(Object.getOwnPropertyDescriptor(globalThis, name).writable, true);
+    restored_global_reference = 2;
+    assert(globalThis[name], 2);
+    assert(Reflect.set(globalThis, name, 3), true);
+    assert(globalThis[name], 3);
+    delete globalThis[name];
+}
+
+test_restore_global_reference_writable();
